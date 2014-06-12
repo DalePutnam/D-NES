@@ -17,6 +17,7 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
+	// If no ROM file specified then exit
 	if (argc < 2)
 	{
 		cout << "No ROM specified" << endl;
@@ -24,29 +25,25 @@ int main(int argc, char* argv[])
 	else
 	{
 		string filename(argv[1]);
-		VRAM* vram = new VRAM(filename);
-		PPU* ppu = new PPU(vram);
-		RAM* ram = new RAM(filename);
-		CPU* cpu = new CPU(ram);
-		ram->attachPPU(ppu);
-
+		RAM* ram = new RAM(filename); // Initialize RAM (a certain section of the main memory is devoted to the .nes file)
+		CPU* cpu = new CPU(ram); // Initialize CPU
 
 		clock_t t1, t2, diff;
-		t1 = clock();
+		t1 = clock(); // Record starting time
 
 		cpu->Run(-1);
 
-		t2 = clock();
-		diff = t2 - t1;
+		t2 = clock(); // Recored ending time
+		diff = t2 - t1; // Recored running time
 
+		// Print running time in milliseconds
 		float milliseconds = diff / (CLOCKS_PER_SEC / 1000);
 
 		cout << "CPU ran for " << milliseconds << "ms" << endl;
 
+		// Deallocate memory
 		delete cpu;
 		delete ram;
-		delete ppu;
-		delete vram;
 	}
 
 	return 0;

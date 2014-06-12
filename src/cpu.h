@@ -13,6 +13,10 @@
 #include "log/logger.h"
 #endif
 
+/*
+ * 6502 CPU Simulator
+ */
+
 class CPU
 {
 #ifdef DEBUG
@@ -104,13 +108,13 @@ class CPU
 	void TXS(); // Transfer X to Stack Pointer
 	void TYA(); // Transfer Y to Accumulator
 
-	bool NextOP(); // Execute next op code
+	bool NextOP(); // Execute next instruction
 
 public:
 
 	CPU(RAM* ram);
-	int Run(int cyc);
-	void Reset();
+	int Run(int cyc); // Run CPU for the specified number of cycles
+	void Reset(); // Reset the CPU to starting conditions
 	~CPU();
 };
 

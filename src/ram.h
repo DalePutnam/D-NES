@@ -9,21 +9,17 @@
 #define MEMORY_
 
 #include <string>
-#include "ppu.h"
 
 class RAM
 {
-	PPU* ppu;
-
-	char* iram;
-	char* apuioreg;
-	char* cartspace;
+	char* iram; // Internal RAM
+	char* apuioreg; // Audio processor registers, can be written to but currently do nothing
+	char* cartspace; // Space where the ROM file is written to
 
 public:
 	RAM(std::string filename);
-	void attachPPU(PPU* ppu);
-	unsigned char read(unsigned short int address);
-	void write(unsigned char M, unsigned short int address);
+	unsigned char read(unsigned short int address); // Read from specified address
+	void write(unsigned char M, unsigned short int address); // Write to specified address
 	~RAM();
 };
 

@@ -29,21 +29,38 @@ Logger::Logger():
 {
 }
 
+// Set the memory pointer
+// This needs to be done before anything else can be used
 void Logger::attachMemory(RAM* memory)
 {
 	this->memory = memory;
 }
 
+// Sets the current Opcode
 void Logger::logOpCode(int opcode)
 {
 	this->opcode = opcode;
 }
 
+// Sets the current instruction name
 void Logger::logOpName(string opname)
 {
 	this->opname = opname;
 }
 
+// Logs the current addressing modes in their specific formats
+// Immediate:       #$10
+// Relative:        $1000
+// Accumulator:     A
+// ZeroPage:        $00 = FF
+// ZeroPageX:       $00,X @ 44 = FF
+// ZeroPageY:       $00,Y @ 55 = FF
+// Absolute:        $2000 = FF or $2000 if special is true
+// AbsoluteX:       $2000,X @ 2044 = FF
+// AbsoluteY:       $2000,Y @ 2055 = FF
+// Indirect:        ($0200) = DB7E
+// IndexedIndirect: ($80,X) @ 82 = 0300 = 5B
+// IndirectIndexed: ($89),Y = 0300 @ 0300 = 89
 void Logger::logAddressingMode(string mode, unsigned short int addr)
 {
 	ostringstream oss;
@@ -54,8 +71,8 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("Relative") == 0)
 	{
-		unsigned short int val = (unsigned short int) (((short int) PC) + ((char) addr) + 2) ;
-		oss << hex << uppercase << setfill('0') << setw(4) << val;
+		unsigned short int val = (unsigned short int) (((short int) PC) + ((char) addr) + 2); // Get value
+		oss << hex << uppercase << setfill('0') << setw(4) << val; // Format value
 		addrMode = "$" + oss.str();
 	}
 	else if (mode.compare("Accumulator") == 0)
@@ -64,135 +81,141 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("ZeroPage") == 0)
 	{
-		int val = memory->read(addr);
-		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1;
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "$" + lvalue + " = " + rvalue;
+		int val = memory->read(addr); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1; // Format address
+		string lvalue = oss.str(); // Save formated address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Save formated value
+		addrMode = "$" + lvalue + " = " + rvalue; // Combine into final string
 	}
 	else if (mode.compare("ZeroPageX") == 0)
 	{
-		int val = memory->read((addr + X) % 0x100);
-		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",X @ " << setfill('0') << setw(2) <<  ((int) ((addrArg1 + X) % 0x100));
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "$" + lvalue + " = " + rvalue;
+		int val = memory->read((addr + X) % 0x100); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",X @ " << setfill('0') << setw(2) <<  ((int) ((addrArg1 + X) % 0x100)); // Format address
+		string lvalue = oss.str(); // Save formated address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Save formated value
+		addrMode = "$" + lvalue + " = " + rvalue; // Combine into final string
 	}
 	else if (mode.compare("ZeroPageY") == 0)
 	{
-		int val = memory->read((addr + Y) % 0x100);
-		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",Y @ " << setfill('0') << setw(2) <<  ((int) ((addrArg1 + Y) % 0x100));
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "$" + lvalue + " = " + rvalue;
+		int val = memory->read((addr + Y) % 0x100); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",Y @ " << setfill('0') << setw(2) <<  ((int) ((addrArg1 + Y) % 0x100)); // Format address
+		string lvalue = oss.str(); // Save formated address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Save formated value
+		addrMode = "$" + lvalue + " = " + rvalue; // Combine into final string
 	}
 	else if (mode.compare("Absolute") == 0 && !special)
 	{
-		int val = memory->read(addr);
-		oss << hex << uppercase << setfill('0') << setw(4) << addr;
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "$" + lvalue + " = " + rvalue;
+		int val = memory->read(addr); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(4) << addr; // Format address
+		string lvalue = oss.str(); // Save formated address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Save formated value
+		addrMode = "$" + lvalue + " = " + rvalue; // Combine into final string
 	}
 	else if (mode.compare("Absolute") == 0 && special)
 	{
-		oss << hex << uppercase << setfill('0') << setw(4) << addr;
+		oss << hex << uppercase << setfill('0') << setw(4) << addr; // Format address
 		string lvalue = oss.str();
-		addrMode = "$" + lvalue;
+		addrMode = "$" + lvalue; // Combine into final string
 	}
 	else if (mode.compare("AbsoluteX") == 0)
 	{
-		int val = memory->read(addr + X);
-		oss << hex << uppercase << setfill('0') << setw(4) << addr << ",X @ " << setfill('0') << setw(4) << (unsigned short int) (addr + X);
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "$" + lvalue + " = " + rvalue;
+		int val = memory->read(addr + X); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(4) << addr << ",X @ " << setfill('0') << setw(4) << (unsigned short int) (addr + X); // Format address
+		string lvalue = oss.str(); // Save formated address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Save formated value
+		addrMode = "$" + lvalue + " = " + rvalue; // Combine into final string
 	}
 	else if (mode.compare("AbsoluteY") == 0)
 	{
-		int val = memory->read(addr + Y);
-		oss << hex << uppercase << setfill('0') << setw(4) << addr << ",Y @ " << setfill('0') << setw(4) << (unsigned short int) (addr + Y);
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "$" + lvalue + " = " + rvalue;
+		int val = memory->read(addr + Y); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(4) << addr << ",Y @ " << setfill('0') << setw(4) << (unsigned short int) (addr + Y); // Format address
+		string lvalue = oss.str(); // Save formated address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Save formated value
+		addrMode = "$" + lvalue + " = " + rvalue; // Combine into final string
 	}
 	else if (mode.compare("IndexedIndirect") == 0)
 	{
 		unsigned char arg = (unsigned char) addr;
-		unsigned short int addrfin = memory->read((unsigned char) (arg + X)) + (((unsigned short int) memory->read((unsigned char) (arg + X + 1))) * 0x100);
-		int val = memory->read(addrfin);
-		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",X) @ " << setfill('0') << setw(2) << ((int) ((arg + X) % 0x100));
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(4) << addrfin;
-		string mvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "($" + lvalue + " = " + mvalue + " = " + rvalue;
+		unsigned short int addrfin = memory->read((unsigned char) (arg + X)) + (((unsigned short int) memory->read((unsigned char) (arg + X + 1))) * 0x100); // get address
+		int val = memory->read(addrfin); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",X) @ " << setfill('0') << setw(2) << ((int) ((arg + X) % 0x100)); // Format original address
+		string lvalue = oss.str(); // Store original address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(4) << addrfin; // Format final address
+		string mvalue = oss.str(); // Store final address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Store value
+		addrMode = "($" + lvalue + " = " + mvalue + " = " + rvalue; // Combine into final string
 	}
 	else if (mode.compare("IndirectIndexed") == 0)
 	{
 		unsigned char arg = (unsigned char) addr;
-		unsigned short int addrfin = memory->read(arg) + (((unsigned short int) memory->read((unsigned char) (arg + 1))) * 0x100);
-		int val = memory->read((unsigned short int) (addrfin + Y));
-		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << "),Y = " << setfill('0') << setw(4) << addrfin;
-		string lvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(4) << (unsigned short int) (addrfin + Y);
-		string mvalue = oss.str();
-		oss.str("");
-		oss << hex << uppercase << setfill('0') << setw(2) << val;
-		string rvalue = oss.str();
-		addrMode = "($" + lvalue + " @ " + mvalue + " = " + rvalue;
+		unsigned short int addrfin = memory->read(arg) + (((unsigned short int) memory->read((unsigned char) (arg + 1))) * 0x100); // get address
+		int val = memory->read((unsigned short int) (addrfin + Y)); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << "),Y = " << setfill('0') << setw(4) << addrfin; // Format original address
+		string lvalue = oss.str();  // Store original address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(4) << (unsigned short int) (addrfin + Y); // Format final address
+		string mvalue = oss.str(); // Store final address
+		oss.str(""); // Blank string stream
+		oss << hex << uppercase << setfill('0') << setw(2) << val; // Format value
+		string rvalue = oss.str(); // Store value
+		addrMode = "($" + lvalue + " @ " + mvalue + " = " + rvalue;  // Combine into final string
 	}
 	else if (mode.compare("Indirect") == 0)
 	{
-		unsigned short int val = memory->read(addr) + (((unsigned short int) memory->read(addr + 1)) * 0x100);
-		oss << hex << uppercase << setfill('0') << setw(4) <<  addr << ") = " << setfill('0') << setw(4) << val;
-		addrMode = "($" + oss.str();
+		unsigned short int val = memory->read(addr) + (((unsigned short int) memory->read(addr + 1)) * 0x100); // Get Value
+		oss << hex << uppercase << setfill('0') << setw(4) <<  addr << ") = " << setfill('0') << setw(4) << val; // Format Value
+		addrMode = "($" + oss.str();  // Combine into final string
 	}
 }
 
+// Set Special flag
 void Logger::setSpecial()
 {
 	special = true;
 }
 
+// Log the addressing mode arguments
 void Logger::logAddressingArgs(int arg1, int arg2)
 {
 	this->addrArg1 = arg1;
 	this->addrArg2 = arg2;
 }
 
+// Log the addressing mode arguments
 void Logger::logAddressingArgs(int arg1)
 {
 	this->addrArg1 = arg1;
 	this->addrArg2 = -1;
 }
 
+// Logs current cycle count
 void Logger::logCycles(int cycles)
 {
 	this->cycles = cycles;
 }
 
+// Log Program Counter
 void Logger::logProgramCounter(int counter)
 {
 	this->PC = counter;
 }
 
+// Log register values
 void Logger::logRegisters(int A, int X, int Y, int P, int S)
 {
 	this->A = A;
@@ -202,39 +225,39 @@ void Logger::logRegisters(int A, int X, int Y, int P, int S)
 	this->S = S;
 }
 
+// Print out all current log information
 void Logger::printLog()
 {
-	cout << hex << uppercase << setfill('0') << setw(4) << PC << "  ";
-	cout << setfill('0') << setw(2) << opcode << " ";
-	//cout << setfill('0') << setw(2) << addrArg1 << " ";
+	cout << hex << uppercase << setfill('0') << setw(4) << PC << "  "; // Output Program counter followed by a space
+	cout << setfill('0') << setw(2) << opcode << " "; // Output opcode followed by a space
 
 	if (addrArg1 == -1)
 	{
-		cout << "   ";
+		cout << "   "; // if there are no arguments then output 3 spaces
 	}
 	else
 	{
-		cout << setfill('0') << setw(2) << addrArg1 << " ";
+		cout << setfill('0') << setw(2) << addrArg1 << " "; // otherwise output the first argument followed by a space
 	}
 
 	if (addrArg2 == -1)
 	{
-		cout << "  ";
+		cout << "  "; // if there is only one argument output 2 spaces
 	}
 	else
 	{
-		cout << setfill('0') << setw(2) << addrArg2;
+		cout << setfill('0') << setw(2) << addrArg2; // otherwise output the second argument
 	}
 
-	cout << "  " << opname << " ";// << "A:";
-	cout << addrMode << setfill(' ') << setw(30 - addrMode.length()) << "A:";
-	cout << setfill('0') << setw(2) << A << " X:";
-	cout << setfill('0') << setw(2) << X << " Y:";
-	cout << setfill('0') << setw(2) << Y << " P:";
-	cout << setfill('0') << setw(2) << P << " SP:";
-	cout << setfill('0') << setw(2) << S << endl;/*" CYC:";
-	cout << dec << cycles << endl;*/
+	cout << "  " << opname << " ";// << "A:"; // output instruction name
+	cout << addrMode << setfill(' ') << setw(30 - addrMode.length()) << "A:"; // output addressing mode log, followed by filler spaces
+	cout << setfill('0') << setw(2) << A << " X:"; // Output Accumulator
+	cout << setfill('0') << setw(2) << X << " Y:"; // Output X register
+	cout << setfill('0') << setw(2) << Y << " P:"; // Output Y Register
+	cout << setfill('0') << setw(2) << P << " SP:"; // Output Processor Status
+	cout << setfill('0') << setw(2) << S << endl; // Output Stack Pointer
 
+	// Reset logged values
 	opcode = 0;
 	opname = "";
 	addrArg1 = -1;
