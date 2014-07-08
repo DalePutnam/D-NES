@@ -12,11 +12,12 @@
 using namespace std;
 
 Logger::Logger():
-	memory(0),
 	opcode(0),
 	opname(""),
 	addrArg1(-1),
 	addrArg2(-1),
+	finalAddr(0),
+	value(0),
 	addrMode(""),
 	cycles(0),
 	PC(0),
@@ -27,13 +28,6 @@ Logger::Logger():
 	S(0),
 	special(false)
 {
-}
-
-// Set the memory pointer
-// This needs to be done before anything else can be used
-void Logger::attachMemory(RAM* memory)
-{
-	this->memory = memory;
 }
 
 // Sets the current Opcode
@@ -81,7 +75,7 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("ZeroPage") == 0)
 	{
-		int val = memory->read(addr); // Get Value
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1; // Format address
 		string lvalue = oss.str(); // Save formated address
 		oss.str(""); // Blank string stream
@@ -91,7 +85,7 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("ZeroPageX") == 0)
 	{
-		int val = memory->read((addr + X) % 0x100); // Get Value
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",X @ " << setfill('0') << setw(2) <<  ((int) ((addrArg1 + X) % 0x100)); // Format address
 		string lvalue = oss.str(); // Save formated address
 		oss.str(""); // Blank string stream
@@ -101,7 +95,7 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("ZeroPageY") == 0)
 	{
-		int val = memory->read((addr + Y) % 0x100); // Get Value
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",Y @ " << setfill('0') << setw(2) <<  ((int) ((addrArg1 + Y) % 0x100)); // Format address
 		string lvalue = oss.str(); // Save formated address
 		oss.str(""); // Blank string stream
@@ -111,7 +105,7 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("Absolute") == 0 && !special)
 	{
-		int val = memory->read(addr); // Get Value
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(4) << addr; // Format address
 		string lvalue = oss.str(); // Save formated address
 		oss.str(""); // Blank string stream
@@ -127,7 +121,7 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("AbsoluteX") == 0)
 	{
-		int val = memory->read(addr + X); // Get Value
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(4) << addr << ",X @ " << setfill('0') << setw(4) << (unsigned short int) (addr + X); // Format address
 		string lvalue = oss.str(); // Save formated address
 		oss.str(""); // Blank string stream
@@ -137,7 +131,7 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("AbsoluteY") == 0)
 	{
-		int val = memory->read(addr + Y); // Get Value
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(4) << addr << ",Y @ " << setfill('0') << setw(4) << (unsigned short int) (addr + Y); // Format address
 		string lvalue = oss.str(); // Save formated address
 		oss.str(""); // Blank string stream
@@ -148,8 +142,8 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	else if (mode.compare("IndexedIndirect") == 0)
 	{
 		unsigned char arg = (unsigned char) addr;
-		unsigned short int addrfin = memory->read((unsigned char) (arg + X)) + (((unsigned short int) memory->read((unsigned char) (arg + X + 1))) * 0x100); // get address
-		int val = memory->read(addrfin); // Get Value
+		unsigned short int addrfin = finalAddr; // get address
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << ",X) @ " << setfill('0') << setw(2) << ((int) ((arg + X) % 0x100)); // Format original address
 		string lvalue = oss.str(); // Store original address
 		oss.str(""); // Blank string stream
@@ -163,8 +157,8 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	else if (mode.compare("IndirectIndexed") == 0)
 	{
 		unsigned char arg = (unsigned char) addr;
-		unsigned short int addrfin = memory->read(arg) + (((unsigned short int) memory->read((unsigned char) (arg + 1))) * 0x100); // get address
-		int val = memory->read((unsigned short int) (addrfin + Y)); // Get Value
+		unsigned short int addrfin = finalAddr; // get address
+		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << "),Y = " << setfill('0') << setw(4) << addrfin; // Format original address
 		string lvalue = oss.str();  // Store original address
 		oss.str(""); // Blank string stream
@@ -177,7 +171,7 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("Indirect") == 0)
 	{
-		unsigned short int val = memory->read(addr) + (((unsigned short int) memory->read(addr + 1)) * 0x100); // Get Value
+		unsigned short int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(4) <<  addr << ") = " << setfill('0') << setw(4) << val; // Format Value
 		addrMode = "($" + oss.str();  // Combine into final string
 	}
@@ -201,6 +195,16 @@ void Logger::logAddressingArgs(int arg1)
 {
 	this->addrArg1 = arg1;
 	this->addrArg2 = -1;
+}
+
+void Logger::logFinalAddress(int addr)
+{
+	this->finalAddr = addr;
+}
+
+void Logger::logValue(int val)
+{
+	this->value = val;
 }
 
 // Logs current cycle count
@@ -263,6 +267,8 @@ void Logger::printLog()
 	addrArg1 = -1;
 	addrArg2 = -1;
 	addrMode = "";
+	finalAddr = 0;
+	value = 0;
 	PC = 0;
 	A = 0;
 	X = 0;

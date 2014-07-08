@@ -25,8 +25,9 @@ int main(int argc, char* argv[])
 	else
 	{
 		string filename(argv[1]);
-		RAM* ram = new RAM(filename); // Initialize RAM (a certain section of the main memory is devoted to the .nes file)
-		CPU* cpu = new CPU(ram); // Initialize CPU
+		Cart* cart = new Cart(filename);
+		//RAM* ram = new RAM(filename); // Initialize RAM (a certain section of the main memory is devoted to the .nes file)
+		CPU* cpu = new CPU(cart); // Initialize CPU
 
 		clock_t t1, t2, diff;
 		t1 = clock(); // Record starting time
@@ -43,7 +44,7 @@ int main(int argc, char* argv[])
 
 		// Deallocate memory
 		delete cpu;
-		delete ram;
+		delete cart;
 	}
 
 	return 0;

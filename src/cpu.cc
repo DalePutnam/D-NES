@@ -7,15 +7,75 @@
 #include <iostream>
 #include "cpu.h"
 
+#ifdef DEBUG
+unsigned char CPU::SoftRead(unsigned short int address)
+{
+	// Any address less then 0x2000 is just the
+	// Internal Ram mirrored every 0x800 bytes
+	if (address < 0x2000)
+	{
+		return memory[address % 0x800];
+	}
+	else if (address > 0x5FFF && address < 0x10000)
+	{
+		return cart->Read(address - 0x6000);
+	}
+	else
+	{
+		return 0x00;
+	}
+}
+
+#endif
+
+unsigned char CPU::Read(unsigned short int address)
+{
+	//cycles += 3;
+	// Any address less then 0x2000 is just the
+	// Internal Ram mirrored every 0x800 bytes
+	if (address < 0x2000)
+	{
+		return memory[address % 0x800];
+	}
+	else if (address > 0x5FFF && address < 0x10000)
+	{
+		return cart->Read(address - 0x6000);
+	}
+	else
+	{
+		return 0x00;
+	}
+}
+
+void CPU::Write(unsigned char M, unsigned short int address)
+{
+	//cycles += 3;
+	// Any address less then 0x2000 is just the
+	// Internal Ram mirrored every 0x800 bytes
+	if (address < 0x2000)
+	{
+		memory[address % 0x800] = M;
+	}
+	else if (address > 0x5FFF && address < 0x10000)
+	{
+		return cart->Write(M, address - 0x6000);
+	}
+	else
+	{
+
+	}
+}
+
 // ZeroPage Addressing takes the the next byte of memory
 // as the location of the instruction operand
 unsigned short int CPU::ZeroPage()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC));
-	logger.logAddressingMode("ZeroPage", memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
+	logger.logAddressingMode("ZeroPage", SoftRead(PC));
+	logger.logValue(SoftRead(PC));
 #endif
-	return memory->read(PC++);
+	return Read(PC++);
 }
 
 // ZeroPage,X Addressing takes the the next byte of memory
@@ -24,10 +84,11 @@ unsigned short int CPU::ZeroPage()
 unsigned short int CPU::ZeroPageX()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC));
-	logger.logAddressingMode("ZeroPageX", memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
+	logger.logAddressingMode("ZeroPageX", SoftRead(PC));
+	logger.logValue((SoftRead(PC) + X) % 0x100);
 #endif
-	return (memory->read(PC++) + X) % 0x100;
+	return (Read(PC++) + X) % 0x100;
 }
 
 // ZeroPage,Y Addressing takes the the next byte of memory
@@ -36,10 +97,11 @@ unsigned short int CPU::ZeroPageX()
 unsigned short int CPU::ZeroPageY()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC));
-	logger.logAddressingMode("ZeroPageY", memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
+	logger.logAddressingMode("ZeroPageY", SoftRead(PC));
+	logger.logValue((SoftRead(PC) + Y) % 0x100);
 #endif
-	return (memory->read(PC++) + Y) % 0x100;
+	return (Read(PC++) + Y) % 0x100;
 }
 
 // Absolute Addressing reads two bytes from memory and
@@ -49,10 +111,12 @@ unsigned short int CPU::ZeroPageY()
 unsigned short int CPU::Absolute()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC), memory->read(PC + 1));
-	logger.logAddressingMode("Absolute", memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100));
+	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
+	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
+	logger.logAddressingMode("Absolute", addr);
+	logger.logValue(SoftRead(addr));
 #endif
-	unsigned short int address = memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100);
+	unsigned short int address = Read(PC) + (((unsigned short int) Read(PC + 1)) * 0x100);
 	PC += 2;
 	return address;
 }
@@ -66,10 +130,12 @@ unsigned short int CPU::Absolute()
 unsigned short int CPU::AbsoluteX()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC), memory->read(PC + 1));
-	logger.logAddressingMode("AbsoluteX", (memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100)));
+	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
+	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
+	logger.logAddressingMode("AbsoluteX", addr);
+	logger.logValue(SoftRead(addr + X));
 #endif
-	unsigned short int arg = (memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100));
+	unsigned short int arg = (Read(PC) + (((unsigned short int) Read(PC + 1)) * 0x100));
 	unsigned short int address = arg + X;
 
 	if ((address % 0x100) <= (arg % 0x100))
@@ -90,10 +156,12 @@ unsigned short int CPU::AbsoluteX()
 unsigned short int CPU::AbsoluteY()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC), memory->read(PC + 1));
-	logger.logAddressingMode("AbsoluteY", (memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100)));
+	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
+	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
+	logger.logAddressingMode("AbsoluteY", addr);
+	logger.logValue(SoftRead(addr + X));
 #endif
-	unsigned short int arg = (memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100));
+	unsigned short int arg = (Read(PC) + (((unsigned short int) Read(PC + 1)) * 0x100));
 	unsigned short int address = arg + Y;
 
 	if ((address % 0x100) < (arg % 0x100))
@@ -120,14 +188,16 @@ unsigned short int CPU::AbsoluteY()
 unsigned short int CPU::Indirect()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC), memory->read(PC + 1));
-	logger.logAddressingMode("Indirect", memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100));
+	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
+	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
+	logger.logAddressingMode("Indirect", addr);
+	logger.logValue(SoftRead(addr) + (((unsigned short int) SoftRead(addr + 1)) * 0x100));
 #endif
-	unsigned short int addr = memory->read(PC) + (((unsigned short int) memory->read(PC + 1)) * 0x100); // Address where true address will be fetched from
+	unsigned short int address = Read(PC) + (((unsigned short int) Read(PC + 1)) * 0x100); // Address where true address will be fetched from
 	PC += 2;
-	unsigned char lowbyte = (unsigned char) addr + 1; // Least significant byte of address incremented (but the MSB is ALWAYS unaffected)
-	unsigned short int highaddr = (addr & 0xFF00) + lowbyte; // Calculation of the MSB address
-	return memory->read(addr) + (((unsigned short int) memory->read(highaddr)) * 0x100);
+	unsigned char lowbyte = (unsigned char) address + 1; // Least significant byte of address incremented (but the MSB is ALWAYS unaffected)
+	unsigned short int highaddr = (address & 0xFF00) + lowbyte; // Calculation of the MSB address
+	return Read(address) + (((unsigned short int) Read(highaddr)) * 0x100);
 }
 
 // Indexed Indirect addressing reads a byte from memory
@@ -138,11 +208,15 @@ unsigned short int CPU::Indirect()
 unsigned short int CPU::IndexedIndirect()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC));
-	logger.logAddressingMode("IndexedIndirect", memory->read(PC));
+	int argument = SoftRead(PC);
+	int addrfin = SoftRead((unsigned char) (argument + X)) + (((unsigned short int) SoftRead((unsigned char) (argument + X + 1))) * 0x100);
+	logger.logAddressingArgs(SoftRead(PC));
+	logger.logAddressingMode("IndexedIndirect", SoftRead(PC));
+	logger.logFinalAddress(addrfin);
+	logger.logValue(SoftRead(addrfin));
 #endif
-	unsigned char arg = memory->read(PC++);
-	return memory->read((unsigned char) (arg + X)) + (((unsigned short int) memory->read((unsigned char) (arg + X + 1))) * 0x100);
+	unsigned char arg = Read(PC++);
+	return Read((unsigned char) (arg + X)) + (((unsigned short int) Read((unsigned char) (arg + X + 1))) * 0x100);
 }
 
 // Indirect Indexed addressing reads a byte from memory
@@ -155,11 +229,15 @@ unsigned short int CPU::IndexedIndirect()
 unsigned short int CPU::IndirectIndexed()
 {
 #ifdef DEBUG
-	logger.logAddressingArgs(memory->read(PC));
-	logger.logAddressingMode("IndirectIndexed", memory->read(PC));
+	int argument = SoftRead(PC);
+	int addrfin = SoftRead(argument) + (((unsigned short int) SoftRead((unsigned char) (argument + 1))) * 0x100);
+	logger.logAddressingArgs(SoftRead(PC));
+	logger.logAddressingMode("IndirectIndexed", SoftRead(PC));
+	logger.logFinalAddress(addrfin);
+	logger.logValue(SoftRead((unsigned short int) (addrfin + Y)));
 #endif
-	unsigned char arg = memory->read(PC++);
-	unsigned short int address = memory->read(arg) + (((unsigned short int) memory->read((unsigned char) (arg + 1))) * 0x100);
+	unsigned char arg = Read(PC++);
+	unsigned short int address = Read(arg) + (((unsigned short int) Read((unsigned char) (arg + 1))) * 0x100);
 
 	if (((address + Y) % 0x100) < (address % 0x100))
 	{
@@ -240,13 +318,13 @@ void CPU::BCC()
 {
 #ifdef DEBUG
 	logger.logOpName("BCC");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if ((P & 0x01) == 0)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -264,13 +342,13 @@ void CPU::BCS()
 {
 #ifdef DEBUG
 	logger.logOpName("BCS");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if ((P & 0x01) == 1)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -288,13 +366,13 @@ void CPU::BEQ()
 {
 #ifdef DEBUG
 	logger.logOpName("BEQ");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if (((P & 0x02) >> 1) == 1)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -332,13 +410,13 @@ void CPU::BMI()
 {
 #ifdef DEBUG
 	logger.logOpName("BMI");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if (((P & 0x80) >> 7) == 1)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -356,13 +434,13 @@ void CPU::BNE()
 {
 #ifdef DEBUG
 	logger.logOpName("BNE");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if (((P & 0x02) >> 1) == 0)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -380,13 +458,13 @@ void CPU::BPL()
 {
 #ifdef DEBUG
 	logger.logOpName("BPL");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if (((P & 0x80) >> 7) == 0)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -405,12 +483,12 @@ void CPU::BRK()
 #ifdef DEBUG
 	logger.logOpName("BRK");
 #endif
-	memory->write(PC >> 4, 0x100 + S);
-	memory->write(PC, 0x100 + (S - 1));
-	memory->write(P | 0x30, 0x100 + (S - 2));
+	Write(PC >> 4, 0x100 + S);
+	Write(PC, 0x100 + (S - 1));
+	Write(P | 0x30, 0x100 + (S - 2));
 	S -= 3;
 
-	PC = memory->read(0xFFFE) + (((unsigned short int) memory->read(0xFFFF)) * 0x100);
+	PC = Read(0xFFFE) + (((unsigned short int) Read(0xFFFF)) * 0x100);
 }
 
 // Branch if Overflow Clear
@@ -420,13 +498,13 @@ void CPU::BVC()
 {
 #ifdef DEBUG
 	logger.logOpName("BVC");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if (((P & 0x40) >> 6) == 0)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -444,13 +522,13 @@ void CPU::BVS()
 {
 #ifdef DEBUG
 	logger.logOpName("BVS");
-	logger.logAddressingArgs(memory->read(PC));
+	logger.logAddressingArgs(SoftRead(PC));
 #endif
 	if (((P & 0x40) >> 6) == 1)
 	{
 		unsigned char origPC = PC >> 2;
 		// Signed addition of the next byte to PC, then convert back to unsigned
-		PC = ((unsigned short int) (((short int) PC) + ((short int) memory->read(PC))));
+		PC = ((unsigned short int) (((short int) PC) + ((short int) Read(PC))));
 		oops = 1; // One cycle added for successful branch
 
 		if (origPC != (PC >> 2))
@@ -673,8 +751,8 @@ void CPU::JSR(unsigned short int M)
 	logger.logOpName("JSR");
 #endif
 	PC--;
-	memory->write(PC >> 8, 0x100 + S);
-	memory->write(PC, 0x100 + (S - 1));
+	Write(PC >> 8, 0x100 + S);
+	Write(PC, 0x100 + (S - 1));
 	S -= 2;
 
 	PC = M;
@@ -778,7 +856,7 @@ void CPU::PHA()
 #ifdef DEBUG
 	logger.logOpName("PHA");
 #endif
-	memory->write(A, 0x100 + S);
+	Write(A, 0x100 + S);
 	S--;
 }
 
@@ -789,7 +867,7 @@ void CPU::PHP()
 #ifdef DEBUG
 	logger.logOpName("PHP");
 #endif
-	memory->write(P | 0x30, 0x100 + S);
+	Write(P | 0x30, 0x100 + S);
 	S--;
 }
 
@@ -801,7 +879,7 @@ void CPU::PLA()
 #ifdef DEBUG
 	logger.logOpName("PLA");
 #endif
-	A = memory->read(0x100 + ++S);
+	A = Read(0x100 + ++S);
 	// if A is 0 set zero flag
 	(A == 0) ? P = P | 0x02 : P = P & 0xFD;
 	// set negative flag to bit 7 of A
@@ -816,7 +894,7 @@ void CPU::PLP()
 #ifdef DEBUG
 	logger.logOpName("PLP");
 #endif
-	P = (memory->read(0x100 + ++S) & 0xEF) | 0x20;
+	P = (Read(0x100 + ++S) & 0xEF) | 0x20;
 }
 
 // Rotate Left
@@ -868,8 +946,8 @@ void CPU::RTI()
 #ifdef DEBUG
 	logger.logOpName("RTI");
 #endif
-	P = (memory->read(0x100 + (S + 1)) & 0xEF) | 0x20;
-	PC = memory->read(0x100 + (S + 2)) + (((unsigned short int) memory->read(0x100 + (S + 3))) * 0x100);
+	P = (Read(0x100 + (S + 1)) & 0xEF) | 0x20;
+	PC = Read(0x100 + (S + 2)) + (((unsigned short int) Read(0x100 + (S + 3))) * 0x100);
 	S += 3;
 }
 
@@ -881,7 +959,7 @@ void CPU::RTS()
 #ifdef DEBUG
 	logger.logOpName("RTS");
 #endif
-	PC = (memory->read(0x100 + (S + 1)) + (((unsigned short int) memory->read(0x100 + (S + 2))) * 0x100));
+	PC = (Read(0x100 + (S + 1)) + (((unsigned short int) Read(0x100 + (S + 2))) * 0x100));
 	PC++;
 	S += 2;
 }
@@ -1053,21 +1131,24 @@ void CPU::TYA()
 	((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
-CPU::CPU(RAM* memory):
-	memory(memory),
+CPU::CPU(Cart* cart):
+	memory(new unsigned char[0x800]),
+	cart(cart),
 	cycles(0),
-	oops(0),
+	oops(false),
 	S(0xFD),
 	P(0x24),
 	A(0),
 	X(0),
 	Y(0)
 {
-#ifdef DEBUG
-	logger.attachMemory(memory);
-#endif
+	for (int i = 0; i < 0x800; i++)
+	{
+		memory[i] = 0xFF;
+	}
+
 	// Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-	PC = memory->read(0xFFFC) + (((unsigned short int) memory->read(0xFFFD)) * 0x100);
+	PC = Read(0xFFFC) + (((unsigned short int) Read(0xFFFD)) * 0x100);
 }
 
 // Currently unimplemented
@@ -1108,11 +1189,11 @@ bool CPU::NextOP()
 {
 #ifdef DEBUG
 	logger.logProgramCounter(PC);
-	logger.logOpCode(memory->read(PC));
+	logger.logOpCode(SoftRead(PC));
 	logger.logRegisters(A, X, Y, P, S);
 	logger.logCycles(cycles);
 #endif
-	unsigned char opcode = memory->read(PC++); 	// Retrieve opcode from memory
+	unsigned char opcode = Read(PC++); 	// Retrieve opcode from memory
 	unsigned short int addr;
 
 	oops = 0; // Reset oops cycles (some addressing modes take extra cycles in certain conditions)
@@ -1137,75 +1218,75 @@ bool CPU::NextOP()
 	// ADC OpCodes
 	case 0x69:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		ADC(memory->read(PC++));
+		ADC(Read(PC++));
 		cycles += 2;
 		break;
 	case 0x65:
-		ADC(memory->read(ZeroPage()));
+		ADC(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0x75:
-		ADC(memory->read(ZeroPageX()));
+		ADC(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0x6D:
-		ADC(memory->read(Absolute()));
+		ADC(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0x7D:
-		ADC(memory->read(AbsoluteX()));
+		ADC(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	case 0x79:
-		ADC(memory->read(AbsoluteY()));
+		ADC(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	case 0x61:
-		ADC(memory->read(IndexedIndirect()));
+		ADC(Read(IndexedIndirect()));
 		cycles += 6;
 		break;
 	case 0x71:
-		ADC(memory->read(IndirectIndexed()));
+		ADC(Read(IndirectIndexed()));
 		cycles += 5 + oops;
 		break;
 	// AND OpCodes
 	case 0x29:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		AND(memory->read(PC++));
+		AND(Read(PC++));
 		cycles += 2;
 		break;
 	case 0x25:
-		AND(memory->read(ZeroPage()));
+		AND(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0x35:
-		AND(memory->read(ZeroPageX()));
+		AND(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0x2D:
-		AND(memory->read(Absolute()));
+		AND(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0x3D:
-		AND(memory->read(AbsoluteX()));
+		AND(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	case 0x39:
-		AND(memory->read(AbsoluteY()));
+		AND(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	case 0x21:
-		AND(memory->read(IndexedIndirect()));
+		AND(Read(IndexedIndirect()));
 		cycles += 6;
 		break;
 	case 0x31:
-		AND(memory->read(IndirectIndexed()));
+		AND(Read(IndirectIndexed()));
 		cycles += 5 + oops;
 		break;
 	// ASL OpCodes
@@ -1218,28 +1299,28 @@ bool CPU::NextOP()
 		break;
 	case 0x06:
 		addr = ZeroPage();
-		memory->write(ASL(memory->read(addr)), addr);
+		Write(ASL(Read(addr)), addr);
 		cycles += 5;
 		break;
 	case 0x16:
 		addr = ZeroPageX();
-		memory->write(ASL(memory->read(addr)), addr);
+		Write(ASL(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x0E:
 		addr = Absolute();
-		memory->write(ASL(memory->read(addr)), addr);
+		Write(ASL(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x1E:
 		addr = AbsoluteX();
-		memory->write(ASL(memory->read(addr)), addr);
+		Write(ASL(Read(addr)), addr);
 		cycles += 7;
 		break;
 	// BCC OpCode
 	case 0x90:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BCC();
 		cycles += 2 + oops;
@@ -1247,7 +1328,7 @@ bool CPU::NextOP()
 	// BCS OpCode
 	case 0xB0:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BCS();
 		cycles += 2 + oops;
@@ -1255,24 +1336,24 @@ bool CPU::NextOP()
 	// BEQ OpCode
 	case 0xF0:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BEQ();
 		cycles += 2 + oops;
 		break;
 	// BIT OpCodes
 	case 0x24:
-		BIT(memory->read(ZeroPage()));
+		BIT(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0x2C:
-		BIT(memory->read(Absolute()));
+		BIT(Read(Absolute()));
 		cycles += 4;
 		break;
 	// BMI OpCode
 	case 0x30:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BMI();
 		cycles += 2 + oops;
@@ -1280,7 +1361,7 @@ bool CPU::NextOP()
 	// BNE OpCode
 	case 0xD0:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BNE();
 		cycles += 2 + oops;
@@ -1288,7 +1369,7 @@ bool CPU::NextOP()
 	// BPL OpCode
 	case 0x10:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BPL();
 		cycles += 2 + oops;
@@ -1301,7 +1382,7 @@ bool CPU::NextOP()
 	// BVC OpCode
 	case 0x50:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BVC();
 		cycles += 2 + oops;
@@ -1309,7 +1390,7 @@ bool CPU::NextOP()
 	// BVS OpCode
 	case 0x70:
 #ifdef DEBUG
-		logger.logAddressingMode("Relative", memory->read(PC));
+		logger.logAddressingMode("Relative", SoftRead(PC));
 #endif
 		BVS();
 		cycles += 2 + oops;
@@ -1337,93 +1418,93 @@ bool CPU::NextOP()
 	// CMP OpCodes
 	case 0xC9:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		CMP(memory->read(PC++));
+		CMP(Read(PC++));
 		cycles += 2;
 		break;
 	case 0xC5:
-		CMP(memory->read(ZeroPage()));
+		CMP(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0xD5:
-		CMP(memory->read(ZeroPageX()));
+		CMP(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0xCD:
-		CMP(memory->read(Absolute()));
+		CMP(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0xDD:
-		CMP(memory->read(AbsoluteX()));
+		CMP(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	case 0xD9:
-		CMP(memory->read(AbsoluteY()));
+		CMP(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	case 0xC1:
-		CMP(memory->read(IndexedIndirect()));
+		CMP(Read(IndexedIndirect()));
 		cycles += 6;
 		break;
 	case 0xD1:
-		CMP(memory->read(IndirectIndexed()));
+		CMP(Read(IndirectIndexed()));
 		cycles += 5 + oops;
 		break;
 	// CPX OpCodes
 	case 0xE0:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		CPX(memory->read(PC++));
+		CPX(Read(PC++));
 		cycles += 2;
 		break;
 	case 0xE4:
-		CPX(memory->read(ZeroPage()));
+		CPX(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0xEC:
-		CPX(memory->read(Absolute()));
+		CPX(Read(Absolute()));
 		cycles += 4;
 		break;
 	// CPY OpCodes
 	case 0xC0:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		CPY(memory->read(PC++));
+		CPY(Read(PC++));
 		cycles += 2;
 		break;
 	case 0xC4:
-		CPY(memory->read(ZeroPage()));
+		CPY(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0xCC:
-		CPY(memory->read(Absolute()));
+		CPY(Read(Absolute()));
 		cycles += 4;
 		break;
 	// DEC OpCodes
 	case 0xC6:
 		addr = ZeroPage();
-		memory->write(DEC(memory->read(addr)), addr);
+		Write(DEC(Read(addr)), addr);
 		cycles += 5;
 		break;
 	case 0xD6:
 		addr = ZeroPageX();
-		memory->write(DEC(memory->read(addr)), addr);
+		Write(DEC(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0xCE:
 		addr = Absolute();
-		memory->write(DEC(memory->read(addr)), addr);
+		Write(DEC(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0xDE:
 		addr = AbsoluteX();
-		memory->write(DEC(memory->read(addr)), addr);
+		Write(DEC(Read(addr)), addr);
 		cycles += 7;
 		break;
 	// DEX Opcode
@@ -1439,59 +1520,59 @@ bool CPU::NextOP()
 	// EOR OpCodes
 	case 0x49:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		EOR(memory->read(PC++));
+		EOR(Read(PC++));
 		cycles += 2;
 		break;
 	case 0x45:
-		EOR(memory->read(ZeroPage()));
+		EOR(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0x55:
-		EOR(memory->read(ZeroPageX()));
+		EOR(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0x4D:
-		EOR(memory->read(Absolute()));
+		EOR(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0x5D:
-		EOR(memory->read(AbsoluteX()));
+		EOR(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	case 0x59:
-		EOR(memory->read(AbsoluteY()));
+		EOR(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	case 0x41:
-		EOR(memory->read(IndexedIndirect()));
+		EOR(Read(IndexedIndirect()));
 		cycles += 6;
 		break;
 	case 0x51:
-		EOR(memory->read(IndirectIndexed()));
+		EOR(Read(IndirectIndexed()));
 		cycles += 5 + oops;
 		break;
 	// INC OpCodes
 	case 0xE6:
 		addr = ZeroPage();
-		memory->write(INC(memory->read(addr)), addr);
+		Write(INC(Read(addr)), addr);
 		cycles += 5;
 		break;
 	case 0xF6:
 		addr = ZeroPageX();
-		memory->write(INC(memory->read(addr)), addr);
+		Write(INC(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0xEE:
 		addr = Absolute();
-		memory->write(INC(memory->read(addr)), addr);
+		Write(INC(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0xFE:
 		addr = AbsoluteX();
-		memory->write(INC(memory->read(addr)), addr);
+		Write(INC(Read(addr)), addr);
 		cycles += 7;
 		break;
 	// INX OpCode
@@ -1530,88 +1611,88 @@ bool CPU::NextOP()
 	// LDA OpCodes
 	case 0xA9:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		LDA(memory->read(PC++));
+		LDA(Read(PC++));
 		cycles += 2;
 		break;
 	case 0xA5:
-		LDA(memory->read(ZeroPage()));
+		LDA(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0xB5:
-		LDA(memory->read(ZeroPageX()));
+		LDA(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0xAD:
-		LDA(memory->read(Absolute()));
+		LDA(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0xBD:
-		LDA(memory->read(AbsoluteX()));
+		LDA(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	case 0xB9:
-		LDA(memory->read(AbsoluteY()));
+		LDA(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	case 0xA1:
-		LDA(memory->read(IndexedIndirect()));
+		LDA(Read(IndexedIndirect()));
 		cycles += 6;
 		break;
 	case 0xB1:
-		LDA(memory->read(IndirectIndexed()));
+		LDA(Read(IndirectIndexed()));
 		cycles += 5 + oops;
 		break;
 	// LDX OpCodes
 	case 0xA2:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		LDX(memory->read(PC++));
+		LDX(Read(PC++));
 		cycles += 2;
 		break;
 	case 0xA6:
-		LDX(memory->read(ZeroPage()));
+		LDX(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0xB6:
-		LDX(memory->read(ZeroPageY()));
+		LDX(Read(ZeroPageY()));
 		cycles += 4;
 		break;
 	case 0xAE:
-		LDX(memory->read(Absolute()));
+		LDX(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0xBE:
-		LDX(memory->read(AbsoluteY()));
+		LDX(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	// LDY OpCodes
 	case 0xA0:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		LDY(memory->read(PC++));
+		LDY(Read(PC++));
 		cycles += 2;
 		break;
 	case 0xA4:
-		LDY(memory->read(ZeroPage()));
+		LDY(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0xB4:
-		LDY(memory->read(ZeroPageX()));
+		LDY(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0xAC:
-		LDY(memory->read(Absolute()));
+		LDY(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0xBC:
-		LDY(memory->read(AbsoluteX()));
+		LDY(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	// LSR OpCodes
@@ -1624,22 +1705,22 @@ bool CPU::NextOP()
 		break;
 	case 0x46:
 		addr = ZeroPage();
-		memory->write(LSR(memory->read(addr)), addr);
+		Write(LSR(Read(addr)), addr);
 		cycles += 5;
 		break;
 	case 0x56:
 		addr = ZeroPageX();
-		memory->write(LSR(memory->read(addr)), addr);
+		Write(LSR(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x4E:
 		addr = Absolute();
-		memory->write(LSR(memory->read(addr)), addr);
+		Write(LSR(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x5E:
 		addr = AbsoluteX();
-		memory->write(LSR(memory->read(addr)), addr);
+		Write(LSR(Read(addr)), addr);
 		cycles += 7;
 		break;
 	// NOP OPCode
@@ -1650,38 +1731,38 @@ bool CPU::NextOP()
 	// ORA OpCodes
 	case 0x09:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		ORA(memory->read(PC++));
+		ORA(Read(PC++));
 		cycles += 2;
 		break;
 	case 0x05:
-		ORA(memory->read(ZeroPage()));
+		ORA(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0x15:
-		ORA(memory->read(ZeroPageX()));
+		ORA(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0x0D:
-		ORA(memory->read(Absolute()));
+		ORA(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0x1D:
-		ORA(memory->read(AbsoluteX()));
+		ORA(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	case 0x19:
-		ORA(memory->read(AbsoluteY()));
+		ORA(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	case 0x01:
-		ORA(memory->read(IndexedIndirect()));
+		ORA(Read(IndexedIndirect()));
 		cycles += 6;
 		break;
 	case 0x11:
-		ORA(memory->read(IndirectIndexed()));
+		ORA(Read(IndirectIndexed()));
 		cycles += 5 + oops;
 		break;
 	// PHA OpCode
@@ -1714,22 +1795,22 @@ bool CPU::NextOP()
 		break;
 	case 0x26:
 		addr = ZeroPage();
-		memory->write(ROL(memory->read(addr)), addr);
+		Write(ROL(Read(addr)), addr);
 		cycles += 5;
 		break;
 	case 0x36:
 		addr = ZeroPageX();
-		memory->write(ROL(memory->read(addr)), addr);
+		Write(ROL(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x2E:
 		addr = Absolute();
-		memory->write(ROL(memory->read(addr)), addr);
+		Write(ROL(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x3E:
 		addr = AbsoluteX();
-		memory->write(ROL(memory->read(addr)), addr);
+		Write(ROL(Read(addr)), addr);
 		cycles += 7;
 		break;
 	// ROR OpCodes
@@ -1742,22 +1823,22 @@ bool CPU::NextOP()
 		break;
 	case 0x66:
 		addr = ZeroPage();
-		memory->write(ROR(memory->read(addr)), addr);
+		Write(ROR(Read(addr)), addr);
 		cycles += 5;
 		break;
 	case 0x76:
 		addr = ZeroPageX();
-		memory->write(ROR(memory->read(addr)), addr);
+		Write(ROR(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x6E:
 		addr = Absolute();
-		memory->write(ROR(memory->read(addr)), addr);
+		Write(ROR(Read(addr)), addr);
 		cycles += 6;
 		break;
 	case 0x7E:
 		addr = AbsoluteX();
-		memory->write(ROR(memory->read(addr)), addr);
+		Write(ROR(Read(addr)), addr);
 		cycles += 7;
 		break;
 	// RTI OpCode
@@ -1773,38 +1854,38 @@ bool CPU::NextOP()
 	// SBC OpCodes
 	case 0xE9:
 #ifdef DEBUG
-		logger.logAddressingArgs(memory->read(PC));
+		logger.logAddressingArgs(SoftRead(PC));
 		logger.logAddressingMode("Immediate");
 #endif
-		SBC(memory->read(PC++));
+		SBC(Read(PC++));
 		cycles += 2;
 		break;
 	case 0xE5:
-		SBC(memory->read(ZeroPage()));
+		SBC(Read(ZeroPage()));
 		cycles += 3;
 		break;
 	case 0xF5:
-		SBC(memory->read(ZeroPageX()));
+		SBC(Read(ZeroPageX()));
 		cycles += 4;
 		break;
 	case 0xED:
-		SBC(memory->read(Absolute()));
+		SBC(Read(Absolute()));
 		cycles += 4;
 		break;
 	case 0xFD:
-		SBC(memory->read(AbsoluteX()));
+		SBC(Read(AbsoluteX()));
 		cycles += 4 + oops;
 		break;
 	case 0xF9:
-		SBC(memory->read(AbsoluteY()));
+		SBC(Read(AbsoluteY()));
 		cycles += 4 + oops;
 		break;
 	case 0xE1:
-		SBC(memory->read(IndexedIndirect()));
+		SBC(Read(IndexedIndirect()));
 		cycles += 6;
 		break;
 	case 0xF1:
-		SBC(memory->read(IndirectIndexed()));
+		SBC(Read(IndirectIndexed()));
 		cycles += 5 + oops;
 		break;
 	// SEC OpCode
@@ -1824,57 +1905,57 @@ bool CPU::NextOP()
 		break;
 	// STA OpCodes
 	case 0x85:
-		memory->write(STA(), ZeroPage());
+		Write(STA(), ZeroPage());
 		cycles += 3;
 		break;
 	case 0x95:
-		memory->write(STA(), ZeroPageX());
+		Write(STA(), ZeroPageX());
 		cycles += 4;
 		break;
 	case 0x8D:
-		memory->write(STA(), Absolute());
+		Write(STA(), Absolute());
 		cycles += 4;
 		break;
 	case 0x9D:
-		memory->write(STA(), AbsoluteX());
+		Write(STA(), AbsoluteX());
 		cycles += 5;
 		break;
 	case 0x99:
-		memory->write(STA(), AbsoluteY());
+		Write(STA(), AbsoluteY());
 		cycles += 5;
 		break;
 	case 0x81:
-		memory->write(STA(), IndexedIndirect());
+		Write(STA(), IndexedIndirect());
 		cycles += 6;
 		break;
 	case 0x91:
-		memory->write(STA(), IndirectIndexed());
+		Write(STA(), IndirectIndexed());
 		cycles += 6;
 		break;
 	// STX OpCodes
 	case 0x86:
-		memory->write(STX(), ZeroPage());
+		Write(STX(), ZeroPage());
 		cycles += 3;
 		break;
 	case 0x96:
-		memory->write(STX(), ZeroPageY());
+		Write(STX(), ZeroPageY());
 		cycles += 4;
 		break;
 	case 0x8E:
-		memory->write(STX(), Absolute());
+		Write(STX(), Absolute());
 		cycles += 4;
 		break;
 	// STY OpCodes
 	case 0x84:
-		memory->write(STY(), ZeroPage());
+		Write(STY(), ZeroPage());
 		cycles += 3;
 		break;
 	case 0x94:
-		memory->write(STY(), ZeroPageX());
+		Write(STY(), ZeroPageX());
 		cycles += 4;
 		break;
 	case 0x8C:
-		memory->write(STY(), Absolute());
+		Write(STY(), Absolute());
 		cycles += 4;
 		break;
 	// TAX OpCode
