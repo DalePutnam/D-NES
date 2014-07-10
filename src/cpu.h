@@ -8,7 +8,6 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-#include "ram.h"
 #ifdef DEBUG
 #include "log/logger.h"
 #endif

@@ -8,7 +8,7 @@
 #include <iostream>
 #include "nrom.h"
 
-unsigned char NROM::Read(unsigned short int address)
+unsigned char NROM::PrgRead(unsigned short int address)
 {
 	// Battery backed memory, not implemented
 	if (address >= 0x0000 && address < 0x2000)
@@ -28,7 +28,7 @@ unsigned char NROM::Read(unsigned short int address)
 	}
 }
 
-void NROM::Write(unsigned char M, unsigned short int address)
+void NROM::PrgWrite(unsigned char M, unsigned short int address)
 {
 	if (address >= 0x0000 && address < 0x2000)
 	{
@@ -39,6 +39,10 @@ void NROM::Write(unsigned char M, unsigned short int address)
 		prg[address - 0x2000] = M;
 	}
 }
+
+unsigned char NROM::ChrRead(unsigned short int address) { return 0; }
+
+void NROM::ChrWrite(unsigned char M, unsigned short int address) {}
 
 NROM::NROM(std::ifstream& rom) : mirroring(0)
 {

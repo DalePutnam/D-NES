@@ -8,14 +8,24 @@
 #include <iostream>
 #include "cart.h"
 
-unsigned char Cart::Read(unsigned short int address)
+unsigned char Cart::PrgRead(unsigned short int address)
 {
-	return mapper->Read(address);
+	return mapper->PrgRead(address);
 }
 
-void Cart::Write(unsigned char M, unsigned short int address)
+void Cart::PrgWrite(unsigned char M, unsigned short int address)
 {
-	mapper->Write(M, address);
+	mapper->PrgWrite(M, address);
+}
+
+unsigned char Cart::ChrRead(unsigned short int address)
+{
+	return mapper->ChrRead(address);
+}
+
+void Cart::ChrWrite(unsigned char M, unsigned short int address)
+{
+	mapper->ChrWrite(M, address);
 }
 
 Cart::Cart(std::string filename)

@@ -18,7 +18,7 @@ unsigned char CPU::SoftRead(unsigned short int address)
 	}
 	else if (address > 0x5FFF && address < 0x10000)
 	{
-		return cart->Read(address - 0x6000);
+		return cart->PrgRead(address - 0x6000);
 	}
 	else
 	{
@@ -39,7 +39,7 @@ unsigned char CPU::Read(unsigned short int address)
 	}
 	else if (address > 0x5FFF && address < 0x10000)
 	{
-		return cart->Read(address - 0x6000);
+		return cart->PrgRead(address - 0x6000);
 	}
 	else
 	{
@@ -58,7 +58,7 @@ void CPU::Write(unsigned char M, unsigned short int address)
 	}
 	else if (address > 0x5FFF && address < 0x10000)
 	{
-		return cart->Write(M, address - 0x6000);
+		return cart->PrgWrite(M, address - 0x6000);
 	}
 	else
 	{

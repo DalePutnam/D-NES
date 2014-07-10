@@ -14,7 +14,6 @@
 
 using namespace std;
 
-
 int main(int argc, char* argv[])
 {
 	// If no ROM file specified then exit

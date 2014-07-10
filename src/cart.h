@@ -18,8 +18,11 @@ class Cart
 	Mapper* mapper;
 
 public:
-	unsigned char Read(unsigned short int address);
-	void Write(unsigned char M, unsigned short int address);
+	unsigned char PrgRead(unsigned short int address);
+	void PrgWrite(unsigned char M, unsigned short int address);
+
+	unsigned char ChrRead(unsigned short int address);
+	void ChrWrite(unsigned char M, unsigned short int address);
 
 	Cart(std::string filename);
 	~Cart();
