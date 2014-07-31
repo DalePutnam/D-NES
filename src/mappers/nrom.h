@@ -9,6 +9,7 @@
 #define NROM_H_
 
 #include <fstream>
+#include <string>
 #include "mapper.h"
 
 class NROM : public Mapper

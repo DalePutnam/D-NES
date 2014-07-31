@@ -75,14 +75,12 @@ NROM::NROM(std::ifstream& rom) : mirroring(0)
 			chr = new char[chrSize];
 			rom.read(chr, chrSize);
 		}
-
-		rom.close();
 	}
 	else
 	{
 		std::cout << "Open Failed!!" << std::endl;
 	}
-
+	rom.close();
 }
 
 NROM::~NROM()
