@@ -156,7 +156,6 @@ void Logger::logAddressingMode(string mode, unsigned short int addr)
 	}
 	else if (mode.compare("IndirectIndexed") == 0)
 	{
-		unsigned char arg = (unsigned char) addr;
 		unsigned short int addrfin = finalAddr; // get address
 		int val = value; // Get Value
 		oss << hex << uppercase << setfill('0') << setw(2) <<  addrArg1 << "),Y = " << setfill('0') << setw(4) << addrfin; // Format original address
@@ -259,8 +258,8 @@ void Logger::printLog()
 	cout << setfill('0') << setw(2) << X << " Y:"; // Output X register
 	cout << setfill('0') << setw(2) << Y << " P:"; // Output Y Register
 	cout << setfill('0') << setw(2) << P << " SP:"; // Output Processor Status
-	cout << setfill('0') << setw(2) << S << endl; // Output Stack Pointer
-
+	cout << setfill('0') << setw(2) << S << " CYC:"; // Output Stack Pointer
+	cout << dec << setfill(' ') << setw(3) << cycles << endl;
 	// Reset logged values
 	opcode = 0;
 	opname = "";

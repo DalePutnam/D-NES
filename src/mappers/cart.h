@@ -10,7 +10,7 @@
 
 #include <string>
 
-class Mapper
+class Cart
 {
 public:
 	virtual unsigned char PrgRead(unsigned short int address) = 0;
@@ -19,7 +19,7 @@ public:
 	virtual unsigned char ChrRead(unsigned short int address) = 0;
 	virtual void ChrWrite(unsigned char M, unsigned short int address) = 0;
 
-	virtual ~Mapper();
+	virtual ~Cart();
 };
 
 

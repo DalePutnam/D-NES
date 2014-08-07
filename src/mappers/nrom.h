@@ -10,9 +10,9 @@
 
 #include <fstream>
 #include <string>
-#include "mapper.h"
+#include "Cart.h"
 
-class NROM : public Mapper
+class NROM : public Cart
 {
 	int mirroring;
 	int chrSize;

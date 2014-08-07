@@ -8,11 +8,15 @@
 #include <ctime>
 #include <string>
 #include <iostream>
+#include <chrono>
+#include <ratio>
 
 #include "cpu.h"
 #include "memory.h"
+#include "cart_factory.h"
 
 using namespace std;
+
 
 int main(int argc, char* argv[])
 {
@@ -23,23 +27,20 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
+		CartFactory factory;
+
 		string filename(argv[1]);
-		Cart* cart = new Cart(filename);
-		//RAM* ram = new RAM(filename); // Initialize RAM (a certain section of the main memory is devoted to the .nes file)
+		Cart* cart = factory.getCartridge(filename);
 		CPU* cpu = new CPU(cart); // Initialize CPU
 
-		clock_t t1, t2, diff;
-		t1 = clock(); // Record starting time
+		chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 
 		cpu->Run(-1);
 
-		t2 = clock(); // Recored ending time
-		diff = t2 - t1; // Recored running time
+		chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
+		chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
 
-		// Print running time in milliseconds
-		float milliseconds = diff / (CLOCKS_PER_SEC / 1000);
-
-		cout << "CPU ran for " << milliseconds << "ms" << endl;
+		cout << "CPU ran for " << time_span.count() << "s" << endl;
 
 		// Deallocate memory
 		delete cpu;

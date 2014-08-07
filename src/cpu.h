@@ -16,7 +16,7 @@
  * 6502 CPU Simulator
  */
 
-#include "cart.h"
+#include "mappers/cart.h"
 
 class CPU
 {
