@@ -26,13 +26,12 @@ class CPU
 #endif
 
 	// CPU Main Memory
-	//RAM* memory;
-	unsigned char* memory;
+	unsigned char memory[0x800];
 
 	Cart* cart;
 
 	// Cycle Counters
-	int cycles;
+	long int* cycles;
 
 	// Extra read flag
 	bool oops;
@@ -143,7 +142,7 @@ public:
 #endif
 
 
-	CPU(Cart* cart);
+	CPU(Cart* cart, long int* cycles);
 	int Run(int cyc); // Run CPU for the specified number of cycles
 	void Reset(); // Reset the CPU to starting conditions
 	~CPU();

@@ -29,7 +29,7 @@ unsigned char CPU::SoftRead(unsigned short int address)
 
 unsigned char CPU::Read(unsigned short int address)
 {
-	cycles += 3;
+	*cycles += 3;
 	// Any address less then 0x2000 is just the
 	// Internal Ram mirrored every 0x800 bytes
 	if (address < 0x2000)
@@ -48,7 +48,7 @@ unsigned char CPU::Read(unsigned short int address)
 
 void CPU::Write(unsigned char M, unsigned short int address)
 {
-	cycles += 3;
+	*cycles += 3;
 	// Any address less then 0x2000 is just the
 	// Internal Ram mirrored every 0x800 bytes
 	if (address < 0x2000)
@@ -1246,10 +1246,9 @@ void CPU::TYA()
 	((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
-CPU::CPU(Cart* cart):
-	memory(new unsigned char[0x800]),
+CPU::CPU(Cart* cart, long int* cycles):
 	cart(cart),
-	cycles(0),
+	cycles(cycles),
 	oops(false),
 	S(0xFD),
 	P(0x24),
@@ -1264,6 +1263,7 @@ CPU::CPU(Cart* cart):
 
 	// Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
 	PC = Read(0xFFFC) + (((unsigned short int) Read(0xFFFD)) * 0x100);
+	*cycles -= 6;
 }
 
 // Currently unimplemented
@@ -1273,12 +1273,12 @@ void CPU::Reset()
 
 // Run the CPU for the specified number of cycles
 // Since the instructions all take varying numbers
-// of cycles the CPU will like run a few cycles past cyc.
+// of cycles the CPU will likely run a few cycles past cyc.
 // If cyc is -1 then the CPU will simply run until it encounters
 // an illegal opcode
 int CPU::Run(int cyc)
 {
-	cycles = 0;
+	//cycles = 0;
 
 	if (cyc == -1)
 	{
@@ -1289,13 +1289,13 @@ int CPU::Run(int cyc)
 	}
 	else
 	{
-		while (cyc > cycles) // Run until cycles overtakes cyc
+		while (cyc > *cycles) // Run until cycles overtakes cyc
 		{
 			if(!NextOP()) break;
 		}
 	}
 
-	return 0;
+	return *cycles;
 }
 
 // Execute the next instruction at PC and return true
@@ -1306,7 +1306,7 @@ bool CPU::NextOP()
 	logger.logProgramCounter(PC);
 	logger.logOpCode(SoftRead(PC));
 	logger.logRegisters(A, X, Y, P, S);
-	logger.logCycles(cycles % 341);
+	logger.logCycles(*cycles % 341);
 #endif
 	unsigned char opcode = Read(PC++); 	// Retrieve opcode from memory
 	unsigned short int addr;
@@ -2050,5 +2050,4 @@ bool CPU::NextOP()
 
 CPU::~CPU()
 {
-	delete[] memory;
 }

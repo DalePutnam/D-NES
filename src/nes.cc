@@ -1,14 +1,16 @@
 /*
- * cart_factory.cc
+ * nes.cc
  *
- *  Created on: Aug 7, 2014
+ *  Created on: Aug 28, 2014
  *      Author: Dale
  */
 
-#include "cart_factory.h"
+#include <sstream>
+
+#include "nes.h"
 #include "mappers/nrom.h"
 
-Cart* CartFactory::getCartridge(std::string filename)
+NES::NES(std::string filename) : clock(0)
 {
 	// Open file stream to ROM file
 	std::ifstream rom(filename.c_str(), std::ifstream::in);
@@ -26,15 +28,33 @@ Cart* CartFactory::getCartridge(std::string filename)
 		switch (mapper_number)
 		{
 		case 0x00:
-			return new NROM(rom);
+			cart = new NROM(rom);
+			break;
 		default:
 			rom.close();
-			return 0;
+			std::ostringstream oss;
+			oss << "Mapper " << mapper_number << " specified by " << filename << " does not exist.";
+			throw oss.str();
 			break;
 		}
-	}
 
-	return 0;
+		cpu = new CPU(cart, &clock);
+		//ppu = new PPU(cart, &clock);
+	}
 }
 
+void NES::Start()
+{
+	cpu->Run(-1);
+}
+
+void NES::Pause() {}
+void NES::Reset() {}
+
+NES::~NES()
+{
+	delete cpu;
+	//delete ppu;
+	delete cart;
+}
 
