@@ -8,8 +8,11 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include src/mappers/subdir.mk
--include src/log/subdir.mk
+-include src/resources/subdir.mk
+-include src/FrontEnd/subdir.mk
+-include src/Emulator/mappers/subdir.mk
+-include src/Emulator/log/subdir.mk
+-include src/Emulator/subdir.mk
 -include src/subdir.mk
 -include subdir.mk
 -include objects.mk
@@ -40,13 +43,16 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: D-NES
+all: pre-build main-build
+
+# Main-build Target
+main-build: D-NES
 
 # Tool invocations
 D-NES: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MinGW C++ Linker'
-	g++  -o "D-NES" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -o "D-NES" $(OBJS) $(USER_OBJS) $(LIBS)  `pkg-config --cflags --libs gtkmm-3.0`
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -55,7 +61,11 @@ clean:
 	-$(RM) $(C++_DEPS)$(OBJS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) D-NES
 	-@echo ' '
 
+pre-build:
+	-cp D:/Source/D-NES/src/resources/d-nes.gschema.xml C:/gtk/share/glib-2.0/schemas/d-nes.gschema.xml; glib-compile-schemas C:/gtk/share/glib-2.0/schemas/
+	-@echo ' '
+
 .PHONY: all clean dependents
-.SECONDARY:
+.SECONDARY: main-build pre-build
 
 -include ../makefile.targets

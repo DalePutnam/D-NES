@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+	<gresource prefix="/glade">
+		<file alias="MainWindow.glade" preprocess="xml-stripblanks">../src/FrontEnd/glade/MainWindow.glade</file>
+		<file alias="SettingsWindow.glade" preprocess="xml-stripblanks">../src/FrontEnd/glade/SettingsWindow.glade</file>
+	</gresource>
+</gresources>

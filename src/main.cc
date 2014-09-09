@@ -10,8 +10,20 @@
 #include <iostream>
 #include <chrono>
 #include <ratio>
+#include <gtkmm.h>
 
-#include "nes.h"
+#include "FrontEnd/main_window.h"
+
+int main(int argc, char *argv[])
+{
+    Glib::RefPtr<Gtk::Application> app = Gtk::Application::create(argc, argv, "org.TheWretchedEgg.D-NES");
+
+    MainWindow window;
+
+    return app->run(window);
+}
+
+/*#include "Emulator/nes.h"
 
 using namespace std;
 
@@ -40,6 +52,6 @@ int main(int argc, char* argv[])
 	}
 
 	return 0;
-}
+}*/
 
 
