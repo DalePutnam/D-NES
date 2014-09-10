@@ -13,6 +13,7 @@
 
 class MainWindow : public Gtk::Window
 {
+	Glib::RefPtr<Gtk::Builder> builder;
 	SettingsWindow* settings;
 
 	// Signal Handlers

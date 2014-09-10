@@ -43,16 +43,13 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: pre-build main-build
-
-# Main-build Target
-main-build: D-NES
+all: D-NES
 
 # Tool invocations
 D-NES: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MinGW C++ Linker'
-	g++ -o "D-NES" $(OBJS) $(USER_OBJS) $(LIBS)  `pkg-config --cflags --libs gtkmm-3.0`
+	g++ -o "D-NES" -L"C:\boost\bin.v2\libs\program_options" $(OBJS) $(USER_OBJS) $(LIBS)  `pkg-config --cflags --libs gtkmm-3.0`
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -61,11 +58,7 @@ clean:
 	-$(RM) $(C++_DEPS)$(OBJS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) D-NES
 	-@echo ' '
 
-pre-build:
-	-cp D:/Source/D-NES/src/resources/d-nes.gschema.xml C:/gtk/share/glib-2.0/schemas/d-nes.gschema.xml; glib-compile-schemas C:/gtk/share/glib-2.0/schemas/
-	-@echo ' '
-
 .PHONY: all clean dependents
-.SECONDARY: main-build pre-build
+.SECONDARY:
 
 -include ../makefile.targets

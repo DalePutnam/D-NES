@@ -75,9 +75,9 @@ MainWindow::MainWindow()
 	set_title("D-NES");
 
 #ifdef DEBUG
-	Glib::RefPtr<Gtk::Builder> builder = Gtk::Builder::create_from_file("D:/Source/D-NES/src/FrontEnd/glade/MainWindow.glade");
+	builder = Gtk::Builder::create_from_file("D:/Source/D-NES/src/FrontEnd/glade/MainWindow.glade");
 #else
-	Glib::RefPtr<Gtk::Builder> builder = Gtk::Builder::create_from_resource("/glade/MainWindow.glade");
+	builder = Gtk::Builder::create_from_resource("/glade/MainWindow.glade");
 #endif
 
 	Gtk::Box* vbox = 0;

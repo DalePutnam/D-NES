@@ -10,7 +10,7 @@
 #include <iostream>
 #include <chrono>
 #include <ratio>
-#include <gtkmm.h>
+#include <gtkmm/application.h>
 
 #include "FrontEnd/main_window.h"
 

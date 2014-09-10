@@ -8,13 +8,14 @@
 #ifndef SETTINGS_DIALOG_H_
 #define SETTINGS_WINDOW_H_
 
-#include <gtkmm/dialog.h>
+#include <gtkmm/window.h>
 #include <gtkmm/builder.h>
-
+#include <boost/program_options.hpp>
 
 class SettingsWindow : public Gtk::Window
 {
 	Glib::RefPtr<Gtk::Builder> builder;
+	boost::program_options::variables_map options;
 
 	void okClicked();
 	void cancelClicked();

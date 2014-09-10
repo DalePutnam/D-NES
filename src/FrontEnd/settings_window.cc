@@ -6,9 +6,11 @@
  */
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <gtkmm/notebook.h>
 #include <gtkmm/button.h>
 #include <gtkmm/entry.h>
+#include <gtkmm/box.h>
 #include "settings_window.h"
 
 void SettingsWindow::okClicked()
@@ -31,6 +33,10 @@ SettingsWindow::SettingsWindow()
 	set_title("D-NES Settings");
 	set_resizable(false);
 	set_modal(true);
+
+	boost::program_options::options_description desc("Configuration");
+	std::ifstream ini_file("./config/config.ini");
+	boost::program_options::store(boost::program_options::parse_config_file(ini_file, desc), options);
 
 #ifdef DEBUG
 	builder = Gtk::Builder::create_from_file("D:/Source/D-NES/src/FrontEnd/glade/SettingsWindow.glade");
