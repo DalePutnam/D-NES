@@ -52,7 +52,7 @@ main-build: D-NES
 D-NES: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MinGW C++ Linker'
-	g++ -o "D-NES" $(OBJS) $(USER_OBJS) $(LIBS) `pkg-config --cflags --libs gtkmm-3.0` -mwindows
+	g++ -o "D-NES" $(OBJS) $(USER_OBJS) $(LIBS) -L"C:\boost\bin.v2\libs\program_options" `pkg-config --cflags --libs gtkmm-3.0` -mwindows
 	@echo 'Finished building target: $@'
 	@echo ' '
 
