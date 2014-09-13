@@ -4,14 +4,17 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CC_SRCS += \
+../src/FrontEnd/app_settings.cc \
 ../src/FrontEnd/main_window.cc \
 ../src/FrontEnd/settings_window.cc 
 
 OBJS += \
+./src/FrontEnd/app_settings.o \
 ./src/FrontEnd/main_window.o \
 ./src/FrontEnd/settings_window.o 
 
 CC_DEPS += \
+./src/FrontEnd/app_settings.d \
 ./src/FrontEnd/main_window.d \
 ./src/FrontEnd/settings_window.d 
 

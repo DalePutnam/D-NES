@@ -10,12 +10,13 @@
 
 #include <gtkmm/window.h>
 #include <gtkmm/builder.h>
-#include <boost/program_options.hpp>
+
+#include "app_settings.h"
 
 class SettingsWindow : public Gtk::Window
 {
+	AppSettings* settings;
 	Glib::RefPtr<Gtk::Builder> builder;
-	boost::program_options::variables_map options;
 
 	void okClicked();
 	void cancelClicked();

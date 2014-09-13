@@ -46,19 +46,19 @@ endif
 all: pre-build main-build
 
 # Main-build Target
-main-build: D-NES
+main-build: D-NES.exe
 
 # Tool invocations
-D-NES: $(OBJS) $(USER_OBJS)
+D-NES.exe: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MinGW C++ Linker'
-	g++ -o "D-NES" $(OBJS) $(USER_OBJS) $(LIBS) -L"C:\boost\bin.v2\libs\program_options" `pkg-config --cflags --libs gtkmm-3.0` -mwindows
+	g++ -o "D-NES.exe" $(OBJS) $(USER_OBJS) $(LIBS) -L"C:\boost\bin.v2\libs\program_options" `pkg-config --cflags --libs gtkmm-3.0` -mwindows
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(C++_DEPS)$(OBJS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) D-NES
+	-$(RM) $(C++_DEPS)$(OBJS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) D-NES.exe
 	-@echo ' '
 
 pre-build:
