@@ -25,6 +25,7 @@ C_UPPER_DEPS :=
 SUBDIRS := \
 src/resources \
 src \
+src/FrontEnd/utilities \
 src/FrontEnd \
 src/Emulator \
 src/Emulator/mappers \

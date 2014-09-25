@@ -10,7 +10,14 @@
 #include "nes.h"
 #include "mappers/nrom.h"
 
-NES::NES(std::string filename) : clock(0)
+#ifdef DEBUG
+void NES::setLogStream(std::ostream& out)
+{
+	cpu->setLogStream(out);
+}
+#endif
+
+NES::NES(std::string filename) : clock(0), stop(true)
 {
 	// Open file stream to ROM file
 	std::ifstream rom(filename.c_str(), std::ifstream::in);
@@ -33,19 +40,43 @@ NES::NES(std::string filename) : clock(0)
 		default:
 			rom.close();
 			std::ostringstream oss;
-			oss << "Mapper " << mapper_number << " specified by " << filename << " does not exist.";
+			oss << "Mapper " << (int) mapper_number << " specified by " << filename << " does not exist.";
 			throw oss.str();
 			break;
 		}
 
-		cpu = new CPU(cart, &clock);
+		cpu = new CPU(*this, cart, &clock);
 		//ppu = new PPU(cart, &clock);
 	}
 }
 
+bool NES::isStopped()
+{
+	bool isStopped;
+	mtx.lock();
+	isStopped = stop;
+	mtx.unlock();
+	return isStopped;
+}
+
 void NES::Start()
 {
+	mtx.lock();
+	stop = false;
+	mtx.unlock();
+
 	cpu->Run(-1);
+
+	mtx.lock();
+	stop = true;
+	mtx.unlock();
+}
+
+void NES::Stop()
+{
+	mtx.lock();
+	stop = true;
+	mtx.unlock();
 }
 
 void NES::Pause() {}

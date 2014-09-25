@@ -9,6 +9,7 @@
 #define CPU_H_
 
 #ifdef DEBUG
+#include <iostream>
 #include "log/logger.h"
 #endif
 
@@ -17,6 +18,8 @@
  */
 
 #include "mappers/cart.h"
+
+class NES;
 
 class CPU
 {
@@ -28,6 +31,7 @@ class CPU
 	// CPU Main Memory
 	unsigned char memory[0x800];
 
+	NES& nes;
 	Cart* cart;
 
 	// Cycle Counters
@@ -139,10 +143,10 @@ public:
 
 #ifdef DEBUG
 	unsigned char SoftRead(unsigned short int address);
+	void setLogStream(std::ostream& out);
 #endif
 
-
-	CPU(Cart* cart, long int* cycles);
+	CPU(NES& nes, Cart* cart, long int* cycles);
 	int Run(int cyc); // Run CPU for the specified number of cycles
 	void Reset(); // Reset the CPU to starting conditions
 	~CPU();

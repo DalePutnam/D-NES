@@ -8,9 +8,11 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 #include <string>
+#include <iostream>
 
 class Logger
 {
+	std::ostream* outstream;
 	int opcode; // Current OpCode
 	std::string opname; // Current instruction name
 	int addrArg1; // First address argument
@@ -30,6 +32,7 @@ class Logger
 
 public:
 	Logger();
+	void setLogStream(std::ostream& out);
 	void setSpecial(); // Set Special flag
 	void logOpCode(int opcode); // Set OpCode
 	void logOpName(std::string opname); // Set Instruction Name

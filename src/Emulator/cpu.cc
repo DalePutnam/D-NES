@@ -6,6 +6,7 @@
  */
 #include <iostream>
 #include "cpu.h"
+#include "nes.h"
 
 #ifdef DEBUG
 unsigned char CPU::SoftRead(unsigned short int address)
@@ -24,6 +25,11 @@ unsigned char CPU::SoftRead(unsigned short int address)
 	{
 		return 0x00;
 	}
+}
+
+void CPU::setLogStream(std::ostream& out)
+{
+	logger.setLogStream(out);
 }
 #endif
 
@@ -1246,7 +1252,8 @@ void CPU::TYA()
 	((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
-CPU::CPU(Cart* cart, long int* cycles):
+CPU::CPU(NES& nes, Cart* cart, long int* cycles):
+	nes(nes),
 	cart(cart),
 	cycles(cycles),
 	oops(false),
@@ -1282,8 +1289,9 @@ int CPU::Run(int cyc)
 
 	if (cyc == -1)
 	{
-		for(;;) // Run until illegal opcode
+		while (!nes.isStopped())// Run until illegal opcode
 		{
+			//for (int i = 1000000; i > 0; i--);
 			if(!NextOP()) break;
 		}
 	}
@@ -1315,7 +1323,7 @@ bool CPU::NextOP()
 	oops = false; // Reset oops flag (some addressing modes take extra cycles in certain conditions)
 
 	// This switch statement executes the instruction associated with each opcode
-	// With a few exceptions this involves calling on of the 9 addressing mode functions
+	// With a few exceptions this involves calling one of the 9 addressing mode functions
 	// and passing their result into the instruction function. Depending on the instruction
 	// the result may then be written back to the same address. After this procedure is
 	// complete then the required cycles for that instruction are added to the cycle counter.

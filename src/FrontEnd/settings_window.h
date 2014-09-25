@@ -11,13 +11,14 @@
 #include <gtkmm/window.h>
 #include <gtkmm/builder.h>
 
-#include "app_settings.h"
+#include "utilities/app_settings.h"
 
 class SettingsWindow : public Gtk::Window
 {
-	AppSettings* settings;
-	Glib::RefPtr<Gtk::Builder> builder;
+	AppSettings* settings; // Current Application Settings
+	Glib::RefPtr<Gtk::Builder> builder; // Glade Builder
 
+	// Signal Handlers
 	void okClicked();
 	void cancelClicked();
 

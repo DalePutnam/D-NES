@@ -11,7 +11,8 @@
 
 using namespace std;
 
-Logger::Logger():
+Logger::Logger() :
+	outstream(&cout),
 	opcode(0),
 	opname(""),
 	addrArg1(-1),
@@ -28,6 +29,11 @@ Logger::Logger():
 	S(0),
 	special(false)
 {
+}
+
+void Logger::setLogStream(std::ostream& out)
+{
+	outstream = &out;
 }
 
 // Sets the current Opcode
@@ -231,35 +237,37 @@ void Logger::logRegisters(int A, int X, int Y, int P, int S)
 // Print out all current log information
 void Logger::printLog()
 {
-	cout << hex << uppercase << setfill('0') << setw(4) << PC << "  "; // Output Program counter followed by a space
-	cout << setfill('0') << setw(2) << opcode << " "; // Output opcode followed by a space
+	std::ostream& out = *outstream;
+
+	out << hex << uppercase << setfill('0') << setw(4) << PC << "  "; // Output Program counter followed by a space
+	out << setfill('0') << setw(2) << opcode << " "; // Output opcode followed by a space
 
 	if (addrArg1 == -1)
 	{
-		cout << "   "; // if there are no arguments then output 3 spaces
+		out << "   "; // if there are no arguments then output 3 spaces
 	}
 	else
 	{
-		cout << setfill('0') << setw(2) << addrArg1 << " "; // otherwise output the first argument followed by a space
+		out << setfill('0') << setw(2) << addrArg1 << " "; // otherwise output the first argument followed by a space
 	}
 
 	if (addrArg2 == -1)
 	{
-		cout << "  "; // if there is only one argument output 2 spaces
+		out << "  "; // if there is only one argument output 2 spaces
 	}
 	else
 	{
-		cout << setfill('0') << setw(2) << addrArg2; // otherwise output the second argument
+		out << setfill('0') << setw(2) << addrArg2; // otherwise output the second argument
 	}
 
-	cout << "  " << opname << " ";// << "A:"; // output instruction name
-	cout << addrMode << setfill(' ') << setw(30 - addrMode.length()) << "A:"; // output addressing mode log, followed by filler spaces
-	cout << setfill('0') << setw(2) << A << " X:"; // Output Accumulator
-	cout << setfill('0') << setw(2) << X << " Y:"; // Output X register
-	cout << setfill('0') << setw(2) << Y << " P:"; // Output Y Register
-	cout << setfill('0') << setw(2) << P << " SP:"; // Output Processor Status
-	cout << setfill('0') << setw(2) << S << " CYC:"; // Output Stack Pointer
-	cout << dec << setfill(' ') << setw(3) << cycles << endl;
+	out << "  " << opname << " ";// << "A:"; // output instruction name
+	out << addrMode << setfill(' ') << setw(30 - addrMode.length()) << "A:"; // output addressing mode log, followed by filler spaces
+	out << setfill('0') << setw(2) << A << " X:"; // Output Accumulator
+	out << setfill('0') << setw(2) << X << " Y:"; // Output X register
+	out << setfill('0') << setw(2) << Y << " P:"; // Output Y Register
+	out << setfill('0') << setw(2) << P << " SP:"; // Output Processor Status
+	out << setfill('0') << setw(2) << S << " CYC:"; // Output Stack Pointer
+	out << dec << setfill(' ') << setw(3) << cycles << endl;
 	// Reset logged values
 	opcode = 0;
 	opname = "";

@@ -52,7 +52,7 @@ main-build: D-NES.exe
 D-NES.exe: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MinGW C++ Linker'
-	g++ -o "D-NES.exe" $(OBJS) $(USER_OBJS) $(LIBS) -L"C:\boost\bin.v2\libs\program_options" `pkg-config --cflags --libs gtkmm-3.0` -mwindows
+	g++ -o "D-NES.exe" $(OBJS) $(USER_OBJS) $(LIBS) -L"C:\boost\bin.v2\libs\filesystem" -L"C:\boost\bin.v2\libs\system" `pkg-config --cflags --libs gtkmm-3.0` -mwindows
 	@echo 'Finished building target: $@'
 	@echo ' '
 

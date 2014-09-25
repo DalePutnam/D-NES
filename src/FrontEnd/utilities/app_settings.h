@@ -25,17 +25,19 @@ class AppSettings
 
 public:
 
-	static AppSettings* getInstance();
-	static void cleanUp();
+	static AppSettings* getInstance(); // Get single instance
+	static void cleanUp(); // Destroy single instance
 
-	void save();
+	void save(); // Write out to file
 
+	// Get a setting
 	template<typename T>
 	T get(std::string name)
 	{
 		return settings.get<T>(name);
 	}
 
+	// Change a setting
 	template<typename T>
 	void put(std::string name, const T& value)
 	{
