@@ -15,8 +15,6 @@
 #include <boost/filesystem.hpp>
 
 #include "main_window.h"
-#include "utilities/log_buffer.h"
-#include "log_window.h"
 #include "../Emulator/nes.h"
 
 MainWindow::ListColumns::ListColumns()
@@ -36,6 +34,14 @@ void MainWindow::menuInitialize()
 	menuItem->signal_activate().connect(sigc::mem_fun(*this, &MainWindow::onExitClicked));
 	builder->get_widget("allSettingsMenuItem", menuItem);
 	menuItem->signal_activate().connect(sigc::mem_fun(*this, &MainWindow::onAllSettings));
+	builder->get_widget("resumeMenuItem", menuItem);
+	menuItem->signal_activate().connect(sigc::mem_fun(*this, &MainWindow::onResumeClicked));
+	builder->get_widget("stopMenuItem", menuItem);
+	menuItem->signal_activate().connect(sigc::mem_fun(*this, &MainWindow::onStopClicked));
+	builder->get_widget("pauseMenuItem", menuItem);
+	menuItem->signal_activate().connect(sigc::mem_fun(*this, &MainWindow::onPauseClicked));
+	builder->get_widget("nameTableMenuItem", menuItem);
+	menuItem->signal_activate().connect(sigc::mem_fun(*this, &MainWindow::onViewerClicked));
 }
 
 void MainWindow::listInitialize()
@@ -105,6 +111,22 @@ void MainWindow::onAllSettings()
 	settingsWindow->show();
 }
 
+void MainWindow::onViewerClicked()
+{
+	if (worker)
+	{
+		viewer = new NameTableViewer(*worker);
+		viewer->signal_hide().connect(sigc::mem_fun(*this, &MainWindow::onViewerHide));
+		viewer->show();
+	}
+}
+
+void MainWindow::onViewerHide()
+{
+	delete viewer;
+	viewer = 0;
+}
+
 void MainWindow::onExitClicked()
 {
 	hide(); // Close this window
@@ -120,21 +142,47 @@ void MainWindow::onSettingsHide()
 	listUpdate();
 }
 
+void MainWindow::onGameHide()
+{
+	if (workerThread) // If worker thread exists
+	{
+		Glib::Threads::Mutex::Lock lock(mutex);
+		// Issue stop command and wait for completion
+		worker->stopWorker();
+		workerThread->join();
+		workerThread = 0; // Destroy worker thread
+		delete worker;
+		worker = 0;
+	}
+
+	// Close gameWindow window
+	delete gameWindow;
+	gameWindow = 0;
+	delete viewer;
+	viewer = 0;
+	delete logWindow;
+	logWindow = 0;
+}
+
+#ifdef DEBUG
 void MainWindow::onLogHide()
 {
 	if (workerThread) // If worker thread exists
 	{
+		Glib::Threads::Mutex::Lock lock(mutex);
 		// Issue stop command and wait for completion
 		worker->stopWorker();
 		workerThread->join();
-
 		workerThread = 0; // Destroy worker thread
+		delete worker;
+		worker = 0;
 	}
 
 	// Close log window
 	delete logWindow;
 	logWindow = 0;
 }
+#endif
 
 void MainWindow::onROMSelected(const Gtk::TreeModel::Path& path, Gtk::TreeView::Column* col)
 {
@@ -145,16 +193,75 @@ void MainWindow::onROMSelected(const Gtk::TreeModel::Path& path, Gtk::TreeView::
 
 void MainWindow::onWorkerNotify()
 {
+	if (gameWindow && worker->isFrameUpdated())
+	{
+		Glib::Threads::Mutex::Lock lock(mutex);
+		if (worker)
+		{
+			gameWindow->UpdateFrame(worker->getFrame());
+		}
+	}
+
+#ifdef DEBUG
+	if (logWindow && worker->isLogUpdated()) // If log window is active
+	{
+		Glib::Threads::Mutex::Lock lock(mutex);
+		if (worker)
+		{
+			logWindow->updateBuffer(worker->getLogChunk()); // Update log text
+			worker->setLogRetrieved(true); // Notify worker that
+		}
+	}
+#endif
 	if (workerThread && worker->hasStopped()) // If worker has stopped on it's own
 	{
+		Glib::Threads::Mutex::Lock lock(mutex);
 		// Synchronize and destroy worker thread
 		workerThread->join();
 		workerThread = 0;
+		delete worker;
+		worker = 0;
 	}
-	else if (logWindow) // If log window is active
+}
+
+void MainWindow::onResumeClicked()
+{
+	if (workerThread)
 	{
-		logWindow->updateBuffer(worker->getLogChunk()); // Update log text
-		worker->setLogRetrieved(true); // Notify worker that
+		Glib::Threads::Mutex::Lock lock(mutex);
+		worker->resumeWorker();
+	}
+}
+
+void MainWindow::onStopClicked()
+{
+	if (workerThread) // If worker thread exists
+	{
+		Glib::Threads::Mutex::Lock lock(mutex);
+		// Issue stop command and wait for completion
+		worker->stopWorker();
+		workerThread->join();
+		workerThread = 0; // Destroy worker thread
+		delete worker;
+		worker = 0;
+	}
+#ifdef DEBUG
+	// Close log window
+	delete gameWindow;
+	gameWindow = 0;
+	delete viewer;
+	viewer = 0;
+	delete logWindow;
+	logWindow = 0;
+#endif
+}
+
+void MainWindow::onPauseClicked()
+{
+	if (workerThread)
+	{
+		Glib::Threads::Mutex::Lock lock(mutex);
+		worker->pauseWorker();
 	}
 }
 
@@ -194,16 +301,32 @@ void MainWindow::startEmulator(std::string pathToROM)
 {
 	try
 	{
+		if (!worker)
+		{
+
+#ifdef DEBUG
 		// Create worker instance to manage emulator
-		worker = new EmulatorWorker(pathToROM, *this, true);
-
+		worker = new EmulatorWorker(pathToROM, *this, false);
 		// Open log window
-		logWindow = new LogWindow();
-		logWindow->signal_hide().connect(sigc::mem_fun(*this, &MainWindow::onLogHide));
-		logWindow->show();
-
+		//logWindow = new LogWindow();
+		//logWindow->signal_hide().connect(sigc::mem_fun(*this, &MainWindow::onLogHide));
+		//logWindow->show();
+		gameWindow = new GameWindow(256, 240);
+		gameWindow->signal_hide().connect(sigc::mem_fun(*this, &MainWindow::onGameHide));
+		gameWindow->show();
+#else
+		worker = new EmulatorWorker(pathToROM, *this);
+#endif
 		// Start NES emulator
 		workerThread = Glib::Threads::Thread::create(sigc::bind(sigc::mem_fun(*worker, &EmulatorWorker::startWorker), this));
+		}
+		else
+		{
+			// Print error
+			Gtk::MessageDialog dialog(*this, "Emulator Running", Gtk::MESSAGE_INFO);
+			dialog.set_secondary_text("An Emulator instance is already running\n");
+			dialog.run();
+		}
 	}
 	catch (std::string& err)
 	{
@@ -212,7 +335,7 @@ void MainWindow::startEmulator(std::string pathToROM)
 		worker = 0;
 
 		// Print error
-		Gtk::MessageDialog dialog(*this, "Mapper Error", Gtk::MESSAGE_ERROR);
+		Gtk::MessageDialog dialog(*this, "ROM Error", Gtk::MESSAGE_ERROR);
 		dialog.set_secondary_text("Failed to open ROM\n" + err);
 		dialog.run();
 	}
@@ -222,11 +345,13 @@ MainWindow::MainWindow() :
 	worker(0),
 	settings(AppSettings::getInstance()),
 	settingsWindow(0),
-	logWindow(0),
+	gameWindow(0),
+	viewer(0),
 	workerThread(0),
 	listStore(Gtk::ListStore::create(columns)),
 #ifdef DEBUG
-	builder(Gtk::Builder::create_from_file("D:/Source/D-NES/src/FrontEnd/glade/MainWindow.glade")) // Get glade from file
+	builder(Gtk::Builder::create_from_file("D:/Source/D-NES/src/FrontEnd/glade/MainWindow.glade")), // Get glade from file
+	logWindow(0)
 #else
 	builder(Gtk::Builder::create_from_resource("/glade/MainWindow.glade")) // Get glade from resource
 #endif
@@ -254,7 +379,11 @@ MainWindow::~MainWindow()
 	AppSettings::cleanUp();
 	delete worker;
 	delete settingsWindow;
+	delete gameWindow;
+	delete viewer;
+#ifdef DEBUG
 	delete logWindow;
+#endif
 }
 
 void MainWindow::notify()

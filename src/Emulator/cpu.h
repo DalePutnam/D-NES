@@ -17,6 +17,7 @@
  * 6502 CPU Simulator
  */
 
+#include "ppu.h"
 #include "mappers/cart.h"
 
 class NES;
@@ -32,13 +33,14 @@ class CPU
 	unsigned char memory[0x800];
 
 	NES& nes;
-	Cart* cart;
-
-	// Cycle Counters
-	long int* cycles;
+	PPU& ppu;
+	Cart& cart;
 
 	// Extra read flag
 	bool oops;
+
+	// Cycles to next NMI check
+	int nextNMI;
 
 	// Registers
 	unsigned short int PC; // Program Counter
@@ -137,6 +139,9 @@ class CPU
 	// Jump
 	void JMP(unsigned short int M); // Jump
 
+	void HandleNMI(); // Handle non-maskable interrupt
+	void HandleIRQ(); // Handle standard interrupt
+
 	bool NextOP(); // Execute next instruction
 
 public:
@@ -146,8 +151,8 @@ public:
 	void setLogStream(std::ostream& out);
 #endif
 
-	CPU(NES& nes, Cart* cart, long int* cycles);
-	int Run(int cyc); // Run CPU for the specified number of cycles
+	CPU(NES& nes, PPU& ppu, Cart& cart);
+	void Run(); // Run CPU
 	void Reset(); // Reset the CPU to starting conditions
 	~CPU();
 };

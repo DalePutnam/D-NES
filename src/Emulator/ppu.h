@@ -9,78 +9,129 @@
 #define PPU_H_
 
 #include <queue>
-#include <vector>
+
+#include "Interfaces/display.h"
+#include "mappers/cart.h"
+
+class NES;
 
 class PPU
 {
-	Cart* cart;
+	NES& nes;
+	Cart& cart;
+	Display& display;
+
+	static const unsigned int rgbLookupTable[64];
+
+	unsigned int clock;
+	short int dot;
+	short int line;
+	bool even;
+	bool reset;
 
 	// Main Registers
-	unsigned char ppuctrl;
-	unsigned char ppumask;
-	unsigned char ppustatus;
-	unsigned char ppuscroll;
-	unsigned char oamaddr;
-	unsigned char ppuaddr;
 
-	bool addrlatch;
+	// Controller Register Fields
+	bool ppuAddressIncrement;
+	unsigned short int baseSpriteTableAddress;
+	unsigned short int baseBackgroundTableAddress;
+	bool spriteSize;
+	bool nmiEnabled;
+
+	// Mask Register Fields
+	bool grayscale;
+	bool showBackgroundLeft;
+	bool showSpritesLeft;
+	bool showBackground;
+	bool showSprites;
+	bool intenseRed;
+	bool intenseGreen;
+	bool intenseBlue;
+
+	// Status Register Fields
+	unsigned char lowerBits;
+	bool spriteOverflow;
+	bool sprite0Hit;
+	bool inVBLANK;
+	bool nmiOccured;
+
+	unsigned char oamAddress;
+	unsigned short int ppuAddress;
+	unsigned short int ppuTempAddress;
+	unsigned char fineXScroll;
+
+	bool addressLatch;
 
 	// Main Register Buffers
-	std::queue<std::vector<int, unsigned char>> ctrlbuffer;
-	std::queue<std::vector<int, unsigned char>> maskbuffer;
-	std::queue<std::vector<int, unsigned char>> scrollbuffer;
-	std::queue<std::vector<int, unsigned char>> oamaddrbuffer;
-	std::queue<std::vector<int, unsigned char>> ppuaddrbuffer;
-	std::queue<std::vector<int, unsigned char>> oamdatabuffer;
-	std::queue<std::vector<int, unsigned char>> ppudatabuffer;
+	std::queue<std::pair<unsigned int, unsigned char>> ctrlBuffer;
+	std::queue<std::pair<unsigned int, unsigned char>> maskBuffer;
+	std::queue<std::pair<unsigned int, unsigned char>> scrollBuffer;
+	std::queue<std::pair<unsigned int, unsigned char>> oamAddrBuffer;
+	std::queue<std::pair<unsigned int, unsigned char>> ppuAddrBuffer;
+	std::queue<std::pair<unsigned int, unsigned char>> oamDataBuffer;
+	std::queue<std::pair<unsigned int, unsigned char>> ppuDataBuffer;
 
 	// PPU Data Read Buffer
-	unsigned char databuffer;
+	unsigned char dataBuffer;
 
 	// Primary Object Attribute Memory (OAM)
-	unsigned char primaryoam[0x100];
+	unsigned char primaryOAM[0x100];
 
 	// Secondary Object Attribute Memory (OAM)
-	unsigned char secondaryoam[0x20];
+	unsigned char secondaryOAM[0x20];
 
-	// Internal VRAM
-	unsigned char vram[0x800];
+	// Name Table RAM
+	unsigned char nameTable0[0x400];
+	unsigned char nameTable1[0x400];
+
+	// Palette RAM
+	unsigned char palettes[0x20];
+
+	// Temporary Values
+	unsigned char nameTableByte;
+	unsigned char attributeByte;
+	unsigned char tileBitmapLow;
+	unsigned char tileBitmapHigh;
 
 	// Shift Registers, Latches and Counters
-	unsigned short int bshift0;
-	unsigned short int bshift1;
-	unsigned char attribute0;
-	unsigned char attribute1;
+	unsigned short int backgroundShift0;
+	unsigned short int backgroundShift1;
+	unsigned char backgroundAttributeShift0;
+	unsigned char backgroundAttributeShift1;
+	unsigned char backgroundAttribute;
 
-	unsigned char spshift0;
-	unsigned char spshift1;
-	unsigned char spshift2;
-	unsigned char spshift3;
-	unsigned char spshift4;
-	unsigned char spshift5;
-	unsigned char spshift6;
-	unsigned char spshift7;
+	unsigned char spriteCount;
+	unsigned char glitchCount;
+	unsigned char spriteShift0[8];
+	unsigned char spriteShift1[8];
+	unsigned char spriteAttribute[8];
+	unsigned char spriteCounter[8];
 
-	unsigned char splatch0;
-	unsigned char splatch1;
-	unsigned char splatch2;
-	unsigned char splatch3;
-	unsigned char splatch4;
-	unsigned char splatch5;
-	unsigned char splatch6;
-	unsigned char splatch7;
+	void Tick();
 
-	unsigned char spcounter0;
-	unsigned char spcounter1;
-	unsigned char spcounter2;
-	unsigned char spcounter3;
-	unsigned char spcounter4;
-	unsigned char spcounter5;
-	unsigned char spcounter6;
-	unsigned char spcounter7;
+	void UpdateState(int cycles);
+	void SpriteEvaluation();
+	void Render();
+
+	void TileFetch();
+	void SpriteFetch();
+	void IncrementXScroll();
+	void IncrementYScroll();
+	void IncrementClock(unsigned int increment);
+
+	unsigned char Read(unsigned short int address);
+	void Write(unsigned short int address, unsigned char value);
+	unsigned char ReadNameTable(unsigned short int address);
+	void WriteNameTable(unsigned short int address, unsigned char value);
 
 public:
-	PPU(Cart* cart, long int* clock);
+	PPU(NES& nes, Cart& cart, Display& display);
+
+#ifdef DEBUG
+	unsigned char SoftReadPPUStatus();
+	unsigned char SoftReadOAMData();
+	unsigned char SoftReadPPUData();
+#endif
 
 	unsigned char ReadPPUStatus();
 	unsigned char ReadOAMData();
@@ -94,9 +145,11 @@ public:
 	void WritePPUADDR(unsigned char M);
 	void WritePPUDATA(unsigned char M);
 
-	void SyncPPU();
-	void RunVB();
-	void Run(int cyc);
+	int ScheduleSync();
+	void Sync();
+	void GetNameTable(int table, unsigned char* pixels);
+	void GetPatternTable(int table, unsigned char* pixels);
+	void GetPalette(int palette, unsigned char* pixels);
 
 	~PPU();
 };

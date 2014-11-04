@@ -3,6 +3,5 @@
 	<gresource prefix="/glade">
 		<file alias="MainWindow.glade" preprocess="xml-stripblanks">../src/FrontEnd/glade/MainWindow.glade</file>
 		<file alias="SettingsWindow.glade" preprocess="xml-stripblanks">../src/FrontEnd/glade/SettingsWindow.glade</file>
-		<file alias="LogWindow.glade" preprocess="xml-stripblanks">../src/FrontEnd/glade/LogWindow.glade</file>
 	</gresource>
 </gresources>

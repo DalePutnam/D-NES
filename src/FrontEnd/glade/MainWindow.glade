@@ -25,12 +25,16 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-media-pause</property>
-    <property name="use_fallback">True</property>
   </object>
   <object class="GtkImage" id="image6">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-properties</property>
+  </object>
+  <object class="GtkImage" id="image7">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-select-color</property>
   </object>
   <object class="GtkBox" id="mainBox">
     <property name="visible">True</property>
@@ -88,8 +92,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkImageMenuItem" id="startMenuItem">
-                    <property name="label" translatable="yes">Start</property>
+                  <object class="GtkImageMenuItem" id="resumeMenuItem">
+                    <property name="label" translatable="yes">Resume</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="image">image4</property>
@@ -111,6 +115,21 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="image">image5</property>
+                    <property name="use_stock">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSeparatorMenuItem" id="separatormenuitem2">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkImageMenuItem" id="nameTableMenuItem">
+                    <property name="label" translatable="yes">NameTable Viewer</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="image">image7</property>
                     <property name="use_stock">False</property>
                   </object>
                 </child>

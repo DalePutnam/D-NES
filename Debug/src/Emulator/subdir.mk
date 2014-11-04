@@ -5,15 +5,18 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CC_SRCS += \
 ../src/Emulator/cpu.cc \
-../src/Emulator/nes.cc 
+../src/Emulator/nes.cc \
+../src/Emulator/ppu.cc 
 
 OBJS += \
 ./src/Emulator/cpu.o \
-./src/Emulator/nes.o 
+./src/Emulator/nes.o \
+./src/Emulator/ppu.o 
 
 CC_DEPS += \
 ./src/Emulator/cpu.d \
-./src/Emulator/nes.d 
+./src/Emulator/nes.d \
+./src/Emulator/ppu.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

@@ -54,7 +54,7 @@ SettingsWindow::SettingsWindow()
 	builder->get_widget("settingsCancelButton", button);
 	button->signal_clicked().connect(sigc::mem_fun(*this, &SettingsWindow::cancelClicked));
 
-	// Populate options (should probably move this to a function
+	// Populate options (should probably move this to a function)
 	Gtk::Entry* entry = 0;
 	builder->get_widget("romPath", entry);
 	entry->set_text(settings->get<std::string>("frontend.rompath"));

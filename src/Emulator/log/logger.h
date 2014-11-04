@@ -21,6 +21,7 @@ class Logger
 	int value;
 	std::string addrMode; // Current address mode name
 	int cycles; // Current CPU Cycles
+	int scanlines;
 	int PC; // Current Program Counter
 	int A; // Current Accumulator
 	int X; // Current X Register
@@ -42,6 +43,7 @@ public:
 	void logFinalAddress(int addr);
 	void logValue(int val);
 	void logCycles(int cycles); // Set Cycles
+	void logScanlines(int lines); // Set Cycles
 	void logProgramCounter(int counter); // Set Program Counter
 	void logRegisters(int A, int X, int Y, int P, int S); // Set all registers
 	void printLog(); // Print out all current information

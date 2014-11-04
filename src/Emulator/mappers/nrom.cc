@@ -6,7 +6,13 @@
  */
 
 #include <iostream>
+#include <fstream>
 #include "nrom.h"
+
+Cart::MirrorMode NROM::GetMirrorMode()
+{
+	return mirroring;
+}
 
 unsigned char NROM::PrgRead(unsigned short int address)
 {
@@ -34,18 +40,26 @@ void NROM::PrgWrite(unsigned char M, unsigned short int address)
 	{
 
 	}
-	else
+}
+
+unsigned char NROM::ChrRead(unsigned short int address)
+{
+	return chr[address];
+}
+
+void NROM::ChrWrite(unsigned char M, unsigned short int address)
+{
+	if (chrSize == 0)
 	{
-		prg[address - 0x2000] = M;
+		chr[address] = M;
 	}
 }
 
-unsigned char NROM::ChrRead(unsigned short int address) { return 0; }
-
-void NROM::ChrWrite(unsigned char M, unsigned short int address) {}
-
-NROM::NROM(std::ifstream& rom) : mirroring(0)
+NROM::NROM(std::string filename) : mirroring(Cart::MirrorMode::HORIZONTAL)
 {
+	// Open file stream to ROM file
+	std::ifstream rom(filename.c_str(), std::ifstream::in);
+
 	if (!rom.fail())
 	{
 		// Read Byte 4 from the file to get the program size
@@ -54,6 +68,9 @@ NROM::NROM(std::ifstream& rom) : mirroring(0)
 		rom.seekg(0x04, rom.beg);
 		prgSize = rom.get() * 0x4000;
 		chrSize = rom.get() * 0x2000;
+
+		char flags6 = rom.get();
+		mirroring = static_cast<Cart::MirrorMode>(flags6 & 0x01);
 
 		prg = new char[prgSize];
 
@@ -73,7 +90,10 @@ NROM::NROM(std::ifstream& rom) : mirroring(0)
 		else
 		{
 			chr = new char[chrSize];
+			rom.clear();
+			rom.seekg(0x10 + prgSize, rom.beg);
 			rom.read(chr, chrSize);
+			flags6++;
 		}
 	}
 	else

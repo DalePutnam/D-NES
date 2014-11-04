@@ -4,18 +4,24 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CC_SRCS += \
+../src/FrontEnd/game_window.cc \
 ../src/FrontEnd/log_window.cc \
 ../src/FrontEnd/main_window.cc \
+../src/FrontEnd/name_table_viewer.cc \
 ../src/FrontEnd/settings_window.cc 
 
 OBJS += \
+./src/FrontEnd/game_window.o \
 ./src/FrontEnd/log_window.o \
 ./src/FrontEnd/main_window.o \
+./src/FrontEnd/name_table_viewer.o \
 ./src/FrontEnd/settings_window.o 
 
 CC_DEPS += \
+./src/FrontEnd/game_window.d \
 ./src/FrontEnd/log_window.d \
 ./src/FrontEnd/main_window.d \
+./src/FrontEnd/name_table_viewer.d \
 ./src/FrontEnd/settings_window.d 
 
 

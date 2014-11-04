@@ -21,6 +21,7 @@ Logger::Logger() :
 	value(0),
 	addrMode(""),
 	cycles(0),
+	scanlines(0),
 	PC(0),
 	A(0),
 	X(0),
@@ -218,6 +219,12 @@ void Logger::logCycles(int cycles)
 	this->cycles = cycles;
 }
 
+// Logs current cycle count
+void Logger::logScanlines(int lines)
+{
+	scanlines = lines;
+}
+
 // Log Program Counter
 void Logger::logProgramCounter(int counter)
 {
@@ -267,7 +274,8 @@ void Logger::printLog()
 	out << setfill('0') << setw(2) << Y << " P:"; // Output Y Register
 	out << setfill('0') << setw(2) << P << " SP:"; // Output Processor Status
 	out << setfill('0') << setw(2) << S << " CYC:"; // Output Stack Pointer
-	out << dec << setfill(' ') << setw(3) << cycles << endl;
+	out << dec << setfill(' ') << setw(3) << cycles << " SL:";
+	out << scanlines << endl;
 	// Reset logged values
 	opcode = 0;
 	opname = "";

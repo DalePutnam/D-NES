@@ -17,13 +17,34 @@ unsigned char CPU::SoftRead(unsigned short int address)
 	{
 		return memory[address % 0x800];
 	}
+	else if (address >= 0x2000 && address < 0x4000)
+	{
+		//unsigned short int addr = (address - 0x2000) % 8;
+
+		/*if (addr == 2)
+		{
+			return ppu.SoftReadPPUStatus();
+		}
+		else if (addr == 4)
+		{
+			return ppu.SoftReadOAMData();
+		}
+		else if (addr == 7)
+		{
+			return ppu.SoftReadPPUData();
+		}
+		else
+		{*/
+			return 0xFF;
+		//}
+	}
 	else if (address > 0x5FFF && address < 0x10000)
 	{
-		return cart->PrgRead(address - 0x6000);
+		return cart.PrgRead(address - 0x6000);
 	}
 	else
 	{
-		return 0x00;
+		return 0xFF;
 	}
 }
 
@@ -35,35 +56,118 @@ void CPU::setLogStream(std::ostream& out)
 
 unsigned char CPU::Read(unsigned short int address)
 {
-	*cycles += 3;
+	nes.IncrementClock(3);
+	if (nextNMI > 0)
+	{
+		nextNMI -= 3;
+	}
 	// Any address less then 0x2000 is just the
 	// Internal Ram mirrored every 0x800 bytes
 	if (address < 0x2000)
 	{
 		return memory[address % 0x800];
 	}
+	else if (address >= 0x2000 && address < 0x4000)
+	{
+		unsigned short int addr = (address - 0x2000) % 8;
+
+		if (addr == 2)
+		{
+			return ppu.ReadPPUStatus();
+		}
+		else if (addr == 4)
+		{
+			return ppu.ReadOAMData();
+		}
+		else if (addr == 7)
+		{
+			return ppu.ReadPPUData();
+		}
+		else
+		{
+			return 0xFF;
+		}
+	}
 	else if (address > 0x5FFF && address < 0x10000)
 	{
-		return cart->PrgRead(address - 0x6000);
+		return cart.PrgRead(address - 0x6000);
 	}
 	else
 	{
-		return 0x00;
+		return 0xFF;
 	}
 }
 
 void CPU::Write(unsigned char M, unsigned short int address)
 {
-	*cycles += 3;
+	nes.IncrementClock(3);
+	if (nextNMI > 0) nextNMI -= 3;
+
+	// OAM DMA
+	if (address == 0x4014)
+	{
+		unsigned short int page = M * 0x100;
+
+		if (nes.GetClock() % 6 == 0)
+		{
+			nes.IncrementClock(3);
+			if (nextNMI > 0) nextNMI -= 3;
+		}
+		else
+		{
+			nes.IncrementClock(6);
+			if (nextNMI > 0) nextNMI -= 6;
+		}
+
+		for (int i = 0; i < 0x100; ++i)
+		{
+			ppu.WriteOAMDATA(Read(page + i));
+			nes.IncrementClock(3);
+			if (nextNMI > 0) nextNMI -= 3;
+		}
+	}
 	// Any address less then 0x2000 is just the
 	// Internal Ram mirrored every 0x800 bytes
-	if (address < 0x2000)
+	else if (address < 0x2000)
 	{
 		memory[address % 0x800] = M;
 	}
+	else if (address >= 0x2000 && address < 0x4000)
+	{
+		unsigned short int addr = (address - 0x2000) % 8;
+
+		if (addr == 0)
+		{
+			ppu.WritePPUCTRL(M);
+		}
+		else if (addr == 1)
+		{
+			ppu.WritePPUMASK(M);
+		}
+		else if (addr == 3)
+		{
+			ppu.WriteOAMADDR(M);
+		}
+		else if (addr == 4)
+		{
+			ppu.WriteOAMDATA(M);
+		}
+		else if (addr == 5)
+		{
+			ppu.WritePPUSCROLL(M);
+		}
+		else if (addr == 6)
+		{
+			ppu.WritePPUADDR(M);
+		}
+		else if (addr == 7)
+		{
+			ppu.WritePPUDATA(M);
+		}
+	}
 	else if (address > 0x5FFF && address < 0x10000)
 	{
-		return cart->PrgWrite(M, address - 0x6000);
+		return cart.PrgWrite(M, address - 0x6000);
 	}
 	else
 	{
@@ -399,10 +503,27 @@ void CPU::BCC()
 
 		PC = (PC & 0xFF00) | lowPC;
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
+		PC = (PC & 0xFF00) | lowPC;
+
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -428,10 +549,27 @@ void CPU::BCS()
 
 		PC = (PC & 0xFF00) | lowPC;
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
+		PC = (PC & 0xFF00) | lowPC;
+
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -455,12 +593,27 @@ void CPU::BEQ()
 		// Perform signed addition on the low byte of PC then convert back to unsigned
 		lowPC = (unsigned short int) ((short int) lowPC + operand);
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
 		PC = (PC & 0xFF00) | lowPC;
 
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -504,12 +657,27 @@ void CPU::BMI()
 		// Perform signed addition on the low byte of PC then convert back to unsigned
 		lowPC = (unsigned short int) ((short int) lowPC + operand);
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
 		PC = (PC & 0xFF00) | lowPC;
 
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -533,12 +701,27 @@ void CPU::BNE()
 		// Perform signed addition on the low byte of PC then convert back to unsigned
 		lowPC = (unsigned short int) ((short int) lowPC + operand);
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
 		PC = (PC & 0xFF00) | lowPC;
 
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -564,10 +747,27 @@ void CPU::BPL()
 
 		PC = (PC & 0xFF00) | lowPC;
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
+		PC = (PC & 0xFF00) | lowPC;
+
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -609,10 +809,27 @@ void CPU::BVC()
 
 		PC = (PC & 0xFF00) | lowPC;
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
+		PC = (PC & 0xFF00) | lowPC;
+
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -638,10 +855,27 @@ void CPU::BVS()
 
 		PC = (PC & 0xFF00) | lowPC;
 
+		// If lowPC is larger than 8 bits
+		if (lowPC > 0xFF)
+		{
+			lowPC &= 0xFF; // Clear high bits
+			oops = true;
+		}
+
+		PC = (PC & 0xFF00) | lowPC;
+
 		if (oops)
 		{
 			Read(PC);
-			PC += 0x100;
+
+			if (operand > 0)
+			{
+				PC += 0x100;
+			}
+			else
+			{
+				PC -= 0x100;
+			}
 		}
 	}
 }
@@ -1060,12 +1294,13 @@ void CPU::RTI()
 #ifdef DEBUG
 	logger.logOpName("RTI");
 #endif
-	Read(0x100 + S++);
+	Read(0x100 + S);
 
-	P = (Read(0x100 + S++) & 0xEF) | 0x20;
-	unsigned short int lowPC = Read(0x100 + S++);
-	unsigned short int highPC = Read(0x100 + S);
+	P = (Read(0x100 + (S + 1)) & 0xEF) | 0x20;
+	unsigned short int lowPC = Read(0x100 + (S + 2));
+	unsigned short int highPC = Read(0x100 + (S + 3));
 	PC = (highPC << 8) | lowPC;
+	S += 3;
 }
 
 // Return From Subroutine
@@ -1252,11 +1487,22 @@ void CPU::TYA()
 	((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
-CPU::CPU(NES& nes, Cart* cart, long int* cycles):
+void CPU::HandleNMI()
+{
+	Write(PC >> 8, 0x100 + S);
+	Write(PC, 0x100 + (S - 1));
+	Write(P | 0x20, 0x100 + (S - 2));
+	S -= 3;
+
+	PC = Read(0xFFFA) + (((unsigned short int) Read(0xFFFB)) * 0x100);
+}
+
+CPU::CPU(NES& nes, PPU& ppu, Cart& cart):
 	nes(nes),
+	ppu(ppu),
 	cart(cart),
-	cycles(cycles),
 	oops(false),
+	nextNMI(ppu.ScheduleSync()),
 	S(0xFD),
 	P(0x24),
 	A(0),
@@ -1270,12 +1516,13 @@ CPU::CPU(NES& nes, Cart* cart, long int* cycles):
 
 	// Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
 	PC = Read(0xFFFC) + (((unsigned short int) Read(0xFFFD)) * 0x100);
-	*cycles -= 6;
+	nes.IncrementClock(-6);
 }
 
 // Currently unimplemented
 void CPU::Reset()
 {
+
 }
 
 // Run the CPU for the specified number of cycles
@@ -1283,27 +1530,14 @@ void CPU::Reset()
 // of cycles the CPU will likely run a few cycles past cyc.
 // If cyc is -1 then the CPU will simply run until it encounters
 // an illegal opcode
-int CPU::Run(int cyc)
+void CPU::Run()
 {
-	//cycles = 0;
-
-	if (cyc == -1)
+	while (!nes.IsStopped()) // Run until illegal opcode or stop command issued
 	{
-		while (!nes.isStopped())// Run until illegal opcode
-		{
-			//for (int i = 1000000; i > 0; i--);
-			if(!NextOP()) break;
-		}
-	}
-	else
-	{
-		while (cyc > *cycles) // Run until cycles overtakes cyc
-		{
-			if(!NextOP()) break;
-		}
-	}
+		if(!NextOP()) break;
 
-	return *cycles;
+		while(nes.IsPaused() && !nes.IsStopped()); // Hold here if paused
+	}
 }
 
 // Execute the next instruction at PC and return true
@@ -1314,13 +1548,29 @@ bool CPU::NextOP()
 	logger.logProgramCounter(PC);
 	logger.logOpCode(SoftRead(PC));
 	logger.logRegisters(A, X, Y, P, S);
-	logger.logCycles(*cycles % 341);
+	logger.logCycles(nes.GetClock() % 341);
+	logger.logScanlines(nes.GetScanline());
 #endif
+	oops = false; // Reset oops flag (some addressing modes take extra cycles in certain conditions)
+
+	// Handle non-maskable interrupts
+	if (nextNMI <= 0)
+	{
+		ppu.Sync();
+		nextNMI = ppu.ScheduleSync();
+
+		if (nes.NMIRaised())
+		{
+			Read(PC);
+			Read(PC);
+			HandleNMI();
+			return true;
+		}
+	}
+
 	unsigned char opcode = Read(PC++); 	// Retrieve opcode from memory
 	unsigned short int addr;
 	unsigned char value;
-
-	oops = false; // Reset oops flag (some addressing modes take extra cycles in certain conditions)
 
 	// This switch statement executes the instruction associated with each opcode
 	// With a few exceptions this involves calling one of the 9 addressing mode functions

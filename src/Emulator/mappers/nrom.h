@@ -8,13 +8,12 @@
 #ifndef NROM_H_
 #define NROM_H_
 
-#include <fstream>
 #include <string>
 #include "cart.h"
 
 class NROM : public Cart
 {
-	int mirroring;
+	MirrorMode mirroring;
 	int chrSize;
 	int prgSize;
 
@@ -22,13 +21,15 @@ class NROM : public Cart
 	char* chr;
 
 public:
+	MirrorMode GetMirrorMode();
+
 	unsigned char PrgRead(unsigned short int address);
 	void PrgWrite(unsigned char M, unsigned short int address);
 
 	unsigned char ChrRead(unsigned short int address);
 	void ChrWrite(unsigned char M, unsigned short int address);
 
-	NROM(std::ifstream& rom);
+	NROM(std::string filename);
 	~NROM();
 };
 

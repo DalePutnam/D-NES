@@ -17,7 +17,7 @@ C_DEPS += \
 src/resources/%.o: ../src/resources/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -I"C:\gtk\include\glib-2.0" -I"C:\gtk\include\gtk-3.0" -O3 -Wall -c -fmessage-length=0 `pkg-config --cflags --libs gtk+-3.0` -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -I"C:\libraries\gtk\include\glib-2.0" -I"C:\libraries\gtk\include\gtk-3.0" -O3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<" `pkg-config --cflags --libs gtk+-3.0`
 	@echo 'Finished building: $<'
 	@echo ' '
 

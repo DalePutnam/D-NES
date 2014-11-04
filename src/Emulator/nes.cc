@@ -5,87 +5,141 @@
  *      Author: Dale
  */
 
-#include <sstream>
-
 #include "nes.h"
 #include "mappers/nrom.h"
 
 #ifdef DEBUG
 void NES::setLogStream(std::ostream& out)
 {
-	cpu->setLogStream(out);
+	cpu.setLogStream(out);
 }
 #endif
 
-NES::NES(std::string filename) : clock(0), stop(true)
+NES::NES(std::string filename, Display& display)
+	: clock(0),
+	  scanline(241),
+	  stop(true),
+	  pause(false),
+	  nmi(false),
+	  cart(Cart::Create(filename)),
+	  ppu(*new PPU(*this, cart, display)),
+	  cpu(*new CPU(*this, ppu, cart))
+
+{}
+
+unsigned int NES::GetClock()
 {
-	// Open file stream to ROM file
-	std::ifstream rom(filename.c_str(), std::ifstream::in);
+	return clock;
+}
 
-	if (!rom.fail())
+unsigned int NES::GetScanline()
+{
+	return scanline;
+}
+
+void NES::IncrementClock(int increment)
+{
+	unsigned int old = clock;
+	clock += increment;
+
+	if (clock % 341 < old % 341)
 	{
-		// Read Bytes 6 and 7 to determine the mapper number
-		rom.seekg(0x06, rom.beg);
-		unsigned char flags6 = rom.get();
-		unsigned char flags7 = rom.get();
-		unsigned char mapper_number = (flags7 & 0xF0) | (flags6 >> 4);
-
-		rom.seekg(0x00, rom.beg);
-
-		switch (mapper_number)
+		if (scanline == 260)
 		{
-		case 0x00:
-			cart = new NROM(rom);
-			break;
-		default:
-			rom.close();
-			std::ostringstream oss;
-			oss << "Mapper " << (int) mapper_number << " specified by " << filename << " does not exist.";
-			throw oss.str();
-			break;
+			scanline = -1;
 		}
-
-		cpu = new CPU(*this, cart, &clock);
-		//ppu = new PPU(cart, &clock);
+		else
+		{
+			scanline++;
+		}
 	}
 }
 
-bool NES::isStopped()
+void NES::RaiseNMI()
+{
+	nmi = true;
+}
+
+bool NES::NMIRaised()
+{
+	bool value = nmi;
+	nmi = false;
+	return value;
+}
+
+void NES::GetNameTable(int table, unsigned char* pixels)
+{
+	ppu.GetNameTable(table, pixels);
+}
+
+void NES::GetPatternTable(int table, unsigned char* pixels)
+{
+	ppu.GetPatternTable(table, pixels);
+}
+
+void NES::GetPalette(int palette, unsigned char* pixels)
+{
+	ppu.GetPalette(palette, pixels);
+}
+
+bool NES::IsStopped()
 {
 	bool isStopped;
-	mtx.lock();
+	stopMutex.lock();
 	isStopped = stop;
-	mtx.unlock();
+	stopMutex.unlock();
 	return isStopped;
+}
+
+bool NES::IsPaused()
+{
+	bool isPaused;
+	pauseMutex.lock();
+	isPaused = pause;
+	pauseMutex.unlock();
+	return isPaused;
 }
 
 void NES::Start()
 {
-	mtx.lock();
+	stopMutex.lock();
 	stop = false;
-	mtx.unlock();
+	stopMutex.unlock();
 
-	cpu->Run(-1);
+	cpu.Run();
 
-	mtx.lock();
+	stopMutex.lock();
 	stop = true;
-	mtx.unlock();
+	stopMutex.unlock();
 }
 
 void NES::Stop()
 {
-	mtx.lock();
+	stopMutex.lock();
 	stop = true;
-	mtx.unlock();
+	stopMutex.unlock();
 }
 
-void NES::Pause() {}
+void NES::Resume()
+{
+	pauseMutex.lock();
+	pause = false;
+	pauseMutex.unlock();
+}
+
+void NES::Pause()
+{
+	pauseMutex.lock();
+	pause = true;
+	pauseMutex.unlock();
+}
+
 void NES::Reset() {}
 
 NES::~NES()
 {
-	delete cpu;
-	//delete ppu;
-	delete cart;
+	delete &cpu;
+	delete &ppu;
+	delete &cart;
 }
 
