@@ -64,6 +64,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <Xml Include="config\config.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="utilities\app_settings.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cc" />
+    <ClCompile Include="utilities\app_settings.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
