@@ -8,11 +8,11 @@
 #ifndef SRC_EMULATOR_INTERFACES_DISPLAY_H_
 #define SRC_EMULATOR_INTERFACES_DISPLAY_H_
 
-class Display
+class IDisplay
 {
 public:
 	virtual void NextPixel(unsigned int pixel) = 0;
-	virtual ~Display() {}
+	virtual ~IDisplay() {}
 };
 
 
