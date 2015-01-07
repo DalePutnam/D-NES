@@ -21,21 +21,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="config\config.xml">
-      <Filter>Resource Files</Filter>
-    </Xml>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="utilities\app_settings.h">
       <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="app.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="main_window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="settings_window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="nes_thread.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="ppu_debug_window.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="utilities\app_settings.cc">
       <Filter>Source Files\Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="main.cc">
+    <ClCompile Include="app.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="main_window.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="settings_window.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_window.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nes_thread.cc">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="ppu_debug_window.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="config.xml">
+      <Filter>Resource Files</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

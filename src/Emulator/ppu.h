@@ -10,7 +10,7 @@
 
 #include <queue>
 
-#include "Interfaces/display.h"
+#include "Interfaces/idisplay.h"
 #include "mappers/cart.h"
 
 class NES;
@@ -19,7 +19,7 @@ class PPU
 {
 	NES& nes;
 	Cart& cart;
-	Display& display;
+	IDisplay& display;
 
 	static const unsigned int rgbLookupTable[64];
 
@@ -125,7 +125,7 @@ class PPU
 	void WriteNameTable(unsigned short int address, unsigned char value);
 
 public:
-	PPU(NES& nes, Cart& cart, Display& display);
+	PPU(NES& nes, Cart& cart, IDisplay& display);
 
 #ifdef DEBUG
 	unsigned char SoftReadPPUStatus();
@@ -148,8 +148,10 @@ public:
 	int ScheduleSync();
 	void Sync();
 	void GetNameTable(int table, unsigned char* pixels);
-	void GetPatternTable(int table, unsigned char* pixels);
+	void GetPatternTable(int table, int palette, unsigned char* pixels);
 	void GetPalette(int palette, unsigned char* pixels);
+	void GetPrimaryOAM(int sprite, unsigned char* pixels);
+	void GetSecondaryOAM(int sprite, unsigned char* pixels);
 
 	~PPU();
 };

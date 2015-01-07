@@ -44,10 +44,18 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\VS-Source\libs\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>libboost_iostreams-vc120-mt-gd-1_57.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>D:\VS-Source\libs\boost\bin.v2\libs\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -65,7 +73,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h" />
-    <ClInclude Include="Interfaces\display.h" />
+    <ClInclude Include="Interfaces\idisplay.h" />
+    <ClInclude Include="log\logger.h" />
     <ClInclude Include="mappers\cart.h" />
     <ClInclude Include="mappers\nrom.h" />
     <ClInclude Include="nes.h" />
@@ -73,6 +82,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc" />
+    <ClCompile Include="log\logger.cc" />
     <ClCompile Include="mappers\cart.cc" />
     <ClCompile Include="mappers\nrom.cc" />
     <ClCompile Include="nes.cc" />

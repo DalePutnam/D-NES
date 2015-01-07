@@ -15,7 +15,7 @@ void NES::setLogStream(std::ostream& out)
 }
 #endif
 
-NES::NES(std::string filename, Display& display)
+NES::NES(std::string filename, IDisplay& display)
 	: clock(0),
 	  scanline(241),
 	  stop(true),
@@ -72,14 +72,24 @@ void NES::GetNameTable(int table, unsigned char* pixels)
 	ppu.GetNameTable(table, pixels);
 }
 
-void NES::GetPatternTable(int table, unsigned char* pixels)
+void NES::GetPatternTable(int table, int palette, unsigned char* pixels)
 {
-	ppu.GetPatternTable(table, pixels);
+	ppu.GetPatternTable(table, palette, pixels);
 }
 
 void NES::GetPalette(int palette, unsigned char* pixels)
 {
 	ppu.GetPalette(palette, pixels);
+}
+
+void NES::GetPrimaryOAM(int sprite, unsigned char* pixels)
+{
+	ppu.GetPrimaryOAM(sprite, pixels);
+}
+
+void NES::GetSecondaryOAM(int sprite, unsigned char* pixels)
+{
+	ppu.GetSecondaryOAM(sprite, pixels);
 }
 
 bool NES::IsStopped()

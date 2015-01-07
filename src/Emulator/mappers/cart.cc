@@ -14,7 +14,7 @@
 Cart& Cart::Create(std::string filename)
 {
 	// Open file stream to ROM file
-	std::ifstream rom(filename.c_str(), std::ifstream::in);
+	std::ifstream rom(filename.c_str(), std::ifstream::in | std::ifstream::binary);
 
 	if (!rom.fail())
 	{
@@ -25,7 +25,7 @@ Cart& Cart::Create(std::string filename)
 		// NOTE: The last && in the if statement and rom.clear() are specific to windows as they
 		// are due to an MS-DOS EOF present in the ROM header, on other platforms this
 		// may need to be revised.
-		if (header[0] == 'N' && header[1] == 'E' && header[2] == 'S' && header[3] == 0)
+		if (header[0] == 'N' && header[1] == 'E' && header[2] == 'S' && header[3] == 0x1A)
 		{
 			// Read Bytes 6 and 7 to determine the mapper number
 			rom.clear();

@@ -13,7 +13,7 @@
 #include <mutex>
 
 #include "cpu.h"
-#include "Interfaces/display.h"
+#include "Interfaces/idisplay.h"
 #include "ppu.h"
 #include "mappers/cart.h"
 
@@ -37,7 +37,7 @@ public:
 	void setLogStream(std::ostream& out);
 #endif
 
-	NES(std::string filename, Display& display);
+	NES(std::string filename, IDisplay& display);
 
 	unsigned int GetClock();
 	unsigned int GetScanline();
@@ -49,8 +49,10 @@ public:
 	bool IsPaused();
 
 	void GetNameTable(int table, unsigned char* pixels);
-	void GetPatternTable(int table, unsigned char* pixels);
+	void GetPatternTable(int table, int palette, unsigned char* pixels);
 	void GetPalette(int palette, unsigned char* pixels);
+	void GetPrimaryOAM(int sprite, unsigned char* pixels);
+	void GetSecondaryOAM(int sprite, unsigned char* pixels);
 	void Start();
 	void Stop();
 	void Resume();

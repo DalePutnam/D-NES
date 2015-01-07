@@ -5,8 +5,9 @@
  *      Author: Dale
  */
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
+
 #include "nrom.h"
 
 Cart::MirrorMode NROM::GetMirrorMode()
@@ -44,68 +45,69 @@ void NROM::PrgWrite(unsigned char M, unsigned short int address)
 
 unsigned char NROM::ChrRead(unsigned short int address)
 {
-	return chr[address];
+	if (chrSize != 0)
+	{
+		return chr[address];
+	}
+	else
+	{
+		return chrRam[address];
+	}
 }
 
 void NROM::ChrWrite(unsigned char M, unsigned short int address)
 {
 	if (chrSize == 0)
 	{
-		chr[address] = M;
+		chrRam[address] = M;
 	}
 }
 
-NROM::NROM(std::string filename) : mirroring(Cart::MirrorMode::HORIZONTAL)
+NROM::NROM(std::string& filename) 
+	: file(*new boost::iostreams::mapped_file_source(filename)),
+	mirroring(Cart::MirrorMode::HORIZONTAL)
 {
-	// Open file stream to ROM file
-	std::ifstream rom(filename.c_str(), std::ifstream::in);
-
-	if (!rom.fail())
+	if (file.is_open())
 	{
 		// Read Byte 4 from the file to get the program size
 		// For the type of ROM the emulator currently supports
 		// this will be either 1 or 2 representing 0x4000 or 0x8000 bytes
-		rom.seekg(0x04, rom.beg);
-		prgSize = rom.get() * 0x4000;
-		chrSize = rom.get() * 0x2000;
+		prgSize = file.data()[4] * 0x4000;
+		chrSize = file.data()[5] * 0x2000;
 
-		char flags6 = rom.get();
+		char flags6 = file.data()[6];
 		mirroring = static_cast<Cart::MirrorMode>(flags6 & 0x01);
 
-		prg = new char[prgSize];
-
-		// Read entire program to memory
-		rom.seekg(0x10, rom.beg);
-		rom.read(prg, prgSize);
+		prg = file.data() + 16; // Data pointer plus he size of the file header
 
 		// initialize chr RAM or read chr to memory
 		if (chrSize == 0)
 		{
-			chr = new char[0x2000];
+			chrRam = new char[0x2000];
 			for (int i = 0; i < 0x2000; i++)
 			{
-				chr[i] = 0;
+				chrRam[i] = 0;
 			}
 		}
 		else
 		{
-			chr = new char[chrSize];
-			rom.clear();
-			rom.seekg(0x10 + prgSize, rom.beg);
-			rom.read(chr, chrSize);
-			flags6++;
+			chr = file.data() + prgSize + 16;
 		}
 	}
 	else
 	{
 		std::cout << "Open Failed!!" << std::endl;
 	}
-	rom.close();
 }
 
 NROM::~NROM()
 {
-	delete [] prg;
-	delete [] chr;
+	file.close();
+	delete &file;
+
+	if (chrSize == 0)
+	{
+		delete[] chrRam;
+	}
 }
 

@@ -38,15 +38,22 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <TargetName>D-NES</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>D:\VS-Source\D-NES\src\Emulator;D:\VS-Source\libs\wxWidgets\include\msvc;D:\VS-Source\libs\wxWidgets\include;D:\VS-Source\libs\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;WINVER=0x0400;__WXMSW__;_WINDOWS;wxUSE_GUI=1;_UNICODE;_DEBUG;__WXDEBUG__;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\VS-Source\libs\wxWidgets\lib\vc_lib;D:\VS-Source\libs\boost\bin.v2\libs\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libboost_filesystem-vc120-mt-gd-1_57.lib;wxmsw30ud_core.lib;wxbase30ud.lib;comctl32.lib;rpcrt4.lib;winmm.lib;advapi32.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -64,14 +71,32 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Xml Include="config\config.xml" />
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="app.h" />
+    <ClInclude Include="game_window.h" />
+    <ClInclude Include="main_window.h" />
+    <ClInclude Include="nes_thread.h" />
+    <ClInclude Include="ppu_debug_window.h" />
+    <ClInclude Include="settings_window.h" />
     <ClInclude Include="utilities\app_settings.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cc" />
+    <ClCompile Include="app.cc" />
+    <ClCompile Include="game_window.cc" />
+    <ClCompile Include="main_window.cc" />
+    <ClCompile Include="nes_thread.cc" />
+    <ClCompile Include="ppu_debug_window.cc" />
+    <ClCompile Include="settings_window.cc" />
     <ClCompile Include="utilities\app_settings.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="config.xml">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Emulator\Emulator.vcxproj">
+      <Project>{2f61ab97-7292-4a8c-b249-2773318d46a8}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

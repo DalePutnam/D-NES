@@ -132,29 +132,29 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnThreadUpdate(wxThreadEvent& WXUNUSED(event))
 {
-	gameWindow->UpdateImage(nesThread->GetFrame());
-
-	if (ppuDebugWindow)
+	if (nesThread)
 	{
-		ppuDebugWindow->UpdateNameTable(0, nesThread->GetNameTable(0));
-		ppuDebugWindow->UpdateNameTable(1, nesThread->GetNameTable(1));
-		ppuDebugWindow->UpdateNameTable(2, nesThread->GetNameTable(2));
-		ppuDebugWindow->UpdateNameTable(3, nesThread->GetNameTable(3));
+		gameWindow->UpdateImage(nesThread->GetFrame());
 
-		ppuDebugWindow->UpdatePatternTable(0, nesThread->GetPatternTable(0, ppuDebugWindow->GetCurrentPalette()));
-		ppuDebugWindow->UpdatePatternTable(1, nesThread->GetPatternTable(1, ppuDebugWindow->GetCurrentPalette()));
+		if (ppuDebugWindow)
+		{
+			for (int i = 0; i < 64; ++i)
+			{
+				if (i < 2) ppuDebugWindow->UpdatePatternTable(i, nesThread->GetPatternTable(i, ppuDebugWindow->GetCurrentPalette()));
+				if (i < 4) ppuDebugWindow->UpdateNameTable(i, nesThread->GetNameTable(i));
 
-		ppuDebugWindow->UpdatePalette(0, nesThread->GetPalette(0));
-		ppuDebugWindow->UpdatePalette(1, nesThread->GetPalette(1));
-		ppuDebugWindow->UpdatePalette(2, nesThread->GetPalette(2));
-		ppuDebugWindow->UpdatePalette(3, nesThread->GetPalette(3));
-		ppuDebugWindow->UpdatePalette(4, nesThread->GetPalette(4));
-		ppuDebugWindow->UpdatePalette(5, nesThread->GetPalette(5));
-		ppuDebugWindow->UpdatePalette(6, nesThread->GetPalette(6));
-		ppuDebugWindow->UpdatePalette(7, nesThread->GetPalette(7));
+				if (i < 8)
+				{
+					ppuDebugWindow->UpdatePalette(i, nesThread->GetPalette(i));
+					ppuDebugWindow->UpdateSecondarySprite(i, nesThread->GetPrimarySprite(i));
+				}
+
+				ppuDebugWindow->UpdatePrimarySprite(i, nesThread->GetPrimarySprite(i));
+			}
+		}
+
+		nesThread->UnlockFrame();
 	}
-
-	nesThread->UnlockFrame();
 }
 
 void MainWindow::OnEmulatorResume(wxCommandEvent& WXUNUSED(event))

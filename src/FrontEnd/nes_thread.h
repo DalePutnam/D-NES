@@ -17,20 +17,11 @@ class NESThread : public wxThread, public IDisplay
 	MainWindow* handler;
 	NES& nes;
 
-	unsigned char* nameTable0;
-	unsigned char* nameTable1;
-	unsigned char* nameTable2;
-	unsigned char* nameTable3;
-	unsigned char* patternTable0;
-	unsigned char* patternTable1;
-	unsigned char* palette0;
-	unsigned char* palette1;
-	unsigned char* palette2;
-	unsigned char* palette3;
-	unsigned char* palette4;
-	unsigned char* palette5;
-	unsigned char* palette6;
-	unsigned char* palette7;
+	unsigned char* nameTable[4];
+	unsigned char* patternTable[2];
+	unsigned char* palette[8];
+	unsigned char* primarySprite[64];
+	unsigned char* secondarySprite[8];
 
 	int width;
 	int height;
@@ -56,6 +47,8 @@ public:
 	unsigned char* GetNameTable(int tableID);
 	unsigned char* GetPatternTable(int tableID, int paletteID);
 	unsigned char* GetPalette(int tableID);
+	unsigned char* GetPrimarySprite(int sprite);
+	unsigned char* GetSecondarySprite(int sprite);
 };
 
 #endif

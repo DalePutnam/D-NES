@@ -72,7 +72,7 @@ void PPU::GetNameTable(int table, unsigned char* pixels)
 	}
 }
 
-void PPU::GetPatternTable(int table, unsigned char* pixels)
+void PPU::GetPatternTable(int table, int palette, unsigned char* pixels)
 {
 	unsigned short int tableIndex;
 	if (table == 0)
@@ -98,7 +98,7 @@ void PPU::GetPatternTable(int table, unsigned char* pixels)
 				for (unsigned int h = 0; h < 8; ++h)
 				{
 					unsigned short int pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
-					unsigned short int paletteIndex = 0x3F04 | pixel;
+					unsigned short int paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
 					unsigned int rgb = rgbLookupTable[Read(paletteIndex)];
 					unsigned char red = (rgb & 0xFF0000) >> 16;
 					unsigned char green = (rgb & 0x00FF00) >> 8;
@@ -170,6 +170,70 @@ void PPU::GetPalette(int palette, unsigned char* pixels)
 				pixels[index + 1] = green;
 				pixels[index + 2] = blue;
 			}
+		}
+	}
+}
+
+void PPU::GetPrimaryOAM(int sprite, unsigned char* pixels)
+{
+	unsigned char byteOne = primaryOAM[(0x4 * sprite) + 1];
+	unsigned char byteTwo = primaryOAM[(0x4 * sprite) + 2];
+
+	unsigned short int tableIndex = baseSpriteTableAddress; //(byteOne & 0x01) ? 0x1000 : 0x0000;
+	unsigned short int patternIndex = byteOne; //(byteOne & 0xFE) >> 1;
+	unsigned char palette = (byteTwo & 0xFC) + 4;
+
+	for (unsigned int i = 0; i < 8; ++i)
+	{
+		unsigned char tileLow = cart.ChrRead(tableIndex + patternIndex + i);
+		unsigned char tileHigh = cart.ChrRead(tableIndex + patternIndex + i + 8);
+
+		for (unsigned int f = 0; f < 8; ++f)
+		{
+			unsigned short int pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
+			unsigned short int paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
+			unsigned int rgb = rgbLookupTable[Read(paletteIndex)];
+			unsigned char red = (rgb & 0xFF0000) >> 16;
+			unsigned char green = (rgb & 0x00FF00) >> 8;
+			unsigned char blue = (rgb & 0x0000FF);
+
+			unsigned int index = (24 * i) + (f * 3);
+
+			pixels[index] = red;
+			pixels[index + 1] = green;
+			pixels[index + 2] = blue;
+		}
+	}
+}
+
+void PPU::GetSecondaryOAM(int sprite, unsigned char* pixels)
+{
+	unsigned char byteOne = secondaryOAM[(0x4 * sprite) + 1];
+	unsigned char byteTwo = secondaryOAM[(0x4 * sprite) + 2];
+
+	unsigned short int tableIndex = baseSpriteTableAddress; //(byteOne & 0x01) ? 0x1000 : 0x0000;
+	unsigned short int patternIndex = byteOne;//(byteOne & 0xFE) >> 1;
+	unsigned char palette = (byteTwo & 0xFC) + 4;
+
+	for (unsigned int i = 0; i < 8; ++i)
+	{
+		unsigned char tileLow = cart.ChrRead(tableIndex + patternIndex + i);
+		unsigned char tileHigh = cart.ChrRead(tableIndex + patternIndex + i + 8);
+
+		for (unsigned int f = 0; f < 8; ++f)
+		{
+			unsigned short int pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
+			unsigned short int paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
+			unsigned int rgb = rgbLookupTable[Read(paletteIndex)];
+			unsigned char red = (rgb & 0xFF0000) >> 16;
+			unsigned char green = (rgb & 0x00FF00) >> 8;
+			unsigned char blue = (rgb & 0x0000FF);
+
+			unsigned int index = (24 * i) + (f * 3);
+
+			pixels[index] = red;
+			pixels[index + 1] = green;
+			pixels[index + 2] = blue;
 		}
 	}
 }
@@ -446,7 +510,7 @@ void PPU::UpdateState(int cycles)
 
 	while (cycles != 0)
 	{
-		if (ctrlBuffer.front().first == clock - cycles)
+		if (ctrlBuffer.size() > 0 && ctrlBuffer.front().first == clock - cycles)
 		{
 			unsigned char value = ctrlBuffer.front().second;
 			ctrlBuffer.pop();
@@ -460,7 +524,7 @@ void PPU::UpdateState(int cycles)
 
 			lowerBits = (0x1F & value);
 		}
-		else if (maskBuffer.front().first == clock - cycles)
+		else if (maskBuffer.size() > 0 && maskBuffer.front().first == clock - cycles)
 		{
 			unsigned char value = maskBuffer.front().second;
 			maskBuffer.pop();
@@ -476,7 +540,7 @@ void PPU::UpdateState(int cycles)
 
 			lowerBits = (0x1F & value);
 		}
-		else if (scrollBuffer.front().first == clock - cycles)
+		else if (scrollBuffer.size() > 0 && scrollBuffer.front().first == clock - cycles)
 		{
 			unsigned short int value = scrollBuffer.front().second;
 			scrollBuffer.pop();
@@ -495,14 +559,14 @@ void PPU::UpdateState(int cycles)
 			addressLatch = !addressLatch;
 			lowerBits = static_cast<unsigned char>(0x1F & value);
 		}
-		else if (oamAddrBuffer.front().first == clock - cycles)
+		else if (oamAddrBuffer.size() > 0 && oamAddrBuffer.front().first == clock - cycles)
 		{
 			oamAddress = oamAddrBuffer.front().second;
 			oamAddrBuffer.pop();
 
 			lowerBits = (0x1F & oamAddress);
 		}
-		else if (ppuAddrBuffer.front().first == clock - cycles)
+		else if (ppuAddrBuffer.size() > 0 && ppuAddrBuffer.front().first == clock - cycles)
 		{
 			unsigned short int value = ppuAddrBuffer.front().second;
 			ppuAddrBuffer.pop();
@@ -513,7 +577,7 @@ void PPU::UpdateState(int cycles)
 			addressLatch = !addressLatch;
 			lowerBits = static_cast<unsigned char>(0x1F & value);
 		}
-		else if (oamDataBuffer.front().first == clock - cycles)
+		else if (oamDataBuffer.size() > 0 && oamDataBuffer.front().first == clock - cycles)
 		{
 			unsigned char value = oamDataBuffer.front().second;
 			oamDataBuffer.pop();
@@ -521,7 +585,7 @@ void PPU::UpdateState(int cycles)
 			primaryOAM[oamAddress++] = value;
 			lowerBits = (0x1F & value);
 		}
-		else if (ppuDataBuffer.front().first == clock - cycles)
+		else if (ppuDataBuffer.size() > 0 && ppuDataBuffer.front().first == clock - cycles)
 		{
 			unsigned char value = ppuDataBuffer.front().second;
 			ppuDataBuffer.pop();
@@ -947,7 +1011,7 @@ void PPU::WriteNameTable(unsigned short int address, unsigned char value)
 	}
 }
 
-PPU::PPU(NES& nes, Cart& cart, Display& display)
+PPU::PPU(NES& nes, Cart& cart, IDisplay& display)
 	: nes(nes),
 	  cart(cart),
 	  display(display),

@@ -8,17 +8,20 @@
 #ifndef NROM_H_
 #define NROM_H_
 
-#include <string>
 #include "cart.h"
+#include "boost/iostreams/device/mapped_file.hpp"
 
 class NROM : public Cart
 {
+	boost::iostreams::mapped_file_source& file;
+
 	MirrorMode mirroring;
 	int chrSize;
 	int prgSize;
 
-	char* prg;
-	char* chr;
+	const char* prg;
+	const char* chr;
+	char* chrRam;
 
 public:
 	MirrorMode GetMirrorMode();
@@ -29,7 +32,7 @@ public:
 	unsigned char ChrRead(unsigned short int address);
 	void ChrWrite(unsigned char M, unsigned short int address);
 
-	NROM(std::string filename);
+	NROM(std::string& filename);
 	~NROM();
 };
 

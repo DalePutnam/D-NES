@@ -5,6 +5,7 @@
  *      Author: Dale
  */
 #include <iostream>
+
 #include "cpu.h"
 #include "nes.h"
 
@@ -2301,7 +2302,7 @@ bool CPU::NextOP()
 		return false;
 	}
 #ifdef DEBUG
-	logger.printLog();
+	//logger.printLog();
 #endif
 	return true;
 }
