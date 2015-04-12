@@ -873,7 +873,7 @@ void PPU::IncrementYScroll()
 		}
 		else
 		{
-			coarseY++; // Increment coarse &
+			coarseY++; // Increment coarse Y
 		}
 
 		ppuAddress = (ppuAddress & 0xFC1F) | (coarseY << 5); // Combine values into new address

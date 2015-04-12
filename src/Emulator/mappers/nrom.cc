@@ -78,7 +78,7 @@ NROM::NROM(std::string& filename)
 		char flags6 = file.data()[6];
 		mirroring = static_cast<Cart::MirrorMode>(flags6 & 0x01);
 
-		prg = file.data() + 16; // Data pointer plus he size of the file header
+		prg = file.data() + 16; // Data pointer plus the size of the file header
 
 		// initialize chr RAM or read chr to memory
 		if (chrSize == 0)

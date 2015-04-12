@@ -25,7 +25,6 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
 {
 	wxBoxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* hbox0 = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* vbox0 = new wxBoxSizer(wxVERTICAL);
 	wxGridSizer* grid0 = new wxGridSizer(2, 2, 5, 5);
 	wxGridSizer* grid1 = new wxGridSizer(2, 4, 0, 0);
