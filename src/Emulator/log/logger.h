@@ -36,8 +36,8 @@ public:
 	void setLogStream(std::ostream& out);
 	void setSpecial(); // Set Special flag
 	void logOpCode(int opcode); // Set OpCode
-	void logOpName(std::string opname); // Set Instruction Name
-	void logAddressingMode(std::string mode, unsigned short int addr = 0); // Set addressing mode name
+	void logOpName(const std::string& opname); // Set Instruction Name
+	void logAddressingMode(const std::string& mode, unsigned short int addr = 0); // Set addressing mode name
 	void logAddressingArgs(int arg1, int arg2); // Set both addressing arguments
 	void logAddressingArgs(int arg1); // Set only the first addressing arguments
 	void logFinalAddress(int addr);

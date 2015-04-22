@@ -44,7 +44,7 @@ void Logger::logOpCode(int opcode)
 }
 
 // Sets the current instruction name
-void Logger::logOpName(string opname)
+void Logger::logOpName(const std::string& opname)
 {
 	this->opname = opname;
 }
@@ -62,7 +62,7 @@ void Logger::logOpName(string opname)
 // Indirect:        ($0200) = DB7E
 // IndexedIndirect: ($80,X) @ 82 = 0300 = 5B
 // IndirectIndexed: ($89),Y = 0300 @ 0300 = 89
-void Logger::logAddressingMode(string mode, unsigned short int addr)
+void Logger::logAddressingMode(const std::string& mode, unsigned short int addr)
 {
 	ostringstream oss;
 	if (mode.compare("Immediate") == 0)
