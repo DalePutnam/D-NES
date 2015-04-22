@@ -28,7 +28,7 @@ class NESThread : public wxThread, public IDisplay
 	int pixelCount;
 	unsigned char* pixelArray;
 
-	bool frameLocked;
+	volatile bool frameLocked;
 
 	virtual wxThread::ExitCode Entry();
 
