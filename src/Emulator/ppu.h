@@ -127,12 +127,6 @@ class PPU
 public:
 	PPU(NES& nes, Cart& cart, IDisplay& display);
 
-#ifdef DEBUG
-	unsigned char SoftReadPPUStatus();
-	unsigned char SoftReadOAMData();
-	unsigned char SoftReadPPUData();
-#endif
-
 	unsigned char ReadPPUStatus();
 	unsigned char ReadOAMData();
 	unsigned char ReadPPUData();

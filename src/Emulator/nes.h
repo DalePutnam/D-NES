@@ -33,9 +33,6 @@ class NES
 	std::mutex pauseMutex;
 
 public:
-#ifdef DEBUG
-	void setLogStream(std::ostream& out);
-#endif
 
 	NES(std::string filename, IDisplay& display);
 

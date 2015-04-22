@@ -8,13 +8,6 @@
 #include "nes.h"
 #include "mappers/nrom.h"
 
-#ifdef DEBUG
-void NES::setLogStream(std::ostream& out)
-{
-	cpu.setLogStream(out);
-}
-#endif
-
 NES::NES(std::string filename, IDisplay& display)
 	: clock(0),
 	  scanline(241),
