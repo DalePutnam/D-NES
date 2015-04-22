@@ -8,11 +8,6 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-#ifdef DEBUG
-#include <iostream>
-#include "log/logger.h"
-#endif
-
 /*
  * 6502 CPU Simulator
  */
@@ -24,11 +19,6 @@ class NES;
 
 class CPU
 {
-#ifdef DEBUG
-	// Logger
-	Logger logger;
-#endif
-
 	// CPU Main Memory
 	unsigned char memory[0x800];
 
@@ -145,11 +135,6 @@ class CPU
 	bool NextOP(); // Execute next instruction
 
 public:
-
-#ifdef DEBUG
-	unsigned char SoftRead(unsigned short int address);
-	void setLogStream(std::ostream& out);
-#endif
 
 	CPU(NES& nes, PPU& ppu, Cart& cart);
 	void Run(); // Run CPU

@@ -1085,51 +1085,6 @@ PPU::PPU(NES& nes, Cart& cart, IDisplay& display)
 	}
 }
 
-#ifdef DEBUG
-unsigned char PPU::SoftReadPPUStatus()
-{
-	if (nes.GetClock() != clock)
-	{
-		Sync();
-	}
-
-	unsigned char vB = static_cast<unsigned char>(inVBLANK);
-	unsigned char sp0 = static_cast<unsigned char>(sprite0Hit);
-	unsigned char spOv = static_cast<unsigned char>(spriteOverflow);
-
-	return  (vB << 7) | (sp0 << 6) | (spOv << 5) | lowerBits;
-}
-
-unsigned char PPU::SoftReadOAMData()
-{
-	if (nes.GetClock() != clock)
-	{
-		Sync();
-	}
-
-	return primaryOAM[oamAddress];
-}
-
-unsigned char PPU::SoftReadPPUData()
-{
-	if (nes.GetClock() != clock)
-	{
-		Sync();
-	}
-
-	unsigned short int addr =  ppuAddress % 0x4000;
-	unsigned char value = dataBuffer;
-
-	if (addr >= 0x3F00)
-	{
-		if (addr % 4 == 0) addr &= 0xFF0F; // Ignore second nibble if addr is a multiple of 4
-		value = palettes[addr % 0x20];
-	}
-
-	return value;
-}
-#endif
-
 unsigned char PPU::ReadPPUStatus()
 {
 	if (nes.GetClock() != clock)

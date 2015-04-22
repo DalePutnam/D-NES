@@ -4,56 +4,9 @@
  *  Created on: Mar 15, 2014
  *      Author: Dale
  */
-#include <iostream>
 
 #include "cpu.h"
 #include "nes.h"
-
-#ifdef DEBUG
-unsigned char CPU::SoftRead(unsigned short int address)
-{
-	// Any address less then 0x2000 is just the
-	// Internal Ram mirrored every 0x800 bytes
-	if (address < 0x2000)
-	{
-		return memory[address % 0x800];
-	}
-	else if (address >= 0x2000 && address < 0x4000)
-	{
-		//unsigned short int addr = (address - 0x2000) % 8;
-
-		/*if (addr == 2)
-		{
-			return ppu.SoftReadPPUStatus();
-		}
-		else if (addr == 4)
-		{
-			return ppu.SoftReadOAMData();
-		}
-		else if (addr == 7)
-		{
-			return ppu.SoftReadPPUData();
-		}
-		else
-		{*/
-			return 0xFF;
-		//}
-	}
-	else if (address > 0x5FFF && address < 0x10000)
-	{
-		return cart.PrgRead(address - 0x6000);
-	}
-	else
-	{
-		return 0xFF;
-	}
-}
-
-void CPU::setLogStream(std::ostream& out)
-{
-	logger.setLogStream(out);
-}
-#endif
 
 unsigned char CPU::Read(unsigned short int address)
 {
@@ -180,11 +133,6 @@ void CPU::Write(unsigned char M, unsigned short int address)
 // as the location of the instruction operand
 unsigned short int CPU::ZeroPage()
 {
-#ifdef DEBUG
-	logger.logAddressingArgs(SoftRead(PC));
-	logger.logValue(SoftRead(SoftRead(PC)));
-	logger.logAddressingMode("ZeroPage", SoftRead(PC));
-#endif
 	return Read(PC++);
 }
 
@@ -193,11 +141,6 @@ unsigned short int CPU::ZeroPage()
 // as the location of the instruction operand
 unsigned short int CPU::ZeroPageX()
 {
-#ifdef DEBUG
-	logger.logAddressingArgs(SoftRead(PC));
-	logger.logValue(SoftRead((SoftRead(PC) + X) % 0x100));
-	logger.logAddressingMode("ZeroPageX", SoftRead(PC));
-#endif
 	unsigned short int address = Read(PC++);
 	Read(address);
 	return (address + X) % 0x100;
@@ -208,11 +151,6 @@ unsigned short int CPU::ZeroPageX()
 // as the location of the instruction operand
 unsigned short int CPU::ZeroPageY()
 {
-#ifdef DEBUG
-	logger.logAddressingArgs(SoftRead(PC));
-	logger.logValue(SoftRead((SoftRead(PC) + Y) % 0x100));
-	logger.logAddressingMode("ZeroPageY", SoftRead(PC));
-#endif
 	unsigned short int address = Read(PC++);
 	Read(address);
 	return (address + Y) % 0x100;
@@ -224,12 +162,6 @@ unsigned short int CPU::ZeroPageY()
 // this mode as its operand
 unsigned short int CPU::Absolute()
 {
-#ifdef DEBUG
-	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
-	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
-	logger.logValue(SoftRead(addr));
-	logger.logAddressingMode("Absolute", addr);
-#endif
 	unsigned short int address = Read(PC) + (((unsigned short int) Read(PC + 1)) * 0x100);
 	PC += 2;
 	return address;
@@ -243,12 +175,6 @@ unsigned short int CPU::Absolute()
 // to the instruction.
 unsigned short int CPU::AbsoluteX()
 {
-#ifdef DEBUG
-	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
-	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
-	logger.logValue(SoftRead(addr + X));
-	logger.logAddressingMode("AbsoluteX", addr);
-#endif
 	// In the case of read-modify-write instructions the extra read and "fix" will
 	// happen if they need to or not, so fix will only be set to 0x100 if a page
 	// has actually been crossed
@@ -284,12 +210,6 @@ unsigned short int CPU::AbsoluteX()
 // to the instruction.
 unsigned short int CPU::AbsoluteY()
 {
-#ifdef DEBUG
-	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
-	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
-	logger.logValue(SoftRead(addr + Y));
-	logger.logAddressingMode("AbsoluteY", addr);
-#endif
 	// In the case of read-modify-write instructions the extra read and "fix" will
 	// happen if they need to or not, so fix will only be set to 0x100 if a page
 	// has actually been crossed
@@ -331,12 +251,6 @@ unsigned short int CPU::AbsoluteY()
 // the operand
 unsigned short int CPU::Indirect()
 {
-#ifdef DEBUG
-	int addr = SoftRead(PC) + (((unsigned short int) SoftRead(PC + 1)) * 0x100);
-	logger.logAddressingArgs(SoftRead(PC), SoftRead(PC + 1));
-	logger.logValue(SoftRead(addr) + (((unsigned short int) SoftRead(addr + 1)) * 0x100));
-	logger.logAddressingMode("Indirect", addr);
-#endif
 	unsigned short int address = Read(PC) + (((unsigned short int) Read(PC + 1)) * 0x100); // Address where true address will be fetched from
 	PC += 2;
 	unsigned char lowbyte = (unsigned char) address + 1; // Least significant byte of address incremented (but the MSB is ALWAYS unaffected)
@@ -351,14 +265,6 @@ unsigned short int CPU::Indirect()
 // to make the final 16-bit address of the operand
 unsigned short int CPU::IndexedIndirect()
 {
-#ifdef DEBUG
-	int argument = SoftRead(PC);
-	int addrfin = SoftRead((unsigned char) (argument + X)) + (((unsigned short int) SoftRead((unsigned char) (argument + X + 1))) * 0x100);
-	logger.logAddressingArgs(SoftRead(PC));
-	logger.logFinalAddress(addrfin);
-	logger.logValue(SoftRead(addrfin));
-	logger.logAddressingMode("IndexedIndirect", SoftRead(PC));
-#endif
 	unsigned short int pointer = Read(PC++); // Get pointer
 	Read(pointer); // Read from pointer
 	pointer += X; // Add index to pointer
@@ -380,14 +286,6 @@ unsigned short int CPU::IndexedIndirect()
 // is added.
 unsigned short int CPU::IndirectIndexed()
 {
-#ifdef DEBUG
-	int argument = SoftRead(PC);
-	int addrfin = SoftRead(argument) + (((unsigned short int) SoftRead((unsigned char) (argument + 1))) * 0x100);
-	logger.logAddressingArgs(SoftRead(PC));
-	logger.logFinalAddress(addrfin);
-	logger.logValue(SoftRead((unsigned short int) (addrfin + Y)));
-	logger.logAddressingMode("IndirectIndexed", SoftRead(PC));
-#endif
 	// In the case of read-modify-write instructions the extra read and "fix" will
 	// happen if they need to or not, so fix will only be set to 0x100 if a page
 	// has actually been crossed
@@ -425,9 +323,6 @@ unsigned short int CPU::IndirectIndexed()
 // flags as necessary.
 void CPU::ADC(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("ADC");
-#endif
 	unsigned char C = P & 0x01; // get carry flag
 	unsigned char origA = A;
 	short int result = A + M + C;
@@ -450,9 +345,6 @@ void CPU::ADC(unsigned char M)
 // Sets the Negative and Zero flags if necessary
 void CPU::AND(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("AND");
-#endif
 	A = A & M;
 
 	// if Result is 0 set zero flag
@@ -467,9 +359,6 @@ void CPU::AND(unsigned char M)
 // In this case Carry gets the former bit 7 of M.
 unsigned char CPU::ASL(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("ASL");
-#endif
 	unsigned char origM = M;
 	M = M << 1;
 
@@ -488,10 +377,6 @@ unsigned char CPU::ASL(unsigned char M)
 // found at the next memory location.
 void CPU::BCC()
 {
-#ifdef DEBUG
-	logger.logOpName("BCC");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if ((P & 0x01) == 0)
@@ -534,10 +419,6 @@ void CPU::BCC()
 // found at the next memory location.
 void CPU::BCS()
 {
-#ifdef DEBUG
-	logger.logOpName("BCS");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if ((P & 0x01) == 1)
@@ -580,10 +461,6 @@ void CPU::BCS()
 // found at the next memory location.
 void CPU::BEQ()
 {
-#ifdef DEBUG
-	logger.logOpName("BEQ");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if (((P & 0x02) >> 1) == 1)
@@ -626,9 +503,6 @@ void CPU::BEQ()
 // The Overflow and Negative flags are also set if necessary.
 void CPU::BIT(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("BIT");
-#endif
 	unsigned char result = A & M;
 
 	// if Result is 0 set zero flag
@@ -644,10 +518,6 @@ void CPU::BIT(unsigned char M)
 // found at the next memory location.
 void CPU::BMI()
 {
-#ifdef DEBUG
-	logger.logOpName("BMI");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if (((P & 0x80) >> 7) == 1)
@@ -688,10 +558,6 @@ void CPU::BMI()
 // found at the next memory location.
 void CPU::BNE()
 {
-#ifdef DEBUG
-	logger.logOpName("BNE");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if (((P & 0x02) >> 1) == 0)
@@ -732,10 +598,6 @@ void CPU::BNE()
 // found at the next memory location.
 void CPU::BPL()
 {
-#ifdef DEBUG
-	logger.logOpName("BPL");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if (((P & 0x80) >> 7) == 0)
@@ -778,9 +640,6 @@ void CPU::BPL()
 // address stored at the interrupt vector (0xFFFE and 0xFFFF)
 void CPU::BRK()
 {
-#ifdef DEBUG
-	logger.logOpName("BRK");
-#endif
 	Write(PC >> 8, 0x100 + S);
 	Write(PC, 0x100 + (S - 1));
 	Write(P | 0x30, 0x100 + (S - 2));
@@ -794,10 +653,6 @@ void CPU::BRK()
 // found at the next memory location.
 void CPU::BVC()
 {
-#ifdef DEBUG
-	logger.logOpName("BVC");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if (((P & 0x40) >> 6) == 0)
@@ -840,10 +695,6 @@ void CPU::BVC()
 // found at the next memory location.
 void CPU::BVS()
 {
-#ifdef DEBUG
-	logger.logOpName("BVS");
-	logger.logAddressingArgs(SoftRead(PC));
-#endif
 	char operand = (char) Read(PC++);
 
 	if (((P & 0x40) >> 6) == 1)
@@ -884,9 +735,6 @@ void CPU::BVS()
 // Clear Carry Flag
 void CPU::CLC()
 {
-#ifdef DEBUG
-	logger.logOpName("CLC");
-#endif
 	P = P & 0xFE;
 }
 
@@ -896,27 +744,18 @@ void CPU::CLC()
 // include decimal mode (and it was stupid anyway)
 void CPU::CLD()
 {
-#ifdef DEBUG
-	logger.logOpName("CLD");
-#endif
 	P = P & 0xF7;
 }
 
 // Clear Interrupt Disable
 void CPU::CLI()
 {
-#ifdef DEBUG
-	logger.logOpName("CLI");
-#endif
 	P = P & 0xFB;
 }
 
 // Clear Overflow flag
 void CPU::CLV()
 {
-#ifdef DEBUG
-	logger.logOpName("CLV");
-#endif
 	P = P & 0xBF;
 }
 
@@ -926,9 +765,6 @@ void CPU::CLV()
 // and the Carry flag if the Accumulator was larger (or equal)
 void CPU::CMP(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("CMP");
-#endif
 	unsigned char result = A - M;
 	// if A >= M set carry flag
 	(A >= M) ? P = P | 0x01 : P = P & 0xFE;
@@ -944,9 +780,6 @@ void CPU::CMP(unsigned char M)
 // and the Carry flag if the X register was larger (or equal)
 void CPU::CPX(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("CPX");
-#endif
 	unsigned char result = X - M;
 	// if X >= M set carry flag
 	(X >= M) ? P = P | 0x01 : P = P & 0xFE;
@@ -962,9 +795,6 @@ void CPU::CPX(unsigned char M)
 // and the Carry flag if the Y register was larger (or equal)
 void CPU::CPY(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("CPY");
-#endif
 	unsigned char result = Y - M;
 	// if Y >= M set carry flag
 	(Y >= M) ? P = P | 0x01 : P = P & 0xFE;
@@ -978,9 +808,6 @@ void CPU::CPY(unsigned char M)
 // Subtracts one from M and then returns the new value
 unsigned char CPU::DEC(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("DEC");
-#endif
 	unsigned char result = M - 1;
 	// if result is 0 set zero flag
 	(result == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -993,9 +820,6 @@ unsigned char CPU::DEC(unsigned char M)
 // Subtracts one from X
 void CPU::DEX()
 {
-#ifdef DEBUG
-	logger.logOpName("DEX");
-#endif
 	--X;
 	// if X is 0 set zero flag
 	(X == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1007,9 +831,6 @@ void CPU::DEX()
 // Subtracts one from Y
 void CPU::DEY()
 {
-#ifdef DEBUG
-	logger.logOpName("DEY");
-#endif
 	--Y;
 	// if Y is 0 set zero flag
 	(Y == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1022,9 +843,6 @@ void CPU::DEY()
 // and M. The Zero and Negative flags are set if necessary.
 void CPU::EOR(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("EOR");
-#endif
 	A = A ^ M;
 	// if A is 0 set zero flag
 	(A == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1036,9 +854,6 @@ void CPU::EOR(unsigned char M)
 // Adds one to M and then returns the new value
 unsigned char CPU::INC(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("INC");
-#endif
 	unsigned char result = M + 1;
 	// if result is 0 set zero flag
 	(result == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1051,9 +866,6 @@ unsigned char CPU::INC(unsigned char M)
 // Adds one to X
 void CPU::INX()
 {
-#ifdef DEBUG
-	logger.logOpName("INX");
-#endif
 	++X;
 	// if X is 0 set zero flag
 	(X == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1065,9 +877,6 @@ void CPU::INX()
 // Adds one to Y
 void CPU::INY()
 {
-#ifdef DEBUG
-	logger.logOpName("INY");
-#endif
 	++Y;
 	// if Y is 0 set zero flag
 	(Y == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1079,9 +888,6 @@ void CPU::INY()
 // Sets PC to M
 void CPU::JMP(unsigned short int M)
 {
-#ifdef DEBUG
-	logger.logOpName("JMP");
-#endif
 	PC = M;
 }
 
@@ -1093,9 +899,6 @@ void CPU::JMP(unsigned short int M)
 // it happens before with some fudging to compensate
 void CPU::JSR(unsigned short int M)
 {
-#ifdef DEBUG
-	logger.logOpName("JSR");
-#endif
 	PC--;
 	Read(0x100 + S); // internal operation
 
@@ -1109,9 +912,6 @@ void CPU::JSR(unsigned short int M)
 // Sets the accumulator to M
 void CPU::LDA(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("LDA");
-#endif
 	A = M;
 
 	// if A is 0 set zero flag
@@ -1124,9 +924,6 @@ void CPU::LDA(unsigned char M)
 // Sets the X to M
 void CPU::LDX(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("LDX");
-#endif
 	X = M;
 
 	// if X is 0 set zero flag
@@ -1139,9 +936,6 @@ void CPU::LDX(unsigned char M)
 // Sets the Y to M
 void CPU::LDY(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("LDY");
-#endif
 	Y = M;
 
 	// if Y is 0 set zero flag
@@ -1156,9 +950,6 @@ void CPU::LDY(unsigned char M)
 // The Zero and Negative flags are set like normal/
 unsigned char CPU::LSR(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("LSR");
-#endif
 	unsigned char result = M >> 1;
 
 	// set carry flag to bit 0 of M
@@ -1176,9 +967,6 @@ unsigned char CPU::LSR(unsigned char M)
 // a convenient place to put the logger code.
 void CPU::NOP()
 {
-#ifdef DEBUG
-	logger.logOpName("NOP");
-#endif
 }
 
 // Logical Inclusive Or
@@ -1186,9 +974,6 @@ void CPU::NOP()
 // The Zero and Negative flags are set if necessary
 void CPU::ORA(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("ORA");
-#endif
 	A = A | M;
 	// if A is 0 set zero flag
 	(A == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1200,9 +985,6 @@ void CPU::ORA(unsigned char M)
 // Pushes the Accumulator (A) onto the stack
 void CPU::PHA()
 {
-#ifdef DEBUG
-	logger.logOpName("PHA");
-#endif
 	Write(A, 0x100 + S--);
 }
 
@@ -1210,9 +992,6 @@ void CPU::PHA()
 // Pushes P onto the stack
 void CPU::PHP()
 {
-#ifdef DEBUG
-	logger.logOpName("PHP");
-#endif
 	Write(P | 0x30, 0x100 + S--);
 }
 
@@ -1221,9 +1000,6 @@ void CPU::PHP()
 // Sets Zero and Negative flags if necessary
 void CPU::PLA()
 {
-#ifdef DEBUG
-	logger.logOpName("PLA");
-#endif
 	Read(0x100 + S++);
 
 	A = Read(0x100 + S);
@@ -1238,9 +1014,6 @@ void CPU::PLA()
 // Sets Zero and Negative flags if necessary
 void CPU::PLP()
 {
-#ifdef DEBUG
-	logger.logOpName("PLP");
-#endif
 	Read(0x100 + S++);
 
 	P = (Read(0x100 + S) & 0xEF) | 0x20;
@@ -1252,9 +1025,6 @@ void CPU::PLP()
 // The Zero and Negative flags are set if necessary
 unsigned char CPU::ROL(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("ROL");
-#endif
 	unsigned char result = (M << 1) | (P & 0x01);
 	// set carry flag to old bit 7
 	((M >> 7) == 1) ? P = P | 0x01 : P = P & 0xFE;
@@ -1273,9 +1043,6 @@ unsigned char CPU::ROL(unsigned char M)
 // The Zero and Negative flags are set if necessary
 unsigned char CPU::ROR(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("ROR");
-#endif
 	unsigned char result = (M >> 1) | ((P & 0x01) << 7);
 	// set carry flag to old bit 0
 	((M & 0x01) == 1) ? P = P | 0x01 : P = P & 0xFE;
@@ -1292,9 +1059,6 @@ unsigned char CPU::ROR(unsigned char M)
 // execution at the new PC
 void CPU::RTI()
 {
-#ifdef DEBUG
-	logger.logOpName("RTI");
-#endif
 	Read(0x100 + S);
 
 	P = (Read(0x100 + (S + 1)) & 0xEF) | 0x20;
@@ -1309,9 +1073,6 @@ void CPU::RTI()
 // execution at the new PC
 void CPU::RTS()
 {
-#ifdef DEBUG
-	logger.logOpName("RTS");
-#endif
 	Read(0x100 + S++);
 
 	unsigned short int lowPC = Read(0x100 + S++);
@@ -1326,9 +1087,6 @@ void CPU::RTS()
 // Sets the Carry, Overflow, Negative and Zero flags if necessary
 void CPU::SBC(unsigned char M)
 {
-#ifdef DEBUG
-	logger.logOpName("SBC");
-#endif
 	char C = P & 0x01; // get carry flag
 	char signA = (char) A;
 	char signM = (char) M;
@@ -1350,9 +1108,6 @@ void CPU::SBC(unsigned char M)
 // Set Carry Flag
 void CPU::SEC()
 {
-#ifdef DEBUG
-	logger.logOpName("SEC");
-#endif
 	P = P | 0x01;
 }
 
@@ -1361,18 +1116,12 @@ void CPU::SEC()
 // See the comment of CLD for why.
 void CPU::SED()
 {
-#ifdef DEBUG
-	logger.logOpName("SED");
-#endif
 	P = P | 0x08;
 }
 
 // Set Interrupt Disable
 void CPU::SEI()
 {
-#ifdef DEBUG
-	logger.logOpName("SEI");
-#endif
 	P = P | 0x04;
 }
 
@@ -1381,9 +1130,6 @@ void CPU::SEI()
 // are done externally to these functions
 unsigned char CPU::STA()
 {
-#ifdef DEBUG
-	logger.logOpName("STA");
-#endif
 	return A;
 }
 
@@ -1392,9 +1138,6 @@ unsigned char CPU::STA()
 // are done externally to these functions
 unsigned char CPU::STX()
 {
-#ifdef DEBUG
-	logger.logOpName("STX");
-#endif
 	return X;
 }
 
@@ -1403,18 +1146,12 @@ unsigned char CPU::STX()
 // are done externally to these functions
 unsigned char CPU::STY()
 {
-#ifdef DEBUG
-	logger.logOpName("STY");
-#endif
 	return Y;
 }
 
 // Transfer Accumulator to X
 void CPU::TAX()
 {
-#ifdef DEBUG
-	logger.logOpName("TAX");
-#endif
 	X = A;
 
 	// Set zero flag if X is 0
@@ -1426,9 +1163,6 @@ void CPU::TAX()
 // Transfer Accumulator to Y
 void CPU::TAY()
 {
-#ifdef DEBUG
-	logger.logOpName("TAY");
-#endif
 	Y = A;
 
 	// Set zero flag if Y is 0
@@ -1440,9 +1174,6 @@ void CPU::TAY()
 // Transfer Stack Pointer to X
 void CPU::TSX()
 {
-#ifdef DEBUG
-	logger.logOpName("TSX");
-#endif
 	X = S;
 
 	// Set zero flag if X is 0
@@ -1454,9 +1185,6 @@ void CPU::TSX()
 // Transfer X to Accumulator
 void CPU::TXA()
 {
-#ifdef DEBUG
-	logger.logOpName("TXA");
-#endif
 	A = X;
 
 	// Set zero flag if A is 0
@@ -1468,18 +1196,12 @@ void CPU::TXA()
 // Transfer X to Stack Pointer
 void CPU::TXS()
 {
-#ifdef DEBUG
-	logger.logOpName("TXS");
-#endif
 	S = X;
 }
 
 // Transfer Y to Accumulator
 void CPU::TYA()
 {
-#ifdef DEBUG
-	logger.logOpName("TYA");
-#endif
 	A = Y;
 
 	// Set zero flag if A is 0
@@ -1545,13 +1267,6 @@ void CPU::Run()
 // or return false if the next value is not an opcode
 bool CPU::NextOP()
 {
-#ifdef DEBUG
-	logger.logProgramCounter(PC);
-	logger.logOpCode(SoftRead(PC));
-	logger.logRegisters(A, X, Y, P, S);
-	logger.logCycles(nes.GetClock() % 341);
-	logger.logScanlines(nes.GetScanline());
-#endif
 	oops = false; // Reset oops flag (some addressing modes take extra cycles in certain conditions)
 
 	// Handle non-maskable interrupts
@@ -1592,10 +1307,6 @@ bool CPU::NextOP()
 	{
 	// ADC OpCodes
 	case 0x69:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		ADC(Read(PC++));
 		break;
 	case 0x65:
@@ -1621,10 +1332,6 @@ bool CPU::NextOP()
 		break;
 	// AND OpCodes
 	case 0x29:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		AND(Read(PC++));
 		break;
 	case 0x25:
@@ -1650,9 +1357,6 @@ bool CPU::NextOP()
 		break;
 	// ASL OpCodes
 	case 0x0A:
-#ifdef DEBUG
-		logger.logAddressingMode("Accumulator");
-#endif
 		Read(PC);
 		A = ASL(A);
 		break;
@@ -1683,23 +1387,14 @@ bool CPU::NextOP()
 		break;
 	// BCC OpCode
 	case 0x90:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BCC();
 		break;
 	// BCS OpCode
 	case 0xB0:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BCS();
 		break;
 	// BEQ OpCode
 	case 0xF0:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BEQ();
 		break;
 	// BIT OpCodes
@@ -1711,23 +1406,14 @@ bool CPU::NextOP()
 		break;
 	// BMI OpCode
 	case 0x30:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BMI();
 		break;
 	// BNE OpCode
 	case 0xD0:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BNE();
 		break;
 	// BPL OpCode
 	case 0x10:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BPL();
 		break;
 	// BRK OpCode
@@ -1737,16 +1423,10 @@ bool CPU::NextOP()
 		break;
 	// BVC OpCode
 	case 0x50:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BVC();
 		break;
 	// BVS OpCode
 	case 0x70:
-#ifdef DEBUG
-		logger.logAddressingMode("Relative", SoftRead(PC));
-#endif
 		BVS();
 		break;
 	// CLC OpCode
@@ -1771,10 +1451,6 @@ bool CPU::NextOP()
 		break;
 	// CMP OpCodes
 	case 0xC9:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		CMP(Read(PC++));
 		break;
 	case 0xC5:
@@ -1800,10 +1476,6 @@ bool CPU::NextOP()
 		break;
 	// CPX OpCodes
 	case 0xE0:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		CPX(Read(PC++));
 		break;
 	case 0xE4:
@@ -1814,10 +1486,6 @@ bool CPU::NextOP()
 		break;
 	// CPY OpCodes
 	case 0xC0:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		CPY(Read(PC++));
 		break;
 	case 0xC4:
@@ -1864,10 +1532,6 @@ bool CPU::NextOP()
 		break;
 	// EOR OpCodes
 	case 0x49:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		EOR(Read(PC++));
 		break;
 	case 0x45:
@@ -1929,30 +1593,17 @@ bool CPU::NextOP()
 		break;
 	// JMP OpCodes
 	case 0x4C:
-#ifdef DEBUG
-		logger.setSpecial();
-#endif
 		JMP(Absolute());
 		break;
 	case 0x6C:
-#ifdef DEBUG
-		logger.setSpecial();
-#endif
 		JMP(Indirect());
 		break;
 	// JSR OpCode
 	case 0x20:
-#ifdef DEBUG
-		logger.setSpecial();
-#endif
 		JSR(Absolute());
 		break;
 	// LDA OpCodes
 	case 0xA9:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		LDA(Read(PC++));
 		break;
 	case 0xA5:
@@ -1978,10 +1629,6 @@ bool CPU::NextOP()
 		break;
 	// LDX OpCodes
 	case 0xA2:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		LDX(Read(PC++));
 		break;
 	case 0xA6:
@@ -1998,10 +1645,6 @@ bool CPU::NextOP()
 		break;
 	// LDY OpCodes
 	case 0xA0:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		LDY(Read(PC++));
 		break;
 	case 0xA4:
@@ -2018,9 +1661,6 @@ bool CPU::NextOP()
 		break;
 	// LSR OpCodes
 	case 0x4A:
-#ifdef DEBUG
-		logger.logAddressingMode("Accumulator");
-#endif
 		Read(PC);
 		A = LSR(A);
 		break;
@@ -2056,10 +1696,6 @@ bool CPU::NextOP()
 		break;
 	// ORA OpCodes
 	case 0x09:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		ORA(Read(PC++));
 		break;
 	case 0x05:
@@ -2105,9 +1741,6 @@ bool CPU::NextOP()
 		break;
 	// ROL OpCodes
 	case 0x2A:
-#ifdef DEBUG
-		logger.logAddressingMode("Accumulator");
-#endif
 		Read(PC);
 		A = ROL(A);
 		break;
@@ -2138,9 +1771,6 @@ bool CPU::NextOP()
 		break;
 	// ROR OpCodes
 	case 0x6A:
-#ifdef DEBUG
-		logger.logAddressingMode("Accumulator");
-#endif
 		Read(PC);
 		A = ROR(A);
 		break;
@@ -2181,10 +1811,6 @@ bool CPU::NextOP()
 		break;
 	// SBC OpCodes
 	case 0xE9:
-#ifdef DEBUG
-		logger.logAddressingArgs(SoftRead(PC));
-		logger.logAddressingMode("Immediate");
-#endif
 		SBC(Read(PC++));
 		break;
 	case 0xE5:
@@ -2301,9 +1927,7 @@ bool CPU::NextOP()
 	default: // Otherwise illegal OpCode
 		return false;
 	}
-#ifdef DEBUG
-	//logger.printLog();
-#endif
+
 	return true;
 }
 
