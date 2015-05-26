@@ -146,7 +146,7 @@ void PPU::GetPalette(int palette, unsigned char* pixels)
 	{
 		baseAddress = 0x3F18;
 	}
-	else if (palette == 7)
+	else
 	{
 		baseAddress = 0x3F1C;
 	}

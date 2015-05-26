@@ -29,13 +29,13 @@ void MainWindow::PopulateROMList()
 					&& it->path().has_extension()
 					&& std::string(".nes").compare(it->path().extension().string()) == 0)
 				{
-					wxTreeListItem* item = &romList->AppendItem(romList->GetRootItem(), it->path().filename().string());
+					wxTreeListItem item = romList->AppendItem(romList->GetRootItem(), it->path().filename().string());
 
 					// Get file size in Kibibytes
 					std::ostringstream oss;
 					oss << file_size(it->path()) / 1024 << " KiB";
 
-					romList->SetItemText(*item, 1, oss.str());
+					romList->SetItemText(item, 1, oss.str());
 				}
 			}
 		}
@@ -113,7 +113,8 @@ void MainWindow::OnROMDoubleClick(wxCommandEvent& WXUNUSED(event))
 	AppSettings* settings = AppSettings::getInstance();
 	wxString filename = romList->GetItemText(romList->GetSelection());
 
-	StartEmulator(settings->get<std::string>("frontend.rompath") + "/" + filename.ToStdString());
+	std::string romName = settings->get<std::string>("frontend.rompath") + "/" + filename.ToStdString();
+	StartEmulator(romName);
 }
 
 void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
@@ -126,7 +127,8 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 		AppSettings* settings = AppSettings::getInstance();
 		wxString filename = dialog.GetFilename();
 
-		StartEmulator(settings->get<std::string>("frontend.rompath") + "/" + filename.ToStdString());
+		std::string romName = settings->get<std::string>("frontend.rompath") + "/" + filename.ToStdString();
+		StartEmulator(romName);
 	}
 }
 
