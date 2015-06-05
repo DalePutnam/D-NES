@@ -30,6 +30,7 @@ class MainWindow : public wxFrame
 	void PopulateROMList();
 	void StartEmulator(std::string& filename);
 
+	void ToggleCPULog(wxCommandEvent& event);
 	void OnSettings(wxCommandEvent& event);
 	void OnROMDoubleClick(wxCommandEvent& event);
 	void OnOpenROM(wxCommandEvent& event);
@@ -54,5 +55,6 @@ const int ID_EMULATOR_PAUSE = 102;
 const int ID_EMULATOR_STOP = 103;
 const int ID_EMUALTOR_PPU_DEBUG = 104;
 const int ID_SETTINGS = 105;
+const int ID_CPU_LOG = 106;
 
 #endif

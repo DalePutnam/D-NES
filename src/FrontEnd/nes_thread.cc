@@ -13,10 +13,10 @@ wxThread::ExitCode NESThread::Entry()
 	return static_cast<wxThread::ExitCode>(0);
 }
 
-NESThread::NESThread(MainWindow* handler, std::string& filename)
+NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnabled)
 	: wxThread(wxTHREAD_JOINABLE),
 	handler(handler),
-	nes(*new NES(filename, *this)),
+	nes(*new NES(filename, *this, cpuLogEnabled)),
 	width(256),
 	height(240),
 	pixelCount(0),
@@ -63,6 +63,21 @@ NESThread::~NESThread()
 	}
 
 	delete[] pixelArray;
+}
+
+std::string& NESThread::GetGameName()
+{
+	return nes.GetGameName();
+}
+
+void NESThread::EnableCPULog()
+{
+	nes.EnableCPULog();
+}
+
+void NESThread::DisableCPULog()
+{
+	nes.DisableCPULog();
 }
 
 void NESThread::EmulatorResume()

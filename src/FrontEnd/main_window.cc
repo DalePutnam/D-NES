@@ -48,8 +48,8 @@ void MainWindow::StartEmulator(std::string& filename)
 	{
 		if (!nesThread)
 		{
-			nesThread = new NESThread(this, filename);
-			gameWindow = new GameWindow(this, "Test Emulator");
+			nesThread = new NESThread(this, filename, settings->FindItem(ID_CPU_LOG)->IsChecked());
+			gameWindow = new GameWindow(this, nesThread->GetGameName());
 			gameWindow->Show();
 
 			if (nesThread->Run() != wxTHREAD_NO_ERROR)
@@ -93,6 +93,21 @@ void MainWindow::StopEmulator()
 		{
 			ppuDebugWindow->Destroy();
 			ppuDebugWindow = 0;
+		}
+	}
+}
+
+void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
+{
+	if (nesThread)
+	{
+		if (settings->FindItem(ID_CPU_LOG)->IsChecked())
+		{
+			nesThread->EnableCPULog();
+		}
+		else
+		{
+			nesThread->DisableCPULog();
 		}
 	}
 }
@@ -223,6 +238,8 @@ MainWindow::MainWindow()
 	emulator->Append(ID_EMUALTOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
 	settings = new wxMenu;
+	settings->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
+	settings->AppendSeparator();
 	settings->Append(ID_SETTINGS, wxT("&All Settings"));
 
 	about = new wxMenu;
@@ -236,6 +253,7 @@ MainWindow::MainWindow()
 
 	SetMenuBar(menuBar);
 	Connect(wxID_EXIT, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit));
+	Connect(ID_CPU_LOG, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleCPULog));
 	Connect(ID_SETTINGS, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSettings));
 	Connect(wxEVT_TREELIST_ITEM_ACTIVATED, wxCommandEventHandler(MainWindow::OnROMDoubleClick));
 	Connect(ID_OPEN_ROM, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnOpenROM));

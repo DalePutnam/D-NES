@@ -25,6 +25,8 @@ class NES
 	bool pause;
 	bool nmi;
 
+	std::string gameName;
+
 	Cart& cart;
 	PPU& ppu;
 	CPU& cpu;
@@ -34,22 +36,27 @@ class NES
 
 public:
 
-	NES(std::string filename, IDisplay& display);
+	NES(std::string filename, IDisplay& display, bool cpuLogEnabled = false);
 
 	unsigned int GetClock();
 	unsigned int GetScanline();
 	void IncrementClock(int increment);
 	void RaiseNMI();
 	bool NMIRaised();
+	std::string& GetGameName();
 
 	bool IsStopped();
 	bool IsPaused();
+
+	void EnableCPULog();
+	void DisableCPULog();
 
 	void GetNameTable(int table, unsigned char* pixels);
 	void GetPatternTable(int table, int palette, unsigned char* pixels);
 	void GetPalette(int palette, unsigned char* pixels);
 	void GetPrimaryOAM(int sprite, unsigned char* pixels);
 	void GetSecondaryOAM(int sprite, unsigned char* pixels);
+
 	void Start();
 	void Stop();
 	void Resume();
@@ -58,6 +65,5 @@ public:
 
 	~NES();
 };
-
 
 #endif /* NES_H_ */

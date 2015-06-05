@@ -382,7 +382,7 @@ void PPU::Tick()
 			{
 				if (sprite < spriteCount)
 				{
-					bool flipVertical = (0x80 & spriteAttribute[sprite]) >> 7;
+					bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
 					unsigned char frameY = (((ppuAddress & 0x03E0) >> 2) | ((ppuAddress & 0x7000) >> 12)); // The current Y position in the frame
 					unsigned char spriteY = secondaryOAM[(sprite * 4)] + 1;
 
@@ -411,7 +411,7 @@ void PPU::Tick()
 			{
 				if (sprite < spriteCount)
 				{
-					bool flipVertical = (0x80 & spriteAttribute[sprite]) >> 7;
+					bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
 					unsigned char frameY = (((ppuAddress & 0x03E0) >> 2) | ((ppuAddress & 0x7000) >> 12)); // The current Y position in the frame
 					unsigned char spriteY = secondaryOAM[(sprite * 4)] + 1;
 
@@ -516,11 +516,11 @@ void PPU::UpdateState(int cycles)
 			ctrlBuffer.pop();
 
 			ppuTempAddress = (ppuTempAddress & 0xF3FF) | ((0x3 & static_cast<unsigned short int>(value)) << 10); // High bits of NameTable address
-			ppuAddressIncrement = (0x4 & value) >> 2;
+			ppuAddressIncrement = ((0x4 & value) >> 2) != 0;
 			baseSpriteTableAddress = 0x1000 * ((0x8 & value) >> 3);
 			baseBackgroundTableAddress = 0x1000 * ((0x10 & value) >> 4);
-			spriteSize = (0x20 & value) >> 5;
-			nmiEnabled = (0x80 & value) >> 7;
+			spriteSize = ((0x20 & value) >> 5) != 0;
+			nmiEnabled = ((0x80 & value) >> 7) != 0;
 
 			lowerBits = (0x1F & value);
 		}
@@ -530,13 +530,13 @@ void PPU::UpdateState(int cycles)
 			maskBuffer.pop();
 
 			grayscale = (0x1 & value);
-			showBackgroundLeft = (0x2 & value) >> 1;
-			showSpritesLeft = (0x4 & value) >> 2;
-			showBackground = (0x8 & value) >> 3;
-			showSprites = (0x10 & value) >> 4;
-			intenseRed = (0x20 & value) >> 5;
-			intenseGreen = (0x40 & value) >> 6;
-			intenseBlue = (0x80 & value) >> 7;
+			showBackgroundLeft = ((0x2 & value) >> 1) != 0;
+			showSpritesLeft = ((0x4 & value) >> 2) != 0;
+			showBackground = ((0x8 & value) >> 3) != 0;
+			showSprites = ((0x10 & value) >> 4) != 0;
+			intenseRed = ((0x20 & value) >> 5) != 0;
+			intenseGreen = ((0x40 & value) >> 6) != 0;
+			intenseBlue = ((0x80 & value) >> 7) != 0;
 
 			lowerBits = (0x1F & value);
 		}
@@ -681,7 +681,7 @@ void PPU::Render()
 	{
 		if (active[f])
 		{
-			bool horizontalFlip = (spriteAttribute[f] & 0x40) >> 6;
+			bool horizontalFlip = ((spriteAttribute[f] & 0x40) >> 6) != 0;
 			unsigned short int pixel;
 
 			if (horizontalFlip)
@@ -784,7 +784,7 @@ void PPU::SpriteFetch()
 
 	if (sprite < spriteCount)
 	{
-		bool flipVertical = (0x80 & spriteAttribute[sprite]) >> 7;
+		bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
 		unsigned char frameY = ((ppuAddress & 0x01E0) >> 2) | ((ppuAddress & 0x7000) >> 7); // The current Y position in the frame
 		unsigned char spriteY = secondaryOAM[(sprite * 4)];
 
@@ -811,7 +811,7 @@ void PPU::SpriteFetch()
 
 	if (sprite < spriteCount)
 	{
-		bool flipVertical = (0x80 & spriteAttribute[sprite]) >> 7;
+		bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
 		unsigned char frameY = ((ppuAddress & 0x01E0) >> 2) | ((ppuAddress & 0x7000) >> 7); // The current Y position in the frame
 		unsigned char spriteY = secondaryOAM[(sprite * 4)];
 

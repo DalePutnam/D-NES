@@ -44,7 +44,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\VS-Source\libs\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -61,10 +61,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>
+      </FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>D:\VS-Source\libs\boost;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -79,7 +81,6 @@
   <ItemGroup>
     <ClInclude Include="cpu.h" />
     <ClInclude Include="Interfaces\idisplay.h" />
-    <ClInclude Include="log\logger.h" />
     <ClInclude Include="mappers\cart.h" />
     <ClInclude Include="mappers\nrom.h" />
     <ClInclude Include="nes.h" />
@@ -87,7 +88,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc" />
-    <ClCompile Include="log\logger.cc" />
     <ClCompile Include="mappers\cart.cc" />
     <ClCompile Include="mappers\nrom.cc" />
     <ClCompile Include="nes.cc" />

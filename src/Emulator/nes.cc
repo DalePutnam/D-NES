@@ -7,8 +7,9 @@
 
 #include "nes.h"
 #include "mappers/nrom.h"
+#include <boost/algorithm/string.hpp>
 
-NES::NES(std::string filename, IDisplay& display)
+NES::NES(std::string filename, IDisplay& display, bool cpuLogEnabled)
 	: clock(0),
 	  scanline(241),
 	  stop(true),
@@ -16,9 +17,13 @@ NES::NES(std::string filename, IDisplay& display)
 	  nmi(false),
 	  cart(Cart::Create(filename)),
 	  ppu(*new PPU(*this, cart, display)),
-	  cpu(*new CPU(*this, ppu, cart))
+	  cpu(*new CPU(*this, ppu, cart, cpuLogEnabled))
 
-{}
+{
+	std::vector<std::string> stringList;
+	boost::algorithm::split(stringList, filename, boost::is_any_of("\\/"));
+	gameName = stringList.back().substr(0, stringList.back().length() - 4);
+}
 
 unsigned int NES::GetClock()
 {
@@ -28,6 +33,11 @@ unsigned int NES::GetClock()
 unsigned int NES::GetScanline()
 {
 	return scanline;
+}
+
+std::string& NES::GetGameName()
+{
+	return gameName;
 }
 
 void NES::IncrementClock(int increment)
@@ -58,6 +68,16 @@ bool NES::NMIRaised()
 	bool value = nmi;
 	nmi = false;
 	return value;
+}
+
+void NES::EnableCPULog()
+{
+	cpu.EnableLog();
+}
+
+void NES::DisableCPULog()
+{
+	cpu.DisableLog();
 }
 
 void NES::GetNameTable(int table, unsigned char* pixels)
@@ -96,11 +116,7 @@ bool NES::IsStopped()
 
 bool NES::IsPaused()
 {
-	bool isPaused;
-	pauseMutex.lock();
-	isPaused = pause;
-	pauseMutex.unlock();
-	return isPaused;
+	return cpu.IsPaused();
 }
 
 void NES::Start()
@@ -121,20 +137,21 @@ void NES::Stop()
 	stopMutex.lock();
 	stop = true;
 	stopMutex.unlock();
+
+	if (cpu.IsPaused())
+	{
+		cpu.Resume();
+	}
 }
 
 void NES::Resume()
 {
-	pauseMutex.lock();
-	pause = false;
-	pauseMutex.unlock();
+	cpu.Resume();
 }
 
 void NES::Pause()
 {
-	pauseMutex.lock();
-	pause = true;
-	pauseMutex.unlock();
+	cpu.Pause();
 }
 
 void NES::Reset() {}

@@ -22,12 +22,6 @@
     <Filter Include="Source Files\Mappers">
       <UniqueIdentifier>{5f44222b-4992-43d8-b028-cd22ac026d36}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Logging">
-      <UniqueIdentifier>{9e5af2f3-7f54-4f4a-9602-dd6b3266aa93}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Logging">
-      <UniqueIdentifier>{667d97e4-dd49-497e-811a-0c69eca457f1}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h">
@@ -48,9 +42,6 @@
     <ClInclude Include="Interfaces\idisplay.h">
       <Filter>Header Files\Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="log\logger.h">
-      <Filter>Header Files\Logging</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
@@ -67,9 +58,6 @@
     </ClCompile>
     <ClCompile Include="mappers\nrom.cc">
       <Filter>Source Files\Mappers</Filter>
-    </ClCompile>
-    <ClCompile Include="log\logger.cc">
-      <Filter>Source Files\Logging</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

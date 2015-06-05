@@ -33,8 +33,10 @@ class NESThread : public wxThread, public IDisplay
 	virtual wxThread::ExitCode Entry();
 
 public:
-	NESThread(MainWindow* handler, std::string& filename);
+	NESThread(MainWindow* handler, std::string& filename, bool cupLogEnabled = false);
 	~NESThread();
+
+	std::string& GetGameName();
 
 	void EmulatorResume();
 	void EmulatorPause();
@@ -43,6 +45,9 @@ public:
 	virtual void NextPixel(unsigned int pixel);
 	unsigned char* GetFrame();
 	void UnlockFrame();
+
+	void EnableCPULog();
+	void DisableCPULog();
 
 	unsigned char* GetNameTable(int tableID);
 	unsigned char* GetPatternTable(int tableID, int paletteID);
