@@ -11,7 +11,6 @@ EXEC=bld/D-NES
 DIRS=bld bld/Emulator bld/Emulator/log bld/Emulator/mappers bld/FrontEnd bld/FrontEnd/utilities
 
 include src/Emulator/subdir.mk
-include src/Emulator/log/subdir.mk
 include src/Emulator/mappers/subdir.mk
 include src/FrontEnd/subdir.mk
 include src/FrontEnd/utilities/subdir.mk
