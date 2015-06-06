@@ -8,28 +8,28 @@ class MainWindow;
 
 class PPUDebugWindow : public wxFrame
 {
-	MainWindow* mainWindow;
+    MainWindow* mainWindow;
 
-	int paletteIndex;
+    int paletteIndex;
 
-	wxPanel* nameTable[4];
-	wxPanel* patternTable[2];
-	wxPanel* palette[8];
-	wxPanel* primarySprite[64];
-	wxPanel* secondarySprite[8];
-	
-	void OnQuit(wxCommandEvent& event);
-	void OnPatternTableClicked(wxMouseEvent& event);
+    wxPanel* nameTable[4];
+    wxPanel* patternTable[2];
+    wxPanel* palette[8];
+    wxPanel* primarySprite[64];
+    wxPanel* secondarySprite[8];
+
+    void OnQuit(wxCommandEvent& event);
+    void OnPatternTableClicked(wxMouseEvent& event);
 
 public:
-	explicit PPUDebugWindow(MainWindow* mainWindow);
+    explicit PPUDebugWindow(MainWindow* mainWindow);
 
-	void UpdateNameTable(int tableID, unsigned char* data);
-	void UpdatePatternTable(int tableID, unsigned char* data);
-	void UpdatePalette(int tableID, unsigned char* data);
-	void UpdatePrimarySprite(int sprite, unsigned char* data);
-	void UpdateSecondarySprite(int sprite, unsigned char* data);
-	int GetCurrentPalette();
+    void UpdateNameTable(int tableID, unsigned char* data);
+    void UpdatePatternTable(int tableID, unsigned char* data);
+    void UpdatePalette(int tableID, unsigned char* data);
+    void UpdatePrimarySprite(int sprite, unsigned char* data);
+    void UpdateSecondarySprite(int sprite, unsigned char* data);
+    int GetCurrentPalette();
 };
 
 #endif

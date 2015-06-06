@@ -11,8 +11,8 @@
 class IDisplay
 {
 public:
-	virtual void NextPixel(unsigned int pixel) = 0;
-	virtual ~IDisplay() {}
+    virtual void NextPixel(unsigned int pixel) = 0;
+    virtual ~IDisplay() {}
 };
 
 

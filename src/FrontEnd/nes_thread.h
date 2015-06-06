@@ -14,46 +14,46 @@ class MainWindow;
 
 class NESThread : public wxThread, public IDisplay
 {
-	MainWindow* handler;
-	NES& nes;
+    MainWindow* handler;
+    NES& nes;
 
-	unsigned char* nameTable[4];
-	unsigned char* patternTable[2];
-	unsigned char* palette[8];
-	unsigned char* primarySprite[64];
-	unsigned char* secondarySprite[8];
+    unsigned char* nameTable[4];
+    unsigned char* patternTable[2];
+    unsigned char* palette[8];
+    unsigned char* primarySprite[64];
+    unsigned char* secondarySprite[8];
 
-	int width;
-	int height;
-	int pixelCount;
-	unsigned char* pixelArray;
+    int width;
+    int height;
+    int pixelCount;
+    unsigned char* pixelArray;
 
-	volatile bool frameLocked;
+    volatile bool frameLocked;
 
-	virtual wxThread::ExitCode Entry();
+    virtual wxThread::ExitCode Entry();
 
 public:
-	NESThread(MainWindow* handler, std::string& filename, bool cupLogEnabled = false);
-	~NESThread();
+    NESThread(MainWindow* handler, std::string& filename, bool cupLogEnabled = false);
+    ~NESThread();
 
-	std::string& GetGameName();
+    std::string& GetGameName();
 
-	void EmulatorResume();
-	void EmulatorPause();
-	void Stop();
+    void EmulatorResume();
+    void EmulatorPause();
+    void Stop();
 
-	virtual void NextPixel(unsigned int pixel);
-	unsigned char* GetFrame();
-	void UnlockFrame();
+    virtual void NextPixel(unsigned int pixel);
+    unsigned char* GetFrame();
+    void UnlockFrame();
 
-	void EnableCPULog();
-	void DisableCPULog();
+    void EnableCPULog();
+    void DisableCPULog();
 
-	unsigned char* GetNameTable(int tableID);
-	unsigned char* GetPatternTable(int tableID, int paletteID);
-	unsigned char* GetPalette(int tableID);
-	unsigned char* GetPrimarySprite(int sprite);
-	unsigned char* GetSecondarySprite(int sprite);
+    unsigned char* GetNameTable(int tableID);
+    unsigned char* GetPatternTable(int tableID, int paletteID);
+    unsigned char* GetPalette(int tableID);
+    unsigned char* GetPrimarySprite(int sprite);
+    unsigned char* GetSecondarySprite(int sprite);
 };
 
 #endif

@@ -6,22 +6,22 @@
 
 void GameWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
-	mainWindow->StopEmulator();
+    mainWindow->StopEmulator();
 }
 
 GameWindow::GameWindow(MainWindow* mainWindow, wxString filename)
-	: wxFrame(NULL, wxID_ANY, filename, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX),
-	mainWindow(mainWindow)
+    : wxFrame(NULL, wxID_ANY, filename, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX),
+    mainWindow(mainWindow)
 {
-	SetClientSize(256, 240);
-	Connect(wxID_ANY, wxEVT_CLOSE_WINDOW, wxCommandEventHandler(GameWindow::OnQuit));
+    SetClientSize(256, 240);
+    Connect(wxID_ANY, wxEVT_CLOSE_WINDOW, wxCommandEventHandler(GameWindow::OnQuit));
 }
 
 void GameWindow::UpdateImage(unsigned char* data)
 {
-	wxClientDC dc(this);
-	wxImage image(256, 240, data, true);
-	wxBitmap bitmap(image, 24);
+    wxClientDC dc(this);
+    wxImage image(256, 240, data, true);
+    wxBitmap bitmap(image, 24);
 
-	dc.DrawBitmap(bitmap, 0, 0);
+    dc.DrawBitmap(bitmap, 0, 0);
 }

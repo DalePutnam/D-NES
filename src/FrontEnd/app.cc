@@ -7,10 +7,10 @@
 // App Implementation
 bool MyApp::OnInit()
 {
-	atexit(AppSettings::cleanUp);
-	MainWindow* window = new MainWindow();
-	window->Show(true);
-	return true;
+    atexit(AppSettings::cleanUp);
+    MainWindow* window = new MainWindow();
+    window->Show(true);
+    return true;
 }
 
 // Main Function

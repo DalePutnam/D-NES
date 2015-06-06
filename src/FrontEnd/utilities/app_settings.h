@@ -13,36 +13,36 @@
 
 class AppSettings
 {
-	// Singleton
-	static AppSettings* instance;
-	AppSettings();
-	AppSettings(const AppSettings&); // Prevent construction by copying
-	AppSettings& operator=(const AppSettings&); // Prevent assignment
-	~AppSettings(); // Prevent unwanted destruction
+    // Singleton
+    static AppSettings* instance;
+    AppSettings();
+    AppSettings(const AppSettings&); // Prevent construction by copying
+    AppSettings& operator=(const AppSettings&); // Prevent assignment
+    ~AppSettings(); // Prevent unwanted destruction
 
-	// Application Settings
-	boost::property_tree::ptree settings;
+    // Application Settings
+    boost::property_tree::ptree settings;
 
 public:
 
-	static AppSettings* getInstance(); // Get single instance
-	static void cleanUp(); // Destroy single instance
+    static AppSettings* getInstance(); // Get single instance
+    static void cleanUp(); // Destroy single instance
 
-	void save(); // Write out to file
+    void save(); // Write out to file
 
-	// Get a setting
-	template<typename T>
-	T get(std::string name)
-	{
-		return settings.get<T>(name);
-	}
+    // Get a setting
+    template<typename T>
+    T get(std::string name)
+    {
+        return settings.get<T>(name);
+    }
 
-	// Change a setting
-	template<typename T>
-	void put(std::string name, const T& value)
-	{
-		settings.put(name, value);
-	}
+    // Change a setting
+    template<typename T>
+    void put(std::string name, const T& value)
+    {
+        settings.put(name, value);
+    }
 };
 
 

@@ -14,39 +14,39 @@
 
 class MainWindow : public wxFrame
 {
-	NESThread* nesThread;
-	GameWindow* gameWindow;
-	PPUDebugWindow* ppuDebugWindow;
+    NESThread* nesThread;
+    GameWindow* gameWindow;
+    PPUDebugWindow* ppuDebugWindow;
 
-	wxMenuBar* menuBar;
-	wxMenu* file;
-	wxMenu* emulator;
-	wxMenu* settings;
-	wxMenu* about;
+    wxMenuBar* menuBar;
+    wxMenu* file;
+    wxMenu* emulator;
+    wxMenu* settings;
+    wxMenu* about;
 
-	wxBoxSizer* vbox;
-	wxTreeListCtrl* romList;
+    wxBoxSizer* vbox;
+    wxTreeListCtrl* romList;
 
-	void PopulateROMList();
-	void StartEmulator(std::string& filename);
+    void PopulateROMList();
+    void StartEmulator(std::string& filename);
 
-	void ToggleCPULog(wxCommandEvent& event);
-	void OnSettings(wxCommandEvent& event);
-	void OnROMDoubleClick(wxCommandEvent& event);
-	void OnOpenROM(wxCommandEvent& event);
-	void OnThreadUpdate(wxThreadEvent& event);
-	void OnEmulatorResume(wxCommandEvent& event);
-	void OnEmulatorStop(wxCommandEvent& event);
-	void OnEmulatorPause(wxCommandEvent& event);
-	void OnPPUDebug(wxCommandEvent& event);
-	//void OnThreadComplete(wxThreadEvent& event);
-	void OnQuit(wxCommandEvent& event);
+    void ToggleCPULog(wxCommandEvent& event);
+    void OnSettings(wxCommandEvent& event);
+    void OnROMDoubleClick(wxCommandEvent& event);
+    void OnOpenROM(wxCommandEvent& event);
+    void OnThreadUpdate(wxThreadEvent& event);
+    void OnEmulatorResume(wxCommandEvent& event);
+    void OnEmulatorStop(wxCommandEvent& event);
+    void OnEmulatorPause(wxCommandEvent& event);
+    void OnPPUDebug(wxCommandEvent& event);
+    //void OnThreadComplete(wxThreadEvent& event);
+    void OnQuit(wxCommandEvent& event);
 
 public:
-	MainWindow();
-	~MainWindow();
-	void StopEmulator();
-	void PPUDebugClose();
+    MainWindow();
+    ~MainWindow();
+    void StopEmulator();
+    void PPUDebugClose();
 };
 
 const int ID_OPEN_ROM = 100;

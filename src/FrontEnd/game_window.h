@@ -8,14 +8,14 @@ class MainWindow;
 
 class GameWindow : public wxFrame
 {
-	MainWindow* mainWindow;
+    MainWindow* mainWindow;
 
-	void OnQuit(wxCommandEvent& event);
+    void OnQuit(wxCommandEvent& event);
 
 public:
-	GameWindow(MainWindow* mainWindow, wxString filename);
+    GameWindow(MainWindow* mainWindow, wxString filename);
 
-	void UpdateImage(unsigned char* data);
+    void UpdateImage(unsigned char* data);
 };
 
 #endif

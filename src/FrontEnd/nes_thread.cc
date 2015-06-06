@@ -5,158 +5,158 @@ wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_UPDATE, wxThreadEvent);
 
 wxThread::ExitCode NESThread::Entry()
 {
-	if (!TestDestroy())
-	{
-		nes.Start();
-	}
+    if (!TestDestroy())
+    {
+        nes.Start();
+    }
 
-	return static_cast<wxThread::ExitCode>(0);
+    return static_cast<wxThread::ExitCode>(0);
 }
 
 NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnabled)
-	: wxThread(wxTHREAD_JOINABLE),
-	handler(handler),
-	nes(*new NES(filename, *this, cpuLogEnabled)),
-	width(256),
-	height(240),
-	pixelCount(0),
-	pixelArray(new unsigned char[width*height*3])
+    : wxThread(wxTHREAD_JOINABLE),
+    handler(handler),
+    nes(*new NES(filename, *this, cpuLogEnabled)),
+    width(256),
+    height(240),
+    pixelCount(0),
+    pixelArray(new unsigned char[width*height * 3])
 {
-	for (int i = 0; i < 64; ++i)
-	{
-		if (i < 2) patternTable[i] = 0;
-		if (i < 4) nameTable[i] = 0;
+    for (int i = 0; i < 64; ++i)
+    {
+        if (i < 2) patternTable[i] = 0;
+        if (i < 4) nameTable[i] = 0;
 
-		if (i < 8)
-		{
-			palette[i] = 0;
-			secondarySprite[i] = 0;
-		}
+        if (i < 8)
+        {
+            palette[i] = 0;
+            secondarySprite[i] = 0;
+        }
 
-		primarySprite[i] = 0;
-	}
+        primarySprite[i] = 0;
+    }
 }
 
 NESThread::~NESThread()
 {
-	delete &nes;
+    delete &nes;
 
-	for (int i = 0; i < 64; ++i)
-	{
-		if (i < 2)
-		{
-			if (patternTable[i]) delete[] patternTable[i];
-		}
+    for (int i = 0; i < 64; ++i)
+    {
+        if (i < 2)
+        {
+            if (patternTable[i]) delete[] patternTable[i];
+        }
 
-		if (i < 4)
-		{
-			if (nameTable[i]) delete[] nameTable[i];
-		}
+        if (i < 4)
+        {
+            if (nameTable[i]) delete[] nameTable[i];
+        }
 
-		if (i < 8)
-		{
-			if (palette[i]) delete[] palette[i];
-			if (secondarySprite[i]) delete[] secondarySprite[i];
-		}
+        if (i < 8)
+        {
+            if (palette[i]) delete[] palette[i];
+            if (secondarySprite[i]) delete[] secondarySprite[i];
+        }
 
-		if (primarySprite[i]) delete[] primarySprite[i];
-	}
+        if (primarySprite[i]) delete[] primarySprite[i];
+    }
 
-	delete[] pixelArray;
+    delete[] pixelArray;
 }
 
 std::string& NESThread::GetGameName()
 {
-	return nes.GetGameName();
+    return nes.GetGameName();
 }
 
 void NESThread::EnableCPULog()
 {
-	nes.EnableCPULog();
+    nes.EnableCPULog();
 }
 
 void NESThread::DisableCPULog()
 {
-	nes.DisableCPULog();
+    nes.DisableCPULog();
 }
 
 void NESThread::EmulatorResume()
 {
-	if (nes.IsPaused()) nes.Resume();
+    if (nes.IsPaused()) nes.Resume();
 }
 
 void NESThread::EmulatorPause()
 {
-	if (!nes.IsPaused()) nes.Pause();
+    if (!nes.IsPaused()) nes.Pause();
 }
 
 void NESThread::Stop()
 {
-	nes.Stop();
+    nes.Stop();
 }
 
 void NESThread::NextPixel(unsigned int pixel)
 {
-	while (frameLocked);
+    while (frameLocked);
 
-	unsigned char red = static_cast<unsigned char>((pixel & 0xFF0000) >> 16);
-	unsigned char green = static_cast<unsigned char>((pixel & 0x00FF00) >> 8);
-	unsigned char blue = static_cast<unsigned char>(pixel & 0x0000FF);
+    unsigned char red = static_cast<unsigned char>((pixel & 0xFF0000) >> 16);
+    unsigned char green = static_cast<unsigned char>((pixel & 0x00FF00) >> 8);
+    unsigned char blue = static_cast<unsigned char>(pixel & 0x0000FF);
 
-	pixelArray[pixelCount * 3] = red;
-	pixelArray[(pixelCount * 3) + 1] = green;
-	pixelArray[(pixelCount * 3) + 2] = blue;
-	++pixelCount;
+    pixelArray[pixelCount * 3] = red;
+    pixelArray[(pixelCount * 3) + 1] = green;
+    pixelArray[(pixelCount * 3) + 2] = blue;
+    ++pixelCount;
 
-	if (pixelCount == width * height)
-	{
-		frameLocked = true;
-		wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_UPDATE));
-		pixelCount = 0;
-	}
+    if (pixelCount == width * height)
+    {
+        frameLocked = true;
+        wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_UPDATE));
+        pixelCount = 0;
+    }
 }
 
 unsigned char* NESThread::GetFrame()
 {
-	return pixelArray;
+    return pixelArray;
 }
 
 void NESThread::UnlockFrame()
 {
-	frameLocked = false;
+    frameLocked = false;
 }
 
 unsigned char* NESThread::GetNameTable(int tableID)
 {
-	if (!nameTable[tableID]) nameTable[tableID] = new unsigned char[184320];
-	nes.GetNameTable(tableID, nameTable[tableID]);
-	return nameTable[tableID];
+    if (!nameTable[tableID]) nameTable[tableID] = new unsigned char[184320];
+    nes.GetNameTable(tableID, nameTable[tableID]);
+    return nameTable[tableID];
 }
 
 unsigned char* NESThread::GetPatternTable(int tableID, int paletteID)
 {
-	if (!patternTable[tableID]) patternTable[tableID] = new unsigned char[49152];
-	nes.GetPatternTable(tableID, paletteID, patternTable[tableID]);
-	return patternTable[tableID];
+    if (!patternTable[tableID]) patternTable[tableID] = new unsigned char[49152];
+    nes.GetPatternTable(tableID, paletteID, patternTable[tableID]);
+    return patternTable[tableID];
 }
 
 unsigned char* NESThread::GetPalette(int tableID)
 {
-	if (!palette[tableID]) palette[tableID] = new unsigned char[3072];
-	nes.GetPalette(tableID, palette[tableID]);
-	return palette[tableID];
+    if (!palette[tableID]) palette[tableID] = new unsigned char[3072];
+    nes.GetPalette(tableID, palette[tableID]);
+    return palette[tableID];
 }
 
 unsigned char* NESThread::GetPrimarySprite(int sprite)
 {
-	if (!primarySprite[sprite]) primarySprite[sprite] = new unsigned char[192];
-	nes.GetPrimaryOAM(sprite, primarySprite[sprite]);
-	return primarySprite[sprite];
+    if (!primarySprite[sprite]) primarySprite[sprite] = new unsigned char[192];
+    nes.GetPrimaryOAM(sprite, primarySprite[sprite]);
+    return primarySprite[sprite];
 }
 
 unsigned char* NESThread::GetSecondarySprite(int sprite)
 {
-	if (!secondarySprite[sprite]) secondarySprite[sprite] = new unsigned char[192];
-	nes.GetSecondaryOAM(sprite, secondarySprite[sprite]);
-	return secondarySprite[sprite];
+    if (!secondarySprite[sprite]) secondarySprite[sprite] = new unsigned char[192];
+    nes.GetSecondaryOAM(sprite, secondarySprite[sprite]);
+    return secondarySprite[sprite];
 }
