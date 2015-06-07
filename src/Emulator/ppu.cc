@@ -180,8 +180,8 @@ void PPU::GetPrimaryOAM(int sprite, unsigned char* pixels)
     unsigned char byteTwo = primaryOAM[(0x4 * sprite) + 2];
 
     unsigned short int tableIndex = baseSpriteTableAddress; //(byteOne & 0x01) ? 0x1000 : 0x0000;
-    unsigned short int patternIndex = byteOne; //(byteOne & 0xFE) >> 1;
-    unsigned char palette = (byteTwo & 0xFC) + 4;
+    unsigned short int patternIndex = byteOne * 16; //(byteOne & 0xFE) >> 1;
+    unsigned char palette = (byteTwo & 0x03) + 4;
 
     for (unsigned int i = 0; i < 8; ++i)
     {
@@ -264,8 +264,8 @@ void PPU::Tick()
             // Reload background shift registers
             if (cycle == 0 && dot != 1)
             {
-                backgroundShift0 |= tileBitmapLow;
-                backgroundShift1 |= tileBitmapHigh;
+                backgroundShift0 = (backgroundShift0 & 0xFF00) | tileBitmapLow;
+                backgroundShift1 = (backgroundShift1 & 0xFF00) | tileBitmapHigh;
                 backgroundAttribute = attributeByte;
             }
 
@@ -285,15 +285,12 @@ void PPU::Tick()
             {
                 unsigned char fineY = ppuAddress >> 12; // Get fine y scroll bits from address
                 unsigned short int patternAddress = static_cast<unsigned short int>(nameTableByte)* 16; // Get pattern address, independent of the table
-                //unsigned short int baseAddress = spriteSize ? baseBackgroundTableAddress : 0; // Get base pattern table address
                 tileBitmapLow = cart.ChrRead(baseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
             }
             else if (cycle == 7)
             {
                 unsigned char fineY = ppuAddress >> 12; // Get fine y scroll
                 unsigned short int patternAddress = static_cast<unsigned short int>(nameTableByte)* 16; // Get pattern address, independent of the table
-                //spriteSize ? patternAddress += 8 : patternAddress += 16; // Offset to next half of pattern, sprites can have width 8 or 16
-                //unsigned short int baseAddress = spriteSize ? baseBackgroundTableAddress : 0; // Get base pattern table address
                 tileBitmapHigh = cart.ChrRead(baseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
             }
 
@@ -383,21 +380,20 @@ void PPU::Tick()
                 if (sprite < spriteCount)
                 {
                     bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
-                    unsigned char frameY = (((ppuAddress & 0x03E0) >> 2) | ((ppuAddress & 0x7000) >> 12)); // The current Y position in the frame
-                    unsigned char spriteY = secondaryOAM[(sprite * 4)] + 1;
+                    unsigned char spriteY = secondaryOAM[(sprite * 4)];
 
                     if (spriteSize) // if spriteSize is 8x16
                     {
                         unsigned short int base = (0x1 & secondaryOAM[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
                         unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 16); // Index of the beginning of the pattern
-                        unsigned short int offset = flipVertical ? (spriteY + 15) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
+                        unsigned short int offset = flipVertical ? 15 - (line - spriteY) : (line - spriteY); // Offset from base index
 
                         spriteShift0[sprite] = cart.ChrRead(patternIndex + offset);
                     }
                     else
                     {
-                        unsigned short int patternIndex = baseSpriteTableAddress + secondaryOAM[(sprite * 4) + 1] * 16; // Index of the beginning of the pattern
-                        unsigned short int offset = flipVertical ? (spriteY + 7) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
+                        unsigned short int patternIndex = baseSpriteTableAddress + (secondaryOAM[(sprite * 4) + 1] * 16); // Index of the beginning of the pattern
+                        unsigned short int offset = flipVertical ? 7 - (line - spriteY) : (line - spriteY); // Offset from base index
 
                         spriteShift0[sprite] = cart.ChrRead(patternIndex + offset);
                     }
@@ -412,21 +408,20 @@ void PPU::Tick()
                 if (sprite < spriteCount)
                 {
                     bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
-                    unsigned char frameY = (((ppuAddress & 0x03E0) >> 2) | ((ppuAddress & 0x7000) >> 12)); // The current Y position in the frame
-                    unsigned char spriteY = secondaryOAM[(sprite * 4)] + 1;
+                    unsigned char spriteY = secondaryOAM[(sprite * 4)];
 
                     if (spriteSize) // if spriteSize is 8x16
                     {
                         unsigned short int base = (0x1 & secondaryOAM[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
                         unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 16); // Index of the beginning of the pattern
-                        unsigned short int offset = flipVertical ? (spriteY + 15) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
+                        unsigned short int offset = flipVertical ? 15 - (line - spriteY) : (line - spriteY); // Offset from base index
 
                         spriteShift1[sprite] = cart.ChrRead(patternIndex + offset + 16);
                     }
                     else
                     {
-                        unsigned short int patternIndex = baseSpriteTableAddress + secondaryOAM[(sprite * 4) + 1] * 16; // Index of the beginning of the pattern
-                        unsigned short int offset = flipVertical ? (spriteY + 7) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
+                        unsigned short int patternIndex = baseSpriteTableAddress + (secondaryOAM[(sprite * 4) + 1] * 16); // Index of the beginning of the pattern
+                        unsigned short int offset = flipVertical ? 7 - (line - spriteY) : (line - spriteY); // Offset from base index
 
                         spriteShift1[sprite] = cart.ChrRead(patternIndex + offset + 8);
                     }
@@ -470,7 +465,7 @@ void PPU::Tick()
     }
     else // VBlank and post-render scanline
     {
-        if (dot == 1 && line == 241)
+        if (dot == 1 && line == 241 && clock > 88974)
         {
             even = !even;
             inVBLANK = true;
@@ -617,15 +612,14 @@ void PPU::SpriteEvaluation()
 
     for (int i = 0; i < 64; ++i)
     {
-        unsigned char size = spriteSize ? 8 : 16;
+        unsigned char size = spriteSize ? 16 : 8;
         unsigned char index = i * 4; // Index of one of 64 sprites in Primary OAM
         unsigned char spriteY = primaryOAM[index + glitchCount]; // The sprites Y coordinate, glitchCount is used to replicated a hardware glitch
-        unsigned char frameY = ((ppuAddress & 0x03E0) >> 2) | ((ppuAddress & 0x7000) >> 12); // The current Y position in the frame
 
         if (spriteCount < 8) // If fewer than 8 sprites have been found
         {
             // If a sprite is in range, copy it to the next spot in secondary OAM
-            if (spriteY <= frameY && spriteY + size > frameY)
+            if (spriteY <= line && spriteY + size > line)
             {
                 secondaryOAM[spriteCount * 4] = primaryOAM[index];
                 secondaryOAM[(spriteCount * 4) + 1] = primaryOAM[index + 1];
@@ -637,7 +631,7 @@ void PPU::SpriteEvaluation()
         else // 8 sprites have already been found
         {
             // If the sprite is in range, set the sprite overflow, due to glitch Count this may actually be incorrect
-            if (spriteY <= frameY && spriteY + size >= frameY && !spriteOverflow)
+            if (spriteY <= line && spriteY + size > line && !spriteOverflow)
             {
                 spriteOverflow = true;
             }
@@ -664,12 +658,16 @@ void PPU::Render()
 
     for (int f = 0; f < 8; ++f)
     {
-        if (spriteCounter[f] != 0)
+        if (spriteCounter[f] == 0)
+        {
+            active[f] = (spriteCounter[f] == 0);
+        }
+        else// (spriteCounter[f] != 0)
         {
             --spriteCounter[f];
         }
 
-        active[f] = (spriteCounter[f] == 0);
+        //active[f] = (spriteCounter[f] == 0);
     }
 
     bool spriteFound = false;
@@ -705,7 +703,7 @@ void PPU::Render()
                 spriteFound = true;
 
                 // Detect a sprite 0 hit
-                if (dot >= 1 && f == 0 && spPixel != 0 && bgPixel != 0)
+                if (dot > 1 && f == 0 && spPixel != 0 && bgPixel != 0)
                 {
                     sprite0Hit = true;
                 }

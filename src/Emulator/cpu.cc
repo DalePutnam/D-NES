@@ -73,7 +73,7 @@ unsigned char CPU::Read(unsigned short int address)
     }
     else
     {
-        return 0xFF;
+        return 0x00;
     }
 }
 
