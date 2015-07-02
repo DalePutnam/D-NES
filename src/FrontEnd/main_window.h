@@ -39,14 +39,19 @@ class MainWindow : public wxFrame
     void OnEmulatorStop(wxCommandEvent& event);
     void OnEmulatorPause(wxCommandEvent& event);
     void OnPPUDebug(wxCommandEvent& event);
+    void OnUnexpectedShutdown(wxThreadEvent& event);
+    void OnFPSUpdate(wxThreadEvent& event);
     //void OnThreadComplete(wxThreadEvent& event);
     void OnQuit(wxCommandEvent& event);
 
 public:
     MainWindow();
     ~MainWindow();
+
     void StopEmulator();
     void PPUDebugClose();
+
+    NESThread* GetNESThread();
 };
 
 const int ID_OPEN_ROM = 100;

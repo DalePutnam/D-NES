@@ -15,7 +15,7 @@ NES::NES(std::string filename, IDisplay& display, bool cpuLogEnabled)
     stop(true),
     pause(false),
     nmi(false),
-    cart(Cart::Create(filename)),
+    cart(Cart::Create(filename, *this)),
     ppu(*new PPU(*this, cart, display)),
     cpu(*new CPU(*this, ppu, cart, cpuLogEnabled))
 
@@ -69,6 +69,17 @@ bool NES::NMIRaised()
     nmi = false;
     return value;
 }
+
+void NES::SetControllerOneState(unsigned char state)
+{
+    cpu.SetControllerOneState(state);
+}
+
+unsigned char NES::GetControllerOneState()
+{
+    return cpu.GetControllerOneState();
+}
+
 
 void NES::EnableCPULog()
 {

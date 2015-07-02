@@ -32,10 +32,10 @@ class CPU
     std::condition_variable pauseCV;
     volatile bool isPaused;
 
-
     std::atomic<bool> logEnabled;
     std::ofstream* logStream;
 
+    // Debug Strings
     char programCounter[5];
     char instruction[5];
     char opcode[3];
@@ -47,6 +47,10 @@ class CPU
     NES& nes;
     PPU& ppu;
     Cart& cart;
+
+    bool controllerStrobe;
+    unsigned char controllerOneShift;
+    std::atomic<unsigned char> controllerOneState;
 
     // Cycles to next NMI check
     int nextNMI;
@@ -154,6 +158,9 @@ class CPU
 
     bool NextInst(); // Execute next instruction
 
+    void SetControllerStrobe(bool strobe);
+    unsigned char GetControllerOneShift();
+
     // Diagnostics
     unsigned char DebugRead(unsigned short int address);
     bool IsLogEnabled();
@@ -179,6 +186,9 @@ public:
     CPU(NES& nes, PPU& ppu, Cart& cart, bool logEnabled = false);
     void Run(); // Run CPU
     void Reset(); // Reset the CPU to starting conditions
+
+    void SetControllerOneState(unsigned char state);
+    unsigned char GetControllerOneState();
 
     void Pause();
     void Resume();

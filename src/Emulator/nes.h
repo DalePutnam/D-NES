@@ -48,6 +48,9 @@ public:
     bool IsStopped();
     bool IsPaused();
 
+    void SetControllerOneState(unsigned char state);
+    unsigned char GetControllerOneState();
+
     void EnableCPULog();
     void DisableCPULog();
 

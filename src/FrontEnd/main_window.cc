@@ -139,10 +139,10 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 
     if (dialog.ShowModal() == wxID_OK)
     {
-        AppSettings* settings = AppSettings::getInstance();
-        wxString filename = dialog.GetFilename();
+        //AppSettings* settings = AppSettings::getInstance();
+        wxString filename = dialog.GetPath();
 
-        std::string romName = settings->get<std::string>("frontend.rompath") + "/" + filename.ToStdString();
+        std::string romName = filename.ToStdString();
         StartEmulator(romName);
     }
 }
@@ -163,7 +163,6 @@ void MainWindow::OnThreadUpdate(wxThreadEvent& WXUNUSED(event))
                 if (i < 8)
                 {
                     ppuDebugWindow->UpdatePalette(i, nesThread->GetPalette(i));
-                    ppuDebugWindow->UpdateSecondarySprite(i, nesThread->GetPrimarySprite(i));
                 }
 
                 ppuDebugWindow->UpdatePrimarySprite(i, nesThread->GetPrimarySprite(i));
@@ -213,10 +212,30 @@ void MainWindow::PPUDebugClose()
     }
 }
 
+void MainWindow::OnUnexpectedShutdown(wxThreadEvent& WXUNUSED(event))
+{
+    wxMessageDialog message(NULL, "Emulator Crashed", "ERROR", wxOK | wxICON_ERROR);
+    message.ShowModal();
+    StopEmulator();
+}
+
+void MainWindow::OnFPSUpdate(wxThreadEvent& WXUNUSED(event))
+{
+    if (nesThread)
+    {
+        gameWindow->SetFPS(nesThread->GetCurrentFPS());
+    }
+}
+
 void MainWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
     StopEmulator();
     Close(true);
+}
+
+NESThread* MainWindow::GetNESThread()
+{
+    return nesThread;
 }
 
 MainWindow::MainWindow()
@@ -261,7 +280,9 @@ MainWindow::MainWindow()
     Connect(ID_EMULATOR_STOP, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop));
     Connect(ID_EMULATOR_PAUSE, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause));
     Connect(ID_EMUALTOR_PPU_DEBUG, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug));
-    Connect(wxID_ANY, wxEVT_COMMAND_NESTHREAD_UPDATE, wxThreadEventHandler(MainWindow::OnThreadUpdate));
+    Connect(wxID_ANY, wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEventHandler(MainWindow::OnThreadUpdate));
+    Connect(wxID_ANY, wxEVT_COMMAND_NESTHREAD_FPS_UPDATE, wxThreadEventHandler(MainWindow::OnFPSUpdate));
+    Connect(wxID_ANY, wxEVT_COMMAND_NESTHREAD_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown));
 
     romList = new wxTreeListCtrl(this, wxID_ANY);
     romList->AppendColumn("File Name");

@@ -10,8 +10,9 @@
 
 #include "cart.h"
 #include "nrom.h"
+#include "sxrom.h"
 
-Cart& Cart::Create(std::string filename)
+Cart& Cart::Create(std::string& filename, NES& nes)
 {
     // Open file stream to ROM file
     std::ifstream rom(filename.c_str(), std::ifstream::in | std::ifstream::binary);
@@ -39,6 +40,8 @@ Cart& Cart::Create(std::string filename)
             {
             case 0x00:
                 return *new NROM(filename);
+            case 0x01:
+                return *new SXROM(filename, nes);
             default:
                 std::ostringstream oss;
                 oss << "Mapper " << (int)mapper_number << " specified by " << filename << " does not exist.";

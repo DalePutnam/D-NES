@@ -67,6 +67,10 @@ unsigned char CPU::Read(unsigned short int address)
             return 0xFF;
         }
     }
+    else if (address == 0x4016)
+    {
+        return GetControllerOneShift();
+    }
     else if (address > 0x5FFF && address < 0x10000)
     {
         return cart.PrgRead(address - 0x6000);
@@ -143,6 +147,10 @@ void CPU::Write(unsigned char M, unsigned short int address)
         {
             ppu.WritePPUDATA(M);
         }
+    }
+    else if (address == 0x4016)
+    {
+        SetControllerStrobe(!!(M & 0x1));
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
@@ -413,14 +421,14 @@ void CPU::ADC(unsigned char M)
     // If overflow occurred, set the carry flag
     (result > 0xFF) ? P = P | 0x01 : P = P & 0xFE;
 
-    A = (unsigned char)result;
+    A = static_cast<unsigned char>(result);
 
     // if Result is 0 set zero flag
     (A == 0) ? P = P | 0x02 : P = P & 0xFD;
     // if bit seven is 1 set negative flag
     ((A & 0x80) >> 7) == 1 ? P = P | 0x80 : P = P & 0x7F;
     // if signed overflow occurred set overflow flag
-    ((A >> 7) != ((origA & 0x80) >> 7) && ((A & 0x80) >> 7) != ((M & 0x80) >> 7)) ? P = P | 0x40 : P = P & 0xBF;
+    ((A >> 7) != (origA >> 7) && (A >> 7) != (M >> 7)) ? P = P | 0x40 : P = P & 0xBF;
 }
 
 // Logical And
@@ -586,6 +594,8 @@ void CPU::BRK()
     Write(lowPC, 0x100 + (S - 1));
     Write(P | 0x30, 0x100 + (S - 2));
     S -= 3;
+
+    P |= 0x4;
 
     PC = Read(0xFFFE) + (((unsigned short int) Read(0xFFFF)) * 0x100);
 }
@@ -1003,7 +1013,7 @@ void CPU::RTI()
 
     Read(0x100 + S);
 
-    P = (Read(0x100 + (S + 1)) & 0xEF) | 0x20;
+    P = Read(0x100 + (S + 1)) & 0xCF;
     unsigned short int lowPC = Read(0x100 + (S + 2));
     unsigned short int highPC = Read(0x100 + (S + 3));
     PC = (highPC << 8) | lowPC;
@@ -1033,22 +1043,23 @@ void CPU::SBC(unsigned char M)
 {
     if (IsLogEnabled()) LogInstructionName("SBC");
 
-    char C = P & 0x01; // get carry flag
-    char signA = (char)A;
-    char signM = (char)M;
-    int result = signA - signM - (1 - C);
+    unsigned char C = P & 0x01; // get carry flag
+    unsigned char origA = A;
+    short int result = A - M - (1 - C);
 
     // if signed overflow occurred set overflow flag
-    (result > 127 || result < -128) ? P = P | 0x40 : P = P & 0xBF;
+    //(result > 127 || result < -128) ? P = P | 0x40 : P = P & 0xBF;
     // If overflow occurred, clear the carry flag
-    (((char)result) >= 0) ? P = P | 0x01 : P = P & 0xFE;
+    (result < 0) ? P = P & 0xFE : P = P | 0x01;
 
-    A = (unsigned char)result;
+    A = static_cast<unsigned char>(result);
 
     // if Result is 0 set zero flag
     (A == 0) ? P = P | 0x02 : P = P & 0xFD;
     // if bit seven is 1 set negative flag
     ((A & 0x80) >> 7) == 1 ? P = P | 0x80 : P = P & 0x7F;
+    // if signed overflow occurred set overflow flag
+    ((origA >> 7) != (M >> 7)) && ((origA >> 7) != (A >> 7)) ? P = P | 0x40 : P = P & 0xBF;
 }
 
 // Set Carry Flag
@@ -1190,23 +1201,47 @@ void CPU::HandleNMI()
     Write(P | 0x20, 0x100 + (S - 2));
     S -= 3;
 
+    P |= 0x4;
+
     PC = Read(0xFFFA) + (((unsigned short int) Read(0xFFFB)) * 0x100);
 }
 
+void CPU::SetControllerStrobe(bool strobe)
+{
+    controllerStrobe = strobe;
+    controllerOneShift = controllerOneState.load();
+}
+
+unsigned char CPU::GetControllerOneShift()
+{
+    if (controllerStrobe)
+    {
+        controllerOneShift = controllerOneState.load();
+    }
+
+    unsigned char result = controllerOneShift & 0x1;
+    controllerOneShift >>= 1;
+
+    return result;
+}
+
 CPU::CPU(NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
-isPaused(false),
-pauseFlag(false),
-logEnabled(logEnabled),
-logStream(0),
-nes(nes),
-ppu(ppu),
-cart(cart),
-nextNMI(ppu.ScheduleSync()),
-S(0xFD),
-P(0x24),
-A(0),
-X(0),
-Y(0)
+    isPaused(false),
+    pauseFlag(false),
+    logEnabled(logEnabled),
+    logStream(0),
+    nes(nes),
+    ppu(ppu),
+    cart(cart),
+    controllerStrobe(0),
+    controllerOneShift(0),
+    controllerOneState(0),
+    nextNMI(ppu.ScheduleSync()),
+    S(0xFD),
+    P(0x24),
+    A(0),
+    X(0),
+    Y(0)
 {
     for (int i = 0; i < 0x800; i++)
     {
@@ -1251,6 +1286,16 @@ CPU::~CPU()
         logStream->close();
         delete logStream;
     }
+}
+
+void CPU::SetControllerOneState(unsigned char state)
+{
+    controllerOneState.store(state);
+}
+
+unsigned char CPU::GetControllerOneState()
+{
+    return controllerOneState.load();
 }
 
 void CPU::Pause()
@@ -1465,7 +1510,7 @@ bool CPU::NextInst()
         break;
         // BRK OpCode
     case 0x00:
-        Read(PC);
+        Read(PC++);
         BRK();
         break;
         // BVC OpCode

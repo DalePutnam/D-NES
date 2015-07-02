@@ -26,16 +26,14 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
     wxBoxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* hbox0 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* vbox0 = new wxBoxSizer(wxVERTICAL);
-    wxGridSizer* grid0 = new wxGridSizer(2, 2, 5, 5);
+    wxGridSizer* grid0 = new wxGridSizer(2, 2, 0, 0);
     wxGridSizer* grid1 = new wxGridSizer(2, 4, 0, 0);
     wxGridSizer* grid2 = new wxGridSizer(4, 16, 8, 8);
-    wxGridSizer* grid3 = new wxGridSizer(1, 8, 8, 8);
 
     wxStaticBoxSizer* sbox0 = new wxStaticBoxSizer(wxVERTICAL, this, "Name Tables");
     wxStaticBoxSizer* sbox1 = new wxStaticBoxSizer(wxHORIZONTAL, this, "Pattern Tables");
     wxStaticBoxSizer* sbox2 = new wxStaticBoxSizer(wxVERTICAL, this, "Palettes");
-    wxStaticBoxSizer* sbox3 = new wxStaticBoxSizer(wxHORIZONTAL, this, "Primary OAM Sprites");
-    wxStaticBoxSizer* sbox4 = new wxStaticBoxSizer(wxHORIZONTAL, this, "Secondary OAM Sprites");
+    wxStaticBoxSizer* sbox3 = new wxStaticBoxSizer(wxHORIZONTAL, this, "Sprites");
 
     for (int i = 0; i < 4; ++i)
     {
@@ -59,12 +57,6 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
     {
         primarySprite[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(8, 8));
         primarySprite[i]->SetBackgroundColour(*wxBLACK);
-    }
-
-    for (int i = 0; i < 8; ++i)
-    {
-        secondarySprite[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(8, 8));
-        secondarySprite[i]->SetBackgroundColour(*wxBLACK);
     }
 
     topsizer->Add(hbox0, 0, wxALL, 5);
@@ -104,16 +96,7 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
         grid2->Add(primarySprite[i]);
     }
 
-    vbox0->Add(sbox4);
-    sbox4->Add(grid3);
-    sbox4->AddSpacer(136);
-
-    for (int i = 0; i < 8; ++i)
-    {
-        grid3->Add(secondarySprite[i]);
-    }
-
-    SetBackgroundColour(*wxLIGHT_GREY);
+    SetBackgroundColour(*wxWHITE);
     SetSizer(topsizer);
     Fit();
 
@@ -153,15 +136,6 @@ void PPUDebugWindow::UpdatePrimarySprite(int sprite, unsigned char* data)
     wxBitmap bitmap(image, 24);
 
     wxClientDC dc(primarySprite[sprite]);
-    dc.DrawBitmap(bitmap, 0, 0);
-}
-
-void PPUDebugWindow::UpdateSecondarySprite(int sprite, unsigned char* data)
-{
-    wxImage image(8, 8, data, true);
-    wxBitmap bitmap(image, 24);
-
-    wxClientDC dc(secondarySprite[sprite]);
     dc.DrawBitmap(bitmap, 0, 0);
 }
 

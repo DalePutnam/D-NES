@@ -16,7 +16,6 @@ class PPUDebugWindow : public wxFrame
     wxPanel* patternTable[2];
     wxPanel* palette[8];
     wxPanel* primarySprite[64];
-    wxPanel* secondarySprite[8];
 
     void OnQuit(wxCommandEvent& event);
     void OnPatternTableClicked(wxMouseEvent& event);
@@ -28,7 +27,6 @@ public:
     void UpdatePatternTable(int tableID, unsigned char* data);
     void UpdatePalette(int tableID, unsigned char* data);
     void UpdatePrimarySprite(int sprite, unsigned char* data);
-    void UpdateSecondarySprite(int sprite, unsigned char* data);
     int GetCurrentPalette();
 };
 

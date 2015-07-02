@@ -10,15 +10,19 @@
 
 #include <string>
 
+class NES;
+
 class Cart
 {
 public:
-    static Cart& Create(std::string filename);
+    static Cart& Create(std::string& filename, NES& nes);
 
     enum MirrorMode
     {
         HORIZONTAL,
-        VERTICAL
+        VERTICAL,
+        SINGLE_SCREEN_A,
+        SINGLE_SCREEN_B
     };
 
     virtual MirrorMode GetMirrorMode() = 0;

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -83,6 +83,7 @@
     <ClInclude Include="Interfaces\idisplay.h" />
     <ClInclude Include="mappers\cart.h" />
     <ClInclude Include="mappers\nrom.h" />
+    <ClInclude Include="mappers\sxrom.h" />
     <ClInclude Include="nes.h" />
     <ClInclude Include="ppu.h" />
   </ItemGroup>
@@ -90,6 +91,7 @@
     <ClCompile Include="cpu.cc" />
     <ClCompile Include="mappers\cart.cc" />
     <ClCompile Include="mappers\nrom.cc" />
+    <ClCompile Include="mappers\sxrom.cc" />
     <ClCompile Include="nes.cc" />
     <ClCompile Include="ppu.cc" />
   </ItemGroup>

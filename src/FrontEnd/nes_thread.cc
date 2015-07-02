@@ -1,13 +1,20 @@
 #include "nes_thread.h"
 #include "main_window.h"
 
-wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_UPDATE, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 wxThread::ExitCode NESThread::Entry()
 {
     if (!TestDestroy())
     {
         nes.Start();
+    }
+
+    if (!expectedStop)
+    {
+        wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_UNEXPECTED_SHUTDOWN));
     }
 
     return static_cast<wxThread::ExitCode>(0);
@@ -17,6 +24,10 @@ NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnab
     : wxThread(wxTHREAD_JOINABLE),
     handler(handler),
     nes(*new NES(filename, *this, cpuLogEnabled)),
+    expectedStop(false),
+    fpsCounter(0),
+    currentFPS(0),
+    intervalStart(boost::chrono::steady_clock::now()),
     width(256),
     height(240),
     pixelCount(0),
@@ -92,7 +103,18 @@ void NESThread::EmulatorPause()
 
 void NESThread::Stop()
 {
+    expectedStop = true;
     nes.Stop();
+}
+
+void NESThread::SetControllerOneState(unsigned char state)
+{
+    nes.SetControllerOneState(state);
+}
+
+unsigned char NESThread::GetControllerOneState()
+{
+    return nes.GetControllerOneState();
 }
 
 void NESThread::NextPixel(unsigned int pixel)
@@ -111,8 +133,21 @@ void NESThread::NextPixel(unsigned int pixel)
     if (pixelCount == width * height)
     {
         frameLocked = true;
-        wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_UPDATE));
+        wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE));
         pixelCount = 0;
+        fpsCounter++;
+
+        using namespace boost::chrono;
+
+        steady_clock::time_point now = steady_clock::now();
+        microseconds time_span = duration_cast<microseconds>(now - intervalStart);
+        if (time_span.count() >= 1000000)
+        {
+            currentFPS.store(fpsCounter);
+            fpsCounter = 0;
+            intervalStart = steady_clock::now();
+            wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE));
+        }
     }
 }
 
@@ -124,6 +159,11 @@ unsigned char* NESThread::GetFrame()
 void NESThread::UnlockFrame()
 {
     frameLocked = false;
+}
+
+int NESThread::GetCurrentFPS()
+{
+    return currentFPS.load();
 }
 
 unsigned char* NESThread::GetNameTable(int tableID)

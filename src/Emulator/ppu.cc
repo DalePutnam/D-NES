@@ -56,6 +56,7 @@ void PPU::GetNameTable(int table, unsigned char* pixels)
                 {
                     unsigned short int pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
                     unsigned short int paletteIndex = 0x3F00 | (atByte << 2) | pixel;
+                    if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
                     unsigned int rgb = rgbLookupTable[Read(paletteIndex)];
                     unsigned char red = (rgb & 0xFF0000) >> 16;
                     unsigned char green = (rgb & 0x00FF00) >> 8;
@@ -240,7 +241,7 @@ void PPU::GetSecondaryOAM(int sprite, unsigned char* pixels)
 
 void PPU::Tick()
 {
-    UpdateState(1);
+    UpdateState();
     bool renderingEnabled = showSprites || showBackground;
 
     if ((line >= 0 && line <= 239) || line == 261) // Visible Scanlines (also pre-render scanline)
@@ -302,45 +303,13 @@ void PPU::Tick()
             // Every 8 dots increment the coarse X scroll
             if (cycle == 7)
             {
-                if ((ppuAddress & 0x001F) == 31) // Reach end of Name Table
-                {
-                    ppuAddress &= 0xFFE0; // Set Coarse X to 0
-                    ppuAddress ^= 0x400; // Switch horizontal Name Table
-                }
-                else
-                {
-                    ppuAddress++; // Increment Coarse X
-                }
+                IncrementXScroll();
             }
 
             // Exactly at dot 256 increment the Y scroll
             if (dot == 256)
             {
-                if ((ppuAddress & 0x7000) != 0x7000) // if the fine Y < 7
-                {
-                    ppuAddress += 0x1000; // increment fine Y
-                }
-                else
-                {
-                    ppuAddress &= 0x8FFF; // Set fine Y to 0
-                    unsigned short int coarseY = (ppuAddress & 0x03E0) >> 5; // get coarse Y
-
-                    if (coarseY == 29) // End of name table
-                    {
-                        coarseY = 0; // set coarse Y to 0
-                        ppuAddress ^= 0x0800; // Switch Name Table
-                    }
-                    else if (coarseY == 31) // End of attribute table
-                    {
-                        coarseY = 0; // set coarse Y to 0
-                    }
-                    else
-                    {
-                        coarseY++; // Increment coarse &
-                    }
-
-                    ppuAddress = (ppuAddress & 0xFC1F) | (coarseY << 5); // Combine values into new address
-                }
+                IncrementYScroll();
             }
         }
         else if (dot >= 257 && dot <= 320 && renderingEnabled)
@@ -385,8 +354,9 @@ void PPU::Tick()
                     if (spriteSize) // if spriteSize is 8x16
                     {
                         unsigned short int base = (0x1 & secondaryOAM[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-                        unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 16); // Index of the beginning of the pattern
+                        unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 32); // Index of the beginning of the pattern
                         unsigned short int offset = flipVertical ? 15 - (line - spriteY) : (line - spriteY); // Offset from base index
+                        if (offset >= 8) offset += 8;
 
                         spriteShift0[sprite] = cart.ChrRead(patternIndex + offset);
                     }
@@ -413,10 +383,11 @@ void PPU::Tick()
                     if (spriteSize) // if spriteSize is 8x16
                     {
                         unsigned short int base = (0x1 & secondaryOAM[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-                        unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 16); // Index of the beginning of the pattern
+                        unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 32); // Index of the beginning of the pattern
                         unsigned short int offset = flipVertical ? 15 - (line - spriteY) : (line - spriteY); // Offset from base index
+                        if (offset >= 8) offset += 8;
 
-                        spriteShift1[sprite] = cart.ChrRead(patternIndex + offset + 16);
+                        spriteShift1[sprite] = cart.ChrRead(patternIndex + offset + 8);
                     }
                     else
                     {
@@ -465,7 +436,7 @@ void PPU::Tick()
     }
     else // VBlank and post-render scanline
     {
-        if (dot == 1 && line == 241 && clock > 88974)
+        if (dot == 1 && line == 241 && ppuClock > 88974)
         {
             even = !even;
             inVBLANK = true;
@@ -478,119 +449,111 @@ void PPU::Tick()
         }
     }
 
-    // Increment Scanline pixel
-    if (dot == 339 && line == 261 && !even && renderingEnabled)
+    // Limit to 60 FPS
+    if (line == 239 && dot == 256)
     {
-        dot = line = 0;
-    }
-    else if (dot == 340 && line == 261)
-    {
-        dot = line = 0;
-    }
-    else if (dot == 340)
-    {
-        dot = 0;
-        ++line;
-    }
-    else
-    {
-        ++dot;
+        using namespace boost::chrono;
+
+        high_resolution_clock::time_point now = high_resolution_clock::now();
+        nanoseconds span = duration_cast<nanoseconds>(now - intervalStart);
+
+        while (span.count() < 16666667)
+        {
+            now = high_resolution_clock::now();
+            span = duration_cast<nanoseconds>(now - intervalStart);
+        }
+
+        intervalStart = high_resolution_clock::now();
     }
 
-    ++clock;
+    IncrementClock();
 }
 
-void PPU::UpdateState(int cycles)
+void PPU::UpdateState()
 {
-
-    while (cycles != 0)
+    if (ctrlBuffer.size() > 0 && ctrlBuffer.front().first == ppuClock)
     {
-        if (ctrlBuffer.size() > 0 && ctrlBuffer.front().first == clock - cycles)
+        unsigned char value = ctrlBuffer.front().second;
+        ctrlBuffer.pop();
+
+        ppuTempAddress = (ppuTempAddress & 0x73FF) | ((0x3 & static_cast<unsigned short int>(value)) << 10); // High bits of NameTable address
+        ppuAddressIncrement = ((0x4 & value) >> 2) != 0;
+        baseSpriteTableAddress = 0x1000 * ((0x8 & value) >> 3);
+        baseBackgroundTableAddress = 0x1000 * ((0x10 & value) >> 4);
+        spriteSize = ((0x20 & value) >> 5) != 0;
+        nmiEnabled = ((0x80 & value) >> 7) != 0;
+
+        lowerBits = (0x1F & value);
+    }
+    else if (maskBuffer.size() > 0 && maskBuffer.front().first == ppuClock)
+    {
+        unsigned char value = maskBuffer.front().second;
+        maskBuffer.pop();
+
+        grayscale = (0x1 & value);
+        showBackgroundLeft = ((0x2 & value) >> 1) != 0;
+        showSpritesLeft = ((0x4 & value) >> 2) != 0;
+        showBackground = ((0x8 & value) >> 3) != 0;
+        showSprites = ((0x10 & value) >> 4) != 0;
+        intenseRed = ((0x20 & value) >> 5) != 0;
+        intenseGreen = ((0x40 & value) >> 6) != 0;
+        intenseBlue = ((0x80 & value) >> 7) != 0;
+
+        lowerBits = (0x1F & value);
+    }
+    else if (scrollBuffer.size() > 0 && scrollBuffer.front().first == ppuClock)
+    {
+        unsigned short int value = scrollBuffer.front().second;
+        scrollBuffer.pop();
+
+        if (addressLatch)
         {
-            unsigned char value = ctrlBuffer.front().second;
-            ctrlBuffer.pop();
-
-            ppuTempAddress = (ppuTempAddress & 0xF3FF) | ((0x3 & static_cast<unsigned short int>(value)) << 10); // High bits of NameTable address
-            ppuAddressIncrement = ((0x4 & value) >> 2) != 0;
-            baseSpriteTableAddress = 0x1000 * ((0x8 & value) >> 3);
-            baseBackgroundTableAddress = 0x1000 * ((0x10 & value) >> 4);
-            spriteSize = ((0x20 & value) >> 5) != 0;
-            nmiEnabled = ((0x80 & value) >> 7) != 0;
-
-            lowerBits = (0x1F & value);
+            ppuTempAddress = (ppuTempAddress & 0x0FFF) | ((0x7 & value) << 12);
+            ppuTempAddress = (ppuTempAddress & 0x7C1F) | ((0xF8 & value) << 2);
         }
-        else if (maskBuffer.size() > 0 && maskBuffer.front().first == clock - cycles)
+        else
         {
-            unsigned char value = maskBuffer.front().second;
-            maskBuffer.pop();
-
-            grayscale = (0x1 & value);
-            showBackgroundLeft = ((0x2 & value) >> 1) != 0;
-            showSpritesLeft = ((0x4 & value) >> 2) != 0;
-            showBackground = ((0x8 & value) >> 3) != 0;
-            showSprites = ((0x10 & value) >> 4) != 0;
-            intenseRed = ((0x20 & value) >> 5) != 0;
-            intenseGreen = ((0x40 & value) >> 6) != 0;
-            intenseBlue = ((0x80 & value) >> 7) != 0;
-
-            lowerBits = (0x1F & value);
-        }
-        else if (scrollBuffer.size() > 0 && scrollBuffer.front().first == clock - cycles)
-        {
-            unsigned short int value = scrollBuffer.front().second;
-            scrollBuffer.pop();
-
-            if (addressLatch)
-            {
-                ppuTempAddress = (ppuTempAddress & 0x0FFF) | ((0x7 & value) << 12);
-                ppuTempAddress = (ppuTempAddress & 0xFC1F) | ((0xF8 & value) << 2);
-            }
-            else
-            {
-                fineXScroll = static_cast<unsigned char>(0x7 & value);
-                ppuTempAddress = (ppuTempAddress & 0xFFE0) | ((0xF8 & value) >> 3);
-            }
-
-            addressLatch = !addressLatch;
-            lowerBits = static_cast<unsigned char>(0x1F & value);
-        }
-        else if (oamAddrBuffer.size() > 0 && oamAddrBuffer.front().first == clock - cycles)
-        {
-            oamAddress = oamAddrBuffer.front().second;
-            oamAddrBuffer.pop();
-
-            lowerBits = (0x1F & oamAddress);
-        }
-        else if (ppuAddrBuffer.size() > 0 && ppuAddrBuffer.front().first == clock - cycles)
-        {
-            unsigned short int value = ppuAddrBuffer.front().second;
-            ppuAddrBuffer.pop();
-
-            addressLatch ? ppuTempAddress = (ppuTempAddress & 0xFF00) | value : ppuTempAddress = (ppuTempAddress & 0x00FF) | ((0x3F & value) << 8);
-            if (addressLatch) ppuAddress = ppuTempAddress;
-
-            addressLatch = !addressLatch;
-            lowerBits = static_cast<unsigned char>(0x1F & value);
-        }
-        else if (oamDataBuffer.size() > 0 && oamDataBuffer.front().first == clock - cycles)
-        {
-            unsigned char value = oamDataBuffer.front().second;
-            oamDataBuffer.pop();
-
-            primaryOAM[oamAddress++] = value;
-            lowerBits = (0x1F & value);
-        }
-        else if (ppuDataBuffer.size() > 0 && ppuDataBuffer.front().first == clock - cycles)
-        {
-            unsigned char value = ppuDataBuffer.front().second;
-            ppuDataBuffer.pop();
-
-            Write(ppuAddress, value);
-            ppuAddressIncrement ? ppuAddress = (ppuAddress + 32) & 0x7FFF : ppuAddress = (ppuAddress + 1) & 0x7FFF;
-            lowerBits = (0x1F & value);
+            fineXScroll = static_cast<unsigned char>(0x7 & value);
+            ppuTempAddress = (ppuTempAddress & 0x7FE0) | ((0xF8 & value) >> 3);
         }
 
-        cycles -= 1;
+        addressLatch = !addressLatch;
+        lowerBits = static_cast<unsigned char>(0x1F & value);
+    }
+    else if (oamAddrBuffer.size() > 0 && oamAddrBuffer.front().first == ppuClock)
+    {
+        oamAddress = oamAddrBuffer.front().second;
+        oamAddrBuffer.pop();
+
+        lowerBits = (0x1F & oamAddress);
+    }
+    else if (ppuAddrBuffer.size() > 0 && ppuAddrBuffer.front().first == ppuClock)
+    {
+        unsigned short int value = ppuAddrBuffer.front().second;
+        ppuAddrBuffer.pop();
+
+        addressLatch ? ppuTempAddress = (ppuTempAddress & 0x7F00) | value : ppuTempAddress = (ppuTempAddress & 0x00FF) | ((0x3F & value) << 8);
+        if (addressLatch) ppuAddress = ppuTempAddress;
+
+        addressLatch = !addressLatch;
+        lowerBits = static_cast<unsigned char>(0x1F & value);
+    }
+    else if (oamDataBuffer.size() > 0 && oamDataBuffer.front().first == ppuClock)
+    {
+        unsigned char value = oamDataBuffer.front().second;
+        oamDataBuffer.pop();
+
+        primaryOAM[oamAddress++] = value;
+        lowerBits = (0x1F & value);
+    }
+    else if (ppuDataBuffer.size() > 0 && ppuDataBuffer.front().first == ppuClock)
+    {
+        unsigned char value = ppuDataBuffer.front().second;
+        ppuDataBuffer.pop();
+
+        Write(ppuAddress, value);
+        ppuAddressIncrement ? ppuAddress = (ppuAddress + 32) & 0x7FFF : ppuAddress = (ppuAddress + 1) & 0x7FFF;
+        lowerBits = (0x1F & value);
     }
 }
 
@@ -603,6 +566,7 @@ void PPU::SpriteEvaluation()
     {
         spriteCount = 0;
         glitchCount = 0;
+        sprite0SecondaryOAM = -1;
         unsigned char index = i * 4;
         secondaryOAM[index] = 0xFF;
         secondaryOAM[index + 1] = 0xFF;
@@ -619,8 +583,13 @@ void PPU::SpriteEvaluation()
         if (spriteCount < 8) // If fewer than 8 sprites have been found
         {
             // If a sprite is in range, copy it to the next spot in secondary OAM
-            if (spriteY <= line && spriteY + size > line)
+            if (spriteY <= line && spriteY + size > line && line != 239)
             {
+                if (index == 0)
+                {
+                    sprite0SecondaryOAM = spriteCount;
+                }
+
                 secondaryOAM[spriteCount * 4] = primaryOAM[index];
                 secondaryOAM[(spriteCount * 4) + 1] = primaryOAM[index + 1];
                 secondaryOAM[(spriteCount * 4) + 2] = primaryOAM[index + 2];
@@ -646,8 +615,10 @@ void PPU::SpriteEvaluation()
 void PPU::Render()
 {
     unsigned short int bgPixel = (((backgroundShift0 << fineXScroll) & 0x8000) >> 15) | (((backgroundShift1 << fineXScroll) & 0x8000) >> 14);
-    unsigned char bgAttribute = ((backgroundAttributeShift0 & 0x80) >> 7) | ((backgroundAttributeShift1 & 0x80) >> 6);
+    unsigned char bgAttribute = (((backgroundAttributeShift0 << fineXScroll) & 0x80) >> 7) | (((backgroundAttributeShift1 << fineXScroll) & 0x80) >> 6);
     unsigned short int bgPaletteIndex = 0x3F00 | (bgAttribute << 2) | bgPixel;
+
+    if (!showBackground || (!showBackgroundLeft && dot <= 8)) bgPixel = 0;
 
     backgroundAttributeShift0 = (backgroundAttributeShift0 << 1) | (backgroundAttribute & 0x1);
     backgroundAttributeShift1 = (backgroundAttributeShift1 << 1) | ((backgroundAttribute & 0x2) >> 1);
@@ -660,14 +631,12 @@ void PPU::Render()
     {
         if (spriteCounter[f] == 0)
         {
-            active[f] = (spriteCounter[f] == 0);
+            active[f] = true;
         }
-        else// (spriteCounter[f] != 0)
+        else
         {
             --spriteCounter[f];
         }
-
-        //active[f] = (spriteCounter[f] == 0);
     }
 
     bool spriteFound = false;
@@ -702,8 +671,10 @@ void PPU::Render()
                 spPaletteIndex |= ((spriteAttribute[f] & 0x03) << 2) | spPixel;
                 spriteFound = true;
 
+                if (!showSprites || (!showSpritesLeft && dot <= 8)) spPixel = 0;
+                
                 // Detect a sprite 0 hit
-                if (dot > 1 && f == 0 && spPixel != 0 && bgPixel != 0)
+                if (dot > 1 && f == sprite0SecondaryOAM && spPixel != 0 && bgPixel != 0 && dot != 256)
                 {
                     sprite0Hit = true;
                 }
@@ -740,100 +711,6 @@ void PPU::Render()
     }
 
     display.NextPixel(rgbLookupTable[Read(paletteIndex)]);
-}
-
-void PPU::TileFetch()
-{
-
-    backgroundShift0 = backgroundShift0 << 8;
-    backgroundShift1 = backgroundShift1 << 8;
-
-    backgroundShift0 |= tileBitmapLow;
-    backgroundShift1 |= tileBitmapHigh;
-    backgroundAttribute = attributeByte;
-
-    // Perform fetches
-    nameTableByte = ReadNameTable(0x2000 | (ppuAddress & 0x0FFF)); // Get the Name Table byte, a pointer into the pattern table
-
-    // Get the attribute byte, determines the palette to use when rendering
-    attributeByte = ReadNameTable(0x23C0 | (ppuAddress & 0x0C00) | ((ppuAddress >> 4) & 0x38) | ((ppuAddress >> 2) & 0x07));
-    unsigned char attributeShift = (((ppuAddress & 0x0002) >> 1) | ((ppuAddress & 0x0040) >> 5)) * 2;
-    attributeByte = (attributeByte >> attributeShift) & 0x3;
-
-    unsigned char fineY = ppuAddress >> 12; // Get fine y scroll bits from address
-    unsigned short int patternAddress = static_cast<unsigned short int>(nameTableByte)* 16; // Get pattern address, independent of the table
-    //unsigned short int baseAddress = spriteSize ? baseBackgroundTableAddress : 0; // Get base pattern table address
-    tileBitmapLow = cart.ChrRead(baseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
-
-    fineY = ppuAddress >> 12; // Get fine y scroll
-    patternAddress = static_cast<unsigned short int>(nameTableByte)* 16; // Get pattern address, independent of the table
-    //spriteSize ? patternAddress += 8 : patternAddress += 16; // Offset to next half of pattern, sprites can have width 8 or 16
-    //unsigned short int baseAddress = spriteSize ? baseBackgroundTableAddress : 0; // Get base pattern table address
-    tileBitmapHigh = cart.ChrRead(baseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
-}
-
-void PPU::SpriteFetch()
-{
-    unsigned char sprite = (dot - 257) / 8;
-
-    spriteAttribute[sprite] = secondaryOAM[(sprite * 4) + 2];
-
-    spriteCounter[sprite] = secondaryOAM[(sprite * 4) + 3];
-
-    if (sprite < spriteCount)
-    {
-        bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
-        unsigned char frameY = ((ppuAddress & 0x01E0) >> 2) | ((ppuAddress & 0x7000) >> 7); // The current Y position in the frame
-        unsigned char spriteY = secondaryOAM[(sprite * 4)];
-
-        if (spriteSize) // if spriteSize is 8x16
-        {
-            unsigned short int base = (0x1 & secondaryOAM[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-            unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 16); // Index of the beginning of the pattern
-            unsigned short int offset = flipVertical ? (spriteY + 15) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
-
-            spriteShift0[sprite] = cart.ChrRead(patternIndex + offset);
-        }
-        else
-        {
-            unsigned short int patternIndex = baseSpriteTableAddress + secondaryOAM[(sprite * 4) + 1] * 16; // Index of the beginning of the pattern
-            unsigned short int offset = flipVertical ? (spriteY + 7) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
-
-            spriteShift0[sprite] = cart.ChrRead(patternIndex + offset);
-        }
-    }
-    else
-    {
-        spriteShift0[sprite] = 0x00;
-    }
-
-    if (sprite < spriteCount)
-    {
-        bool flipVertical = ((0x80 & spriteAttribute[sprite]) >> 7) != 0;
-        unsigned char frameY = ((ppuAddress & 0x01E0) >> 2) | ((ppuAddress & 0x7000) >> 7); // The current Y position in the frame
-        unsigned char spriteY = secondaryOAM[(sprite * 4)];
-
-        if (spriteSize) // if spriteSize is 8x16
-        {
-            unsigned short int base = (0x1 & secondaryOAM[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-            unsigned short int patternIndex = base + ((secondaryOAM[(sprite * 4) + 1] >> 1) * 16); // Index of the beginning of the pattern
-            unsigned short int offset = flipVertical ? (spriteY + 15) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
-
-            spriteShift1[sprite] = cart.ChrRead(patternIndex + offset + 16);
-        }
-        else
-        {
-            unsigned short int patternIndex = baseSpriteTableAddress + secondaryOAM[(sprite * 4) + 1] * 16; // Index of the beginning of the pattern
-            unsigned short int offset = flipVertical ? (spriteY + 7) - (frameY - spriteY) : (frameY - spriteY); // Offset from base index
-
-            spriteShift1[sprite] = cart.ChrRead(patternIndex + offset + 8);
-        }
-    }
-    else
-    {
-        spriteShift1[sprite] = 0x00;
-    }
-
 }
 
 void PPU::IncrementXScroll()
@@ -878,29 +755,29 @@ void PPU::IncrementYScroll()
     }
 }
 
-void PPU::IncrementClock(unsigned int increment)
+void PPU::IncrementClock()
 {
     bool renderingEnabled = showSprites || showBackground;
 
-    clock += increment;
-    dot += increment;
-
-    // Increment Scanline pixel
-    if (dot >= 339 && line == 261 && !even && renderingEnabled)
+    if (dot == 339 && line == 261 && !even && renderingEnabled)
     {
-        dot = dot - 339;
-        line = 0;
+        dot = line = 0;
     }
-    else if (dot >= 340 && line == 261)
+    else if (dot == 340 && line == 261)
     {
-        dot = dot - 340;
-        line = 0;
+        dot = line = 0;
     }
-    else if (dot >= 340)
+    else if (dot == 340)
     {
-        dot = dot - 340;
+        dot = 0;
         ++line;
     }
+    else
+    {
+        ++dot;
+    }
+
+    ++ppuClock;
 }
 
 unsigned char PPU::Read(unsigned short int address)
@@ -949,6 +826,14 @@ unsigned char PPU::ReadNameTable(unsigned short int address)
 
     switch (mode)
     {
+    case Cart::MirrorMode::SINGLE_SCREEN_A:
+
+        return nameTable0[nametableaddr % 0x400];
+
+    case Cart::MirrorMode::SINGLE_SCREEN_B:
+
+        return nameTable1[nametableaddr % 0x400];
+
     case Cart::MirrorMode::HORIZONTAL:
 
         if (nametableaddr < 0x800)
@@ -983,6 +868,14 @@ void PPU::WriteNameTable(unsigned short int address, unsigned char value)
 
     switch (mode)
     {
+    case Cart::MirrorMode::SINGLE_SCREEN_A:
+
+        nameTable0[nametableaddr % 0x400] = 0;
+
+    case Cart::MirrorMode::SINGLE_SCREEN_B:
+
+        nameTable1[nametableaddr % 0x400] = 0;
+
     case Cart::MirrorMode::HORIZONTAL:
 
         if (nametableaddr < 0x800)
@@ -1013,7 +906,8 @@ PPU::PPU(NES& nes, Cart& cart, IDisplay& display)
     : nes(nes),
     cart(cart),
     display(display),
-    clock(0),
+    intervalStart(boost::chrono::high_resolution_clock::now()),
+    ppuClock(0),
     dot(0),
     line(241),
     even(true),
@@ -1036,6 +930,7 @@ PPU::PPU(NES& nes, Cart& cart, IDisplay& display)
     sprite0Hit(0),
     inVBLANK(0),
     nmiOccured(0),
+    sprite0SecondaryOAM(-1),
     oamAddress(0),
     ppuAddress(0),
     ppuTempAddress(0),
@@ -1085,7 +980,7 @@ PPU::PPU(NES& nes, Cart& cart, IDisplay& display)
 
 unsigned char PPU::ReadPPUStatus()
 {
-    if (nes.GetClock() != clock)
+    if (nes.GetClock() != ppuClock)
     {
         Sync();
     }
@@ -1103,7 +998,7 @@ unsigned char PPU::ReadPPUStatus()
 
 unsigned char PPU::ReadOAMData()
 {
-    if (nes.GetClock() != clock)
+    if (nes.GetClock() != ppuClock)
     {
         Sync();
     }
@@ -1113,7 +1008,7 @@ unsigned char PPU::ReadOAMData()
 
 unsigned char PPU::ReadPPUData()
 {
-    if (nes.GetClock() != clock)
+    if (nes.GetClock() != ppuClock)
     {
         Sync();
     }
@@ -1124,7 +1019,7 @@ unsigned char PPU::ReadPPUData()
 
     if (addr < 0x2000)
     {
-        dataBuffer = 0x00;//cart.ChrRead(addr);
+        dataBuffer = cart.ChrRead(addr);
     }
     else if (addr >= 0x2000 && addr < 0x4000)
     {
@@ -1208,7 +1103,7 @@ void PPU::WritePPUDATA(unsigned char M)
 }
 
 // At this point this function just gives two points where the PPU should sync with the CPU
-// If the PPU is in vBlank or the Pre-Render line then it should give an interval guaranteed to land in the visible frame (7161 in this case)
+// If the PPU is in vBlank or the Pre-Render line then it should give an interval guaranteed to land in the visible frame (7169 in this case)
 // Otherwise the next Sync happens when the next NMI will occur.
 // I chose to do it this way because it simplifies the issue of variable frame length, something that is subject to change until after the pre-render line.
 int PPU::ScheduleSync()
@@ -1219,91 +1114,16 @@ int PPU::ScheduleSync()
     }
     else
     {
-        return (((241 - line - 1) * 341) + (341 - dot + 1) + 1);// - (nes.GetClock() - clock); // Time to next NMI
+        return (((241 - line - 1) * 341) + (341 - dot + 1) + 1); // Time to next NMI
     }
 }
 
 void PPU::Sync()
 {
-    while (nes.GetClock() != clock)
+    while (nes.GetClock() != ppuClock)
     {
         Tick();
     }
-
-    /*while (nes.GetClock() != clock)
-    {
-    bool renderingEnabled = showSprites || showBackground;
-    unsigned int increment = 0;
-    unsigned int difference = nes.GetClock() - clock;
-
-    if (dot == 1 && line == 261)
-    {
-    inVBLANK = false;
-    nmiOccured = false;
-    sprite0Hit = false;
-    }
-
-
-    if (dot == 0) // First dot of a line is always an idle cycle
-    {
-    increment = 1;
-    }
-    else if ((line >= 0 && line <= 239) || line == 261)
-    {
-    if (!renderingEnabled)
-    {
-    if (dot >= 1 && dot <= 256) display.NextPixel(rgbLookupTable[Read(0x3F00)]);
-    increment = 1;
-    }
-    else if (dot >= 1 && dot <= 256)
-    {
-    if (difference < 8) break;
-    TileFetch();
-    IncrementXScroll();
-    if (dot == 256) IncrementYScroll();
-    if (line != 261) Render();
-    increment = 8;
-    }
-    else if (dot >= 257 && dot <= 320)
-    {
-    if (difference < 8) break;
-    if (line != 261 && dot == 257) SpriteEvaluation();
-    SpriteFetch();
-    increment = 8;
-    }
-    else if (dot >= 321 && dot <= 336)
-    {
-    if (difference < 8) break;
-    TileFetch();
-    IncrementXScroll();
-    increment = 8;
-    }
-    else if (dot >= 337 && dot <= 340)
-    {
-    if (difference < 4) break;
-    ReadNameTable(0x2000 | (ppuAddress & 0x0FFF));
-    increment = 4;
-    }
-    }
-    else if (line >= 240 && line <= 260)
-    {
-    if (dot == 1 && line == 241)
-    {
-    even = !even;
-    inVBLANK = true;
-    nmiOccured = true;
-
-    if (nmiOccured && nmiEnabled)
-    {
-    nes.RaiseNMI();
-    }
-    }
-    increment = 1;
-    }
-
-    IncrementClock(increment);
-    UpdateState(increment);
-    }*/
 }
 
 PPU::~PPU() {}

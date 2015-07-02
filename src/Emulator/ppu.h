@@ -9,6 +9,9 @@
 #define PPU_H_
 
 #include <queue>
+//#include <chrono>
+#include <ctime>
+#include <boost\chrono\chrono.hpp>
 
 #include "Interfaces/idisplay.h"
 #include "mappers/cart.h"
@@ -23,7 +26,9 @@ class PPU
 
     static const unsigned int rgbLookupTable[64];
 
-    unsigned int clock;
+    boost::chrono::high_resolution_clock::time_point intervalStart;
+
+    unsigned int ppuClock;
     short int dot;
     short int line;
     bool even;
@@ -54,6 +59,7 @@ class PPU
     bool sprite0Hit;
     bool inVBLANK;
     bool nmiOccured;
+    int sprite0SecondaryOAM;
 
     unsigned char oamAddress;
     unsigned short int ppuAddress;
@@ -109,15 +115,13 @@ class PPU
 
     void Tick();
 
-    void UpdateState(int cycles);
+    void UpdateState();
     void SpriteEvaluation();
     void Render();
 
-    void TileFetch();
-    void SpriteFetch();
     void IncrementXScroll();
     void IncrementYScroll();
-    void IncrementClock(unsigned int increment);
+    void IncrementClock();
 
     unsigned char Read(unsigned short int address);
     void Write(unsigned short int address, unsigned char value);
