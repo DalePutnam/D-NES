@@ -12,6 +12,7 @@ class IDisplay
 {
 public:
     virtual void NextPixel(unsigned int pixel) = 0;
+    virtual void UpdateFrame(unsigned char* frameBuffer) = 0;
     virtual ~IDisplay() {}
 };
 

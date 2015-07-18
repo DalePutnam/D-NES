@@ -10,12 +10,14 @@
 
 #include <string>
 
+#include "../clock.h"
+
 class NES;
 
 class Cart
 {
 public:
-    static Cart& Create(std::string& filename, NES& nes);
+    static Cart& Create(std::string& filename, Clock& clock, NES& nes);
 
     enum MirrorMode
     {

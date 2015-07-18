@@ -151,6 +151,28 @@ void NESThread::NextPixel(unsigned int pixel)
     }
 }
 
+void NESThread::UpdateFrame(unsigned char* frameBuffer)
+{
+    frameLocked = true;
+    pixelArray = frameBuffer;
+    wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE));
+
+    while (frameLocked);
+
+    using namespace boost::chrono;
+
+    fpsCounter++;
+    steady_clock::time_point now = steady_clock::now();
+    microseconds time_span = duration_cast<microseconds>(now - intervalStart);
+    if (time_span.count() >= 1000000)
+    {
+        currentFPS.store(fpsCounter);
+        fpsCounter = 0;
+        intervalStart = steady_clock::now();
+        wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE));
+    }
+}
+
 unsigned char* NESThread::GetFrame()
 {
     return pixelArray;

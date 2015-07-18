@@ -9,17 +9,18 @@
 #define PPU_H_
 
 #include <queue>
-//#include <chrono>
-#include <ctime>
 #include <boost\chrono\chrono.hpp>
 
-#include "Interfaces/idisplay.h"
+#include "clock.h"
 #include "mappers/cart.h"
+#include "Interfaces/idisplay.h"
+
 
 class NES;
 
 class PPU
 {
+    Clock& clock;
     NES& nes;
     Cart& cart;
     IDisplay& display;
@@ -69,13 +70,13 @@ class PPU
     bool addressLatch;
 
     // Main Register Buffers
-    std::queue<std::pair<unsigned int, unsigned char>> ctrlBuffer;
-    std::queue<std::pair<unsigned int, unsigned char>> maskBuffer;
-    std::queue<std::pair<unsigned int, unsigned char>> scrollBuffer;
-    std::queue<std::pair<unsigned int, unsigned char>> oamAddrBuffer;
-    std::queue<std::pair<unsigned int, unsigned char>> ppuAddrBuffer;
-    std::queue<std::pair<unsigned int, unsigned char>> oamDataBuffer;
-    std::queue<std::pair<unsigned int, unsigned char>> ppuDataBuffer;
+    std::queue<std::pair<unsigned long long, unsigned char>> ctrlBuffer;
+    std::queue<std::pair<unsigned long long, unsigned char>> maskBuffer;
+    std::queue<std::pair<unsigned long long, unsigned char>> scrollBuffer;
+    std::queue<std::pair<unsigned long long, unsigned char>> oamAddrBuffer;
+    std::queue<std::pair<unsigned long long, unsigned char>> ppuAddrBuffer;
+    std::queue<std::pair<unsigned long long, unsigned char>> oamDataBuffer;
+    std::queue<std::pair<unsigned long long, unsigned char>> ppuDataBuffer;
 
     // PPU Data Read Buffer
     unsigned char dataBuffer;
@@ -129,7 +130,7 @@ class PPU
     void WriteNameTable(unsigned short int address, unsigned char value);
 
 public:
-    PPU(NES& nes, Cart& cart, IDisplay& display);
+    PPU(Clock& clock, NES& nes, Cart& cart, IDisplay& display);
 
     unsigned char ReadPPUStatus();
     unsigned char ReadOAMData();

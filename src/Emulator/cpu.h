@@ -12,12 +12,13 @@
  * 6502 CPU Simulator
  */
 
-#include <fstream>
 #include <mutex>
-#include <condition_variable>
 #include <atomic>
+#include <fstream>
+#include <condition_variable>
 
 #include "ppu.h"
+#include "clock.h"
 #include "mappers/cart.h"
 
 class NES;
@@ -44,6 +45,7 @@ class CPU
     char addressing[28];
     char registers[41];
 
+    Clock& clock;
     NES& nes;
     PPU& ppu;
     Cart& cart;
@@ -183,7 +185,7 @@ class CPU
 
 public:
 
-    CPU(NES& nes, PPU& ppu, Cart& cart, bool logEnabled = false);
+    CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled = false);
     void Run(); // Run CPU
     void Reset(); // Reset the CPU to starting conditions
 

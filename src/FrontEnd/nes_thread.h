@@ -54,6 +54,7 @@ public:
     unsigned char GetControllerOneState();
 
     virtual void NextPixel(unsigned int pixel);
+    virtual void UpdateFrame(unsigned char* frameBuffer);
     unsigned char* GetFrame();
     void UnlockFrame();
 

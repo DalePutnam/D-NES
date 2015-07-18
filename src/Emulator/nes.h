@@ -8,17 +8,19 @@
 #ifndef NES_H_
 #define NES_H_
 
+#include <mutex>
 #include <string>
 #include <iostream>
-#include <mutex>
 
 #include "cpu.h"
-#include "Interfaces/idisplay.h"
 #include "ppu.h"
+#include "clock.h"
 #include "mappers/cart.h"
+#include "Interfaces/idisplay.h"
 
 class NES
 {
+    Clock masterClock;
     unsigned int clock;
     int scanline;
     bool stop;

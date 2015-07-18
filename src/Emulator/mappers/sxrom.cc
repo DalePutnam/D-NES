@@ -188,9 +188,9 @@ void SXROM::PrgWrite(unsigned char M, unsigned short int address)
         }
         else
         {
-            if (nes.GetClock() - lastWriteCycle > 6)
+            if (clock.GetClock() - lastWriteCycle > 6)
             {
-                lastWriteCycle = nes.GetClock();
+                lastWriteCycle = clock.GetClock();
                 tempRegister = tempRegister | ((M & 0x1) << counter);
                 ++counter;
             }
@@ -225,9 +225,10 @@ void SXROM::PrgWrite(unsigned char M, unsigned short int address)
     }
 }
 
-SXROM::SXROM(std::string& filename, NES& nes)
-    : file(*new boost::iostreams::mapped_file_source(filename)),
+SXROM::SXROM(std::string& filename, Clock& clock, NES& nes) :
+    file(*new boost::iostreams::mapped_file_source(filename)),
     save(0),
+    clock(clock),
     nes(nes),
     lastWriteCycle(0),
     counter(0),

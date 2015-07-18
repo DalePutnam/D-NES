@@ -5,12 +5,11 @@
  *      Author: Dale
  */
 
+#include <string>
+#include <cstdio>
+
 #include "cpu.h"
 #include "nes.h"
-
-#include <string>
-#include <chrono>
-#include <cstdio>
 
 unsigned char CPU::DebugRead(unsigned short int address)
 {
@@ -36,9 +35,9 @@ unsigned char CPU::DebugRead(unsigned short int address)
 
 unsigned char CPU::Read(unsigned short int address)
 {
-    nes.IncrementClock(3);
+    clock.CPUIncrementClock();
+    //nes.IncrementClock(3);
     if (nextNMI > 0) nextNMI -= 3;
-
 
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
@@ -83,7 +82,8 @@ unsigned char CPU::Read(unsigned short int address)
 
 void CPU::Write(unsigned char M, unsigned short int address)
 {
-    nes.IncrementClock(3);
+    clock.CPUIncrementClock();
+    //nes.IncrementClock(3);
     if (nextNMI > 0) nextNMI -= 3;
 
     // OAM DMA
@@ -91,21 +91,25 @@ void CPU::Write(unsigned char M, unsigned short int address)
     {
         unsigned short int page = M * 0x100;
 
-        if (nes.GetClock() % 6 == 0)
+        if (clock.GetClock() % 6 == 0)
         {
-            nes.IncrementClock(3);
+            clock.CPUIncrementClock();
+            //nes.IncrementClock(3);
             if (nextNMI > 0) nextNMI -= 3;
         }
         else
         {
-            nes.IncrementClock(6);
+            clock.CPUIncrementClock();
+            clock.CPUIncrementClock();
+            //nes.IncrementClock(6);
             if (nextNMI > 0) nextNMI -= 6;
         }
 
         for (int i = 0; i < 0x100; ++i)
         {
             ppu.WriteOAMDATA(Read(page + i));
-            nes.IncrementClock(3);
+            clock.CPUIncrementClock();
+            //nes.IncrementClock(3);
             if (nextNMI > 0) nextNMI -= 3;
         }
     }
@@ -1225,11 +1229,12 @@ unsigned char CPU::GetControllerOneShift()
     return result;
 }
 
-CPU::CPU(NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
+CPU::CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
     isPaused(false),
     pauseFlag(false),
     logEnabled(logEnabled),
     logStream(0),
+    clock(clock),
     nes(nes),
     ppu(ppu),
     cart(cart),
@@ -2021,7 +2026,7 @@ void CPU::LogProgramCounter()
 
 void CPU::LogRegisters()
 {
-    sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d SL:%d", A, X, Y, P, S, nes.GetClock() % 341, nes.GetScanline());
+    sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d SL:%d", A, X, Y, P, S, clock.GetClock() % 341, clock.GetScanline());
 }
 
 void CPU::LogOpcode(unsigned char opcode)

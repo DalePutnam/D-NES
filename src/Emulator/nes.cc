@@ -15,9 +15,9 @@ NES::NES(std::string filename, IDisplay& display, bool cpuLogEnabled)
     stop(true),
     pause(false),
     nmi(false),
-    cart(Cart::Create(filename, *this)),
-    ppu(*new PPU(*this, cart, display)),
-    cpu(*new CPU(*this, ppu, cart, cpuLogEnabled))
+    cart(Cart::Create(filename, masterClock, *this)),
+    ppu(*new PPU(masterClock, *this, cart, display)),
+    cpu(*new CPU(masterClock, *this, ppu, cart, cpuLogEnabled))
 
 {
     std::vector<std::string> stringList;

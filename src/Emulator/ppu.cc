@@ -10,10 +10,14 @@
 
 const unsigned int PPU::rgbLookupTable[64] =
 {
-    0x545454, 0x001E74, 0x081090, 0x300088, 0x440064, 0x5C0030, 0x540400, 0x3C1800, 0x202A00, 0x083A00, 0x004000, 0x003C00, 0x00323C, 0x000000, 0x000000, 0x000000,
-    0x989698, 0x084CC4, 0x3032EC, 0x5C1EE4, 0x8814B0, 0xA01464, 0x982220, 0x783C00, 0x545A00, 0x287200, 0x087C00, 0x007628, 0x006678, 0x000000, 0x000000, 0x000000,
-    0xECEEEC, 0x4C9AEC, 0x787CEC, 0xB062EC, 0xE454EC, 0xEC58B4, 0xEC6A64, 0xD48820, 0xA0AA00, 0x74C400, 0x4CD020, 0x38CC6C, 0x38B4CC, 0x3C3C3C, 0x000000, 0x000000,
-    0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490, 0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
+    0x545454, 0x001E74, 0x081090, 0x300088, 0x440064, 0x5C0030, 0x540400, 0x3C1800,
+    0x202A00, 0x083A00, 0x004000, 0x003C00, 0x00323C, 0x000000, 0x000000, 0x000000,
+    0x989698, 0x084CC4, 0x3032EC, 0x5C1EE4, 0x8814B0, 0xA01464, 0x982220, 0x783C00,
+    0x545A00, 0x287200, 0x087C00, 0x007628, 0x006678, 0x000000, 0x000000, 0x000000,
+    0xECEEEC, 0x4C9AEC, 0x787CEC, 0xB062EC, 0xE454EC, 0xEC58B4, 0xEC6A64, 0xD48820,
+    0xA0AA00, 0x74C400, 0x4CD020, 0x38CC6C, 0x38B4CC, 0x3C3C3C, 0x000000, 0x000000,
+    0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490,
+    0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
 };
 
 void PPU::GetNameTable(int table, unsigned char* pixels)
@@ -255,11 +259,21 @@ void PPU::Tick()
 
         if (dot >= 1 && dot <= 256 && line != 261 && !renderingEnabled)
         {
-            display.NextPixel(rgbLookupTable[Read(0x3F00)]);
+            if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF)
+            {
+                display.NextPixel(rgbLookupTable[Read(ppuAddress)]);
+            }
+            else
+            {
+                display.NextPixel(rgbLookupTable[Read(0x3F00)]);
+            }
         }
 
         if (((dot >= 1 && dot <= 256) || (dot >= 321 && dot <= 336)) && renderingEnabled)
         {
+            //*************************************************************************************
+            // Background Fetch Phase
+            //*************************************************************************************
             unsigned char cycle = (dot - 1) % 8; // The current point in the background fetch cycle
 
             // Reload background shift registers
@@ -314,6 +328,10 @@ void PPU::Tick()
         }
         else if (dot >= 257 && dot <= 320 && renderingEnabled)
         {
+            //*************************************************************************************
+            // Sprite Fetch Phase
+            //*************************************************************************************
+
             oamAddress = 0;
 
             if (dot == 257 && line != 261)
@@ -448,7 +466,7 @@ void PPU::Tick()
             }
         }
     }
-
+    
     // Limit to 60 FPS
     if (line == 239 && dot == 256)
     {
@@ -578,7 +596,7 @@ void PPU::SpriteEvaluation()
     {
         unsigned char size = spriteSize ? 16 : 8;
         unsigned char index = i * 4; // Index of one of 64 sprites in Primary OAM
-        unsigned char spriteY = primaryOAM[index + glitchCount]; // The sprites Y coordinate, glitchCount is used to replicated a hardware glitch
+        unsigned char spriteY = primaryOAM[index + glitchCount]; // The sprites Y coordinate, glitchCount is used to replicate a hardware glitch
 
         if (spriteCount < 8) // If fewer than 8 sprites have been found
         {
@@ -871,10 +889,12 @@ void PPU::WriteNameTable(unsigned short int address, unsigned char value)
     case Cart::MirrorMode::SINGLE_SCREEN_A:
 
         nameTable0[nametableaddr % 0x400] = 0;
+        break;
 
     case Cart::MirrorMode::SINGLE_SCREEN_B:
 
         nameTable1[nametableaddr % 0x400] = 0;
+        break;
 
     case Cart::MirrorMode::HORIZONTAL:
 
@@ -902,8 +922,9 @@ void PPU::WriteNameTable(unsigned short int address, unsigned char value)
     }
 }
 
-PPU::PPU(NES& nes, Cart& cart, IDisplay& display)
-    : nes(nes),
+PPU::PPU(Clock& clock, NES& nes, Cart& cart, IDisplay& display) :
+    clock(clock),
+    nes(nes),
     cart(cart),
     display(display),
     intervalStart(boost::chrono::high_resolution_clock::now()),
@@ -980,7 +1001,7 @@ PPU::PPU(NES& nes, Cart& cart, IDisplay& display)
 
 unsigned char PPU::ReadPPUStatus()
 {
-    if (nes.GetClock() != ppuClock)
+    if (clock.GetClock() != ppuClock)
     {
         Sync();
     }
@@ -998,7 +1019,7 @@ unsigned char PPU::ReadPPUStatus()
 
 unsigned char PPU::ReadOAMData()
 {
-    if (nes.GetClock() != ppuClock)
+    if (clock.GetClock() != ppuClock)
     {
         Sync();
     }
@@ -1008,7 +1029,7 @@ unsigned char PPU::ReadOAMData()
 
 unsigned char PPU::ReadPPUData()
 {
-    if (nes.GetClock() != ppuClock)
+    if (clock.GetClock() != ppuClock)
     {
         Sync();
     }
@@ -1037,69 +1058,69 @@ unsigned char PPU::ReadPPUData()
 
 void PPU::WritePPUCTRL(unsigned char M)
 {
-    if (nes.GetClock() > 88974 && reset)
+    if (clock.GetClock() > 88974 && reset)
     {
         reset = false;
     }
 
     if (!reset)
     {
-        ctrlBuffer.push(std::pair<int, unsigned char>(nes.GetClock(), M));
+        ctrlBuffer.push(std::pair<unsigned long long, unsigned char>(clock.GetClock(), M));
     }
 }
 
 void PPU::WritePPUMASK(unsigned char M)
 {
-    if (nes.GetClock() > 88974 && reset)
+    if (clock.GetClock() > 88974 && reset)
     {
         reset = false;
     }
 
     if (!reset)
     {
-        maskBuffer.push(std::pair<int, unsigned char>(nes.GetClock(), M));
+        maskBuffer.push(std::pair<unsigned long long, unsigned char>(clock.GetClock(), M));
     }
 }
 
 void PPU::WriteOAMADDR(unsigned char M)
 {
-    oamAddrBuffer.push(std::pair<int, unsigned char>(nes.GetClock(), M));
+    oamAddrBuffer.push(std::pair<unsigned long long, unsigned char>(clock.GetClock(), M));
 }
 
 void PPU::WriteOAMDATA(unsigned char M)
 {
-    oamDataBuffer.push(std::pair<int, unsigned char>(nes.GetClock(), M));
+    oamDataBuffer.push(std::pair<unsigned long long, unsigned char>(clock.GetClock(), M));
 }
 
 void PPU::WritePPUSCROLL(unsigned char M)
 {
-    if (nes.GetClock() > 88974 && reset)
+    if (clock.GetClock() > 88974 && reset)
     {
         reset = false;
     }
 
     if (!reset)
     {
-        scrollBuffer.push(std::pair<int, unsigned char>(nes.GetClock(), M));
+        scrollBuffer.push(std::pair<unsigned long long, unsigned char>(clock.GetClock(), M));
     }
 }
 
 void PPU::WritePPUADDR(unsigned char M)
 {
-    if (nes.GetClock() > 88974 && reset)
+    if (clock.GetClock() > 88974 && reset)
     {
         reset = false;
     }
 
     if (!reset)
     {
-        ppuAddrBuffer.push(std::pair<int, unsigned char>(nes.GetClock(), M));
+        ppuAddrBuffer.push(std::pair<unsigned long long, unsigned char>(clock.GetClock(), M));
     }
 }
 
 void PPU::WritePPUDATA(unsigned char M)
 {
-    ppuDataBuffer.push(std::pair<int, unsigned char>(nes.GetClock(), M));
+    ppuDataBuffer.push(std::pair<unsigned long long, unsigned char>(clock.GetClock(), M));
 }
 
 // At this point this function just gives two points where the PPU should sync with the CPU
@@ -1120,7 +1141,7 @@ int PPU::ScheduleSync()
 
 void PPU::Sync()
 {
-    while (nes.GetClock() != ppuClock)
+    while (clock.GetClock() != ppuClock)
     {
         Tick();
     }
