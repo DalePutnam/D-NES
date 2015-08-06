@@ -19,7 +19,7 @@ void PPUDebugWindow::OnPatternTableClicked(wxMouseEvent& WXUNUSED(event))
 }
 
 PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
-    : wxFrame(NULL, wxID_ANY, "PPU Debug", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX),
+    : wxFrame(mainWindow, wxID_ANY, "PPU Debug", wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX),
     mainWindow(mainWindow),
     paletteIndex(0)
 {
@@ -137,6 +137,45 @@ void PPUDebugWindow::UpdatePrimarySprite(int sprite, unsigned char* data)
 
     wxClientDC dc(primarySprite[sprite]);
     dc.DrawBitmap(bitmap, 0, 0);
+}
+
+void PPUDebugWindow::ClearAll()
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        wxImage image(256, 240);
+        wxBitmap bitmap(image, 24);
+
+        wxClientDC dc(nameTable[i]);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        wxImage image(128, 128);
+        wxBitmap bitmap(image, 24);
+
+        wxClientDC dc(patternTable[i]);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+
+    for (int i = 0; i < 8; ++i)
+    {
+        wxImage image(64, 16);
+        wxBitmap bitmap(image, 24);
+
+        wxClientDC dc(palette[i]);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+
+    for (int i = 0; i < 64; ++i)
+    {
+        wxImage image(8, 8);
+        wxBitmap bitmap(image, 24);
+
+        wxClientDC dc(primarySprite[i]);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
 }
 
 int PPUDebugWindow::GetCurrentPalette()

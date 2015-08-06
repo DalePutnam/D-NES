@@ -7,7 +7,7 @@
 
 Cart::MirrorMode SXROM::GetMirrorMode()
 {
-    unsigned char mirroring = controlRegister & 0x3;
+    uint8_t mirroring = controlRegister & 0x3;
 
     switch (mirroring)
     {
@@ -24,7 +24,7 @@ Cart::MirrorMode SXROM::GetMirrorMode()
     }
 }
 
-unsigned char SXROM::ChrRead(unsigned short int address)
+uint8_t SXROM::ChrRead(uint16_t address)
 {
     bool modeSize = !!(controlRegister & 0x10);
     
@@ -32,8 +32,8 @@ unsigned char SXROM::ChrRead(unsigned short int address)
     {
         if (address < 0x1000)
         {
-            unsigned char page = chrRegister1;
-            unsigned int addr = address;
+            uint8_t page = chrRegister1;
+            uint32_t addr = address;
 
             if (chrSize == 0)
             {
@@ -46,8 +46,8 @@ unsigned char SXROM::ChrRead(unsigned short int address)
         }
         else
         {
-            unsigned char page = chrRegister2;
-            unsigned int addr = address - 0x1000;
+            uint8_t page = chrRegister2;
+            uint32_t addr = address - 0x1000;
 
             if (chrSize == 0)
             {
@@ -61,8 +61,8 @@ unsigned char SXROM::ChrRead(unsigned short int address)
     }
     else
     {
-        unsigned char page = chrRegister1 >> 1;
-        unsigned int addr = address;
+        uint8_t page = chrRegister1 >> 1;
+        uint32_t addr = address;
 
         if (chrSize == 0)
         {
@@ -75,7 +75,7 @@ unsigned char SXROM::ChrRead(unsigned short int address)
     }
 }
 
-void SXROM::ChrWrite(unsigned char M, unsigned short int address)
+void SXROM::ChrWrite(uint8_t M, uint16_t address)
 {
     bool modeSize = !!(controlRegister & 0x10);
 
@@ -85,21 +85,21 @@ void SXROM::ChrWrite(unsigned char M, unsigned short int address)
         {
             if (address < 0x1000)
             {
-                unsigned char page = chrRegister1;
-                unsigned int addr = address;
+                uint8_t page = chrRegister1;
+                uint32_t addr = address;
                 chrRam[(addr + (0x1000 * page)) % 0x2000] = M;
             }
             else
             {
-                unsigned char page = chrRegister2;
-                unsigned int addr = address - 0x1000;
+                uint8_t page = chrRegister2;
+                uint32_t addr = address - 0x1000;
                 chrRam[(addr + (0x1000 * page)) % 0x2000] = M;
             }
         }
         else
         {
-            unsigned char page = chrRegister1 >> 1;
-            unsigned int addr = address;
+            uint8_t page = chrRegister1 >> 1;
+            uint32_t addr = address;
             chrRam[addr] = M;
         }
     }
@@ -109,7 +109,7 @@ void SXROM::ChrWrite(unsigned char M, unsigned short int address)
     }
 }
 
-unsigned char SXROM::PrgRead(unsigned short int address)
+uint8_t SXROM::PrgRead(uint16_t address)
 {
     // Battery backed memory, not implemented
     if (address >= 0x0000 && address < 0x2000)
@@ -127,7 +127,7 @@ unsigned char SXROM::PrgRead(unsigned short int address)
     {
         bool modeSize = !!(controlRegister & 0x08);
         bool modeSlot = !!(controlRegister & 0x04);
-        unsigned char page = prgRegister & 0x0F;
+        uint8_t page = prgRegister & 0x0F;
 
         if (modeSize)
         {
@@ -135,12 +135,12 @@ unsigned char SXROM::PrgRead(unsigned short int address)
             {
                 if (address < 0x6000)
                 {
-                    unsigned int addr = address - 0x2000;
+                    uint32_t addr = address - 0x2000;
                     return prg[(addr + (0x4000 * page)) % prgSize];
                 }
                 else
                 {
-                    unsigned int addr = address - 0x6000;
+                    uint32_t addr = address - 0x6000;
                     return prg[(addr + (0x4000 * 0xF)) % prgSize];
                 }
             }
@@ -148,13 +148,13 @@ unsigned char SXROM::PrgRead(unsigned short int address)
             {
                 if (address < 0x6000)
                 {
-                    unsigned int addr = address - 0x2000;
+                    uint32_t addr = address - 0x2000;
                     return prg[addr % prgSize];
                     
                 }
                 else
                 {
-                    unsigned int addr = address - 0x6000;
+                    uint32_t addr = address - 0x6000;
                     return prg[(addr + (0x4000 * page)) % prgSize];
                 }
             }
@@ -162,13 +162,13 @@ unsigned char SXROM::PrgRead(unsigned short int address)
         else
         {
             page = page >> 1;
-            unsigned int addr = address - 0x2000;
+            uint32_t addr = address - 0x2000;
             return prg[(addr + (0x8000 * page)) % prgSize];
         }
     }
 }
 
-void SXROM::PrgWrite(unsigned char M, unsigned short int address)
+void SXROM::PrgWrite(uint8_t M, uint16_t address)
 {
     if (address < 0x2000)
     {
@@ -246,7 +246,7 @@ SXROM::SXROM(std::string& filename, Clock& clock, NES& nes) :
         prgSize = file.data()[4] * 0x4000;
         chrSize = file.data()[5] * 0x2000;
 
-        char flags6 = file.data()[6];
+        int8_t flags6 = file.data()[6];
 
         if (flags6 & 0x2)
         {
@@ -278,7 +278,7 @@ SXROM::SXROM(std::string& filename, Clock& clock, NES& nes) :
 
             if (save->is_open())
             {
-                wram = save->data();
+                wram = reinterpret_cast<int8_t*>(save->data());
             }
             else
             {
@@ -287,15 +287,15 @@ SXROM::SXROM(std::string& filename, Clock& clock, NES& nes) :
         }
         else
         {
-            wram = new char[0x2000];
+            wram = new int8_t[0x2000];
         }
 
-        prg = file.data() + 16; // Data pointer plus the size of the file header
+        prg = reinterpret_cast<const int8_t*>(file.data() + 16); // Data pointer plus the size of the file header
 
         // initialize chr RAM or read chr to memory
         if (chrSize == 0)
         {
-            chrRam = new char[0x2000];
+            chrRam = new int8_t[0x2000];
             for (int i = 0; i < 0x2000; i++)
             {
                 chrRam[i] = 0;
@@ -303,7 +303,7 @@ SXROM::SXROM(std::string& filename, Clock& clock, NES& nes) :
         }
         else
         {
-            chr = file.data() + prgSize + 16;
+            chr = reinterpret_cast<const int8_t*>(file.data() + prgSize + 16);
         }
     }
     else

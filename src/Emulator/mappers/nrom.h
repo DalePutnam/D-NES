@@ -8,8 +8,10 @@
 #ifndef NROM_H_
 #define NROM_H_
 
+#include <boost/cstdint.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
+
 #include "cart.h"
-#include "boost/iostreams/device/mapped_file.hpp"
 
 class NROM : public Cart
 {
@@ -19,18 +21,18 @@ class NROM : public Cart
     int chrSize;
     int prgSize;
 
-    const char* prg;
-    const char* chr;
-    char* chrRam;
+    const int8_t* prg;
+    const int8_t* chr;
+    int8_t* chrRam;
 
 public:
     MirrorMode GetMirrorMode();
 
-    unsigned char PrgRead(unsigned short int address);
-    void PrgWrite(unsigned char M, unsigned short int address);
+    uint8_t PrgRead(uint16_t address);
+    void PrgWrite(uint8_t M, uint16_t address);
 
-    unsigned char ChrRead(unsigned short int address);
-    void ChrWrite(unsigned char M, unsigned short int address);
+    uint8_t ChrRead(uint16_t address);
+    void ChrWrite(uint8_t M, uint16_t address);
 
     NROM(std::string& filename);
     ~NROM();

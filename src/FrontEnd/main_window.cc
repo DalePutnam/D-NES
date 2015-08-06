@@ -2,45 +2,13 @@
 #include <iostream>
 
 #include "wx/msgdlg.h"
+#include "wx/dcclient.h"
 #include "wx/filedlg.h"
 #include "boost/filesystem.hpp"
 
 #include "main_window.h"
 #include "settings_window.h"
 #include "utilities/app_settings.h"
-
-void MainWindow::PopulateROMList()
-{
-    namespace fs = boost::filesystem;
-
-    AppSettings* settings = AppSettings::getInstance();
-    fs::path filePath(settings->get<std::string>("frontend.rompath")); // Get path from settings
-
-    romList->DeleteAllItems();
-
-    if (fs::exists(filePath))
-    {
-        if (fs::is_directory(filePath))
-        {
-            for (fs::directory_iterator it(filePath); it != fs::directory_iterator(); ++it)
-            {
-                // If the file is a regular file and it has a .nes extension, add it to the list
-                if (fs::is_regular_file(it->path())
-                    && it->path().has_extension()
-                    && std::string(".nes").compare(it->path().extension().string()) == 0)
-                {
-                    wxTreeListItem item = romList->AppendItem(romList->GetRootItem(), it->path().filename().string());
-
-                    // Get file size in Kibibytes
-                    std::ostringstream oss;
-                    oss << file_size(it->path()) / 1024 << " KiB";
-
-                    romList->SetItemText(item, 1, oss.str());
-                }
-            }
-        }
-    }
-}
 
 void MainWindow::StartEmulator(std::string& filename)
 {
@@ -49,16 +17,23 @@ void MainWindow::StartEmulator(std::string& filename)
         if (!nesThread)
         {
             nesThread = new NESThread(this, filename, settings->FindItem(ID_CPU_LOG)->IsChecked());
-            gameWindow = new GameWindow(this, nesThread->GetGameName());
-            gameWindow->Show();
+
+            romList = 0;
+            vbox->Clear(true);
+            SetTitle(nesThread->GetGameName());
+            SetClientSize(gameSize);
 
             if (nesThread->Run() != wxTHREAD_NO_ERROR)
             {
                 delete nesThread;
-                gameWindow->Close();
-                gameWindow->Destroy();
                 nesThread = 0;
-                gameWindow = 0;
+             
+                vbox->Clear(true);
+                romList = new GameList(this);
+                vbox->Add(romList, 1, wxEXPAND | wxALL);
+                romList->PopulateList();
+                SetSize(wxSize(600, 460));
+                SetTitle("D-NES");
 
                 wxMessageDialog message(NULL, "Failed to Start Emulator", "ERROR", wxOK | wxICON_ERROR);
                 message.ShowModal();
@@ -77,7 +52,7 @@ void MainWindow::StartEmulator(std::string& filename)
     }
 }
 
-void MainWindow::StopEmulator()
+void MainWindow::StopEmulator(bool showRomList)
 {
     if (nesThread)
     {
@@ -86,15 +61,33 @@ void MainWindow::StopEmulator()
         delete nesThread;
         nesThread = 0;
 
-        gameWindow->Destroy();
-        gameWindow = 0;
+        if (showRomList)
+        {
+            romList = new GameList(this);
+            vbox->Add(romList, 1, wxEXPAND | wxALL);
+            romList->PopulateList();
+            SetSize(wxSize(600, 460));
+            SetTitle("D-NES");
+        }
 
         if (ppuDebugWindow)
         {
-            ppuDebugWindow->Destroy();
-            ppuDebugWindow = 0;
+            ppuDebugWindow->ClearAll();
         }
     }
+}
+
+void MainWindow::UpdateImage(unsigned char* data)
+{
+    wxClientDC dc(this);
+    frame.Create(256, 240, data, true);
+
+    wxImage image = frame;
+    image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
+
+    wxBitmap bitmap(image, 24);
+
+    dc.DrawBitmap(bitmap, 0, 0);
 }
 
 void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
@@ -120,13 +113,16 @@ void MainWindow::OnSettings(wxCommandEvent& WXUNUSED(event))
         settings.SaveSettings();
     }
 
-    PopulateROMList();
+    if (romList)
+    {
+        romList->PopulateList();
+    }
 }
 
-void MainWindow::OnROMDoubleClick(wxCommandEvent& WXUNUSED(event))
+void MainWindow::OnROMDoubleClick(wxListEvent& event)
 {
     AppSettings* settings = AppSettings::getInstance();
-    wxString filename = romList->GetItemText(romList->GetSelection());
+    wxString filename = romList->GetItemText(event.GetIndex(), 0);
 
     std::string romName = settings->get<std::string>("frontend.rompath") + "/" + filename.ToStdString();
     StartEmulator(romName);
@@ -139,7 +135,6 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 
     if (dialog.ShowModal() == wxID_OK)
     {
-        //AppSettings* settings = AppSettings::getInstance();
         wxString filename = dialog.GetPath();
 
         std::string romName = filename.ToStdString();
@@ -151,7 +146,7 @@ void MainWindow::OnThreadUpdate(wxThreadEvent& WXUNUSED(event))
 {
     if (nesThread)
     {
-        gameWindow->UpdateImage(nesThread->GetFrame());
+        UpdateImage(nesThread->GetFrame());
 
         if (ppuDebugWindow)
         {
@@ -194,6 +189,74 @@ void MainWindow::OnEmulatorPause(wxCommandEvent& WXUNUSED(event))
     }
 }
 
+void MainWindow::OnEmulatorScale1X(wxCommandEvent& WXUNUSED(event))
+{
+    gameSize = wxSize(256, 240);
+    SetClientSize(gameSize);
+
+    if (nesThread)
+    {
+        wxClientDC dc(this);
+
+        wxImage image = frame;
+        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
+
+        wxBitmap bitmap(image, 24);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+}
+
+void MainWindow::OnEmulatorScale2X(wxCommandEvent& WXUNUSED(event))
+{
+    gameSize = wxSize(512, 480);
+    SetClientSize(gameSize);
+
+    if (nesThread)
+    {
+        wxClientDC dc(this);
+
+        wxImage image = frame;
+        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
+
+        wxBitmap bitmap(image, 24);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+}
+
+void MainWindow::OnEmulatorScale3X(wxCommandEvent& WXUNUSED(event))
+{
+    gameSize = wxSize(768, 720);
+    SetClientSize(gameSize);
+
+    if (nesThread)
+    {
+        wxClientDC dc(this);
+
+        wxImage image = frame;
+        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
+
+        wxBitmap bitmap(image, 24);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+}
+
+void MainWindow::OnEmulatorScale4X(wxCommandEvent& WXUNUSED(event))
+{
+    gameSize = wxSize(1024, 960);
+    SetClientSize(gameSize);
+
+    if (nesThread)
+    {
+        wxClientDC dc(this);
+
+        wxImage image = frame;
+        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
+
+        wxBitmap bitmap(image, 24);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+}
+
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
     if (!ppuDebugWindow)
@@ -223,14 +286,106 @@ void MainWindow::OnFPSUpdate(wxThreadEvent& WXUNUSED(event))
 {
     if (nesThread)
     {
-        gameWindow->SetFPS(nesThread->GetCurrentFPS());
+        std::ostringstream oss;
+        oss << nesThread->GetCurrentFPS() << " FPS - " << nesThread->GetGameName();
+        SetTitle(oss.str());
     }
 }
 
 void MainWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
-    StopEmulator();
+    StopEmulator(false);
     Close(true);
+}
+
+void MainWindow::OnSize(wxSizeEvent& WXUNUSED(event))
+{
+    if (nesThread)
+    {
+        wxClientDC dc(this);
+
+        wxImage image = frame;
+        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
+
+        wxBitmap bitmap(image, 24);
+        dc.DrawBitmap(bitmap, 0, 0);
+    }
+}
+
+void MainWindow::OnKeyDown(wxKeyEvent& event)
+{
+    if (nesThread)
+    {
+        unsigned char currentState = nesThread->GetControllerOneState();
+
+        switch (event.GetKeyCode())
+        {
+        case 'Z':
+            nesThread->SetControllerOneState(currentState | 0x1);
+            break;
+        case 'X':
+            nesThread->SetControllerOneState(currentState | 0x2);
+            break;
+        case WXK_CONTROL:
+            nesThread->SetControllerOneState(currentState | 0x4);
+            break;
+        case WXK_RETURN:
+            nesThread->SetControllerOneState(currentState | 0x8);
+            break;
+        case WXK_UP:
+            nesThread->SetControllerOneState(currentState | 0x10);
+            break;
+        case WXK_DOWN:
+            nesThread->SetControllerOneState(currentState | 0x20);
+            break;
+        case WXK_LEFT:
+            nesThread->SetControllerOneState(currentState | 0x40);
+            break;
+        case WXK_RIGHT:
+            nesThread->SetControllerOneState(currentState | 0x80);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void MainWindow::OnKeyUp(wxKeyEvent& event)
+{
+    if (nesThread)
+    {
+        unsigned char currentState = nesThread->GetControllerOneState();
+
+        switch (event.GetKeyCode())
+        {
+        case 'Z':
+            nesThread->SetControllerOneState(currentState & ~0x1);
+            break;
+        case 'X':
+            nesThread->SetControllerOneState(currentState & ~0x2);
+            break;
+        case WXK_CONTROL:
+            nesThread->SetControllerOneState(currentState & ~0x4);
+            break;
+        case WXK_RETURN:
+            nesThread->SetControllerOneState(currentState & ~0x8);
+            break;
+        case WXK_UP:
+            nesThread->SetControllerOneState(currentState & ~0x10);
+            break;
+        case WXK_DOWN:
+            nesThread->SetControllerOneState(currentState & ~0x20);
+            break;
+        case WXK_LEFT:
+            nesThread->SetControllerOneState(currentState & ~0x40);
+            break;
+        case WXK_RIGHT:
+            nesThread->SetControllerOneState(currentState & ~0x80);
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 NESThread* MainWindow::GetNESThread()
@@ -241,18 +396,26 @@ NESThread* MainWindow::GetNESThread()
 MainWindow::MainWindow()
     : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460)),
     nesThread(0),
-    gameWindow(0),
-    ppuDebugWindow(0)
+    ppuDebugWindow(0),
+    gameSize(256, 240)
 {
     file = new wxMenu;
     file->Append(ID_OPEN_ROM, wxT("&Open ROM"));
     file->AppendSeparator();
     file->Append(wxID_EXIT, wxT("&Quit"));
 
+    scale = new wxMenu;
+    scale->AppendRadioItem(ID_EMULATOR_SCALE_1X, wxT("1X"));
+    scale->AppendRadioItem(ID_EMULATOR_SCALE_2X, wxT("2X"));
+    scale->AppendRadioItem(ID_EMULATOR_SCALE_3X, wxT("3X"));
+    scale->AppendRadioItem(ID_EMULATOR_SCALE_4X, wxT("4X"));
+
     emulator = new wxMenu;
+    emulator->Append(ID_EMULATOR_PAUSE, wxT("&Pause"));
     emulator->Append(ID_EMULATOR_RESUME, wxT("&Resume"));
     emulator->Append(ID_EMULATOR_STOP, wxT("&Stop"));
-    emulator->Append(ID_EMULATOR_PAUSE, wxT("&Pause"));
+    emulator->AppendSeparator();
+    emulator->AppendSubMenu(scale, wxT("&Scale"));
     emulator->AppendSeparator();
     emulator->Append(ID_EMUALTOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
@@ -271,33 +434,44 @@ MainWindow::MainWindow()
     menuBar->Append(about, wxT("&About"));
 
     SetMenuBar(menuBar);
-    Connect(wxID_EXIT, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit));
-    Connect(ID_CPU_LOG, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleCPULog));
-    Connect(ID_SETTINGS, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSettings));
-    Connect(wxEVT_TREELIST_ITEM_ACTIVATED, wxCommandEventHandler(MainWindow::OnROMDoubleClick));
-    Connect(ID_OPEN_ROM, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnOpenROM));
-    Connect(ID_EMULATOR_RESUME, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume));
-    Connect(ID_EMULATOR_STOP, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop));
-    Connect(ID_EMULATOR_PAUSE, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause));
-    Connect(ID_EMUALTOR_PPU_DEBUG, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug));
-    Connect(wxID_ANY, wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEventHandler(MainWindow::OnThreadUpdate));
-    Connect(wxID_ANY, wxEVT_COMMAND_NESTHREAD_FPS_UPDATE, wxThreadEventHandler(MainWindow::OnFPSUpdate));
-    Connect(wxID_ANY, wxEVT_COMMAND_NESTHREAD_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown));
 
-    romList = new wxTreeListCtrl(this, wxID_ANY);
-    romList->AppendColumn("File Name");
-    romList->AppendColumn("File Size");
+    Bind(wxEVT_LIST_ITEM_ACTIVATED, wxListEventHandler(MainWindow::OnROMDoubleClick), this, wxID_ANY);
 
-    PopulateROMList();
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit), this, wxID_EXIT);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleCPULog), this, ID_CPU_LOG);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSettings), this, ID_SETTINGS);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnOpenROM), this, ID_OPEN_ROM);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume), this, ID_EMULATOR_RESUME);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop), this, ID_EMULATOR_STOP);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause), this, ID_EMULATOR_PAUSE);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale1X), this, ID_EMULATOR_SCALE_1X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale2X), this, ID_EMULATOR_SCALE_2X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale3X), this, ID_EMULATOR_SCALE_3X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale4X), this, ID_EMULATOR_SCALE_4X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMUALTOR_PPU_DEBUG);
+
+    Bind(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEventHandler(MainWindow::OnThreadUpdate), this, wxID_ANY);
+    Bind(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE, wxThreadEventHandler(MainWindow::OnFPSUpdate), this, wxID_ANY);
+    Bind(wxEVT_COMMAND_NESTHREAD_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
+
+    Bind(wxEVT_SIZING, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
+
+    Bind(wxEVT_KEY_DOWN, wxKeyEventHandler(MainWindow::OnKeyDown), this, wxID_ANY);
+    Bind(wxEVT_KEY_UP, wxKeyEventHandler(MainWindow::OnKeyUp), this, wxID_ANY);
+
+    romList = new GameList(this);
+    romList->PopulateList();
 
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(romList, 1, wxEXPAND | wxALL);
     SetSizer(vbox);
 
+    SetMinClientSize(wxSize(256, 240));
     Centre();
 }
 
 MainWindow::~MainWindow()
 {
-    StopEmulator();
+    StopEmulator(false);
+    PPUDebugClose();
 }

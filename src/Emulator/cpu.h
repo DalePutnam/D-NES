@@ -26,7 +26,7 @@ class NES;
 class CPU
 {
     // CPU Main Memory
-    unsigned char memory[0x800];
+    uint8_t memory[0x800];
 
     std::atomic<bool> pauseFlag;
     std::mutex pauseMutex;
@@ -51,80 +51,80 @@ class CPU
     Cart& cart;
 
     bool controllerStrobe;
-    unsigned char controllerOneShift;
-    std::atomic<unsigned char> controllerOneState;
+    uint8_t controllerOneShift;
+    std::atomic<uint8_t> controllerOneState;
 
     // Cycles to next NMI check
     int nextNMI;
 
     // Registers
-    unsigned short int PC; // Program Counter
-    unsigned char S; // Stack Pointer
-    unsigned char P; // Processor Status
-    unsigned char A; // Accumulator
-    unsigned char X; // X Index
-    unsigned char Y; // Y Index
+    uint16_t PC; // Program Counter
+    uint8_t S; // Stack Pointer
+    uint8_t P; // Processor Status
+    uint8_t A; // Accumulator
+    uint8_t X; // X Index
+    uint8_t Y; // Y Index
 
-    unsigned char Read(unsigned short int address);
-    void Write(unsigned char M, unsigned short int address);
+    uint8_t Read(uint16_t address);
+    void Write(uint8_t M, uint16_t address);
 
     // Addressing Modes
-    char Relative();
-    unsigned char Accumulator();
-    unsigned char Immediate();
-    unsigned short int ZeroPage();
-    unsigned short int ZeroPageX();
-    unsigned short int ZeroPageY();
-    unsigned short int Absolute(bool isJump = false);
-    unsigned short int AbsoluteX(bool isRMW = false);
-    unsigned short int AbsoluteY(bool isRMW = false);
-    unsigned short int Indirect();
-    unsigned short int IndexedIndirect();
-    unsigned short int IndirectIndexed(bool isRMW = false);
+    int8_t Relative();
+    uint8_t Accumulator();
+    uint8_t Immediate();
+    uint16_t ZeroPage();
+    uint16_t ZeroPageX();
+    uint16_t ZeroPageY();
+    uint16_t Absolute(bool isJump = false);
+    uint16_t AbsoluteX(bool isRMW = false);
+    uint16_t AbsoluteY(bool isRMW = false);
+    uint16_t Indirect();
+    uint16_t IndexedIndirect();
+    uint16_t IndirectIndexed(bool isRMW = false);
 
     // Instruction Set
 
     // Read Instructions
-    void ADC(unsigned char M); // Add with Carry
-    void AND(unsigned char M); // Logical AND
-    void BIT(unsigned char M); // Bit Test
-    void CMP(unsigned char M); // Compare
-    void CPX(unsigned char M); // Compare X Register
-    void CPY(unsigned char M); // Compare Y Register
-    void EOR(unsigned char M); // Exclusive OR
-    void LDA(unsigned char M); // Load Accumulator
-    void LDX(unsigned char M); // Load X Register
-    void LDY(unsigned char M); // Load Y Register
-    void ORA(unsigned char M); // Logical Inclusive OR
-    void SBC(unsigned char M); // Subtract with Carry
+    void ADC(uint8_t M); // Add with Carry
+    void AND(uint8_t M); // Logical AND
+    void BIT(uint8_t M); // Bit Test
+    void CMP(uint8_t M); // Compare
+    void CPX(uint8_t M); // Compare X Register
+    void CPY(uint8_t M); // Compare Y Register
+    void EOR(uint8_t M); // Exclusive OR
+    void LDA(uint8_t M); // Load Accumulator
+    void LDX(uint8_t M); // Load X Register
+    void LDY(uint8_t M); // Load Y Register
+    void ORA(uint8_t M); // Logical Inclusive OR
+    void SBC(uint8_t M); // Subtract with Carry
 
     // Write Instructions
-    unsigned char STA(); // Store Accumulator
-    unsigned char STX(); // Store X Register
-    unsigned char STY(); // Store Y Register
+    uint8_t STA(); // Store Accumulator
+    uint8_t STX(); // Store X Register
+    uint8_t STY(); // Store Y Register
 
     // Read-Modify-Write Instructions
-    unsigned char ASL(unsigned char M); // Arithmetic Shift Left
-    unsigned char DEC(unsigned char M); // Decrement Memory
-    unsigned char INC(unsigned char M); // Increment Memory
-    unsigned char LSR(unsigned char M); // Logical Shift Right
-    unsigned char ROL(unsigned char M); // Rotate Left
-    unsigned char ROR(unsigned char M); // Rotate Right
+    uint8_t ASL(uint8_t M); // Arithmetic Shift Left
+    uint8_t DEC(uint8_t M); // Decrement Memory
+    uint8_t INC(uint8_t M); // Increment Memory
+    uint8_t LSR(uint8_t M); // Logical Shift Right
+    uint8_t ROL(uint8_t M); // Rotate Left
+    uint8_t ROR(uint8_t M); // Rotate Right
 
     // Branch Instructions
-    void Branch(char offset); // Common Branch function
-    void BCC(char offset); // Branch if Carry Clear
-    void BCS(char offset); // Branch if Carry Set
-    void BEQ(char offset); // Branch if Equal
-    void BMI(char offset); // Branch if Minus
-    void BNE(char offset); // Branch if Not Equal
-    void BPL(char offset); // Branch if Positive
-    void BVC(char offset); // Branch if Overflow Clear
-    void BVS(char offset); // Branch if Overflow Set
+    void Branch(int8_t offset); // Common Branch function
+    void BCC(int8_t offset); // Branch if Carry Clear
+    void BCS(int8_t offset); // Branch if Carry Set
+    void BEQ(int8_t offset); // Branch if Equal
+    void BMI(int8_t offset); // Branch if Minus
+    void BNE(int8_t offset); // Branch if Not Equal
+    void BPL(int8_t offset); // Branch if Positive
+    void BVC(int8_t offset); // Branch if Overflow Clear
+    void BVS(int8_t offset); // Branch if Overflow Set
 
     // Stack Instructions
     void BRK(); // Force Interrupt
-    void JSR(unsigned short int M); // Jump to Subroutine
+    void JSR(uint16_t M); // Jump to Subroutine
     void PHA(); // Push Accumulator
     void PHP(); // Push Processor Status
     void PLA(); // Pull Accumulator
@@ -153,7 +153,7 @@ class CPU
     void TYA(); // Transfer Y to Accumulator
 
     // Jump
-    void JMP(unsigned short int M); // Jump
+    void JMP(uint16_t M); // Jump
 
     void HandleNMI(); // Handle non-maskable interrupt
     void HandleIRQ(); // Handle standard interrupt
@@ -161,26 +161,26 @@ class CPU
     bool NextInst(); // Execute next instruction
 
     void SetControllerStrobe(bool strobe);
-    unsigned char GetControllerOneShift();
+    uint8_t GetControllerOneShift();
 
     // Diagnostics
-    unsigned char DebugRead(unsigned short int address);
+    uint8_t DebugRead(uint16_t address);
     bool IsLogEnabled();
     void LogProgramCounter();
     void LogRegisters();
-    void LogOpcode(unsigned char opcode);
+    void LogOpcode(uint8_t opcode);
     void LogInstructionName(std::string name);
-    void LogRelative(unsigned char value);
-    void LogImmediate(unsigned char value);
-    void LogZeroPage(unsigned char address);
-    void LogZeroPageX(unsigned char initialAddress, unsigned char finalAddress);
-    void LogZeroPageY(unsigned char initialAddress, unsigned char finalAddress);
-    void LogAbsolute(unsigned char lowByte, unsigned char highByte, unsigned short int address, bool isJump);
-    void LogAbsoluteX(unsigned char lowByte, unsigned char highByte, unsigned short int initialAddress, unsigned short int finalAddress);
-    void LogAbsoluteY(unsigned char lowByte, unsigned char highByte, unsigned short int initialAddress, unsigned short int finalAddress);
-    void LogIndirect(unsigned char lowIndirect, unsigned char highIndirect, unsigned short int indirect, unsigned short int address);
-    void LogIndexedIndirect(unsigned char pointer, unsigned char lowIndirect, unsigned short int address);
-    void LogIndirectIndexed(unsigned char pointer, unsigned short int initialAddress, unsigned short int finalAddress);
+    void LogRelative(uint8_t value);
+    void LogImmediate(uint8_t value);
+    void LogZeroPage(uint8_t address);
+    void LogZeroPageX(uint8_t initialAddress, uint8_t finalAddress);
+    void LogZeroPageY(uint8_t initialAddress, uint8_t finalAddress);
+    void LogAbsolute(uint8_t lowByte, uint8_t highByte, uint16_t address, bool isJump);
+    void LogAbsoluteX(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress);
+    void LogAbsoluteY(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress);
+    void LogIndirect(uint8_t lowIndirect, uint8_t highIndirect, uint16_t indirect, uint16_t address);
+    void LogIndexedIndirect(uint8_t pointer, uint8_t lowIndirect, uint16_t address);
+    void LogIndirectIndexed(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress);
     void PrintLog();
 
 public:
@@ -189,8 +189,8 @@ public:
     void Run(); // Run CPU
     void Reset(); // Reset the CPU to starting conditions
 
-    void SetControllerOneState(unsigned char state);
-    unsigned char GetControllerOneState();
+    void SetControllerOneState(uint8_t state);
+    uint8_t GetControllerOneState();
 
     void Pause();
     void Resume();

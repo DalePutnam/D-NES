@@ -20,8 +20,8 @@ Cart& Cart::Create(std::string& filename, Clock& clock, NES& nes)
     if (!rom.fail())
     {
         // Sanity check (Any iNES ROM should start with NES followed by MS-DOS EOF)
-        char header[4];
-        rom.read(header, 4);
+        int8_t header[4];
+        rom.read(reinterpret_cast<char*>(header), 4);
 
         // NOTE: The last && in the if statement and rom.clear() are specific to windows as they
         // are due to an MS-DOS EOF present in the ROM header, on other platforms this
@@ -31,9 +31,9 @@ Cart& Cart::Create(std::string& filename, Clock& clock, NES& nes)
             // Read Bytes 6 and 7 to determine the mapper number
             rom.clear();
             rom.seekg(0x06, rom.beg);
-            unsigned char flags6 = rom.get();
-            unsigned char flags7 = rom.get();
-            unsigned char mapper_number = (flags7 & 0xF0) | (flags6 >> 4);
+            uint8_t flags6 = rom.get();
+            uint8_t flags7 = rom.get();
+            uint8_t mapper_number = (flags7 & 0xF0) | (flags6 >> 4);
             rom.close();
 
             switch (mapper_number)

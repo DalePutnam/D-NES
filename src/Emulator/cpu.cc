@@ -11,7 +11,7 @@
 #include "cpu.h"
 #include "nes.h"
 
-unsigned char CPU::DebugRead(unsigned short int address)
+uint8_t CPU::DebugRead(uint16_t address)
 {
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
@@ -33,7 +33,7 @@ unsigned char CPU::DebugRead(unsigned short int address)
     }
 }
 
-unsigned char CPU::Read(unsigned short int address)
+uint8_t CPU::Read(uint16_t address)
 {
     clock.CPUIncrementClock();
     //nes.IncrementClock(3);
@@ -47,7 +47,7 @@ unsigned char CPU::Read(unsigned short int address)
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
-        unsigned short int addr = (address - 0x2000) % 8;
+        uint16_t addr = (address - 0x2000) % 8;
 
         if (addr == 2)
         {
@@ -80,7 +80,7 @@ unsigned char CPU::Read(unsigned short int address)
     }
 }
 
-void CPU::Write(unsigned char M, unsigned short int address)
+void CPU::Write(uint8_t M, uint16_t address)
 {
     clock.CPUIncrementClock();
     //nes.IncrementClock(3);
@@ -89,7 +89,7 @@ void CPU::Write(unsigned char M, unsigned short int address)
     // OAM DMA
     if (address == 0x4014)
     {
-        unsigned short int page = M * 0x100;
+        uint16_t page = M * 0x100;
 
         if (clock.GetClock() % 6 == 0)
         {
@@ -121,7 +121,7 @@ void CPU::Write(unsigned char M, unsigned short int address)
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
-        unsigned short int addr = (address - 0x2000) % 8;
+        uint16_t addr = (address - 0x2000) % 8;
 
         if (addr == 0)
         {
@@ -162,9 +162,9 @@ void CPU::Write(unsigned char M, unsigned short int address)
     }
 }
 
-char CPU::Relative()
+int8_t CPU::Relative()
 {
-    char value = Read(PC++);
+    int8_t value = Read(PC++);
 
     if (IsLogEnabled())
     {
@@ -174,7 +174,7 @@ char CPU::Relative()
     return value;
 }
 
-unsigned char CPU::Accumulator()
+uint8_t CPU::Accumulator()
 {
     Read(PC);
 
@@ -186,9 +186,9 @@ unsigned char CPU::Accumulator()
     return A;
 }
 
-unsigned char CPU::Immediate()
+uint8_t CPU::Immediate()
 {
-    unsigned char value = Read(PC++);
+    uint8_t value = Read(PC++);
 
     if (IsLogEnabled())
     {
@@ -200,9 +200,9 @@ unsigned char CPU::Immediate()
 
 // ZeroPage Addressing takes the the next byte of memory
 // as the location of the instruction operand
-unsigned short int CPU::ZeroPage()
+uint16_t CPU::ZeroPage()
 {
-    unsigned char address = Read(PC++);
+    uint8_t address = Read(PC++);
 
     if (IsLogEnabled())
     {
@@ -215,10 +215,10 @@ unsigned short int CPU::ZeroPage()
 // ZeroPage,X Addressing takes the the next byte of memory
 // with the value of the X register added (mod 256)
 // as the location of the instruction operand
-unsigned short int CPU::ZeroPageX()
+uint16_t CPU::ZeroPageX()
 {
-    unsigned char initialAddress = Read(PC++);
-    unsigned char finalAddress = initialAddress + X;
+    uint8_t initialAddress = Read(PC++);
+    uint8_t finalAddress = initialAddress + X;
     Read(initialAddress);
 
     if (IsLogEnabled())
@@ -232,10 +232,10 @@ unsigned short int CPU::ZeroPageX()
 // ZeroPage,Y Addressing takes the the next byte of memory
 // with the value of the Y register added (mod 256)
 // as the location of the instruction operand
-unsigned short int CPU::ZeroPageY()
+uint16_t CPU::ZeroPageY()
 {
-    unsigned char initialAddress = Read(PC++);
-    unsigned char finalAddress = initialAddress + Y;
+    uint8_t initialAddress = Read(PC++);
+    uint8_t finalAddress = initialAddress + Y;
     Read(initialAddress);
 
     if (IsLogEnabled())
@@ -250,15 +250,15 @@ unsigned short int CPU::ZeroPageY()
 // combines them into the full 16-bit address of the operand
 // Note: The JMP and JSR instructions uses the literal value returned by
 // this mode as their operand
-unsigned short int CPU::Absolute(bool isJump)
+uint16_t CPU::Absolute(bool isJump)
 {
-    unsigned short int lowByte = Read(PC++);
-    unsigned short int highByte = Read(PC++);
-    unsigned short int address = (highByte << 8) + lowByte;
+    uint16_t lowByte = Read(PC++);
+    uint16_t highByte = Read(PC++);
+    uint16_t address = (highByte << 8) + lowByte;
 
     if (IsLogEnabled())
     {
-        LogAbsolute(static_cast<unsigned char>(lowByte), static_cast<unsigned char>(highByte), address, isJump);
+        LogAbsolute(static_cast<uint8_t>(lowByte), static_cast<uint8_t>(highByte), address, isJump);
     }
 
     return address;
@@ -270,13 +270,13 @@ unsigned short int CPU::Absolute(bool isJump)
 // Should this result in the address crossing a page of memory
 // (ie: from 0x00F8 to 0x0105) then an addition cycle is added
 // to the instruction.
-unsigned short int CPU::AbsoluteX(bool isRMW)
+uint16_t CPU::AbsoluteX(bool isRMW)
 {
     // Fetch High and Low Bytes
-    unsigned short int lowByte = Read(PC++);
-    unsigned short int highByte = Read(PC++);
-    unsigned short int initialAddress = (highByte << 8) + lowByte;
-    unsigned short int finalAddress = initialAddress + X;
+    uint16_t lowByte = Read(PC++);
+    uint16_t highByte = Read(PC++);
+    uint16_t initialAddress = (highByte << 8) + lowByte;
+    uint16_t finalAddress = initialAddress + X;
 
     if ((finalAddress & 0xFF00) != (initialAddress & 0xFF00) || isRMW)
     {
@@ -287,7 +287,7 @@ unsigned short int CPU::AbsoluteX(bool isRMW)
 
     if (IsLogEnabled())
     {
-        LogAbsoluteX(static_cast<unsigned char>(lowByte), static_cast<unsigned char>(highByte), initialAddress, finalAddress);
+        LogAbsoluteX(static_cast<uint8_t>(lowByte), static_cast<uint8_t>(highByte), initialAddress, finalAddress);
     }
 
     return finalAddress;
@@ -299,13 +299,13 @@ unsigned short int CPU::AbsoluteX(bool isRMW)
 // Should this result in the address crossing a page of memory
 // (ie: from 0x00F8 to 0x0105) then an addition cycle is added
 // to the instruction.
-unsigned short int CPU::AbsoluteY(bool isRMW)
+uint16_t CPU::AbsoluteY(bool isRMW)
 {
     // Fetch High and Low Bytes
-    unsigned short int lowByte = Read(PC++);
-    unsigned short int highByte = Read(PC++);
-    unsigned short int initialAddress = (highByte << 8) + lowByte;
-    unsigned short int finalAddress = initialAddress + Y;
+    uint16_t lowByte = Read(PC++);
+    uint16_t highByte = Read(PC++);
+    uint16_t initialAddress = (highByte << 8) + lowByte;
+    uint16_t finalAddress = initialAddress + Y;
 
     if ((finalAddress & 0xFF00) != (initialAddress & 0xFF00) || isRMW)
     {
@@ -316,7 +316,7 @@ unsigned short int CPU::AbsoluteY(bool isRMW)
 
     if (IsLogEnabled())
     {
-        LogAbsoluteY(static_cast<unsigned char>(lowByte), static_cast<unsigned char>(highByte), initialAddress, finalAddress);
+        LogAbsoluteY(static_cast<uint8_t>(lowByte), static_cast<uint8_t>(highByte), initialAddress, finalAddress);
     }
 
     return finalAddress;
@@ -334,21 +334,21 @@ unsigned short int CPU::AbsoluteY(bool isRMW)
 // 2. JMP is the only instruction that uses this mode and like Absolute
 // it treats the final result as its operand rather than the address of
 // the operand
-unsigned short int CPU::Indirect()
+uint16_t CPU::Indirect()
 {
-    unsigned short int lowIndirect = Read(PC++);
-    unsigned short int highIndirect = Read(PC++);
+    uint16_t lowIndirect = Read(PC++);
+    uint16_t highIndirect = Read(PC++);
 
-    unsigned short int lowByte = Read((highIndirect << 8) + lowIndirect);
-    unsigned short int highByte = Read((highIndirect << 8) + ((lowIndirect + 1) & 0xFF));
+    uint16_t lowByte = Read((highIndirect << 8) + lowIndirect);
+    uint16_t highByte = Read((highIndirect << 8) + ((lowIndirect + 1) & 0xFF));
 
-    unsigned short int address = (highByte << 8) + lowByte;
+    uint16_t address = (highByte << 8) + lowByte;
 
     if (IsLogEnabled())
     {
-        unsigned short int otherHighByte = DebugRead((highIndirect << 8) + (lowIndirect + 1));
-        unsigned short int otherAddress = (otherHighByte << 8) + lowByte;
-        LogIndirect(static_cast<unsigned char>(lowIndirect), static_cast<unsigned char>(highIndirect), (highIndirect << 8) + lowIndirect, otherAddress);
+        uint16_t otherHighByte = DebugRead((highIndirect << 8) + (lowIndirect + 1));
+        uint16_t otherAddress = (otherHighByte << 8) + lowByte;
+        LogIndirect(static_cast<uint8_t>(lowIndirect), static_cast<uint8_t>(highIndirect), (highIndirect << 8) + lowIndirect, otherAddress);
     }
 
     return address;
@@ -359,18 +359,18 @@ unsigned short int CPU::Indirect()
 // used as a zero page address and two bytes are read from
 // this address and the next (with zero page wrap around)
 // to make the final 16-bit address of the operand
-unsigned short int CPU::IndexedIndirect()
+uint16_t CPU::IndexedIndirect()
 {
-    unsigned char pointer = Read(PC++); // Get pointer
-    unsigned char lowIndirect = pointer + X;
-    unsigned char highIndirect = pointer + X + 1;
+    uint8_t pointer = Read(PC++); // Get pointer
+    uint8_t lowIndirect = pointer + X;
+    uint8_t highIndirect = pointer + X + 1;
 
     Read(pointer); // Read from pointer
 
     // Fetch high and low bytes
-    unsigned short int lowByte = Read(lowIndirect);
-    unsigned short int highByte = Read(highIndirect);
-    unsigned short int address = (highByte << 8) + lowByte; // Construct address
+    uint16_t lowByte = Read(lowIndirect);
+    uint16_t highByte = Read(highIndirect);
+    uint16_t address = (highByte << 8) + lowByte; // Construct address
 
     if (IsLogEnabled())
     {
@@ -387,15 +387,15 @@ unsigned short int CPU::IndexedIndirect()
 // Y register is added to to create the final address of the operand.
 // Should this result in page being crossed, then an additional cycle
 // is added.
-unsigned short int CPU::IndirectIndexed(bool isRMW)
+uint16_t CPU::IndirectIndexed(bool isRMW)
 {
-    unsigned short int pointer = Read(PC++); // Fetch pointer
+    uint16_t pointer = Read(PC++); // Fetch pointer
 
     // Fetch high and low bytes
-    unsigned short int lowByte = Read(pointer);
-    unsigned short int highByte = Read((pointer + 1) % 0x100);
-    unsigned short int initialAddress = (highByte << 8) + lowByte;
-    unsigned short int finalAddress = initialAddress + Y;
+    uint16_t lowByte = Read(pointer);
+    uint16_t highByte = Read((pointer + 1) % 0x100);
+    uint16_t initialAddress = (highByte << 8) + lowByte;
+    uint16_t finalAddress = initialAddress + Y;
 
     if ((finalAddress & 0xFF00) != (initialAddress & 0xFF00) || isRMW)
     {
@@ -404,7 +404,7 @@ unsigned short int CPU::IndirectIndexed(bool isRMW)
 
     if (IsLogEnabled())
     {
-        LogIndirectIndexed(static_cast<unsigned char>(pointer), initialAddress, finalAddress);
+        LogIndirectIndexed(static_cast<uint8_t>(pointer), initialAddress, finalAddress);
     }
 
     return finalAddress;
@@ -414,18 +414,18 @@ unsigned short int CPU::IndirectIndexed(bool isRMW)
 // Adds M  and the Carry flag to the Accumulator (A)
 // Sets the Carry, Negative, Overflow and Zero
 // flags as necessary.
-void CPU::ADC(unsigned char M)
+void CPU::ADC(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("ADC");
 
-    unsigned char C = P & 0x01; // get carry flag
-    unsigned char origA = A;
-    short int result = A + M + C;
+    uint8_t C = P & 0x01; // get carry flag
+    uint8_t origA = A;
+    int16_t result = A + M + C;
 
     // If overflow occurred, set the carry flag
     (result > 0xFF) ? P = P | 0x01 : P = P & 0xFE;
 
-    A = static_cast<unsigned char>(result);
+    A = static_cast<uint8_t>(result);
 
     // if Result is 0 set zero flag
     (A == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -438,7 +438,7 @@ void CPU::ADC(unsigned char M)
 // Logical And
 // Performs a logical and on the Accumulator and M
 // Sets the Negative and Zero flags if necessary
-void CPU::AND(unsigned char M)
+void CPU::AND(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("AND");
 
@@ -454,11 +454,11 @@ void CPU::AND(unsigned char M)
 // Performs a left shift on M and sets
 // the Carry, Zero and Negative flags as necessary.
 // In this case Carry gets the former bit 7 of M.
-unsigned char CPU::ASL(unsigned char M)
+uint8_t CPU::ASL(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("ASL");
 
-    unsigned char origM = M;
+    uint8_t origM = M;
     M = M << 1;
 
     // Set carry flag to bit 7 of origM
@@ -473,11 +473,11 @@ unsigned char CPU::ASL(unsigned char M)
 
 // Common Branch function
 // Any branch instruction that takes the branch will use this function to do so
-void CPU::Branch(char offset)
+void CPU::Branch(int8_t offset)
 {
     Read(PC);
 
-    unsigned short int newPC = PC + offset;
+    uint16_t newPC = PC + offset;
 
     if ((PC & 0xFF00) != (newPC & 0xFF00))
     {
@@ -490,7 +490,7 @@ void CPU::Branch(char offset)
 // Branch if Carry Clear
 // If the Carry flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BCC(char offset)
+void CPU::BCC(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BCC");
 
@@ -503,7 +503,7 @@ void CPU::BCC(char offset)
 // Branch if Carry Set
 // If the Carry flag is 1 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BCS(char offset)
+void CPU::BCS(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BCS");
 
@@ -516,7 +516,7 @@ void CPU::BCS(char offset)
 // Branch if Equal
 // If the Zero flag is 1 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BEQ(char offset)
+void CPU::BEQ(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BEQ");
 
@@ -531,11 +531,11 @@ void CPU::BEQ(char offset)
 // The Accumulator is expected to hold a mask pattern and
 // is anded with M to clear or set the Zero flag.
 // The Overflow and Negative flags are also set if necessary.
-void CPU::BIT(unsigned char M)
+void CPU::BIT(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("BIT");
 
-    unsigned char result = A & M;
+    uint8_t result = A & M;
 
     // if Result is 0 set zero flag
     (result == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -548,7 +548,7 @@ void CPU::BIT(unsigned char M)
 // Branch if Minus
 // If the Negative flag is 1 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BMI(char offset)
+void CPU::BMI(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BMI");
 
@@ -561,7 +561,7 @@ void CPU::BMI(char offset)
 // Branch if Not Equal
 // If the Zero flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BNE(char offset)
+void CPU::BNE(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BNE");
 
@@ -574,7 +574,7 @@ void CPU::BNE(char offset)
 // Branch if Positive
 // If the Negative flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BPL(char offset)
+void CPU::BPL(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BPL");
 
@@ -591,8 +591,8 @@ void CPU::BRK()
 {
     if (IsLogEnabled()) LogInstructionName("BRK");
 
-    unsigned char highPC = static_cast<unsigned char>(PC >> 8);
-    unsigned char lowPC = static_cast<unsigned char>(PC & 0xFF);
+    uint8_t highPC = static_cast<uint8_t>(PC >> 8);
+    uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
 
     Write(highPC, 0x100 + S);
     Write(lowPC, 0x100 + (S - 1));
@@ -601,13 +601,13 @@ void CPU::BRK()
 
     P |= 0x4;
 
-    PC = Read(0xFFFE) + (((unsigned short int) Read(0xFFFF)) * 0x100);
+    PC = Read(0xFFFE) + (((uint16_t) Read(0xFFFF)) * 0x100);
 }
 
 // Branch if Overflow Clear
 // If the Overflow flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BVC(char offset)
+void CPU::BVC(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BVC");
 
@@ -620,7 +620,7 @@ void CPU::BVC(char offset)
 // Branch if Overflow Set
 // If the Overflow flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BVS(char offset)
+void CPU::BVS(int8_t offset)
 {
     if (IsLogEnabled()) LogInstructionName("BVS");
 
@@ -667,11 +667,11 @@ void CPU::CLV()
 // Compares the Accumulator with M by subtracting
 // A from M and setting the Zero flag if they were equal
 // and the Carry flag if the Accumulator was larger (or equal)
-void CPU::CMP(unsigned char M)
+void CPU::CMP(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("CMP");
 
-    unsigned char result = A - M;
+    uint8_t result = A - M;
     // if A >= M set carry flag
     (A >= M) ? P = P | 0x01 : P = P & 0xFE;
     // if A = M set zero flag
@@ -684,11 +684,11 @@ void CPU::CMP(unsigned char M)
 // Compares the X register with M by subtracting
 // X from M and setting the Zero flag if they were equal
 // and the Carry flag if the X register was larger (or equal)
-void CPU::CPX(unsigned char M)
+void CPU::CPX(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("CPX");
 
-    unsigned char result = X - M;
+    uint8_t result = X - M;
     // if X >= M set carry flag
     (X >= M) ? P = P | 0x01 : P = P & 0xFE;
     // if X = M set zero flag
@@ -701,11 +701,11 @@ void CPU::CPX(unsigned char M)
 // Compares the Y register with M by subtracting
 // Y from M and setting the Zero flag if they were equal
 // and the Carry flag if the Y register was larger (or equal)
-void CPU::CPY(unsigned char M)
+void CPU::CPY(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("CPY");
 
-    unsigned char result = Y - M;
+    uint8_t result = Y - M;
     // if Y >= M set carry flag
     (Y >= M) ? P = P | 0x01 : P = P & 0xFE;
     // if Y = M set zero flag
@@ -716,11 +716,11 @@ void CPU::CPY(unsigned char M)
 
 // Decrement Memory
 // Subtracts one from M and then returns the new value
-unsigned char CPU::DEC(unsigned char M)
+uint8_t CPU::DEC(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("DEC");
 
-    unsigned char result = M - 1;
+    uint8_t result = M - 1;
     // if result is 0 set zero flag
     (result == 0) ? P = P | 0x02 : P = P & 0xFD;
     // set negative flag to bit 7 of result
@@ -757,7 +757,7 @@ void CPU::DEY()
 // Exclusive Or
 // Performs and exclusive or on the Accumulator (A)
 // and M. The Zero and Negative flags are set if necessary.
-void CPU::EOR(unsigned char M)
+void CPU::EOR(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("EOR");
 
@@ -770,11 +770,11 @@ void CPU::EOR(unsigned char M)
 
 // Increment Memory
 // Adds one to M and then returns the new value
-unsigned char CPU::INC(unsigned char M)
+uint8_t CPU::INC(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("INC");
 
-    unsigned char result = M + 1;
+    uint8_t result = M + 1;
     // if result is 0 set zero flag
     (result == 0) ? P = P | 0x02 : P = P & 0xFD;
     // set negative flag to bit 7 of result
@@ -810,7 +810,7 @@ void CPU::INY()
 
 // Jump
 // Sets PC to M
-void CPU::JMP(unsigned short int M)
+void CPU::JMP(uint16_t M)
 {
     if (IsLogEnabled()) LogInstructionName("JMP");
 
@@ -823,15 +823,15 @@ void CPU::JMP(unsigned short int M)
 // in the actual 6502, the last operation of the address fetch doesn't
 // happen until after the rest of JSR has completed, but here
 // it happens before with some fudging to compensate (decrementing PC)
-void CPU::JSR(unsigned short int M)
+void CPU::JSR(uint16_t M)
 {
     if (IsLogEnabled()) LogInstructionName("JSR");
 
     PC--;
     Read(0x100 + S); // internal operation
 
-    unsigned char highPC = static_cast<unsigned char>(PC >> 8);
-    unsigned char lowPC = static_cast<unsigned char>(PC & 0xFF);
+    uint8_t highPC = static_cast<uint8_t>(PC >> 8);
+    uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
 
     Write(highPC, 0x100 + S--);
     Write(lowPC, 0x100 + S--);
@@ -841,7 +841,7 @@ void CPU::JSR(unsigned short int M)
 
 // Load Accumulator
 // Sets the accumulator to M
-void CPU::LDA(unsigned char M)
+void CPU::LDA(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("LDA");
 
@@ -855,7 +855,7 @@ void CPU::LDA(unsigned char M)
 
 // Load X Register
 // Sets the X to M
-void CPU::LDX(unsigned char M)
+void CPU::LDX(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("LDX");
 
@@ -869,7 +869,7 @@ void CPU::LDX(unsigned char M)
 
 // Load Y Register
 // Sets the Y to M
-void CPU::LDY(unsigned char M)
+void CPU::LDY(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("LDY");
 
@@ -885,11 +885,11 @@ void CPU::LDY(unsigned char M)
 // Performs a logical left shift on M and returns the result
 // The Carry flag is set to the former bit zero of M.
 // The Zero and Negative flags are set like normal/
-unsigned char CPU::LSR(unsigned char M)
+uint8_t CPU::LSR(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("LSR");
 
-    unsigned char result = M >> 1;
+    uint8_t result = M >> 1;
 
     // set carry flag to bit 0 of M
     ((M & 0x01) == 1) ? P = P | 0x01 : P = P & 0xFE;
@@ -912,7 +912,7 @@ void CPU::NOP()
 // Logical Inclusive Or
 // Performs a logical inclusive or on the Accumulator (A) and M.
 // The Zero and Negative flags are set if necessary
-void CPU::ORA(unsigned char M)
+void CPU::ORA(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("ORA");
 
@@ -973,11 +973,11 @@ void CPU::PLP()
 // Rotates the bits of one left. The carry flag is shifted
 // into bit 0 and then set to the former bit 7. Returns the result.
 // The Zero and Negative flags are set if necessary
-unsigned char CPU::ROL(unsigned char M)
+uint8_t CPU::ROL(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("ROL");
 
-    unsigned char result = (M << 1) | (P & 0x01);
+    uint8_t result = (M << 1) | (P & 0x01);
     // set carry flag to old bit 7
     ((M >> 7) == 1) ? P = P | 0x01 : P = P & 0xFE;
 
@@ -993,11 +993,11 @@ unsigned char CPU::ROL(unsigned char M)
 // Rotates the bits of one left. The carry flag is shifted
 // into bit 7 and then set to the former bit 0
 // The Zero and Negative flags are set if necessary
-unsigned char CPU::ROR(unsigned char M)
+uint8_t CPU::ROR(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("ROR");
 
-    unsigned char result = (M >> 1) | ((P & 0x01) << 7);
+    uint8_t result = (M >> 1) | ((P & 0x01) << 7);
     // set carry flag to old bit 0
     ((M & 0x01) == 1) ? P = P | 0x01 : P = P & 0xFE;
     // if result is 0 set zero flag
@@ -1018,8 +1018,8 @@ void CPU::RTI()
     Read(0x100 + S);
 
     P = Read(0x100 + (S + 1)) & 0xCF;
-    unsigned short int lowPC = Read(0x100 + (S + 2));
-    unsigned short int highPC = Read(0x100 + (S + 3));
+    uint16_t lowPC = Read(0x100 + (S + 2));
+    uint16_t highPC = Read(0x100 + (S + 3));
     PC = (highPC << 8) | lowPC;
     S += 3;
 }
@@ -1033,8 +1033,8 @@ void CPU::RTS()
 
     Read(0x100 + S++);
 
-    unsigned short int lowPC = Read(0x100 + S++);
-    unsigned short int highPC = Read(0x100 + S);
+    uint16_t lowPC = Read(0x100 + S++);
+    uint16_t highPC = Read(0x100 + S);
     PC = (highPC << 8) | lowPC;
 
     Read(PC++);
@@ -1043,20 +1043,20 @@ void CPU::RTS()
 // Subtract With Carry
 // Subtract A from M and the not of the Carry flag.
 // Sets the Carry, Overflow, Negative and Zero flags if necessary
-void CPU::SBC(unsigned char M)
+void CPU::SBC(uint8_t M)
 {
     if (IsLogEnabled()) LogInstructionName("SBC");
 
-    unsigned char C = P & 0x01; // get carry flag
-    unsigned char origA = A;
-    short int result = A - M - (1 - C);
+    uint8_t C = P & 0x01; // get carry flag
+    uint8_t origA = A;
+    int16_t result = A - M - (1 - C);
 
     // if signed overflow occurred set overflow flag
     //(result > 127 || result < -128) ? P = P | 0x40 : P = P & 0xBF;
     // If overflow occurred, clear the carry flag
     (result < 0) ? P = P & 0xFE : P = P | 0x01;
 
-    A = static_cast<unsigned char>(result);
+    A = static_cast<uint8_t>(result);
 
     // if Result is 0 set zero flag
     (A == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -1095,7 +1095,7 @@ void CPU::SEI()
 // Store Accumulator
 // This simply returns A since all memory writes
 // are done externally to these functions
-unsigned char CPU::STA()
+uint8_t CPU::STA()
 {
     if (IsLogEnabled()) LogInstructionName("STA");
 
@@ -1105,7 +1105,7 @@ unsigned char CPU::STA()
 // Store X Register
 // This simply returns X since all memory writes
 // are done externally to these functions
-unsigned char CPU::STX()
+uint8_t CPU::STX()
 {
     if (IsLogEnabled()) LogInstructionName("STX");
 
@@ -1115,7 +1115,7 @@ unsigned char CPU::STX()
 // Store Y Register
 // This simply returns Y since all memory writes
 // are done externally to these functions
-unsigned char CPU::STY()
+uint8_t CPU::STY()
 {
     if (IsLogEnabled()) LogInstructionName("STY");
 
@@ -1197,8 +1197,8 @@ void CPU::TYA()
 
 void CPU::HandleNMI()
 {
-    unsigned char highPC = static_cast<unsigned char>(PC >> 8);
-    unsigned char lowPC = static_cast<unsigned char>(PC & 0xFF);
+    uint8_t highPC = static_cast<uint8_t>(PC >> 8);
+    uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
 
     Write(highPC, 0x100 + S);
     Write(lowPC, 0x100 + (S - 1));
@@ -1207,7 +1207,7 @@ void CPU::HandleNMI()
 
     P |= 0x4;
 
-    PC = Read(0xFFFA) + (((unsigned short int) Read(0xFFFB)) * 0x100);
+    PC = Read(0xFFFA) + (((uint16_t) Read(0xFFFB)) * 0x100);
 }
 
 void CPU::SetControllerStrobe(bool strobe)
@@ -1216,14 +1216,14 @@ void CPU::SetControllerStrobe(bool strobe)
     controllerOneShift = controllerOneState.load();
 }
 
-unsigned char CPU::GetControllerOneShift()
+uint8_t CPU::GetControllerOneShift()
 {
     if (controllerStrobe)
     {
         controllerOneShift = controllerOneState.load();
     }
 
-    unsigned char result = controllerOneShift & 0x1;
+    uint8_t result = controllerOneShift & 0x1;
     controllerOneShift >>= 1;
 
     return result;
@@ -1254,7 +1254,7 @@ CPU::CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
     }
 
     // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-    PC = (static_cast<unsigned short int>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
+    PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
 }
 
 bool CPU::IsLogEnabled()
@@ -1293,12 +1293,12 @@ CPU::~CPU()
     }
 }
 
-void CPU::SetControllerOneState(unsigned char state)
+void CPU::SetControllerOneState(uint8_t state)
 {
     controllerOneState.store(state);
 }
 
-unsigned char CPU::GetControllerOneState()
+uint8_t CPU::GetControllerOneState()
 {
     return controllerOneState.load();
 }
@@ -1381,9 +1381,9 @@ bool CPU::NextInst()
         }
     }
 
-    unsigned char opcode = Read(PC++); 	// Retrieve opcode from memory
-    unsigned short int addr;
-    unsigned char value;
+    uint8_t opcode = Read(PC++); 	// Retrieve opcode from memory
+    uint16_t addr;
+    uint8_t value;
 
     if (IsLogEnabled()) LogOpcode(opcode);
 
@@ -2029,7 +2029,7 @@ void CPU::LogRegisters()
     sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d SL:%d", A, X, Y, P, S, clock.GetClock() % 341, clock.GetScanline());
 }
 
-void CPU::LogOpcode(unsigned char opcode)
+void CPU::LogOpcode(uint8_t opcode)
 {
     sprintf(this->opcode, "%02X", opcode);
 }
@@ -2039,39 +2039,39 @@ void CPU::LogInstructionName(std::string name)
     sprintf(instruction, " %s", name.c_str());
 }
 
-void CPU::LogRelative(unsigned char value)
+void CPU::LogRelative(uint8_t value)
 {
 
-    sprintf(addressing, "$%04X                      ", PC + static_cast<char>(value));
-    sprintf(addressingArg1, "%02X", static_cast<unsigned char>(value));
+    sprintf(addressing, "$%04X                      ", PC + static_cast<int8_t>(value));
+    sprintf(addressingArg1, "%02X", static_cast<uint8_t>(value));
 }
 
-void CPU::LogImmediate(unsigned char arg1)
+void CPU::LogImmediate(uint8_t arg1)
 {
     sprintf(addressing, "#$%02X                       ", arg1);
     sprintf(addressingArg1, "%02X", arg1);
 }
 
-void CPU::LogZeroPage(unsigned char address)
+void CPU::LogZeroPage(uint8_t address)
 {
     sprintf(addressing, "$%02X = %02X                   ", address, DebugRead(address));
     sprintf(addressingArg1, "%02X", address);
 }
 
 
-void CPU::LogZeroPageX(unsigned char initialAddress, unsigned char finalAddress)
+void CPU::LogZeroPageX(uint8_t initialAddress, uint8_t finalAddress)
 {
     sprintf(addressing, "$%02X,X @ %02X = %02X            ", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", initialAddress);
 }
 
-void CPU::LogZeroPageY(unsigned char initialAddress, unsigned char finalAddress)
+void CPU::LogZeroPageY(uint8_t initialAddress, uint8_t finalAddress)
 {
     sprintf(addressing, "$%02X,Y @ %02X = %02X            ", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", initialAddress);
 }
 
-void CPU::LogAbsolute(unsigned char lowByte, unsigned char highByte, unsigned short int address, bool isJump)
+void CPU::LogAbsolute(uint8_t lowByte, uint8_t highByte, uint16_t address, bool isJump)
 {
     if (!isJump)
     {
@@ -2086,34 +2086,34 @@ void CPU::LogAbsolute(unsigned char lowByte, unsigned char highByte, unsigned sh
     sprintf(addressingArg2, "%02X", highByte);
 }
 
-void CPU::LogAbsoluteX(unsigned char lowByte, unsigned char highByte, unsigned short int initialAddress, unsigned short int finalAddress)
+void CPU::LogAbsoluteX(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
     sprintf(addressing, "$%04X,X @ %04X = %02X        ", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", lowByte);
     sprintf(addressingArg2, "%02X", highByte);
 }
 
-void CPU::LogAbsoluteY(unsigned char lowByte, unsigned char highByte, unsigned short int initialAddress, unsigned short int finalAddress)
+void CPU::LogAbsoluteY(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
     sprintf(addressing, "$%04X,Y @ %04X = %02X        ", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", lowByte);
     sprintf(addressingArg2, "%02X", highByte);
 }
 
-void CPU::LogIndirect(unsigned char lowIndirect, unsigned char highIndirect, unsigned short int indirect, unsigned short int address)
+void CPU::LogIndirect(uint8_t lowIndirect, uint8_t highIndirect, uint16_t indirect, uint16_t address)
 {
     sprintf(addressing, "($%04X) = %04X             ", indirect, address);
     sprintf(addressingArg1, "%02X", lowIndirect);
     sprintf(addressingArg2, "%02X", highIndirect);
 }
 
-void CPU::LogIndexedIndirect(unsigned char pointer, unsigned char lowIndirect, unsigned short int address)
+void CPU::LogIndexedIndirect(uint8_t pointer, uint8_t lowIndirect, uint16_t address)
 {
     sprintf(addressing, "($%02X,X) @ %02X = %04X = %02X   ", pointer, lowIndirect, address, DebugRead(address));
     sprintf(addressingArg1, "%02X", pointer);
 }
 
-void CPU::LogIndirectIndexed(unsigned char pointer, unsigned short int initialAddress, unsigned short int finalAddress)
+void CPU::LogIndirectIndexed(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress)
 {
     sprintf(addressing, "($%02X),Y = %04X @ %04X = %02X ", pointer, initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", pointer);

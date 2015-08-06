@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -42,6 +42,9 @@
     <ClInclude Include="ppu_debug_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="game_list.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="utilities\app_settings.cc">
@@ -64,6 +67,9 @@
     </ClCompile>
     <ClCompile Include="ppu_debug_window.cc">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_list.cc">
+      <Filter>Source Files\Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,9 +1,11 @@
 #ifndef SXROM_H_
 #define SXROM_H_
 
+#include <boost/cstdint.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
+
 #include "cart.h"
 #include "../clock.h"
-#include "boost/iostreams/device/mapped_file.hpp"
 
 class NES;
 
@@ -16,29 +18,29 @@ class SXROM : public Cart
     NES& nes;
 
     unsigned long long lastWriteCycle;
-    unsigned char counter;
-    unsigned char tempRegister;
-    unsigned char controlRegister;
-    unsigned char chrRegister1;
-    unsigned char chrRegister2;
-    unsigned char prgRegister;
+    uint8_t counter;
+    uint8_t tempRegister;
+    uint8_t controlRegister;
+    uint8_t chrRegister1;
+    uint8_t chrRegister2;
+    uint8_t prgRegister;
 
     int chrSize;
     int prgSize;
 
-    char* wram;
-    char* chrRam;
-    const char* prg;
-    const char* chr;
+    int8_t* wram;
+    int8_t* chrRam;
+    const int8_t* prg;
+    const int8_t* chr;
 
 public:
     MirrorMode GetMirrorMode();
 
-    unsigned char PrgRead(unsigned short int address);
-    void PrgWrite(unsigned char M, unsigned short int address);
+    uint8_t PrgRead(uint16_t address);
+    void PrgWrite(uint8_t M, uint16_t address);
 
-    unsigned char ChrRead(unsigned short int address);
-    void ChrWrite(unsigned char M, unsigned short int address);
+    uint8_t ChrRead(uint16_t address);
+    void ChrWrite(uint8_t M, uint16_t address);
 
     SXROM(std::string& filename, Clock& clock, NES& nes);
     ~SXROM();

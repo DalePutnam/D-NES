@@ -27,6 +27,7 @@ public:
     void UpdatePatternTable(int tableID, unsigned char* data);
     void UpdatePalette(int tableID, unsigned char* data);
     void UpdatePrimarySprite(int sprite, unsigned char* data);
+    void ClearAll();
     int GetCurrentPalette();
 };
 

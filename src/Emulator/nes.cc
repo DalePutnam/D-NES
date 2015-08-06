@@ -25,12 +25,12 @@ NES::NES(std::string filename, IDisplay& display, bool cpuLogEnabled)
     gameName = stringList.back().substr(0, stringList.back().length() - 4);
 }
 
-unsigned int NES::GetClock()
+uint32_t NES::GetClock()
 {
     return clock;
 }
 
-unsigned int NES::GetScanline()
+uint32_t NES::GetScanline()
 {
     return scanline;
 }
@@ -42,7 +42,7 @@ std::string& NES::GetGameName()
 
 void NES::IncrementClock(int increment)
 {
-    unsigned int old = clock;
+    uint32_t old = clock;
     clock += increment;
 
     if (clock % 341 < old % 341)
@@ -70,12 +70,12 @@ bool NES::NMIRaised()
     return value;
 }
 
-void NES::SetControllerOneState(unsigned char state)
+void NES::SetControllerOneState(uint8_t state)
 {
     cpu.SetControllerOneState(state);
 }
 
-unsigned char NES::GetControllerOneState()
+uint8_t NES::GetControllerOneState()
 {
     return cpu.GetControllerOneState();
 }
@@ -91,27 +91,27 @@ void NES::DisableCPULog()
     cpu.DisableLog();
 }
 
-void NES::GetNameTable(int table, unsigned char* pixels)
+void NES::GetNameTable(int table, uint8_t* pixels)
 {
     ppu.GetNameTable(table, pixels);
 }
 
-void NES::GetPatternTable(int table, int palette, unsigned char* pixels)
+void NES::GetPatternTable(int table, int palette, uint8_t* pixels)
 {
     ppu.GetPatternTable(table, palette, pixels);
 }
 
-void NES::GetPalette(int palette, unsigned char* pixels)
+void NES::GetPalette(int palette, uint8_t* pixels)
 {
     ppu.GetPalette(palette, pixels);
 }
 
-void NES::GetPrimaryOAM(int sprite, unsigned char* pixels)
+void NES::GetPrimaryOAM(int sprite, uint8_t* pixels)
 {
     ppu.GetPrimaryOAM(sprite, pixels);
 }
 
-void NES::GetSecondaryOAM(int sprite, unsigned char* pixels)
+void NES::GetSecondaryOAM(int sprite, uint8_t* pixels)
 {
     ppu.GetSecondaryOAM(sprite, pixels);
 }

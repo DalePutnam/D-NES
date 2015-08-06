@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -79,6 +79,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="app.h" />
+    <ClInclude Include="game_list.h" />
     <ClInclude Include="game_window.h" />
     <ClInclude Include="main_window.h" />
     <ClInclude Include="nes_thread.h" />
@@ -88,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cc" />
+    <ClCompile Include="game_list.cc" />
     <ClCompile Include="game_window.cc" />
     <ClCompile Include="main_window.cc" />
     <ClCompile Include="nes_thread.cc" />

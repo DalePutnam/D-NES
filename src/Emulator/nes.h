@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <iostream>
+#include <boost/cstdint.hpp>
 
 #include "cpu.h"
 #include "ppu.h"
@@ -21,7 +22,7 @@
 class NES
 {
     Clock masterClock;
-    unsigned int clock;
+    uint32_t clock;
     int scanline;
     bool stop;
     bool pause;
@@ -40,8 +41,8 @@ public:
 
     NES(std::string filename, IDisplay& display, bool cpuLogEnabled = false);
 
-    unsigned int GetClock();
-    unsigned int GetScanline();
+    uint32_t GetClock();
+    uint32_t GetScanline();
     void IncrementClock(int increment);
     void RaiseNMI();
     bool NMIRaised();
@@ -50,17 +51,17 @@ public:
     bool IsStopped();
     bool IsPaused();
 
-    void SetControllerOneState(unsigned char state);
-    unsigned char GetControllerOneState();
+    void SetControllerOneState(uint8_t state);
+    uint8_t GetControllerOneState();
 
     void EnableCPULog();
     void DisableCPULog();
 
-    void GetNameTable(int table, unsigned char* pixels);
-    void GetPatternTable(int table, int palette, unsigned char* pixels);
-    void GetPalette(int palette, unsigned char* pixels);
-    void GetPrimaryOAM(int sprite, unsigned char* pixels);
-    void GetSecondaryOAM(int sprite, unsigned char* pixels);
+    void GetNameTable(int table, uint8_t* pixels);
+    void GetPatternTable(int table, int palette, uint8_t* pixels);
+    void GetPalette(int palette, uint8_t* pixels);
+    void GetPrimaryOAM(int sprite, uint8_t* pixels);
+    void GetSecondaryOAM(int sprite, uint8_t* pixels);
 
     void Start();
     void Stop();

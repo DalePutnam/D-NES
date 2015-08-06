@@ -15,7 +15,7 @@ Cart::MirrorMode NROM::GetMirrorMode()
     return mirroring;
 }
 
-unsigned char NROM::PrgRead(unsigned short int address)
+uint8_t NROM::PrgRead(uint16_t address)
 {
     // Battery backed memory, not implemented
     if (address >= 0x0000 && address < 0x2000)
@@ -35,7 +35,7 @@ unsigned char NROM::PrgRead(unsigned short int address)
     }
 }
 
-void NROM::PrgWrite(unsigned char M, unsigned short int address)
+void NROM::PrgWrite(uint8_t M, uint16_t address)
 {
     if (address >= 0x0000 && address < 0x2000)
     {
@@ -43,7 +43,7 @@ void NROM::PrgWrite(unsigned char M, unsigned short int address)
     }
 }
 
-unsigned char NROM::ChrRead(unsigned short int address)
+uint8_t NROM::ChrRead(uint16_t address)
 {
     if (chrSize != 0)
     {
@@ -55,7 +55,7 @@ unsigned char NROM::ChrRead(unsigned short int address)
     }
 }
 
-void NROM::ChrWrite(unsigned char M, unsigned short int address)
+void NROM::ChrWrite(uint8_t M, uint16_t address)
 {
     if (chrSize == 0)
     {
@@ -75,15 +75,15 @@ NROM::NROM(std::string& filename)
         prgSize = file.data()[4] * 0x4000;
         chrSize = file.data()[5] * 0x2000;
 
-        char flags6 = file.data()[6];
+        int8_t flags6 = file.data()[6];
         mirroring = static_cast<Cart::MirrorMode>(flags6 & 0x01);
 
-        prg = file.data() + 16; // Data pointer plus the size of the file header
+        prg = reinterpret_cast<const int8_t*>(file.data() + 16); // Data pointer plus the size of the file header
 
         // initialize chr RAM or read chr to memory
         if (chrSize == 0)
         {
-            chrRam = new char[0x2000];
+            chrRam = new int8_t[0x2000];
             for (int i = 0; i < 0x2000; i++)
             {
                 chrRam[i] = 0;
@@ -91,7 +91,7 @@ NROM::NROM(std::string& filename)
         }
         else
         {
-            chr = file.data() + prgSize + 16;
+            chr = reinterpret_cast<const int8_t*>(file.data() + prgSize + 16);
         }
     }
     else
