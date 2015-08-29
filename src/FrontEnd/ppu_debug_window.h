@@ -3,6 +3,7 @@
 
 #include "wx/frame.h"
 #include "wx/panel.h"
+#include "pattern_table_display.h"
 
 class MainWindow;
 
@@ -11,6 +12,8 @@ class PPUDebugWindow : public wxFrame
     MainWindow* mainWindow;
 
     int paletteIndex;
+
+    PatternTableDisplay *patternTableDisplay;
 
     wxPanel* nameTable[4];
     wxPanel* patternTable[2];

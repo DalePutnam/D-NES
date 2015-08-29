@@ -79,14 +79,12 @@ void MainWindow::StopEmulator(bool showRomList)
 
 void MainWindow::UpdateImage(unsigned char* data)
 {
-    wxClientDC dc(this);
     frame.Create(256, 240, data, true);
-
     wxImage image = frame;
     image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-
     wxBitmap bitmap(image, 24);
 
+    wxClientDC dc(this);
     dc.DrawBitmap(bitmap, 0, 0);
 }
 
@@ -189,73 +187,38 @@ void MainWindow::OnEmulatorPause(wxCommandEvent& WXUNUSED(event))
     }
 }
 
-void MainWindow::OnEmulatorScale1X(wxCommandEvent& WXUNUSED(event))
+void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 {
-    gameSize = wxSize(256, 240);
-    SetClientSize(gameSize);
+    if (size->IsChecked(ID_EMULATOR_SCALE_1X))
+    {
+        gameSize = wxSize(256, 240);
+    }
+    else if (size->IsChecked(ID_EMULATOR_SCALE_2X))
+    {
+        gameSize = wxSize(512, 480);
+    }
+    else if (size->IsChecked(ID_EMULATOR_SCALE_3X))
+    {
+        gameSize = wxSize(768, 720);
+    }
+    else if (size->IsChecked(ID_EMULATOR_SCALE_4X))
+    {
+        gameSize = wxSize(1024, 960);
+    }
 
     if (nesThread)
     {
-        wxClientDC dc(this);
-
+        SetClientSize(gameSize);
+        
         wxImage image = frame;
         image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-
         wxBitmap bitmap(image, 24);
+
+        wxClientDC dc(this);
         dc.DrawBitmap(bitmap, 0, 0);
     }
 }
 
-void MainWindow::OnEmulatorScale2X(wxCommandEvent& WXUNUSED(event))
-{
-    gameSize = wxSize(512, 480);
-    SetClientSize(gameSize);
-
-    if (nesThread)
-    {
-        wxClientDC dc(this);
-
-        wxImage image = frame;
-        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-
-        wxBitmap bitmap(image, 24);
-        dc.DrawBitmap(bitmap, 0, 0);
-    }
-}
-
-void MainWindow::OnEmulatorScale3X(wxCommandEvent& WXUNUSED(event))
-{
-    gameSize = wxSize(768, 720);
-    SetClientSize(gameSize);
-
-    if (nesThread)
-    {
-        wxClientDC dc(this);
-
-        wxImage image = frame;
-        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-
-        wxBitmap bitmap(image, 24);
-        dc.DrawBitmap(bitmap, 0, 0);
-    }
-}
-
-void MainWindow::OnEmulatorScale4X(wxCommandEvent& WXUNUSED(event))
-{
-    gameSize = wxSize(1024, 960);
-    SetClientSize(gameSize);
-
-    if (nesThread)
-    {
-        wxClientDC dc(this);
-
-        wxImage image = frame;
-        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-
-        wxBitmap bitmap(image, 24);
-        dc.DrawBitmap(bitmap, 0, 0);
-    }
-}
 
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
@@ -302,12 +265,11 @@ void MainWindow::OnSize(wxSizeEvent& WXUNUSED(event))
 {
     if (nesThread)
     {
-        wxClientDC dc(this);
-
         wxImage image = frame;
         image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-
         wxBitmap bitmap(image, 24);
+
+        wxClientDC dc(this);
         dc.DrawBitmap(bitmap, 0, 0);
     }
 }
@@ -404,18 +366,18 @@ MainWindow::MainWindow()
     file->AppendSeparator();
     file->Append(wxID_EXIT, wxT("&Quit"));
 
-    scale = new wxMenu;
-    scale->AppendRadioItem(ID_EMULATOR_SCALE_1X, wxT("1X"));
-    scale->AppendRadioItem(ID_EMULATOR_SCALE_2X, wxT("2X"));
-    scale->AppendRadioItem(ID_EMULATOR_SCALE_3X, wxT("3X"));
-    scale->AppendRadioItem(ID_EMULATOR_SCALE_4X, wxT("4X"));
+    size = new wxMenu;
+    size->AppendRadioItem(ID_EMULATOR_SCALE_1X, wxT("1X"));
+    size->AppendRadioItem(ID_EMULATOR_SCALE_2X, wxT("2X"));
+    size->AppendRadioItem(ID_EMULATOR_SCALE_3X, wxT("3X"));
+    size->AppendRadioItem(ID_EMULATOR_SCALE_4X, wxT("4X"));
 
     emulator = new wxMenu;
     emulator->Append(ID_EMULATOR_PAUSE, wxT("&Pause"));
     emulator->Append(ID_EMULATOR_RESUME, wxT("&Resume"));
     emulator->Append(ID_EMULATOR_STOP, wxT("&Stop"));
     emulator->AppendSeparator();
-    emulator->AppendSubMenu(scale, wxT("&Scale"));
+    emulator->AppendSubMenu(size, wxT("&Size"));
     emulator->AppendSeparator();
     emulator->Append(ID_EMUALTOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
@@ -444,10 +406,10 @@ MainWindow::MainWindow()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume), this, ID_EMULATOR_RESUME);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop), this, ID_EMULATOR_STOP);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause), this, ID_EMULATOR_PAUSE);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale1X), this, ID_EMULATOR_SCALE_1X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale2X), this, ID_EMULATOR_SCALE_2X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale3X), this, ID_EMULATOR_SCALE_3X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale4X), this, ID_EMULATOR_SCALE_4X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_1X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_2X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_3X);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_4X);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMUALTOR_PPU_DEBUG);
 
     Bind(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEventHandler(MainWindow::OnThreadUpdate), this, wxID_ANY);

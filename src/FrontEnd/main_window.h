@@ -24,7 +24,7 @@ class MainWindow : public wxFrame
 
     wxMenuBar* menuBar;
     wxMenu* file;
-    wxMenu* scale;
+    wxMenu* size;
     wxMenu* emulator;
     wxMenu* settings;
     wxMenu* about;
@@ -46,10 +46,7 @@ class MainWindow : public wxFrame
     void OnEmulatorResume(wxCommandEvent& event);
     void OnEmulatorStop(wxCommandEvent& event);
     void OnEmulatorPause(wxCommandEvent& event);
-    void OnEmulatorScale1X(wxCommandEvent& event);
-    void OnEmulatorScale2X(wxCommandEvent& event);
-    void OnEmulatorScale3X(wxCommandEvent& event);
-    void OnEmulatorScale4X(wxCommandEvent& event);
+    void OnEmulatorScale(wxCommandEvent& event);
     void OnPPUDebug(wxCommandEvent& event);
     void OnUnexpectedShutdown(wxThreadEvent& event);
     void OnFPSUpdate(wxThreadEvent& event);
