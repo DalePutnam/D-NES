@@ -15,7 +15,7 @@ include src/Emulator/mappers/subdir.mk
 include src/FrontEnd/subdir.mk
 include src/FrontEnd/utilities/subdir.mk
 
-all: CXXFLAGS+=-O3
+all: CXXFLAGS+=-O2
 all: $(EXEC)
 
 debug: CXXFLAGS+=-g
@@ -23,7 +23,7 @@ debug: $(EXEC)
 
 $(EXEC): $(OBJECTS)
 	@echo 'Building Target: $@'
-	$(CXX) $(CXXFLAGS) -o bld/D-NES $(OBJECTS) -lboost_iostreams -lboost_system -lboost_filesystem `wx-config --cxxflags` `wx-config --libs`
+	$(CXX) $(CXXFLAGS) -o bld/D-NES $(OBJECTS) -lboost_iostreams -lboost_system -lboost_filesystem -lboost_chrono `wx-config --cxxflags` `wx-config --libs`
 	@echo ''
 
 $(OBJECTS): | $(DIRS)

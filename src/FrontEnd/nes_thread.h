@@ -1,7 +1,7 @@
 #ifndef NES_THREAD_H_
 #define NES_THREAD_H_
 
-#include <boost\chrono\chrono.hpp>
+#include <boost/chrono/chrono.hpp>
 #include <atomic>
 #include "wx/thread.h"
 #include "wx/event.h"

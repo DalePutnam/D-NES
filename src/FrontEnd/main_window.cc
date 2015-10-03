@@ -2,8 +2,8 @@
 #include <iostream>
 
 #include "wx/msgdlg.h"
-#include "wx/dcclient.h"
 #include "wx/filedlg.h"
+#include "wx/dcclient.h"
 #include "boost/filesystem.hpp"
 
 #include "main_window.h"
@@ -22,6 +22,7 @@ void MainWindow::StartEmulator(std::string& filename)
             vbox->Clear(true);
             SetTitle(nesThread->GetGameName());
             SetClientSize(gameSize);
+	    panel->SetFocus();
 
             if (nesThread->Run() != wxTHREAD_NO_ERROR)
             {
@@ -53,7 +54,7 @@ void MainWindow::StartEmulator(std::string& filename)
 }
 
 void MainWindow::StopEmulator(bool showRomList)
-{
+{ 
     if (nesThread)
     {
         nesThread->Stop();
@@ -208,8 +209,8 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 
     if (nesThread)
     {
-        SetClientSize(gameSize);
-        
+	SetClientSize(gameSize);
+	
         wxImage image = frame;
         image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
         wxBitmap bitmap(image, 24);
@@ -261,7 +262,7 @@ void MainWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
     Close(true);
 }
 
-void MainWindow::OnSize(wxSizeEvent& WXUNUSED(event))
+void MainWindow::OnSize(wxSizeEvent& event)
 {
     if (nesThread)
     {
@@ -271,6 +272,8 @@ void MainWindow::OnSize(wxSizeEvent& WXUNUSED(event))
 
         wxClientDC dc(this);
         dc.DrawBitmap(bitmap, 0, 0);
+
+	event.Skip();
     }
 }
 
@@ -356,7 +359,7 @@ NESThread* MainWindow::GetNESThread()
 }
 
 MainWindow::MainWindow()
-    : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460)),
+  : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460)),
     nesThread(0),
     ppuDebugWindow(0),
     gameSize(256, 240)
@@ -397,6 +400,8 @@ MainWindow::MainWindow()
 
     SetMenuBar(menuBar);
 
+    panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
+
     Bind(wxEVT_LIST_ITEM_ACTIVATED, wxListEventHandler(MainWindow::OnROMDoubleClick), this, wxID_ANY);
 
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit), this, wxID_EXIT);
@@ -418,8 +423,8 @@ MainWindow::MainWindow()
 
     Bind(wxEVT_SIZING, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
 
-    Bind(wxEVT_KEY_DOWN, wxKeyEventHandler(MainWindow::OnKeyDown), this, wxID_ANY);
-    Bind(wxEVT_KEY_UP, wxKeyEventHandler(MainWindow::OnKeyUp), this, wxID_ANY);
+    panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
+    panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
 
     romList = new GameList(this);
     romList->PopulateList();
@@ -427,7 +432,7 @@ MainWindow::MainWindow()
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(romList, 1, wxEXPAND | wxALL);
     SetSizer(vbox);
-
+    
     SetMinClientSize(wxSize(256, 240));
     Centre();
 }

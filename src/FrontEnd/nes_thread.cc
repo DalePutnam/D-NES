@@ -31,7 +31,8 @@ NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnab
     width(256),
     height(240),
     pixelCount(0),
-    pixelArray(new unsigned char[width*height * 3])
+    pixelArray(new unsigned char[width*height * 3]),
+    frameLocked(false)  
 {
     for (int i = 0; i < 64; ++i)
     {
@@ -104,6 +105,7 @@ void NESThread::EmulatorPause()
 void NESThread::Stop()
 {
     expectedStop = true;
+    frameLocked = false;
     nes.Stop();
 }
 

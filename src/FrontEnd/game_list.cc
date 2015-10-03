@@ -7,6 +7,8 @@ void GameList::OnSize(wxSizeEvent& event)
     int windowWidth = GetVirtualSize().GetX();
     int columnWidth = GetColumnWidth(1);
     SetColumnWidth(0, windowWidth - columnWidth);
+
+    event.Skip();
 }
 
 GameList::GameList(wxWindow* parent) :

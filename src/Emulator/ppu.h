@@ -10,7 +10,7 @@
 
 #include <queue>
 #include <boost/cstdint.hpp>
-#include <boost\chrono\chrono.hpp>
+#include <boost/chrono/chrono.hpp>
 
 #include "clock.h"
 #include "mappers/cart.h"

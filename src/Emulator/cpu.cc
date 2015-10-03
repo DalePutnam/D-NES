@@ -6,6 +6,7 @@
  */
 
 #include <string>
+#include <cstring>
 #include <cstdio>
 
 #include "cpu.h"
@@ -1230,8 +1231,8 @@ uint8_t CPU::GetControllerOneShift()
 }
 
 CPU::CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
-    isPaused(false),
     pauseFlag(false),
+    isPaused(false),
     logEnabled(logEnabled),
     logStream(0),
     clock(clock),
@@ -2026,7 +2027,7 @@ void CPU::LogProgramCounter()
 
 void CPU::LogRegisters()
 {
-    sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d SL:%d", A, X, Y, P, S, clock.GetClock() % 341, clock.GetScanline());
+    sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3lu SL:%d", A, X, Y, P, S, clock.GetClock() % 341, clock.GetScanline());
 }
 
 void CPU::LogOpcode(uint8_t opcode)
@@ -2158,11 +2159,11 @@ void CPU::PrintLog()
 
     out << registers << endl;
 
-    sprintf(programCounter, "");
-    sprintf(opcode, "");
-    sprintf(addressingArg1, "");
-    sprintf(addressingArg2, "");
-    sprintf(instruction, "");
-    sprintf(addressing, "");
-    sprintf(registers, "");
+    opcode[0] = 0;
+    registers[0] = 0;
+    addressing[0] = 0;
+    instruction[0] = 0;
+    programCounter[0] = 0;
+    addressingArg1[0] = 0;
+    addressingArg2[0] = 0;
 }

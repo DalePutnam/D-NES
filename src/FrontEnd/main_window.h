@@ -21,7 +21,8 @@ class MainWindow : public wxFrame
 {
     NESThread* nesThread;
     PPUDebugWindow* ppuDebugWindow;
-
+    
+    wxPanel* panel;
     wxMenuBar* menuBar;
     wxMenu* file;
     wxMenu* size;

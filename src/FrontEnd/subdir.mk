@@ -15,8 +15,8 @@ bld/FrontEnd/game_window.o \
 bld/FrontEnd/settings_window.o \
 bld/FrontEnd/ppu_debug_window.o \
 bld/FrontEnd/nes_thread.o \
-src/FrontEnd/game_list.o \
-src/FrontEnd/pattern_table_display.o
+bld/FrontEnd/game_list.o \
+bld/FrontEnd/pattern_table_display.o
 
 DEPENDS += \
 bld/FrontEnd/app.d \
@@ -25,13 +25,13 @@ bld/FrontEnd/game_window.d \
 bld/FrontEnd/settings_window.d \
 bld/FrontEnd/ppu_debug_window.d \
 bld/FrontEnd/nes_thread.d \
-src/FrontEnd/game_list.d \
-src/FrontEnd/pattern_table_display.d
+bld/FrontEnd/game_list.d \
+bld/FrontEnd/pattern_table_display.d
 
 INCLUDES=-Isrc/Emulator
 
 bld/FrontEnd/%.o: src/FrontEnd/%.cc
 	@echo 'Building file: $<'
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $< `wx-config --cxxflags` `wx-config --libs`
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $< `wx-config --cxxflags`
 	@echo ''
 

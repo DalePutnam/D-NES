@@ -98,7 +98,6 @@ void SXROM::ChrWrite(uint8_t M, uint16_t address)
         }
         else
         {
-            uint8_t page = chrRegister1 >> 1;
             uint32_t addr = address;
             chrRam[addr] = M;
         }
@@ -271,7 +270,7 @@ SXROM::SXROM(std::string& filename, Clock& clock, NES& nes) :
             {
                 boost::iostreams::mapped_file_params params(path.string());
                 params.new_file_size = 0x2000;
-                params.mode = boost::iostreams::mapped_file::mapmode::readwrite;
+		params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
 
                 save = new boost::iostreams::mapped_file(params);
             }
