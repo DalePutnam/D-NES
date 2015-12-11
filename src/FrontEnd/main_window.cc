@@ -22,7 +22,10 @@ void MainWindow::StartEmulator(std::string& filename)
             vbox->Clear(true);
             SetTitle(nesThread->GetGameName());
             SetClientSize(gameSize);
-	    panel->SetFocus();
+
+#ifndef _WINDOWS
+	        panel->SetFocus();
+#endif
 
             if (nesThread->Run() != wxTHREAD_NO_ERROR)
             {
@@ -400,8 +403,6 @@ MainWindow::MainWindow()
 
     SetMenuBar(menuBar);
 
-    panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
-
     Bind(wxEVT_LIST_ITEM_ACTIVATED, wxListEventHandler(MainWindow::OnROMDoubleClick), this, wxID_ANY);
 
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit), this, wxID_EXIT);
@@ -423,8 +424,14 @@ MainWindow::MainWindow()
 
     Bind(wxEVT_SIZING, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
 
+#ifdef _WINDOWS
+    Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
+    Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+#else
+    panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
     panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+#endif
 
     romList = new GameList(this);
     romList->PopulateList();
