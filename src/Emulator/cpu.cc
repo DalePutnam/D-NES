@@ -1233,6 +1233,7 @@ uint8_t CPU::GetControllerOneShift()
 CPU::CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
     pauseFlag(false),
     isPaused(false),
+    logFlag(false),
     logEnabled(logEnabled),
     logStream(0),
     clock(clock),
@@ -1265,9 +1266,9 @@ bool CPU::IsLogEnabled()
 
 void CPU::EnableLog()
 {
-    if (!(logEnabled.load()))
+    if (!logEnabled && !logFlag)
     {
-        logEnabled = true;
+        logFlag = true;
         long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         std::string logName = nes.GetGameName() + "_" + std::to_string(time) + ".log";
         logStream = new std::ofstream(logName);
@@ -1276,8 +1277,9 @@ void CPU::EnableLog()
 
 void CPU::DisableLog()
 {
-    if (logEnabled.load())
+    if (logEnabled || logFlag)
     {
+        logFlag = false;
         logEnabled = false;
         logStream->close();
         delete logStream;
@@ -2016,6 +2018,12 @@ bool CPU::NextInst()
     }
 
     if (IsLogEnabled()) PrintLog();
+        
+    if (logFlag)
+    {
+        logFlag = false;
+        logEnabled = true;
+    }
 
     return true;
 }
@@ -2159,11 +2167,10 @@ void CPU::PrintLog()
 
     out << registers << endl;
 
-    opcode[0] = 0;
-    registers[0] = 0;
-    addressing[0] = 0;
-    instruction[0] = 0;
-    programCounter[0] = 0;
-    addressingArg1[0] = 0;
-    addressingArg2[0] = 0;
+    sprintf(registers, "");
+    sprintf(addressing, "");
+    sprintf(instruction, "");
+    sprintf(programCounter, "");
+    sprintf(addressingArg1, "");
+    sprintf(addressingArg2, "");
 }

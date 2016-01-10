@@ -33,6 +33,7 @@ class CPU
     std::condition_variable pauseCV;
     volatile bool isPaused;
 
+    std::atomic<bool> logFlag;
     std::atomic<bool> logEnabled;
     std::ofstream* logStream;
 
