@@ -3,6 +3,9 @@
 
 #include <boost/chrono/chrono.hpp>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
+
 #include "wx/thread.h"
 #include "wx/event.h"
 
@@ -23,6 +26,8 @@ class NESThread : public wxThread, public IDisplay
     bool expectedStop;
     int fpsCounter;
     std::atomic<int> currentFPS;
+	std::mutex frameMutex;
+	std::condition_variable frameCV;
     boost::chrono::steady_clock::time_point intervalStart;
 
     unsigned char* nameTable[4];
@@ -36,13 +41,13 @@ class NESThread : public wxThread, public IDisplay
     int pixelCount;
     unsigned char* pixelArray;
 
-    volatile bool frameLocked;
-
     virtual wxThread::ExitCode Entry();
 
 public:
     NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnabled = false);
     ~NESThread();
+
+	NES& GetNES();
 
     std::string& GetGameName();
 

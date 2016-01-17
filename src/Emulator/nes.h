@@ -21,18 +21,18 @@
 
 class NES
 {
-    Clock masterClock;
-    uint32_t clock;
-    int scanline;
+    //Clock masterClock;
+    //uint32_t clock;
+    //int scanline;
     bool stop;
     bool pause;
     bool nmi;
 
     std::string gameName;
 
+	CPU& cpu;
+	PPU& ppu;
     Cart& cart;
-    PPU& ppu;
-    CPU& cpu;
 
     std::mutex stopMutex;
     std::mutex pauseMutex;
@@ -41,11 +41,6 @@ public:
 
     NES(std::string filename, IDisplay& display, bool cpuLogEnabled = false);
 
-    uint32_t GetClock();
-    uint32_t GetScanline();
-    void IncrementClock(int increment);
-    void RaiseNMI();
-    bool NMIRaised();
     std::string& GetGameName();
 
     bool IsStopped();
@@ -54,7 +49,10 @@ public:
     void SetControllerOneState(uint8_t state);
     uint8_t GetControllerOneState();
 
-    void EnableCPULog();
+	void EnableFrameLimit();
+	void DisableFrameLimit();
+	
+	void EnableCPULog();
     void DisableCPULog();
 
     void GetNameTable(int table, uint8_t* pixels);

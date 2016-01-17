@@ -17,6 +17,12 @@ void MainWindow::StartEmulator(std::string& filename)
         if (!nesThread)
         {
             nesThread = new NESThread(this, filename, settings->FindItem(ID_CPU_LOG)->IsChecked());
+			NES& nes = nesThread->GetNES();
+
+			if (!emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked())
+			{
+				nes.DisableFrameLimit();
+			}
 
             romList = 0;
             vbox->Clear(true);
@@ -105,6 +111,23 @@ void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
             nesThread->DisableCPULog();
         }
     }
+}
+
+void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
+{
+	if (nesThread)
+	{
+		NES& nes = nesThread->GetNES();
+
+		if (emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked())
+		{
+			nes.EnableFrameLimit();
+		}
+		else
+		{
+			nes.DisableFrameLimit();
+		}
+	}
 }
 
 void MainWindow::OnSettings(wxCommandEvent& WXUNUSED(event))
@@ -212,7 +235,7 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 
     if (nesThread)
     {
-	SetClientSize(gameSize);
+		SetClientSize(gameSize);
 	
         wxImage image = frame;
         image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
@@ -384,8 +407,10 @@ MainWindow::MainWindow()
     emulator->Append(ID_EMULATOR_STOP, wxT("&Stop"));
     emulator->AppendSeparator();
     emulator->AppendSubMenu(size, wxT("&Size"));
+	emulator->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
+	emulator->FindItem(ID_EMULATOR_LIMIT)->Check();
     emulator->AppendSeparator();
-    emulator->Append(ID_EMUALTOR_PPU_DEBUG, wxT("&PPU Debugger"));
+    emulator->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
     settings = new wxMenu;
     settings->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
@@ -416,7 +441,8 @@ MainWindow::MainWindow()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_2X);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_3X);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_4X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMUALTOR_PPU_DEBUG);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
+	Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
 
     Bind(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEventHandler(MainWindow::OnThreadUpdate), this, wxID_ANY);
     Bind(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE, wxThreadEventHandler(MainWindow::OnFPSUpdate), this, wxID_ANY);

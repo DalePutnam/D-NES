@@ -14,11 +14,12 @@
 #include "../clock.h"
 
 class NES;
+class CPU;
 
 class Cart
 {
 public:
-    static Cart& Create(std::string& filename, Clock& clock, NES& nes);
+    static Cart& Create(std::string& filename, NES& nes, CPU& cpu);
 
     enum MirrorMode
     {

@@ -9,6 +9,7 @@
 #define PPU_H_
 
 #include <queue>
+#include <atomic>
 #include <boost/cstdint.hpp>
 #include <boost/chrono/chrono.hpp>
 
@@ -18,17 +19,21 @@
 
 
 class NES;
+class CPU;
 
 class PPU
 {
-    Clock& clock;
     NES& nes;
-    Cart& cart;
-    IDisplay& display;
+	IDisplay& display;
+	CPU* cpu;
+    Cart* cart;
 
+	enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
+    
     static const uint32_t rgbLookupTable[64];
 
     boost::chrono::high_resolution_clock::time_point intervalStart;
+	std::atomic<bool> limitTo60FPS;
 
     uint32_t ppuClock;
     int16_t dot;
@@ -70,14 +75,8 @@ class PPU
 
     bool addressLatch;
 
-    // Main Register Buffers
-    std::queue<std::pair<uint64_t, uint8_t>> ctrlBuffer;
-    std::queue<std::pair<uint64_t, uint8_t>> maskBuffer;
-    std::queue<std::pair<uint64_t, uint8_t>> scrollBuffer;
-    std::queue<std::pair<uint64_t, uint8_t>> oamAddrBuffer;
-    std::queue<std::pair<uint64_t, uint8_t>> ppuAddrBuffer;
-    std::queue<std::pair<uint64_t, uint8_t>> oamDataBuffer;
-    std::queue<std::pair<uint64_t, uint8_t>> ppuDataBuffer;
+    // Register Buffer
+	std::queue<std::tuple<uint64_t, uint8_t, Register>> mainBuffer;
 
     // PPU Data Read Buffer
     uint8_t dataBuffer;
@@ -131,7 +130,12 @@ class PPU
     void WriteNameTable(uint16_t address, uint8_t value);
 
 public:
-    PPU(Clock& clock, NES& nes, Cart& cart, IDisplay& display);
+    PPU(NES& nes, IDisplay& display);
+	void AttachCPU(CPU& cpu);
+	void AttachCart(Cart& cart);
+
+	void EnableFrameLimit();
+	void DisableFrameLimit();
 
     uint8_t ReadPPUStatus();
     uint8_t ReadOAMData();
@@ -147,6 +151,7 @@ public:
 
     int ScheduleSync();
     void Sync();
+	void Run();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);

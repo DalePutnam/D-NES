@@ -17,14 +17,21 @@
 #include <fstream>
 #include <condition_variable>
 
-#include "ppu.h"
 #include "clock.h"
 #include "mappers/cart.h"
 
 class NES;
+class PPU;
 
 class CPU
 {
+	NES& nes;
+	PPU* ppu;
+	Cart* cart;
+
+	uint64_t clock;
+	int32_t scanline;
+
     // CPU Main Memory
     uint8_t memory[0x800];
 
@@ -46,17 +53,13 @@ class CPU
     char addressing[28];
     char registers[41];
 
-    Clock& clock;
-    NES& nes;
-    PPU& ppu;
-    Cart& cart;
-
     bool controllerStrobe;
     uint8_t controllerOneShift;
     std::atomic<uint8_t> controllerOneState;
 
     // Cycles to next NMI check
     int nextNMI;
+	bool nmiRaised;
 
     // Registers
     uint16_t PC; // Program Counter
@@ -65,6 +68,8 @@ class CPU
     uint8_t A; // Accumulator
     uint8_t X; // X Index
     uint8_t Y; // Y Index
+
+	void IncrementClock();
 
     uint8_t Read(uint16_t address);
     void Write(uint8_t M, uint16_t address);
@@ -159,7 +164,7 @@ class CPU
     void HandleNMI(); // Handle non-maskable interrupt
     void HandleIRQ(); // Handle standard interrupt
 
-    bool NextInst(); // Execute next instruction
+    bool ExecuteInstruction(); // Execute next instruction
 
     void SetControllerStrobe(bool strobe);
     uint8_t GetControllerOneShift();
@@ -186,13 +191,18 @@ class CPU
 
 public:
 
-    CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled = false);
+    CPU(NES& nes, bool logEnabled = false);
+	void AttachPPU(PPU& ppu);
+	void AttachCart(Cart& cart);
+
+	uint64_t GetClock();
+	void RaiseNMI();
+
+	void SetControllerOneState(uint8_t state);
+	uint8_t GetControllerOneState();
+
     void Run(); // Run CPU
     void Reset(); // Reset the CPU to starting conditions
-
-    void SetControllerOneState(uint8_t state);
-    uint8_t GetControllerOneState();
-
     void Pause();
     void Resume();
 

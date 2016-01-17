@@ -31,8 +31,7 @@ NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnab
     width(256),
     height(240),
     pixelCount(0),
-    pixelArray(new unsigned char[width*height * 3]),
-    frameLocked(false)  
+    pixelArray(new unsigned char[width*height * 3])
 {
     for (int i = 0; i < 64; ++i)
     {
@@ -77,6 +76,11 @@ NESThread::~NESThread()
     delete[] pixelArray;
 }
 
+NES& NESThread::GetNES()
+{
+	return nes;
+}
+
 std::string& NESThread::GetGameName()
 {
     return nes.GetGameName();
@@ -105,7 +109,6 @@ void NESThread::EmulatorPause()
 void NESThread::Stop()
 {
     expectedStop = true;
-    frameLocked = false;
     nes.Stop();
 }
 
@@ -121,8 +124,6 @@ unsigned char NESThread::GetControllerOneState()
 
 void NESThread::NextPixel(unsigned int pixel)
 {
-    while (frameLocked);
-
     unsigned char red = static_cast<unsigned char>((pixel & 0xFF0000) >> 16);
     unsigned char green = static_cast<unsigned char>((pixel & 0x00FF00) >> 8);
     unsigned char blue = static_cast<unsigned char>(pixel & 0x0000FF);
@@ -130,16 +131,17 @@ void NESThread::NextPixel(unsigned int pixel)
     pixelArray[pixelCount * 3] = red;
     pixelArray[(pixelCount * 3) + 1] = green;
     pixelArray[(pixelCount * 3) + 2] = blue;
+
     ++pixelCount;
 
     if (pixelCount == width * height)
     {
-        frameLocked = true;
+		using namespace boost::chrono;
+
+		std::unique_lock<std::mutex> lock(frameMutex);
         wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE));
         pixelCount = 0;
         fpsCounter++;
-
-        using namespace boost::chrono;
 
         steady_clock::time_point now = steady_clock::now();
         microseconds time_span = duration_cast<microseconds>(now - intervalStart);
@@ -150,18 +152,19 @@ void NESThread::NextPixel(unsigned int pixel)
             intervalStart = steady_clock::now();
             wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE));
         }
+
+		frameCV.wait(lock);
     }
 }
 
 void NESThread::UpdateFrame(unsigned char* frameBuffer)
 {
-    frameLocked = true;
+	using namespace boost::chrono;
+
+	std::unique_lock<std::mutex> lock(frameMutex);
+
     pixelArray = frameBuffer;
     wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE));
-
-    while (frameLocked);
-
-    using namespace boost::chrono;
 
     fpsCounter++;
     steady_clock::time_point now = steady_clock::now();
@@ -173,6 +176,8 @@ void NESThread::UpdateFrame(unsigned char* frameBuffer)
         intervalStart = steady_clock::now();
         wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE));
     }
+
+	frameCV.wait(lock);
 }
 
 unsigned char* NESThread::GetFrame()
@@ -182,7 +187,8 @@ unsigned char* NESThread::GetFrame()
 
 void NESThread::UnlockFrame()
 {
-    frameLocked = false;
+	std::unique_lock<std::mutex> lock(frameMutex);
+	frameCV.notify_all();
 }
 
 int NESThread::GetCurrentFPS()

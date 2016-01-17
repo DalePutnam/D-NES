@@ -9,65 +9,28 @@
 #include "mappers/nrom.h"
 #include <boost/algorithm/string.hpp>
 
-NES::NES(std::string filename, IDisplay& display, bool cpuLogEnabled)
-    : clock(0),
-    scanline(241),
+NES::NES(std::string filename, IDisplay& display, bool cpuLogEnabled) : 
     stop(true),
     pause(false),
     nmi(false),
-    cart(Cart::Create(filename, masterClock, *this)),
-    ppu(*new PPU(masterClock, *this, cart, display)),
-    cpu(*new CPU(masterClock, *this, ppu, cart, cpuLogEnabled))
-
+	cpu(*new CPU(*this, cpuLogEnabled)),
+    ppu(*new PPU(*this, display)),
+	cart(Cart::Create(filename, *this, cpu))
 {
+	cpu.AttachPPU(ppu);
+	cpu.AttachCart(cart);
+
+	ppu.AttachCPU(cpu);
+	ppu.AttachCart(cart);
+
     std::vector<std::string> stringList;
     boost::algorithm::split(stringList, filename, boost::is_any_of("\\/"));
     gameName = stringList.back().substr(0, stringList.back().length() - 4);
 }
 
-uint32_t NES::GetClock()
-{
-    return clock;
-}
-
-uint32_t NES::GetScanline()
-{
-    return scanline;
-}
-
 std::string& NES::GetGameName()
 {
     return gameName;
-}
-
-void NES::IncrementClock(int increment)
-{
-    uint32_t old = clock;
-    clock += increment;
-
-    if (clock % 341 < old % 341)
-    {
-        if (scanline == 260)
-        {
-            scanline = -1;
-        }
-        else
-        {
-            scanline++;
-        }
-    }
-}
-
-void NES::RaiseNMI()
-{
-    nmi = true;
-}
-
-bool NES::NMIRaised()
-{
-    bool value = nmi;
-    nmi = false;
-    return value;
 }
 
 void NES::SetControllerOneState(uint8_t state)
@@ -80,6 +43,15 @@ uint8_t NES::GetControllerOneState()
     return cpu.GetControllerOneState();
 }
 
+void NES::EnableFrameLimit()
+{
+	ppu.EnableFrameLimit();
+}
+
+void NES::DisableFrameLimit()
+{
+	ppu.DisableFrameLimit();
+}
 
 void NES::EnableCPULog()
 {

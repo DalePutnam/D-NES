@@ -4,6 +4,7 @@
 
 #include "sxrom.h"
 #include "../nes.h"
+#include "../cpu.h"
 
 Cart::MirrorMode SXROM::GetMirrorMode()
 {
@@ -187,9 +188,9 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
         }
         else
         {
-            if (clock.GetClock() - lastWriteCycle > 6)
+            if (cpu.GetClock() - lastWriteCycle > 6)
             {
-                lastWriteCycle = clock.GetClock();
+                lastWriteCycle = cpu.GetClock();
                 tempRegister = tempRegister | ((M & 0x1) << counter);
                 ++counter;
             }
@@ -224,11 +225,11 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-SXROM::SXROM(std::string& filename, Clock& clock, NES& nes) :
+SXROM::SXROM(std::string& filename, NES& nes, CPU& cpu) :
     file(*new boost::iostreams::mapped_file_source(filename)),
     save(0),
-    clock(clock),
     nes(nes),
+	cpu(cpu),
     lastWriteCycle(0),
     counter(0),
     tempRegister(0),

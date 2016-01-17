@@ -11,6 +11,7 @@
 
 #include "cpu.h"
 #include "nes.h"
+#include "ppu.h"
 
 uint8_t CPU::DebugRead(uint16_t address)
 {
@@ -26,7 +27,7 @@ uint8_t CPU::DebugRead(uint16_t address)
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-        return cart.PrgRead(address - 0x6000);
+		return cart->PrgRead(address - 0x6000);
     }
     else
     {
@@ -34,10 +35,27 @@ uint8_t CPU::DebugRead(uint16_t address)
     }
 }
 
+void CPU::IncrementClock()
+{
+	uint64_t old = clock;
+	clock += 3;
+
+	if (clock % 341 < old % 341)
+	{
+		if (scanline == 260)
+		{
+			scanline = -1;
+		}
+		else
+		{
+			scanline++;
+		}
+	}
+}
+
 uint8_t CPU::Read(uint16_t address)
 {
-    clock.CPUIncrementClock();
-    //nes.IncrementClock(3);
+	IncrementClock();
     if (nextNMI > 0) nextNMI -= 3;
 
     // Any address less then 0x2000 is just the
@@ -52,15 +70,15 @@ uint8_t CPU::Read(uint16_t address)
 
         if (addr == 2)
         {
-            return ppu.ReadPPUStatus();
+			return ppu->ReadPPUStatus();
         }
         else if (addr == 4)
         {
-            return ppu.ReadOAMData();
+			return ppu->ReadOAMData();
         }
         else if (addr == 7)
         {
-            return ppu.ReadPPUData();
+			return ppu->ReadPPUData();
         }
         else
         {
@@ -73,7 +91,7 @@ uint8_t CPU::Read(uint16_t address)
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-        return cart.PrgRead(address - 0x6000);
+		return cart->PrgRead(address - 0x6000);
     }
     else
     {
@@ -83,8 +101,8 @@ uint8_t CPU::Read(uint16_t address)
 
 void CPU::Write(uint8_t M, uint16_t address)
 {
-    clock.CPUIncrementClock();
-    //nes.IncrementClock(3);
+	// Note: THIS IS NOT THREAD SAFE
+    IncrementClock();
     if (nextNMI > 0) nextNMI -= 3;
 
     // OAM DMA
@@ -92,25 +110,22 @@ void CPU::Write(uint8_t M, uint16_t address)
     {
         uint16_t page = M * 0x100;
 
-        if (clock.GetClock() % 6 == 0)
+        if (clock % 6 == 0)
         {
-            clock.CPUIncrementClock();
-            //nes.IncrementClock(3);
+            IncrementClock();
             if (nextNMI > 0) nextNMI -= 3;
         }
         else
         {
-            clock.CPUIncrementClock();
-            clock.CPUIncrementClock();
-            //nes.IncrementClock(6);
+            IncrementClock();
+            IncrementClock();
             if (nextNMI > 0) nextNMI -= 6;
         }
 
         for (int i = 0; i < 0x100; ++i)
         {
-            ppu.WriteOAMDATA(Read(page + i));
-            clock.CPUIncrementClock();
-            //nes.IncrementClock(3);
+			ppu->WriteOAMDATA(Read(page + i));
+			IncrementClock();
             if (nextNMI > 0) nextNMI -= 3;
         }
     }
@@ -126,31 +141,31 @@ void CPU::Write(uint8_t M, uint16_t address)
 
         if (addr == 0)
         {
-            ppu.WritePPUCTRL(M);
+			ppu->WritePPUCTRL(M);
         }
         else if (addr == 1)
         {
-            ppu.WritePPUMASK(M);
+			ppu->WritePPUMASK(M);
         }
         else if (addr == 3)
         {
-            ppu.WriteOAMADDR(M);
+			ppu->WriteOAMADDR(M);
         }
         else if (addr == 4)
         {
-            ppu.WriteOAMDATA(M);
+			ppu->WriteOAMDATA(M);
         }
         else if (addr == 5)
         {
-            ppu.WritePPUSCROLL(M);
+			ppu->WritePPUSCROLL(M);
         }
         else if (addr == 6)
         {
-            ppu.WritePPUADDR(M);
+			ppu->WritePPUADDR(M);
         }
         else if (addr == 7)
         {
-            ppu.WritePPUDATA(M);
+			ppu->WritePPUDATA(M);
         }
     }
     else if (address == 0x4016)
@@ -159,7 +174,7 @@ void CPU::Write(uint8_t M, uint16_t address)
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-        cart.PrgWrite(M, address - 0x6000);
+		cart->PrgWrite(M, address - 0x6000);
     }
 }
 
@@ -1230,20 +1245,22 @@ uint8_t CPU::GetControllerOneShift()
     return result;
 }
 
-CPU::CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
-    pauseFlag(false),
-    isPaused(false),
-    logFlag(false),
-    logEnabled(logEnabled),
-    logStream(0),
-    clock(clock),
-    nes(nes),
-    ppu(ppu),
-    cart(cart),
-    controllerStrobe(0),
-    controllerOneShift(0),
-    controllerOneState(0),
-    nextNMI(ppu.ScheduleSync()),
+CPU::CPU(NES& nes, bool logEnabled) :
+	pauseFlag(false),
+	isPaused(false),
+	logFlag(false),
+	logEnabled(logEnabled),
+	logStream(0),
+	nes(nes),
+	ppu(0),
+	cart(0),
+	clock(0),
+	scanline(0),
+	controllerStrobe(0),
+	controllerOneShift(0),
+	controllerOneState(0),
+	nextNMI(0),
+	nmiRaised(false),
     S(0xFD),
     P(0x24),
     A(0),
@@ -1254,9 +1271,30 @@ CPU::CPU(Clock& clock, NES& nes, PPU& ppu, Cart& cart, bool logEnabled) :
     {
         memory[i] = 0x00;
     }
+}
 
-    // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-    PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
+uint64_t CPU::GetClock()
+{
+	return clock;
+}
+
+void CPU::RaiseNMI()
+{
+    nmiRaised = true;
+}
+
+
+void CPU::AttachPPU(PPU& ppu)
+{
+	this->ppu = &ppu;
+}
+
+void CPU::AttachCart(Cart& cart)
+{
+	this->cart = &cart;
+
+	// Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
+	PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
 }
 
 bool CPU::IsLogEnabled()
@@ -1346,7 +1384,7 @@ void CPU::Run()
 
     while (!nes.IsStopped()) // Run until illegal opcode or stop command issued
     {
-        if (!NextInst()) break;
+        if (!ExecuteInstruction()) break;
 
         if (pauseFlag.load())
         {
@@ -1361,8 +1399,14 @@ void CPU::Run()
 
 // Execute the next instruction at PC and return true
 // or return false if the next value is not an opcode
-bool CPU::NextInst()
+bool CPU::ExecuteInstruction()
 {
+	if (logFlag)
+	{
+		logFlag = false;
+		logEnabled = true;
+	}
+
     if (IsLogEnabled())
     {
         LogProgramCounter();
@@ -1372,11 +1416,12 @@ bool CPU::NextInst()
     // Handle non-maskable interrupts
     if (nextNMI <= 0)
     {
-        ppu.Sync();
-        nextNMI = ppu.ScheduleSync();
+        ppu->Sync();
+        nextNMI = ppu->ScheduleSync();
 
-        if (nes.NMIRaised())
+        if (nmiRaised)
         {
+			nmiRaised = false;
             Read(PC);
             Read(PC);
             HandleNMI();
@@ -2018,12 +2063,6 @@ bool CPU::NextInst()
     }
 
     if (IsLogEnabled()) PrintLog();
-        
-    if (logFlag)
-    {
-        logFlag = false;
-        logEnabled = true;
-    }
 
     return true;
 }
@@ -2035,7 +2074,7 @@ void CPU::LogProgramCounter()
 
 void CPU::LogRegisters()
 {
-    sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3lu SL:%d", A, X, Y, P, S, clock.GetClock() % 341, clock.GetScanline());
+	sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3lu SL:%d", A, X, Y, P, S, clock % 341, scanline);
 }
 
 void CPU::LogOpcode(uint8_t opcode)
