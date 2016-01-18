@@ -72,7 +72,6 @@ public:
     unsigned char* GetPatternTable(int tableID, int paletteID);
     unsigned char* GetPalette(int tableID);
     unsigned char* GetPrimarySprite(int sprite);
-    unsigned char* GetSecondarySprite(int sprite);
 };
 
 #endif

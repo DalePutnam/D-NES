@@ -83,11 +83,6 @@ void NES::GetPrimaryOAM(int sprite, uint8_t* pixels)
     ppu.GetPrimaryOAM(sprite, pixels);
 }
 
-void NES::GetSecondaryOAM(int sprite, uint8_t* pixels)
-{
-    ppu.GetSecondaryOAM(sprite, pixels);
-}
-
 bool NES::IsStopped()
 {
     bool isStopped;

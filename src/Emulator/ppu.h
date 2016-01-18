@@ -66,7 +66,7 @@ class PPU
     bool sprite0Hit;
     bool inVBLANK;
     bool nmiOccured;
-    int sprite0SecondaryOAM;
+    bool sprite0SecondaryOAM;
 
     uint8_t oamAddress;
     uint16_t ppuAddress;
@@ -107,14 +107,11 @@ class PPU
     uint8_t backgroundAttributeShift1;
     uint8_t backgroundAttribute;
 
-    uint8_t spriteCount;
-    uint8_t glitchCount;
+	uint8_t spriteCount;
     uint8_t spriteShift0[8];
     uint8_t spriteShift1[8];
     uint8_t spriteAttribute[8];
     uint8_t spriteCounter[8];
-
-    void Tick();
 
     void UpdateState();
     void SpriteEvaluation();
@@ -150,13 +147,11 @@ public:
     void WritePPUDATA(uint8_t M);
 
     int ScheduleSync();
-    void Sync();
 	void Run();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
-    void GetSecondaryOAM(int sprite, uint8_t* pixels);
 
     ~PPU();
 };

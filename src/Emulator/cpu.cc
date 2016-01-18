@@ -1283,7 +1283,6 @@ void CPU::RaiseNMI()
     nmiRaised = true;
 }
 
-
 void CPU::AttachPPU(PPU& ppu)
 {
 	this->ppu = &ppu;
@@ -1416,7 +1415,7 @@ bool CPU::ExecuteInstruction()
     // Handle non-maskable interrupts
     if (nextNMI <= 0)
     {
-        ppu->Sync();
+        ppu->Run();
         nextNMI = ppu->ScheduleSync();
 
         if (nmiRaised)

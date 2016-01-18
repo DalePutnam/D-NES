@@ -20,8 +20,8 @@ wxThread::ExitCode NESThread::Entry()
     return static_cast<wxThread::ExitCode>(0);
 }
 
-NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnabled)
-    : wxThread(wxTHREAD_JOINABLE),
+NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnabled):
+	wxThread(wxTHREAD_JOINABLE),
     handler(handler),
     nes(*new NES(filename, *this, cpuLogEnabled)),
     expectedStop(false),
@@ -224,9 +224,3 @@ unsigned char* NESThread::GetPrimarySprite(int sprite)
     return primarySprite[sprite];
 }
 
-unsigned char* NESThread::GetSecondarySprite(int sprite)
-{
-    if (!secondarySprite[sprite]) secondarySprite[sprite] = new unsigned char[192];
-    nes.GetSecondaryOAM(sprite, secondarySprite[sprite]);
-    return secondarySprite[sprite];
-}

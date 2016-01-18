@@ -59,7 +59,6 @@ public:
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
-    void GetSecondaryOAM(int sprite, uint8_t* pixels);
 
     void Start();
     void Stop();
