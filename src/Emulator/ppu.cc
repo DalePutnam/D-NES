@@ -794,7 +794,20 @@ void PPU::WritePPUCTRL(uint8_t M)
 
     if (!reset)
     {
-		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUCTRL));
+		if (inVBLANK)
+		{
+			ppuTempAddress = (ppuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(M)) << 10); // High bits of NameTable address
+			ppuAddressIncrement = ((0x4 & M) >> 2) != 0;
+			baseSpriteTableAddress = 0x1000 * ((0x8 & M) >> 3);
+			baseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
+			spriteSize = ((0x20 & M) >> 5) != 0;
+			nmiEnabled = ((0x80 & M) >> 7) != 0;
+			lowerBits = (0x1F & M);
+		}
+		else
+		{
+			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUCTRL));
+		}
     }
 }
 
@@ -807,18 +820,49 @@ void PPU::WritePPUMASK(uint8_t M)
 
     if (!reset)
     {
-		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUMASK));
+		if (inVBLANK)
+		{
+			grayscale = (0x1 & M);
+			showBackgroundLeft = ((0x2 & M) >> 1) != 0;
+			showSpritesLeft = ((0x4 & M) >> 2) != 0;
+			showBackground = ((0x8 & M) >> 3) != 0;
+			showSprites = ((0x10 & M) >> 4) != 0;
+			intenseRed = ((0x20 & M) >> 5) != 0;
+			intenseGreen = ((0x40 & M) >> 6) != 0;
+			intenseBlue = ((0x80 & M) >> 7) != 0;
+			lowerBits = (0x1F & M);
+		}
+		else
+		{
+			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUMASK));
+		}
     }
 }
 
 void PPU::WriteOAMADDR(uint8_t M)
 {
-	mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMADDR));
+	if (inVBLANK)
+	{
+		oamAddress = M;
+		lowerBits = (0x1F & oamAddress);
+	}
+	else
+	{
+		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMADDR));
+	}
 }
 
 void PPU::WriteOAMDATA(uint8_t M)
 {
-	mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMDATA));
+	if (inVBLANK)
+	{
+		primaryOAM[oamAddress++] = M;
+		lowerBits = (0x1F & M);
+	}
+	else
+	{
+		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMDATA));
+	}
 }
 
 void PPU::WritePPUSCROLL(uint8_t M)
@@ -830,7 +874,27 @@ void PPU::WritePPUSCROLL(uint8_t M)
 
     if (!reset)
     {
-		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUSCROLL));
+		if (inVBLANK)
+		{
+			if (addressLatch)
+			{
+				ppuTempAddress = (ppuTempAddress & 0x0FFF) | ((0x7 & M) << 12);
+				ppuTempAddress = (ppuTempAddress & 0x7C1F) | ((0xF8 & M) << 2);
+			}
+			else
+			{
+				fineXScroll = static_cast<uint8_t>(0x7 & M);
+				ppuTempAddress = (ppuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
+			}
+
+			addressLatch = !addressLatch;
+			lowerBits = static_cast<uint8_t>(0x1F & M);
+		}
+		else
+		{
+			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUSCROLL));
+		}
+		
     }
 }
 
@@ -843,13 +907,35 @@ void PPU::WritePPUADDR(uint8_t M)
 
     if (!reset)
     {
-		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUADDR));
+		if (inVBLANK)
+		{
+			addressLatch ? ppuTempAddress = (ppuTempAddress & 0x7F00) | M : ppuTempAddress = (ppuTempAddress & 0x00FF) | ((0x3F & M) << 8);
+			if (addressLatch) ppuAddress = ppuTempAddress;
+			addressLatch = !addressLatch;
+			lowerBits = static_cast<uint8_t>(0x1F & M);
+		}
+		else
+		{
+			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUADDR));
+		}
+		
     }
 }
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-	mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUDATA));
+	if (inVBLANK)
+	{
+		Write(ppuAddress, M);
+		ppuAddressIncrement ? ppuAddress = (ppuAddress + 32) & 0x7FFF : ppuAddress = (ppuAddress + 1) & 0x7FFF;
+		lowerBits = (0x1F & M);
+	}
+	else
+	{
+		uint64_t clock = cpu->GetClock();
+		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUDATA));
+	}
+	
 }
 
 // At this point this function just gives two points where the PPU should sync with the CPU
@@ -1228,10 +1314,10 @@ void PPU::Run()
 
 		while (line >= 240 && line <= 260 && cpu->GetClock() != ppuClock)
 		{
-			UpdateState();
-
 			if (dot == 1 && line == 241 && ppuClock > 88974)
 			{
+				UpdateState();
+
 				even = !even;
 				inVBLANK = true;
 				nmiOccured = true;
@@ -1240,9 +1326,41 @@ void PPU::Run()
 				{
 					cpu->RaiseNMI();
 				}
-			}
 
-			IncrementClock();
+				IncrementClock();
+			}
+			else if (inVBLANK)
+			{
+				UpdateState();
+
+				uint64_t timeToSync = cpu->GetClock() - ppuClock;
+				uint64_t timeToEndVBlank = (341 - dot + 1) + ((260 - line) * 341);
+
+				if (timeToEndVBlank > timeToSync)
+				{
+					line += static_cast<int16_t>(timeToSync / 341);
+					dot += static_cast<int16_t>(timeToSync % 341);
+
+					if (dot > 340)
+					{
+						dot %= 341;
+						++line;
+					}
+
+					ppuClock += timeToSync;
+				}
+				else
+				{
+					ppuClock += timeToEndVBlank;
+					dot = 1;
+					line = 261;
+				}
+			}
+			else
+			{
+				IncrementClock();
+				UpdateState();
+			}
 		}
 	}
 }

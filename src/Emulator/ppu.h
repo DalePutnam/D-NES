@@ -35,7 +35,7 @@ class PPU
     boost::chrono::high_resolution_clock::time_point intervalStart;
 	std::atomic<bool> limitTo60FPS;
 
-    uint32_t ppuClock;
+    uint64_t ppuClock;
     int16_t dot;
     int16_t line;
     bool even;

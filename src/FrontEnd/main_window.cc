@@ -4,6 +4,7 @@
 #include "wx/msgdlg.h"
 #include "wx/filedlg.h"
 #include "wx/dcclient.h"
+#include "wx/dcmemory.h"
 #include "boost/filesystem.hpp"
 
 #include "main_window.h"
@@ -90,12 +91,10 @@ void MainWindow::StopEmulator(bool showRomList)
 void MainWindow::UpdateImage(unsigned char* data)
 {
     frame.Create(256, 240, data, true);
-    wxImage image = frame;
-    image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-    wxBitmap bitmap(image, 24);
-
+	wxBitmap bitmap(frame, 24);
+	wxMemoryDC mdc(bitmap);
     wxClientDC dc(this);
-    dc.DrawBitmap(bitmap, 0, 0);
+	dc.StretchBlit(0, 0, GetVirtualSize().GetX(), GetVirtualSize().GetY(), &mdc, 0, 0, 256, 240);
 }
 
 void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
@@ -236,13 +235,11 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
     if (nesThread)
     {
 		SetClientSize(gameSize);
-	
-        wxImage image = frame;
-        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-        wxBitmap bitmap(image, 24);
 
-        wxClientDC dc(this);
-        dc.DrawBitmap(bitmap, 0, 0);
+		wxBitmap bitmap(frame, 24);
+		wxMemoryDC mdc(bitmap);
+		wxClientDC dc(this);
+		dc.StretchBlit(0, 0, GetVirtualSize().GetX(), GetVirtualSize().GetY(), &mdc, 0, 0, 256, 240);
     }
 }
 
@@ -292,14 +289,12 @@ void MainWindow::OnSize(wxSizeEvent& event)
 {
     if (nesThread)
     {
-        wxImage image = frame;
-        image.Rescale(GetVirtualSize().GetX(), GetVirtualSize().GetY());
-        wxBitmap bitmap(image, 24);
+		wxBitmap bitmap(frame, 24);
+		wxMemoryDC mdc(bitmap);
+		wxClientDC dc(this);
+		dc.StretchBlit(0, 0, GetVirtualSize().GetX(), GetVirtualSize().GetY(), &mdc, 0, 0, 256, 240);
 
-        wxClientDC dc(this);
-        dc.DrawBitmap(bitmap, 0, 0);
-
-	event.Skip();
+		event.Skip();
     }
 }
 
