@@ -40,6 +40,9 @@ class PPU
     int16_t line;
     bool even;
     bool reset;
+	bool suppressNMI;
+	bool suppressNMIFlag;
+	bool interruptActive;
 
     // Main Registers
 
@@ -128,8 +131,13 @@ class PPU
 
 public:
     PPU(NES& nes, IDisplay& display);
+	~PPU();
 	void AttachCPU(CPU& cpu);
 	void AttachCart(Cart& cart);
+
+	void Run();
+	int ScheduleSync();
+	bool CheckInterrupt();
 
 	void EnableFrameLimit();
 	void DisableFrameLimit();
@@ -137,7 +145,6 @@ public:
     uint8_t ReadPPUStatus();
     uint8_t ReadOAMData();
     uint8_t ReadPPUData();
-
     void WritePPUCTRL(uint8_t M);
     void WritePPUMASK(uint8_t M);
     void WriteOAMADDR(uint8_t M);
@@ -146,14 +153,10 @@ public:
     void WritePPUADDR(uint8_t M);
     void WritePPUDATA(uint8_t M);
 
-    int ScheduleSync();
-	void Run();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
-
-    ~PPU();
 };
 
 #endif /* PPU_H_ */

@@ -90,11 +90,8 @@ void MainWindow::StopEmulator(bool showRomList)
 
 void MainWindow::UpdateImage(unsigned char* data)
 {
-    frame.Create(256, 240, data, true);
-	wxBitmap bitmap(frame, 24);
-	wxMemoryDC mdc(bitmap);
-    wxClientDC dc(this);
-	dc.StretchBlit(0, 0, GetVirtualSize().GetX(), GetVirtualSize().GetY(), &mdc, 0, 0, 256, 240);
+	wxClientDC dc(this);
+	nesThread->DrawFrame(dc, GetVirtualSize().GetX(), GetVirtualSize().GetY());
 }
 
 void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
@@ -170,7 +167,8 @@ void MainWindow::OnThreadUpdate(wxThreadEvent& WXUNUSED(event))
 {
     if (nesThread)
     {
-        UpdateImage(nesThread->GetFrame());
+		wxClientDC dc(this);
+		nesThread->DrawFrame(dc, GetVirtualSize().GetX(), GetVirtualSize().GetY());
 
         if (ppuDebugWindow)
         {
@@ -187,8 +185,6 @@ void MainWindow::OnThreadUpdate(wxThreadEvent& WXUNUSED(event))
                 ppuDebugWindow->UpdatePrimarySprite(i, nesThread->GetPrimarySprite(i));
             }
         }
-
-        nesThread->UnlockFrame();
     }
 }
 
@@ -235,11 +231,6 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
     if (nesThread)
     {
 		SetClientSize(gameSize);
-
-		wxBitmap bitmap(frame, 24);
-		wxMemoryDC mdc(bitmap);
-		wxClientDC dc(this);
-		dc.StretchBlit(0, 0, GetVirtualSize().GetX(), GetVirtualSize().GetY(), &mdc, 0, 0, 256, 240);
     }
 }
 
@@ -289,11 +280,8 @@ void MainWindow::OnSize(wxSizeEvent& event)
 {
     if (nesThread)
     {
-		wxBitmap bitmap(frame, 24);
-		wxMemoryDC mdc(bitmap);
 		wxClientDC dc(this);
-		dc.StretchBlit(0, 0, GetVirtualSize().GetX(), GetVirtualSize().GetY(), &mdc, 0, 0, 256, 240);
-
+		nesThread->DrawFrame(dc, GetVirtualSize().GetX(), GetVirtualSize().GetY());
 		event.Skip();
     }
 }

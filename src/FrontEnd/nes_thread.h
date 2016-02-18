@@ -8,6 +8,7 @@
 
 #include "wx/thread.h"
 #include "wx/event.h"
+#include "wx/dc.h"
 
 #include "nes.h"
 #include "Interfaces/idisplay.h"
@@ -39,7 +40,11 @@ class NESThread : public wxThread, public IDisplay
     int width;
     int height;
     int pixelCount;
-    unsigned char* pixelArray;
+    //unsigned char* pixelArray;
+	unsigned char frameBuffer0[256 * 240 * 3];
+	unsigned char frameBuffer1[256 * 240 * 3];
+	std::atomic<bool> bufferValid0;
+	std::atomic<bool> bufferValid1;
 
     virtual wxThread::ExitCode Entry();
 
@@ -59,9 +64,7 @@ public:
     unsigned char GetControllerOneState();
 
     virtual void NextPixel(unsigned int pixel);
-    virtual void UpdateFrame(unsigned char* frameBuffer);
-    unsigned char* GetFrame();
-    void UnlockFrame();
+	void DrawFrame(wxDC& dc, int width, int height);
 
     void EnableCPULog();
     void DisableCPULog();

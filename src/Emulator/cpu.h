@@ -60,6 +60,7 @@ class CPU
     // Cycles to next NMI check
     int nextNMI;
 	bool nmiRaised;
+	bool nmiPending;
 
     // Registers
     uint16_t PC; // Program Counter

@@ -341,106 +341,120 @@ void PPU::SpriteEvaluation()
 
 void PPU::Render()
 {
-    uint16_t bgPixel = (((backgroundShift0 << fineXScroll) & 0x8000) >> 15) | (((backgroundShift1 << fineXScroll) & 0x8000) >> 14);
-    uint8_t bgAttribute = (((backgroundAttributeShift0 << fineXScroll) & 0x80) >> 7) | (((backgroundAttributeShift1 << fineXScroll) & 0x80) >> 6);
-    uint16_t bgPaletteIndex = 0x3F00 | (bgAttribute << 2) | bgPixel;
-
-    if (!showBackground || (!showBackgroundLeft && dot <= 8)) bgPixel = 0;
-
-    backgroundAttributeShift0 = (backgroundAttributeShift0 << 1) | (backgroundAttribute & 0x1);
-    backgroundAttributeShift1 = (backgroundAttributeShift1 << 1) | ((backgroundAttribute & 0x2) >> 1);
-    backgroundShift0 = backgroundShift0 << 1;
-    backgroundShift1 = backgroundShift1 << 1;
-
-	bool active[8] = { false, false, false, false, false, false, false, false };
-
-	for (int f = 0; f < 8; ++f)
+	if (!showSprites && !showBackground)
 	{
-		if (spriteCounter[f] == 0)
+		if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF)
 		{
-			active[f] = true;
+			display.NextPixel(rgbLookupTable[Read(ppuAddress)]);
 		}
 		else
 		{
-			--spriteCounter[f];
+			display.NextPixel(rgbLookupTable[Read(0x3F00)]);
 		}
 	}
+	else
+	{
+		uint16_t bgPixel = (((backgroundShift0 << fineXScroll) & 0x8000) >> 15) | (((backgroundShift1 << fineXScroll) & 0x8000) >> 14);
+		uint8_t bgAttribute = (((backgroundAttributeShift0 << fineXScroll) & 0x80) >> 7) | (((backgroundAttributeShift1 << fineXScroll) & 0x80) >> 6);
+		uint16_t bgPaletteIndex = 0x3F00 | (bgAttribute << 2) | bgPixel;
 
-    bool spriteFound = false;
-    uint16_t spPixel = 0;
-    uint16_t spPaletteIndex = 0x3F10;
-    uint8_t spPriority = 1;
+		if (!showBackground || (!showBackgroundLeft && dot <= 8)) bgPixel = 0;
 
-    for (int f = 0; f < 8; ++f)
-    {
-		if (active[f])
-        {
-            bool horizontalFlip = ((spriteAttribute[f] & 0x40) >> 6) != 0;
-            uint16_t pixel;
+		backgroundAttributeShift0 = (backgroundAttributeShift0 << 1) | (backgroundAttribute & 0x1);
+		backgroundAttributeShift1 = (backgroundAttributeShift1 << 1) | ((backgroundAttribute & 0x2) >> 1);
+		backgroundShift0 = backgroundShift0 << 1;
+		backgroundShift1 = backgroundShift1 << 1;
 
-            if (horizontalFlip)
-            {
-                pixel = (spriteShift0[f] & 0x1) | ((spriteShift1[f] & 0x1) << 1);
-                spriteShift0[f] = spriteShift0[f] >> 1;
-                spriteShift1[f] = spriteShift1[f] >> 1;
-            }
-            else
-            {
-                pixel = ((spriteShift0[f] & 0x80) >> 7) | ((spriteShift1[f] & 0x80) >> 6);
-                spriteShift0[f] = spriteShift0[f] << 1;
-                spriteShift1[f] = spriteShift1[f] << 1;
-            }
+		bool active[8] = { false, false, false, false, false, false, false, false };
 
-            if (!spriteFound && pixel != 0)
-            {
-                spPixel = pixel;
-                spPriority = (spriteAttribute[f] & 0x20) >> 5;
-                spPaletteIndex |= ((spriteAttribute[f] & 0x03) << 2) | spPixel;
-                spriteFound = true;
+		for (int f = 0; f < 8; ++f)
+		{
+			if (spriteCounter[f] == 0)
+			{
+				active[f] = true;
+			}
+			else
+			{
+				--spriteCounter[f];
+			}
+		}
 
-                if (!showSprites || (!showSpritesLeft && dot <= 8)) spPixel = 0;
-                
-				// Detect a sprite 0 hit
-				if (sprite0SecondaryOAM && f == 0)
+		bool spriteFound = false;
+		uint16_t spPixel = 0;
+		uint16_t spPaletteIndex = 0x3F10;
+		uint8_t spPriority = 1;
+
+		for (int f = 0; f < 8; ++f)
+		{
+			if (active[f])
+			{
+				bool horizontalFlip = ((spriteAttribute[f] & 0x40) >> 6) != 0;
+				uint16_t pixel;
+
+				if (horizontalFlip)
 				{
-					if (dot > 1 && spPixel != 0 && bgPixel != 0 && dot != 256)
+					pixel = (spriteShift0[f] & 0x1) | ((spriteShift1[f] & 0x1) << 1);
+					spriteShift0[f] = spriteShift0[f] >> 1;
+					spriteShift1[f] = spriteShift1[f] >> 1;
+				}
+				else
+				{
+					pixel = ((spriteShift0[f] & 0x80) >> 7) | ((spriteShift1[f] & 0x80) >> 6);
+					spriteShift0[f] = spriteShift0[f] << 1;
+					spriteShift1[f] = spriteShift1[f] << 1;
+				}
+
+				if (!spriteFound && pixel != 0)
+				{
+					spPixel = pixel;
+					spPriority = (spriteAttribute[f] & 0x20) >> 5;
+					spPaletteIndex |= ((spriteAttribute[f] & 0x03) << 2) | spPixel;
+					spriteFound = true;
+
+					if (!showSprites || (!showSpritesLeft && dot <= 8)) spPixel = 0;
+
+					// Detect a sprite 0 hit
+					if (sprite0SecondaryOAM && f == 0)
 					{
-						sprite0Hit = true;
+						if (dot > 1 && spPixel != 0 && bgPixel != 0 && dot != 256)
+						{
+							sprite0Hit = true;
+						}
 					}
 				}
-            }
-        }
-    }
+			}
+		}
 
-    uint16_t paletteIndex;
+		uint16_t paletteIndex;
 
-    if (bgPixel == 0 && spPixel == 0)
-    {
-        paletteIndex = 0x3F00;
-    }
-    else if (bgPixel == 0 && spPixel != 0)
-    {
-        paletteIndex = spPaletteIndex;
-    }
-    else if (bgPixel != 0 && spPixel == 0)
-    {
-        paletteIndex = bgPaletteIndex;
-    }
-    else if (spPriority == 0)
-    {
-        paletteIndex = spPaletteIndex;
-    }
-    else
-    {
-        paletteIndex = bgPaletteIndex;
-    }
+		if (bgPixel == 0 && spPixel == 0)
+		{
+			paletteIndex = 0x3F00;
+		}
+		else if (bgPixel == 0 && spPixel != 0)
+		{
+			paletteIndex = spPaletteIndex;
+		}
+		else if (bgPixel != 0 && spPixel == 0)
+		{
+			paletteIndex = bgPaletteIndex;
+		}
+		else if (spPriority == 0)
+		{
+			paletteIndex = spPaletteIndex;
+		}
+		else
+		{
+			paletteIndex = bgPaletteIndex;
+		}
 
-    if ((paletteIndex & 0x3) == 0)
-    {
-        paletteIndex = 0x3F00;
-    }
+		if ((paletteIndex & 0x3) == 0)
+		{
+			paletteIndex = 0x3F00;
+		}
 
-    display.NextPixel(rgbLookupTable[Read(paletteIndex)]);
+		display.NextPixel(rgbLookupTable[Read(paletteIndex)]);
+	}
 }
 
 void PPU::IncrementXScroll()
@@ -635,17 +649,20 @@ void PPU::WriteNameTable(uint16_t address, uint8_t value)
 }
 
 PPU::PPU(NES& nes, IDisplay& display) :
-    nes(nes),
+	nes(nes),
 	display(display),
 	cpu(0),
-    cart(0),
-    intervalStart(boost::chrono::high_resolution_clock::now()),
+	cart(0),
+	intervalStart(boost::chrono::high_resolution_clock::now()),
 	limitTo60FPS(true),
-    ppuClock(0),
-    dot(0),
-    line(241),
-    even(true),
-    reset(true),
+	ppuClock(0),
+	dot(0),
+	line(241),
+	even(true),
+	reset(true),
+	suppressNMI(false),
+	suppressNMIFlag(false),
+	interruptActive(false),
     ppuAddressIncrement(false),
     baseSpriteTableAddress(0),
     baseBackgroundTableAddress(0),
@@ -660,10 +677,10 @@ PPU::PPU(NES& nes, IDisplay& display) :
     intenseGreen(0),
     intenseBlue(0),
     lowerBits(0x06),
-    spriteOverflow(0),
-    sprite0Hit(0),
-    inVBLANK(0),
-    nmiOccured(0),
+    spriteOverflow(false),
+    sprite0Hit(false),
+    inVBLANK(false),
+    nmiOccured(false),
     sprite0SecondaryOAM(false),
     oamAddress(0),
     ppuAddress(0),
@@ -735,11 +752,21 @@ uint8_t PPU::ReadPPUStatus()
         Run();
     }
 
-    uint8_t vB = static_cast<uint8_t>(inVBLANK);
+    uint8_t vB = static_cast<uint8_t>(nmiOccured/* inVBLANK */);
     uint8_t sp0 = static_cast<uint8_t>(sprite0Hit);
     uint8_t spOv = static_cast<uint8_t>(spriteOverflow);
 
-    inVBLANK = false;
+	if (line == 241 && (dot - 1) == 0)
+	{
+		suppressNMI = true; // Suppress interrupt
+	}
+
+	if (line == 241 && (dot - 1) >= 1 && (dot - 1) <= 2)
+	{
+		interruptActive = false;
+	}
+
+    //inVBLANK = false;
     nmiOccured = false;
     addressLatch = false;
 
@@ -944,21 +971,29 @@ void PPU::WritePPUDATA(uint8_t M)
 // I chose to do it this way because it simplifies the issue of variable frame length, something that is subject to change until after the pre-render line.
 int PPU::ScheduleSync()
 {
-    if ((line >= 242 && line <= 261) || (line == 241 && dot >= 1)) // Any point in VBLANK or the Pre-Render line
+    if ((line >= 242 && line <= 261) || (line == 241 && dot >= 2)) // Any point in VBLANK or the Pre-Render line
     {
         return 7169; // Guaranteed to be after the pre-render line
     }
     else
     {
-        return (((241 - line - 1) * 341) + (341 - dot + 1) + 1); // Time to next NMI
+        return ((240 - line) * 341) + (341 - dot + 1) + 1; // Time to next NMI
     }
+}
+
+bool PPU::CheckInterrupt()
+{
+	bool interrupt = interruptActive;
+	interruptActive = false;
+
+	return interrupt;
 }
 
 void PPU::Run()
 {
-	while (cpu->GetClock() != ppuClock)
+	while (cpu->GetClock() >= ppuClock)
 	{
-		while (((line >= 0 && line <= 239) || line == 261) && cpu->GetClock() != ppuClock)
+		while (((line >= 0 && line <= 239) || line == 261) && cpu->GetClock() >= ppuClock)
 		{
 			if (dot == 0)
 			{
@@ -976,30 +1011,17 @@ void PPU::Run()
 				sprite0Hit = false;
 			}
 
-			while (dot >= 1 && dot <= 256 && cpu->GetClock() != ppuClock)
+			while (dot >= 1 && dot <= 256 && cpu->GetClock() >= ppuClock)
 			{
 				UpdateState();
 
-				if (!showSprites && !showBackground)
+				//*************************************************************************************
+				// Background Fetch Phase
+				//*************************************************************************************
+				uint8_t cycle = (dot - 1) % 8; // The current point in the background fetch cycle
+
+				if (showSprites || showBackground)
 				{
-					if (line != 261)
-					{
-						if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF)
-						{
-							display.NextPixel(rgbLookupTable[Read(ppuAddress)]);
-						}
-						else
-						{
-							display.NextPixel(rgbLookupTable[Read(0x3F00)]);
-						}
-					}
-				}
-				else
-				{
-					//*************************************************************************************
-					// Background Fetch Phase
-					//*************************************************************************************
-					uint8_t cycle = (dot - 1) % 8; // The current point in the background fetch cycle
 
 					// Reload background shift registers
 					if (cycle == 0 && dot != 1)
@@ -1048,12 +1070,15 @@ void PPU::Run()
 						uint16_t patternAddress = static_cast<uint16_t>(nameTableByte)* 16; // Get pattern address, independent of the table
 						tileBitmapHigh = cart->ChrRead(baseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
 					}
+				}
 
-					if (line != 261) // Render on all visible lines
-					{
-						Render();
-					}
+				if (line != 261) // Render on all visible lines
+				{
+					Render();
+				}
 
+				if (showSprites || showBackground)
+				{
 					// Every 8 dots increment the coarse X scroll
 					if (cycle == 7)
 					{
@@ -1086,7 +1111,7 @@ void PPU::Run()
 				IncrementClock();
 			}
 
-			while (dot >= 257 && dot <= 320 && cpu->GetClock() != ppuClock)
+			while (dot >= 257 && dot <= 320 && cpu->GetClock() >= ppuClock)
 			{
 				UpdateState();
 
@@ -1199,7 +1224,7 @@ void PPU::Run()
 				IncrementClock();
 			}
 
-			while (dot >= 321 && dot <= 336 && cpu->GetClock() != ppuClock)
+			while (dot >= 321 && dot <= 336 && cpu->GetClock() >= ppuClock)
 			{
 				UpdateState();
 
@@ -1263,7 +1288,7 @@ void PPU::Run()
 				IncrementClock();
 			}
 
-			while (dot >= 337 && dot <= 340 && cpu->GetClock() != ppuClock)
+			while (dot >= 337 && dot <= 340 && cpu->GetClock() >= ppuClock)
 			{
 				UpdateState();
 
@@ -1312,29 +1337,36 @@ void PPU::Run()
 			}
 		}
 
-		while (line >= 240 && line <= 260 && cpu->GetClock() != ppuClock)
+		while (line >= 240 && line <= 260 && cpu->GetClock() >= ppuClock)
 		{
 			if (dot == 1 && line == 241 && ppuClock > 88974)
 			{
 				UpdateState();
 
-				even = !even;
-				inVBLANK = true;
-				nmiOccured = true;
+				if (!suppressNMI)
+				{
+					nmiOccured = true;
+				}
 
 				if (nmiOccured && nmiEnabled)
 				{
-					cpu->RaiseNMI();
+					//cpu->RaiseNMI();
+					interruptActive = true;
 				}
 
+				even = !even;
+				inVBLANK = true;
+				suppressNMI = false;
+				suppressNMIFlag = false;
+
 				IncrementClock();
-			}
+			}			
 			else if (inVBLANK)
 			{
 				UpdateState();
 
-				uint64_t timeToSync = cpu->GetClock() - ppuClock;
-				uint64_t timeToEndVBlank = (341 - dot + 1) + ((260 - line) * 341);
+				uint64_t timeToSync = cpu->GetClock() - ppuClock + 1;
+				uint64_t timeToEndVBlank = (341 - dot) + ((260 - line) * 341) + 1;
 
 				if (timeToEndVBlank > timeToSync)
 				{
@@ -1358,8 +1390,8 @@ void PPU::Run()
 			}
 			else
 			{
-				IncrementClock();
 				UpdateState();
+				IncrementClock();
 			}
 		}
 	}

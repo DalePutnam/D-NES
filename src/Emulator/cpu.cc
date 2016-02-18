@@ -51,18 +51,21 @@ void CPU::IncrementClock()
 			scanline++;
 		}
 	}
+
+	if (nextNMI > 0) nextNMI -= 3;
 }
 
 uint8_t CPU::Read(uint16_t address)
 {
+	uint8_t value;
+
 	IncrementClock();
-    if (nextNMI > 0) nextNMI -= 3;
 
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
     if (address < 0x2000)
     {
-        return memory[address % 0x800];
+        value = memory[address % 0x800];
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
@@ -70,40 +73,66 @@ uint8_t CPU::Read(uint16_t address)
 
         if (addr == 2)
         {
-			return ppu->ReadPPUStatus();
+			value = ppu->ReadPPUStatus();
         }
         else if (addr == 4)
         {
-			return ppu->ReadOAMData();
+			value = ppu->ReadOAMData();
         }
         else if (addr == 7)
         {
-			return ppu->ReadPPUData();
+			value = ppu->ReadPPUData();
         }
         else
         {
-            return 0xFF;
+			value = 0xFF;
         }
     }
     else if (address == 0x4016)
     {
-        return GetControllerOneShift();
+		value = GetControllerOneShift();
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-		return cart->PrgRead(address - 0x6000);
+		value = cart->PrgRead(address - 0x6000);
     }
     else
     {
-        return 0x00;
+		value = 0x00;
     }
+
+	if (nmiRaised)
+	{
+		nmiRaised = false;
+		nmiPending = true;
+	}
+
+	if (nextNMI <= 0)
+	{
+		ppu->Run();
+
+		if (ppu->CheckInterrupt())
+		{
+			if (nextNMI == -2)
+			{
+				nmiPending = true;
+			}
+			else
+			{
+				nmiRaised = true;
+			}		
+		}
+
+		nextNMI = ppu->ScheduleSync();
+	}
+
+	return value;
 }
 
 void CPU::Write(uint8_t M, uint16_t address)
 {
 	// Note: THIS IS NOT THREAD SAFE
     IncrementClock();
-    if (nextNMI > 0) nextNMI -= 3;
 
     // OAM DMA
     if (address == 0x4014)
@@ -113,20 +142,17 @@ void CPU::Write(uint8_t M, uint16_t address)
         if (clock % 6 == 0)
         {
             IncrementClock();
-            if (nextNMI > 0) nextNMI -= 3;
         }
         else
         {
             IncrementClock();
             IncrementClock();
-            if (nextNMI > 0) nextNMI -= 6;
         }
 
         for (int i = 0; i < 0x100; ++i)
         {
 			ppu->WriteOAMDATA(Read(page + i));
 			IncrementClock();
-            if (nextNMI > 0) nextNMI -= 3;
         }
     }
     // Any address less then 0x2000 is just the
@@ -176,6 +202,31 @@ void CPU::Write(uint8_t M, uint16_t address)
     {
 		cart->PrgWrite(M, address - 0x6000);
     }
+
+	if (nmiRaised)
+	{
+		nmiRaised = false;
+		nmiPending = true;
+	}
+
+	if (nextNMI <= 0)
+	{
+		ppu->Run();
+
+		if (ppu->CheckInterrupt())
+		{
+			if (nextNMI == -2)
+			{
+				nmiPending = true;
+			}
+			else
+			{
+				nmiRaised = true;
+			}
+		}
+
+		nextNMI = ppu->ScheduleSync();
+	}
 }
 
 int8_t CPU::Relative()
@@ -1255,12 +1306,13 @@ CPU::CPU(NES& nes, bool logEnabled) :
 	ppu(0),
 	cart(0),
 	clock(0),
-	scanline(0),
+	scanline(241),
 	controllerStrobe(0),
 	controllerOneShift(0),
 	controllerOneState(0),
 	nextNMI(0),
 	nmiRaised(false),
+	nmiPending(false),
     S(0xFD),
     P(0x24),
     A(0),
@@ -1406,31 +1458,54 @@ bool CPU::ExecuteInstruction()
 		logEnabled = true;
 	}
 
-    if (IsLogEnabled())
-    {
-        LogProgramCounter();
-        LogRegisters();
-    }
-
     // Handle non-maskable interrupts
-    if (nextNMI <= 0)
-    {
-        ppu->Run();
-        nextNMI = ppu->ScheduleSync();
+   // if (nextNMI <= 0)
+   // {
+   //     ppu->Run();
+   //     nextNMI = ppu->ScheduleSync();
 
-        if (nmiRaised)
-        {
-			nmiRaised = false;
-            Read(PC);
-            Read(PC);
-            HandleNMI();
-            return true;
-        }
-    }
+   //     if (ppu->CheckInterrupt())
+   //     {
+			////nmiRaised = false;
+   //         Read(PC);
+   //         Read(PC);
+   //         HandleNMI();
+   //         return true;
+   //     }
+   // }
+	if (nmiPending)
+	{
+		nmiPending = false;
 
-    uint8_t opcode = Read(PC++); 	// Retrieve opcode from memory
-    uint16_t addr;
-    uint8_t value;
+		Read(PC);
+		Read(PC);
+		HandleNMI();
+	}
+
+	if (IsLogEnabled())
+	{
+		LogProgramCounter();
+		LogRegisters();
+	}
+
+    uint8_t opcode = Read(PC++); // Retrieve opcode from memory
+	/*uint8_t opcode = Read(PC);*/
+	uint16_t addr;
+	uint8_t value;
+
+	//if (nmiPending)
+	//{
+	//	nmiPending = false;
+
+	//	//Read(PC);
+	//	Read(PC);
+	//	HandleNMI();
+	//	return true;
+	//}
+	//else
+	//{
+	//	PC++;
+	//}
 
     if (IsLogEnabled()) LogOpcode(opcode);
 
@@ -2073,7 +2148,7 @@ void CPU::LogProgramCounter()
 
 void CPU::LogRegisters()
 {
-	sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3lu SL:%d", A, X, Y, P, S, clock % 341, scanline);
+	sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, static_cast<uint32_t>(clock % 341), scanline);
 }
 
 void CPU::LogOpcode(uint8_t opcode)

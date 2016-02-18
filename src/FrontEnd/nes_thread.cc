@@ -1,6 +1,8 @@
 #include "nes_thread.h"
 #include "main_window.h"
 
+#include "wx/dcmemory.h"
+
 wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_NESTHREAD_UNEXPECTED_SHUTDOWN, wxThreadEvent);
@@ -31,7 +33,8 @@ NESThread::NESThread(MainWindow* handler, std::string& filename, bool cpuLogEnab
     width(256),
     height(240),
     pixelCount(0),
-    pixelArray(new unsigned char[width*height * 3])
+	bufferValid0(false),
+	bufferValid1(false)
 {
     for (int i = 0; i < 64; ++i)
     {
@@ -72,8 +75,6 @@ NESThread::~NESThread()
 
         if (primarySprite[i]) delete[] primarySprite[i];
     }
-
-    delete[] pixelArray;
 }
 
 NES& NESThread::GetNES()
@@ -128,10 +129,19 @@ void NESThread::NextPixel(unsigned int pixel)
     unsigned char green = static_cast<unsigned char>((pixel & 0x00FF00) >> 8);
     unsigned char blue = static_cast<unsigned char>(pixel & 0x0000FF);
 
-    pixelArray[pixelCount * 3] = red;
-    pixelArray[(pixelCount * 3) + 1] = green;
-    pixelArray[(pixelCount * 3) + 2] = blue;
-
+	if (!bufferValid0)
+	{
+		frameBuffer0[pixelCount * 3] = red;
+		frameBuffer0[(pixelCount * 3) + 1] = green;
+		frameBuffer0[(pixelCount * 3) + 2] = blue;
+	}
+	else
+	{
+		frameBuffer1[pixelCount * 3] = red;
+		frameBuffer1[(pixelCount * 3) + 1] = green;
+		frameBuffer1[(pixelCount * 3) + 2] = blue;
+	}
+	
     ++pixelCount;
 
     if (pixelCount == width * height)
@@ -139,6 +149,18 @@ void NESThread::NextPixel(unsigned int pixel)
 		using namespace boost::chrono;
 
 		std::unique_lock<std::mutex> lock(frameMutex);
+
+		if (!bufferValid0)
+		{
+			bufferValid0 = true;
+			bufferValid1 = false;
+		}
+		else
+		{
+			bufferValid0 = false;
+			bufferValid1 = true;
+		}
+
         wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE));
         pixelCount = 0;
         fpsCounter++;
@@ -147,53 +169,37 @@ void NESThread::NextPixel(unsigned int pixel)
         microseconds time_span = duration_cast<microseconds>(now - intervalStart);
         if (time_span.count() >= 1000000)
         {
-            currentFPS.store(fpsCounter);
+            currentFPS = fpsCounter;
             fpsCounter = 0;
             intervalStart = steady_clock::now();
             wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE));
         }
-
-		frameCV.wait(lock);
     }
 }
 
-void NESThread::UpdateFrame(unsigned char* frameBuffer)
-{
-	using namespace boost::chrono;
-
-	std::unique_lock<std::mutex> lock(frameMutex);
-
-    pixelArray = frameBuffer;
-    wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE));
-
-    fpsCounter++;
-    steady_clock::time_point now = steady_clock::now();
-    microseconds time_span = duration_cast<microseconds>(now - intervalStart);
-    if (time_span.count() >= 1000000)
-    {
-        currentFPS.store(fpsCounter);
-        fpsCounter = 0;
-        intervalStart = steady_clock::now();
-        wxQueueEvent(handler, new wxThreadEvent(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE));
-    }
-
-	frameCV.wait(lock);
-}
-
-unsigned char* NESThread::GetFrame()
-{
-    return pixelArray;
-}
-
-void NESThread::UnlockFrame()
+void NESThread::DrawFrame(wxDC& dc, int width, int height)
 {
 	std::unique_lock<std::mutex> lock(frameMutex);
-	frameCV.notify_all();
+
+	if (bufferValid0)
+	{
+		wxImage image(256, 240, frameBuffer0, true);
+		wxBitmap bitmap(image, 24);
+		wxMemoryDC mdc(bitmap);
+		dc.StretchBlit(0, 0, width, height, &mdc, 0, 0, 256, 240);
+	}
+	else if (bufferValid1)
+	{
+		wxImage image(256, 240, frameBuffer1, true);
+		wxBitmap bitmap(image, 24);
+		wxMemoryDC mdc(bitmap);
+		dc.StretchBlit(0, 0, width, height, &mdc, 0, 0, 256, 240);
+	}
 }
 
 int NESThread::GetCurrentFPS()
 {
-    return currentFPS.load();
+    return currentFPS;
 }
 
 unsigned char* NESThread::GetNameTable(int tableID)
