@@ -1,0 +1,6 @@
+[submodule "externals/wxWidgets"]
+	path = externals/wxWidgets
+	url = https://github.com/wxWidgets/wxWidgets.git
+[submodule "externals/boost"]
+	path = externals/boost
+	url = https://github.com/boostorg/boost.git
