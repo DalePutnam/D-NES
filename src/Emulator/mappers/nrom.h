@@ -8,7 +8,7 @@
 #ifndef NROM_H_
 #define NROM_H_
 
-#include <boost/cstdint.hpp>
+//#include <boost/cstdint.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 
 #include "cart.h"
