@@ -24,7 +24,7 @@ Requirements: Visual Studio 2013 (I haven't tried 2015 yet)
 10. Build both the Debug and Release configurations. Once done close the solution.
 11. The build environment is now setup. Open D-NES.sln and build either Debug or Release.
 
-### Unix
+### Linux
 
 1. Download the repository to the location of your choice.
 2. Use your preferred package manager to install boost and wxWidgets-3.0
