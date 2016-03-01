@@ -22,7 +22,7 @@ Requirements: Visual Studio 2013 (I haven't tried 2015 yet)
 8. Download wxWidgets-3.0 and extract it to the externals folder. Name it simply `wxWidgets`.
 9. Navigate to `externals/wxWidgets/build/msw` and open `wx_vc12.sln`.
 10. Build both the Debug and Release configurations. Once done close the solution.
-11. The build environment is now setup. Open D-NES.sln and build either Debug or Release.
+11. The build environment is now set up. Open D-NES.sln and build either Debug or Release.
 
 ### Linux
 
