@@ -10,15 +10,13 @@
 
 const uint32_t PPU::rgbLookupTable[64] =
 {
-    0x545454, 0x001E74, 0x081090, 0x300088, 0x440064, 0x5C0030, 0x540400, 0x3C1800,
-    0x202A00, 0x083A00, 0x004000, 0x003C00, 0x00323C, 0x000000, 0x000000, 0x000000,
-    0x989698, 0x084CC4, 0x3032EC, 0x5C1EE4, 0x8814B0, 0xA01464, 0x982220, 0x783C00,
-    0x545A00, 0x287200, 0x087C00, 0x007628, 0x006678, 0x000000, 0x000000, 0x000000,
-    0xECEEEC, 0x4C9AEC, 0x787CEC, 0xB062EC, 0xE454EC, 0xEC58B4, 0xEC6A64, 0xD48820,
-    0xA0AA00, 0x74C400, 0x4CD020, 0x38CC6C, 0x38B4CC, 0x3C3C3C, 0x000000, 0x000000,
-    0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490,
-    0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
+    0x545454, 0x001E74, 0x081090, 0x300088, 0x440064, 0x5C0030, 0x540400, 0x3C1800, 0x202A00, 0x083A00, 0x004000, 0x003C00, 0x00323C, 0x000000, 0x000000, 0x000000,
+    0x989698, 0x084CC4, 0x3032EC, 0x5C1EE4, 0x8814B0, 0xA01464, 0x982220, 0x783C00, 0x545A00, 0x287200, 0x087C00, 0x007628, 0x006678, 0x000000, 0x000000, 0x000000,
+    0xECEEEC, 0x4C9AEC, 0x787CEC, 0xB062EC, 0xE454EC, 0xEC58B4, 0xEC6A64, 0xD48820, 0xA0AA00, 0x74C400, 0x4CD020, 0x38CC6C, 0x38B4CC, 0x3C3C3C, 0x000000, 0x000000,
+    0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490, 0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
 };
+
+const uint32_t PPU::resetDelay = 88974;
 
 void PPU::GetNameTable(int table, uint8_t* pixels)
 {
@@ -184,8 +182,8 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
     uint8_t byteOne = primaryOAM[(0x4 * sprite) + 1];
     uint8_t byteTwo = primaryOAM[(0x4 * sprite) + 2];
 
-    uint16_t tableIndex = baseSpriteTableAddress; //(byteOne & 0x01) ? 0x1000 : 0x0000;
-    uint16_t patternIndex = byteOne * 16; //(byteOne & 0xFE) >> 1;
+    uint16_t tableIndex = baseSpriteTableAddress;
+    uint16_t patternIndex = byteOne * 16;
     uint8_t palette = (byteTwo & 0x03) + 4;
 
     for (uint32_t i = 0; i < 8; ++i)
@@ -213,13 +211,13 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 
 void PPU::UpdateState()
 {
-	//assert(mainBuffer.size() > 0 ? std::get<0>(mainBuffer.front()) >= ppuClock : true);
+    //assert(registerBuffer.size() > 0 ? std::get<0>(registerBuffer.front()) >= clock : true);
 
-	if (mainBuffer.size() > 0 && std::get<0>(mainBuffer.front()) == ppuClock)
+	if (registerBuffer.size() > 0 && std::get<0>(registerBuffer.front()) == clock)
 	{
-		uint8_t value = std::get<1>(mainBuffer.front());
-		Register reg = std::get<2>(mainBuffer.front());
-		mainBuffer.pop();
+		uint8_t value = std::get<1>(registerBuffer.front());
+		Register reg = std::get<2>(registerBuffer.front());
+		registerBuffer.pop();
 
 		switch (reg)
 		{
@@ -231,6 +229,12 @@ void PPU::UpdateState()
 			spriteSize = ((0x20 & value) >> 5) != 0;
 			nmiEnabled = ((0x80 & value) >> 7) != 0;
 			lowerBits = (0x1F & value);
+
+            if (nmiEnabled == false && line == 241 && (dot - 1) >= 1 && (dot - 1) < 2)
+            {
+                interruptActive = false;
+            }
+
 			break;
 		case PPUMASK:
 			grayscale = (0x1 & value);
@@ -521,7 +525,7 @@ void PPU::IncrementClock()
         ++dot;
     }
 
-    ++ppuClock;
+    ++clock;
 }
 
 uint8_t PPU::Read(uint16_t address)
@@ -655,14 +659,14 @@ PPU::PPU(NES& nes, IDisplay& display) :
 	cart(0),
 	intervalStart(boost::chrono::high_resolution_clock::now()),
 	limitTo60FPS(true),
-	ppuClock(0),
+	clock(0),
 	dot(0),
-	line(241),
-	even(true),
-	reset(true),
+	line(0),
+	even(false),
+	//reset(true),
 	suppressNMI(false),
-	suppressNMIFlag(false),
-	interruptActive(false),
+    interruptActive(false),
+    nmiOccuredCycle(0),
     ppuAddressIncrement(false),
     baseSpriteTableAddress(0),
     baseBackgroundTableAddress(0),
@@ -747,12 +751,12 @@ void PPU::DisableFrameLimit()
 
 uint8_t PPU::ReadPPUStatus()
 {
-    if (cpu->GetClock() != ppuClock)
+    if (cpu->GetClock() != clock)
     {
         Run();
     }
 
-    uint8_t vB = static_cast<uint8_t>(nmiOccured/* inVBLANK */);
+    uint8_t vB = static_cast<uint8_t>(nmiOccured);
     uint8_t sp0 = static_cast<uint8_t>(sprite0Hit);
     uint8_t spOv = static_cast<uint8_t>(spriteOverflow);
 
@@ -761,12 +765,11 @@ uint8_t PPU::ReadPPUStatus()
 		suppressNMI = true; // Suppress interrupt
 	}
 
-	if (line == 241 && (dot - 1) >= 1 && (dot - 1) <= 2)
-	{
-		interruptActive = false;
-	}
+    if (line == 241 && (dot - 1) >= 1 && (dot - 1) <= 2)
+    {
+        interruptActive = false;
+    }
 
-    //inVBLANK = false;
     nmiOccured = false;
     addressLatch = false;
 
@@ -775,7 +778,7 @@ uint8_t PPU::ReadPPUStatus()
 
 uint8_t PPU::ReadOAMData()
 {
-    if (cpu->GetClock() != ppuClock)
+    if (cpu->GetClock() != clock)
     {
         Run();
     }
@@ -785,7 +788,7 @@ uint8_t PPU::ReadOAMData()
 
 uint8_t PPU::ReadPPUData()
 {
-    if (cpu->GetClock() != ppuClock)
+    if (cpu->GetClock() != clock)
     {
         Run();
     }
@@ -814,12 +817,7 @@ uint8_t PPU::ReadPPUData()
 
 void PPU::WritePPUCTRL(uint8_t M)
 {
-    if (cpu->GetClock() > 88974 && reset)
-    {
-        reset = false;
-    }
-
-    if (!reset)
+    if (cpu->GetClock() > resetDelay)
     {
 		if (inVBLANK)
 		{
@@ -830,24 +828,24 @@ void PPU::WritePPUCTRL(uint8_t M)
 			spriteSize = ((0x20 & M) >> 5) != 0;
 			nmiEnabled = ((0x80 & M) >> 7) != 0;
 			lowerBits = (0x1F & M);
+
+            if (nmiEnabled == false && line == 241 && (dot - 1) == 1)
+            {
+                interruptActive = false;
+            }
 		}
 		else
 		{
-			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUCTRL));
+			registerBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUCTRL));
 		}
     }
 }
 
 void PPU::WritePPUMASK(uint8_t M)
 {
-    if (cpu->GetClock() > 88974 && reset)
+    if (cpu->GetClock() > resetDelay)
     {
-        reset = false;
-    }
-
-    if (!reset)
-    {
-		if (inVBLANK)
+		if (inVBLANK || cpu->GetClock() == clock - 1)
 		{
 			grayscale = (0x1 & M);
 			showBackgroundLeft = ((0x2 & M) >> 1) != 0;
@@ -861,47 +859,42 @@ void PPU::WritePPUMASK(uint8_t M)
 		}
 		else
 		{
-			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUMASK));
+			registerBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUMASK));
 		}
     }
 }
 
 void PPU::WriteOAMADDR(uint8_t M)
 {
-	if (inVBLANK)
+    if (inVBLANK || cpu->GetClock() == clock - 1)
 	{
 		oamAddress = M;
 		lowerBits = (0x1F & oamAddress);
 	}
 	else
 	{
-		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMADDR));
+		registerBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMADDR));
 	}
 }
 
 void PPU::WriteOAMDATA(uint8_t M)
 {
-	if (inVBLANK)
+    if (inVBLANK || cpu->GetClock() == clock - 1)
 	{
 		primaryOAM[oamAddress++] = M;
 		lowerBits = (0x1F & M);
 	}
 	else
 	{
-		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMDATA));
+		registerBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, OAMDATA));
 	}
 }
 
 void PPU::WritePPUSCROLL(uint8_t M)
 {
-    if (cpu->GetClock() > 88974 && reset)
+    if (cpu->GetClock() > resetDelay)
     {
-        reset = false;
-    }
-
-    if (!reset)
-    {
-		if (inVBLANK)
+        if (inVBLANK || cpu->GetClock() == clock - 1)
 		{
 			if (addressLatch)
 			{
@@ -919,7 +912,7 @@ void PPU::WritePPUSCROLL(uint8_t M)
 		}
 		else
 		{
-			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUSCROLL));
+			registerBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUSCROLL));
 		}
 		
     }
@@ -927,14 +920,9 @@ void PPU::WritePPUSCROLL(uint8_t M)
 
 void PPU::WritePPUADDR(uint8_t M)
 {
-    if (cpu->GetClock() > 88974 && reset)
+    if (cpu->GetClock() > resetDelay)
     {
-        reset = false;
-    }
-
-    if (!reset)
-    {
-		if (inVBLANK)
+        if (inVBLANK || cpu->GetClock() == clock - 1)
 		{
 			addressLatch ? ppuTempAddress = (ppuTempAddress & 0x7F00) | M : ppuTempAddress = (ppuTempAddress & 0x00FF) | ((0x3F & M) << 8);
 			if (addressLatch) ppuAddress = ppuTempAddress;
@@ -943,7 +931,7 @@ void PPU::WritePPUADDR(uint8_t M)
 		}
 		else
 		{
-			mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUADDR));
+			registerBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUADDR));
 		}
 		
     }
@@ -951,7 +939,7 @@ void PPU::WritePPUADDR(uint8_t M)
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-	if (inVBLANK)
+    if (inVBLANK || cpu->GetClock() == clock - 1)
 	{
 		Write(ppuAddress, M);
 		ppuAddressIncrement ? ppuAddress = (ppuAddress + 32) & 0x7FFF : ppuAddress = (ppuAddress + 1) & 0x7FFF;
@@ -960,7 +948,7 @@ void PPU::WritePPUDATA(uint8_t M)
 	else
 	{
 		uint64_t clock = cpu->GetClock();
-		mainBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUDATA));
+		registerBuffer.push(std::tuple<uint64_t, uint8_t, Register>(cpu->GetClock(), M, PPUDATA));
 	}
 	
 }
@@ -973,47 +961,59 @@ int PPU::ScheduleSync()
 {
     if ((line >= 242 && line <= 261) || (line == 241 && dot >= 2)) // Any point in VBLANK or the Pre-Render line
     {
-        return 7169; // Guaranteed to be after the pre-render line
+        if (nmiOccured)
+        {
+            return 0;
+        }
+        else
+        {
+            return 7169; // Guaranteed to be after the pre-render line
+        }
     }
     else
     {
         return ((240 - line) * 341) + (341 - dot + 1) + 1; // Time to next NMI
     }
+/*    return 0;*/
 }
 
-bool PPU::CheckInterrupt()
+bool PPU::CheckInterrupt(uint64_t& occurredCycle)
 {
-	bool interrupt = interruptActive;
-	interruptActive = false;
-
-	return interrupt;
+    occurredCycle = nmiOccuredCycle;
+    return interruptActive;
 }
 
 void PPU::Run()
 {
-	while (cpu->GetClock() >= ppuClock)
+	while (cpu->GetClock() >= clock)
 	{
-		while (((line >= 0 && line <= 239) || line == 261) && cpu->GetClock() >= ppuClock)
+		while (((line >= 0 && line <= 239) || line == 261) && cpu->GetClock() >= clock)
 		{
 			if (dot == 0)
 			{
 				UpdateState();
 
+                if (line == 0)
+                {
+                    even = !even;
+                }
+
 				IncrementClock();
 
-				if (cpu->GetClock() == ppuClock) return;
+				if (cpu->GetClock() < clock) return;
 			}
 
-			if (dot == 1 && line == 261)
-			{
-				inVBLANK = false;
-				nmiOccured = false;
-				sprite0Hit = false;
-			}
-
-			while (dot >= 1 && dot <= 256 && cpu->GetClock() >= ppuClock)
+			while (dot >= 1 && dot <= 256 && cpu->GetClock() >= clock)
 			{
 				UpdateState();
+
+                if (dot == 1 && line == 261)
+                {
+                    inVBLANK = false;
+                    nmiOccured = false;
+                    interruptActive = false;
+                    sprite0Hit = false;
+                }
 
 				//*************************************************************************************
 				// Background Fetch Phase
@@ -1031,20 +1031,20 @@ void PPU::Run()
 						backgroundAttribute = attributeByte;
 					}
 
-					if (cycle % 2 == 0)
-					{
-						if (line != 261) // Render on all visible lines
-						{
-							Render();
-						}
-
-						IncrementClock();
-
-						if (cpu->GetClock() == ppuClock) return;
-
-						UpdateState();
-						++cycle;
-					}
+// 					if (cycle % 2 == 0)
+// 					{
+// 						if (line != 261) // Render on all visible lines
+// 						{
+// 							Render();
+// 						}
+// 
+// 						IncrementClock();
+// 
+//                         if (cpu->GetClock() < clock) return;
+// 
+// 						UpdateState();
+// 						++cycle;
+// 					}
 
 					// Perform fetches
 					if (cycle == 1)
@@ -1111,7 +1111,7 @@ void PPU::Run()
 				IncrementClock();
 			}
 
-			while (dot >= 257 && dot <= 320 && cpu->GetClock() >= ppuClock)
+			while (dot >= 257 && dot <= 320 && cpu->GetClock() >= clock)
 			{
 				UpdateState();
 
@@ -1142,16 +1142,6 @@ void PPU::Run()
 
 					uint8_t cycle = (dot - 257) % 8; // The current point in the sprite fetch cycle
 					uint8_t sprite = (dot - 257) / 8;
-
-					/*if (cycle % 2 == 0)
-					{
-					IncrementClock();
-
-					if (cpu->GetClock() == ppuClock) break;
-
-					UpdateState();
-					++cycle;
-					}*/
 
 					if (cycle == 2)
 					{
@@ -1224,7 +1214,7 @@ void PPU::Run()
 				IncrementClock();
 			}
 
-			while (dot >= 321 && dot <= 336 && cpu->GetClock() >= ppuClock)
+			while (dot >= 321 && dot <= 336 && cpu->GetClock() >= clock)
 			{
 				UpdateState();
 
@@ -1243,15 +1233,15 @@ void PPU::Run()
 						backgroundAttribute = attributeByte;
 					}
 
-					if (cycle % 2 == 0)
-					{
-						IncrementClock();
-
-						if (cpu->GetClock() == ppuClock) return;
-
-						UpdateState();
-						++cycle;
-					}
+// 					if (cycle % 2 == 0)
+// 					{
+// 						IncrementClock();
+// 
+//                         if (cpu->GetClock() < clock) return;
+// 
+// 						UpdateState();
+// 						++cycle;
+// 					}
 
 					// Perform fetches
 					if (cycle == 1)
@@ -1288,7 +1278,7 @@ void PPU::Run()
 				IncrementClock();
 			}
 
-			while (dot >= 337 && dot <= 340 && cpu->GetClock() >= ppuClock)
+			while (dot >= 337 && dot <= 340 && cpu->GetClock() >= clock)
 			{
 				UpdateState();
 
@@ -1317,15 +1307,15 @@ void PPU::Run()
 
 					uint8_t cycle = (dot - 337) % 2;
 
-					if (cycle == 0)
-					{
-						IncrementClock();
-
-						if (cpu->GetClock() == ppuClock) return;
-
-						UpdateState();
-						++cycle;
-					}
+// 					if (cycle == 0)
+// 					{
+// 						IncrementClock();
+// 
+//                         if (cpu->GetClock() < clock) return;
+// 
+// 						UpdateState();
+// 						++cycle;
+// 					}
 
 					if (cycle == 1)
 					{
@@ -1337,62 +1327,79 @@ void PPU::Run()
 			}
 		}
 
-		while (line >= 240 && line <= 260 && cpu->GetClock() >= ppuClock)
+		while (line >= 240 && line <= 260 && cpu->GetClock() >= clock)
 		{
-			if (dot == 1 && line == 241 && ppuClock > 88974)
+            if (line == 240 || (dot == 0 && line == 241))
+            {
+                UpdateState();
+                IncrementClock();
+            }
+            else if (dot == 1 && line == 241 && clock > resetDelay)
 			{
 				UpdateState();
 
-				if (!suppressNMI)
+				if (dot == 1 && line == 241 && !suppressNMI)
 				{
 					nmiOccured = true;
+
+                    if (nmiOccured && nmiEnabled)
+                    {
+                        nmiOccuredCycle = clock;
+                        interruptActive = true;
+                    }
 				}
 
-				if (nmiOccured && nmiEnabled)
-				{
-					//cpu->RaiseNMI();
-					interruptActive = true;
-				}
-
-				even = !even;
-				inVBLANK = true;
-				suppressNMI = false;
-				suppressNMIFlag = false;
+                suppressNMI = false;
 
 				IncrementClock();
-			}			
-			else if (inVBLANK)
-			{
-				UpdateState();
-
-				uint64_t timeToSync = cpu->GetClock() - ppuClock + 1;
-				uint64_t timeToEndVBlank = (341 - dot) + ((260 - line) * 341) + 1;
-
-				if (timeToEndVBlank > timeToSync)
-				{
-					line += static_cast<int16_t>(timeToSync / 341);
-					dot += static_cast<int16_t>(timeToSync % 341);
-
-					if (dot > 340)
-					{
-						dot %= 341;
-						++line;
-					}
-
-					ppuClock += timeToSync;
-				}
-				else
-				{
-					ppuClock += timeToEndVBlank;
-					dot = 1;
-					line = 261;
-				}
 			}
-			else
-			{
-				UpdateState();
-				IncrementClock();
-			}
+//             else if (inVBLANK)
+// 			{
+// 				UpdateState();
+// 
+//                 uint64_t timeToSync = cpu->GetClock() - ppuClock + 1;
+//                 uint64_t timeToEndVBlank = (341 - dot) + ((260 - line) * 341) + 1;
+// 
+//                 if (timeToEndVBlank > timeToSync)
+//                 {
+//                     line += static_cast<int16_t>(timeToSync / 341);
+//                     dot += static_cast<int16_t>(timeToSync % 341);
+// 
+//                     if (dot > 340)
+//                     {
+//                         dot %= 341;
+//                         ++line;
+//                     }
+// 
+//                     ppuClock += timeToSync;
+//                 }
+//                 else
+//                 {
+//                     ppuClock += timeToEndVBlank;
+//                     dot = 1;
+//                     line = 261;
+//                 }
+//             }
+            else
+            {
+                if (!nmiOccured || !nmiEnabled)
+                {
+                    interruptActive = false;
+                }
+
+                UpdateState();
+
+                if (nmiOccured && nmiEnabled)
+                {
+                    if (!interruptActive)
+                    {
+                        nmiOccuredCycle = clock;
+                        interruptActive = true;
+                    }
+                }
+
+                IncrementClock();
+            }
 		}
 	}
 }

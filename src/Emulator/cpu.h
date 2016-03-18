@@ -58,7 +58,8 @@ class CPU
     std::atomic<uint8_t> controllerOneState;
 
     // Cycles to next NMI check
-    int nextNMI;
+    int ppuRendevous;
+    bool nmiLineStatus;
 	bool nmiRaised;
 	bool nmiPending;
 
@@ -162,6 +163,7 @@ class CPU
     // Jump
     void JMP(uint16_t M); // Jump
 
+    void CheckNMI();
     void HandleNMI(); // Handle non-maskable interrupt
     void HandleIRQ(); // Handle standard interrupt
 

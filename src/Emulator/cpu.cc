@@ -52,7 +52,7 @@ void CPU::IncrementClock()
 		}
 	}
 
-	if (nextNMI > 0) nextNMI -= 3;
+	if (ppuRendevous > 0) ppuRendevous -= 3;
 }
 
 uint8_t CPU::Read(uint16_t address)
@@ -101,30 +101,7 @@ uint8_t CPU::Read(uint16_t address)
 		value = 0x00;
     }
 
-	if (nmiRaised)
-	{
-		nmiRaised = false;
-		nmiPending = true;
-	}
-
-	if (nextNMI <= 0)
-	{
-		ppu->Run();
-
-		if (ppu->CheckInterrupt())
-		{
-			if (nextNMI == -2)
-			{
-				nmiPending = true;
-			}
-			else
-			{
-				nmiRaised = true;
-			}		
-		}
-
-		nextNMI = ppu->ScheduleSync();
-	}
+    CheckNMI();
 
 	return value;
 }
@@ -151,8 +128,9 @@ void CPU::Write(uint8_t M, uint16_t address)
 
         for (int i = 0; i < 0x100; ++i)
         {
-			ppu->WriteOAMDATA(Read(page + i));
-			IncrementClock();
+            uint8_t value = Read(page + i);
+            IncrementClock();
+			ppu->WriteOAMDATA(value);
         }
     }
     // Any address less then 0x2000 is just the
@@ -203,30 +181,7 @@ void CPU::Write(uint8_t M, uint16_t address)
 		cart->PrgWrite(M, address - 0x6000);
     }
 
-	if (nmiRaised)
-	{
-		nmiRaised = false;
-		nmiPending = true;
-	}
-
-	if (nextNMI <= 0)
-	{
-		ppu->Run();
-
-		if (ppu->CheckInterrupt())
-		{
-			if (nextNMI == -2)
-			{
-				nmiPending = true;
-			}
-			else
-			{
-				nmiRaised = true;
-			}
-		}
-
-		nextNMI = ppu->ScheduleSync();
-	}
+    CheckNMI();
 }
 
 int8_t CPU::Relative()
@@ -1262,6 +1217,39 @@ void CPU::TYA()
     ((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
+void CPU::CheckNMI()
+{
+    if (nmiRaised)
+    {
+        nmiRaised = false;
+        nmiPending = true;
+    }
+
+    if (ppuRendevous <= 0 || nmiLineStatus)
+    {
+        ppu->Run();
+
+        uint64_t nmiOccuredCycle;
+        bool nmiLine = ppu->CheckInterrupt(nmiOccuredCycle);
+
+        if (!nmiLineStatus && nmiLine)
+        {
+
+            if (clock - nmiOccuredCycle >= 2)
+            {
+                nmiPending = true;
+            }
+            else
+            {
+                nmiRaised = true;
+            }
+        }
+
+        nmiLineStatus = nmiLine;
+        ppuRendevous = ppu->ScheduleSync();
+    }
+}
+
 void CPU::HandleNMI()
 {
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
@@ -1310,7 +1298,8 @@ CPU::CPU(NES& nes, bool logEnabled) :
 	controllerStrobe(0),
 	controllerOneShift(0),
 	controllerOneState(0),
-	nextNMI(0),
+	ppuRendevous(0),
+    nmiLineStatus(false),
 	nmiRaised(false),
 	nmiPending(false),
     S(0xFD),
@@ -1328,11 +1317,6 @@ CPU::CPU(NES& nes, bool logEnabled) :
 uint64_t CPU::GetClock()
 {
 	return clock;
-}
-
-void CPU::RaiseNMI()
-{
-    nmiRaised = true;
 }
 
 void CPU::AttachPPU(PPU& ppu)
@@ -1418,11 +1402,7 @@ void CPU::Reset()
 
 }
 
-// Run the CPU for the specified number of cycles
-// Since the instructions all take varying numbers
-// of cycles the CPU will likely run a few cycles past cyc.
-// If cyc is -1 then the CPU will simply run until it encounters
-// an illegal opcode
+// Run the CPU
 void CPU::Run()
 {
     // Initialize Logger if it is enabled and has not already been initialized
@@ -1458,21 +1438,6 @@ bool CPU::ExecuteInstruction()
 		logEnabled = true;
 	}
 
-    // Handle non-maskable interrupts
-   // if (nextNMI <= 0)
-   // {
-   //     ppu->Run();
-   //     nextNMI = ppu->ScheduleSync();
-
-   //     if (ppu->CheckInterrupt())
-   //     {
-			////nmiRaised = false;
-   //         Read(PC);
-   //         Read(PC);
-   //         HandleNMI();
-   //         return true;
-   //     }
-   // }
 	if (nmiPending)
 	{
 		nmiPending = false;
@@ -1489,23 +1454,8 @@ bool CPU::ExecuteInstruction()
 	}
 
     uint8_t opcode = Read(PC++); // Retrieve opcode from memory
-	/*uint8_t opcode = Read(PC);*/
 	uint16_t addr;
 	uint8_t value;
-
-	//if (nmiPending)
-	//{
-	//	nmiPending = false;
-
-	//	//Read(PC);
-	//	Read(PC);
-	//	HandleNMI();
-	//	return true;
-	//}
-	//else
-	//{
-	//	PC++;
-	//}
 
     if (IsLogEnabled()) LogOpcode(opcode);
 
@@ -1514,16 +1464,6 @@ bool CPU::ExecuteInstruction()
     // and passing their result into the instruction function. Depending on the instruction
     // the result may then be written back to the same address. After this procedure is
     // complete then the required cycles for that instruction are added to the cycle counter.
-    // Exceptions:
-    // * Immediate Addressing: This mode simply takes the value immediately following the
-    // opcode as the operand.
-    // * Accumulator Mode: This mode has the instruction operate directly on the accumulator
-    // rather than a byte of memory.
-    // * Relative addressing: The Branch instructions use this mode. It uses the next value in memory
-    // as a relative offset to be added to PC if the branch condition is true. This is currently
-    // implemented within the branch instructions.
-    // * Implied Addressing: This refers to all the instructions that take no input at all.
-    // All of these except Implied Addressing have their logging code included in the switch statement (sorry).
     switch (opcode)
     {
         // ADC OpCodes

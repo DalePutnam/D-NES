@@ -31,18 +31,19 @@ class PPU
 	enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
     
     static const uint32_t rgbLookupTable[64];
+    static const uint32_t resetDelay;
 
     boost::chrono::high_resolution_clock::time_point intervalStart;
 	std::atomic<bool> limitTo60FPS;
 
-    uint64_t ppuClock;
+    uint64_t clock;
     int16_t dot;
     int16_t line;
     bool even;
-    bool reset;
+    //bool reset;
 	bool suppressNMI;
-	bool suppressNMIFlag;
-	bool interruptActive;
+    bool interruptActive;
+    uint64_t nmiOccuredCycle;
 
     // Main Registers
 
@@ -79,7 +80,7 @@ class PPU
     bool addressLatch;
 
     // Register Buffer
-	std::queue<std::tuple<uint64_t, uint8_t, Register>> mainBuffer;
+	std::queue<std::tuple<uint64_t, uint8_t, Register>> registerBuffer;
 
     // PPU Data Read Buffer
     uint8_t dataBuffer;
@@ -137,7 +138,7 @@ public:
 
 	void Run();
 	int ScheduleSync();
-	bool CheckInterrupt();
+	bool CheckInterrupt(uint64_t& occuredCycle);
 
 	void EnableFrameLimit();
 	void DisableFrameLimit();
