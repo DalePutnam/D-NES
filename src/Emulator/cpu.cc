@@ -37,22 +37,12 @@ uint8_t CPU::DebugRead(uint16_t address)
 
 void CPU::IncrementClock()
 {
-	uint64_t old = clock;
 	clock += 3;
 
-	if (clock % 341 < old % 341)
-	{
-		if (scanline == 260)
-		{
-			scanline = -1;
-		}
-		else
-		{
-			scanline++;
-		}
-	}
-
-	if (ppuRendevous > 0) ppuRendevous -= 3;
+    if (ppuRendevous > 0)
+    {
+        ppuRendevous -= 3;
+    }
 }
 
 uint8_t CPU::Read(uint16_t address)
@@ -1255,6 +1245,9 @@ void CPU::HandleNMI()
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
 
+    Read(PC);
+    Read(PC);
+
     Write(highPC, 0x100 + S);
     Write(lowPC, 0x100 + (S - 1));
     Write(P | 0x20, 0x100 + (S - 2));
@@ -1294,7 +1287,6 @@ CPU::CPU(NES& nes, bool logEnabled) :
 	ppu(0),
 	cart(0),
 	clock(0),
-	scanline(241),
 	controllerStrobe(0),
 	controllerOneShift(0),
 	controllerOneState(0),
@@ -1334,7 +1326,7 @@ void CPU::AttachCart(Cart& cart)
 
 bool CPU::IsLogEnabled()
 {
-    return logEnabled.load();
+    return logEnabled;
 }
 
 void CPU::EnableLog()
@@ -1442,13 +1434,13 @@ bool CPU::ExecuteInstruction()
 	{
 		nmiPending = false;
 
-		Read(PC);
-		Read(PC);
 		HandleNMI();
 	}
 
 	if (IsLogEnabled())
 	{
+        ppu->Run();
+
 		LogProgramCounter();
 		LogRegisters();
 	}
@@ -2088,7 +2080,15 @@ void CPU::LogProgramCounter()
 
 void CPU::LogRegisters()
 {
-	sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, static_cast<uint32_t>(clock % 341), scanline);
+    int32_t scanline = ppu->GetCurrentScanline();
+
+    if (scanline == 261)
+    {
+        scanline = -1;
+    }
+
+	//sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, static_cast<uint32_t>(clock % 341), scanline);
+    sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, ppu->GetCurrentDot(), scanline);
 }
 
 void CPU::LogOpcode(uint8_t opcode)

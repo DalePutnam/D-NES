@@ -30,7 +30,6 @@ class CPU
 	Cart* cart;
 
 	uint64_t clock;
-	int32_t scanline;
 
     // CPU Main Memory
     uint8_t memory[0x800];
@@ -199,7 +198,6 @@ public:
 	void AttachCart(Cart& cart);
 
 	uint64_t GetClock();
-	void RaiseNMI();
 
 	void SetControllerOneState(uint8_t state);
 	uint8_t GetControllerOneState();

@@ -37,10 +37,9 @@ class PPU
 	std::atomic<bool> limitTo60FPS;
 
     uint64_t clock;
-    int16_t dot;
-    int16_t line;
+    uint16_t dot;
+    uint16_t line;
     bool even;
-    //bool reset;
 	bool suppressNMI;
     bool interruptActive;
     uint64_t nmiOccuredCycle;
@@ -133,8 +132,12 @@ class PPU
 public:
     PPU(NES& nes, IDisplay& display);
 	~PPU();
+
 	void AttachCPU(CPU& cpu);
 	void AttachCart(Cart& cart);
+
+    uint16_t GetCurrentDot();
+    uint16_t GetCurrentScanline();
 
 	void Run();
 	int ScheduleSync();

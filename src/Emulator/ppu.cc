@@ -652,6 +652,37 @@ void PPU::WriteNameTable(uint16_t address, uint8_t value)
     }
 }
 
+uint16_t PPU::GetCurrentDot()
+{
+    if (dot == 0)
+    {
+        return 340;
+    }
+    else
+    {
+        return dot - 1;
+    }
+}
+
+uint16_t PPU::GetCurrentScanline()
+{
+    if (dot == 0)
+    {
+        if (line == 0)
+        {
+            return 261;
+        }
+        else
+        {
+            return line - 1;
+        }
+    }
+    else
+    {
+        return line;
+    }
+}
+
 PPU::PPU(NES& nes, IDisplay& display) :
 	nes(nes),
 	display(display),
@@ -663,7 +694,6 @@ PPU::PPU(NES& nes, IDisplay& display) :
 	dot(0),
 	line(0),
 	even(false),
-	//reset(true),
 	suppressNMI(false),
     interruptActive(false),
     nmiOccuredCycle(0),
