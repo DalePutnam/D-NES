@@ -17,7 +17,6 @@
 #include <fstream>
 #include <condition_variable>
 
-#include "clock.h"
 #include "mappers/cart.h"
 
 class NES;

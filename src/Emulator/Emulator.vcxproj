@@ -81,7 +81,6 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="clock.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="Interfaces\idisplay.h" />
     <ClInclude Include="mappers\cart.h" />
@@ -91,7 +90,6 @@
     <ClInclude Include="ppu.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="clock.cc" />
     <ClCompile Include="cpu.cc" />
     <ClCompile Include="mappers\cart.cc" />
     <ClCompile Include="mappers\nrom.cc" />

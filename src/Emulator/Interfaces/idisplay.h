@@ -15,6 +15,4 @@ public:
     virtual ~IDisplay() {}
 };
 
-
-
 #endif /* SRC_EMULATOR_INTERFACES_DISPLAY_H_ */

@@ -45,9 +45,6 @@
     <ClInclude Include="mappers\sxrom.h">
       <Filter>Header Files\Mappers</Filter>
     </ClInclude>
-    <ClInclude Include="clock.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
@@ -67,9 +64,6 @@
     </ClCompile>
     <ClCompile Include="mappers\sxrom.cc">
       <Filter>Source Files\Mappers</Filter>
-    </ClCompile>
-    <ClCompile Include="clock.cc">
-      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

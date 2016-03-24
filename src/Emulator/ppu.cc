@@ -1004,10 +1004,9 @@ int PPU::ScheduleSync()
     {
         return ((240 - line) * 341) + (341 - dot + 1) + 1; // Time to next NMI
     }
-/*    return 0;*/
 }
 
-bool PPU::CheckInterrupt(uint64_t& occurredCycle)
+bool PPU::CheckNMI(uint64_t& occurredCycle)
 {
     occurredCycle = nmiOccuredCycle;
     return interruptActive;

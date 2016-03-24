@@ -102,11 +102,6 @@
     <ClCompile Include="utilities\app_settings.cc" />
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="config.xml">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </Xml>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Emulator\Emulator.vcxproj">
       <Project>{2f61ab97-7292-4a8c-b249-2773318d46a8}</Project>
     </ProjectReference>

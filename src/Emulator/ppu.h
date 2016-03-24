@@ -13,10 +13,8 @@
 #include <boost/cstdint.hpp>
 #include <boost/chrono/chrono.hpp>
 
-#include "clock.h"
 #include "mappers/cart.h"
 #include "Interfaces/idisplay.h"
-
 
 class NES;
 class CPU;
@@ -141,7 +139,7 @@ public:
 
 	void Run();
 	int ScheduleSync();
-	bool CheckInterrupt(uint64_t& occuredCycle);
+	bool CheckNMI(uint64_t& occuredCycle);
 
 	void EnableFrameLimit();
 	void DisableFrameLimit();

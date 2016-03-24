@@ -1220,7 +1220,7 @@ void CPU::CheckNMI()
         ppu->Run();
 
         uint64_t nmiOccuredCycle;
-        bool nmiLine = ppu->CheckInterrupt(nmiOccuredCycle);
+        bool nmiLine = ppu->CheckNMI(nmiOccuredCycle);
 
         if (!nmiLineStatus && nmiLine)
         {
