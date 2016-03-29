@@ -63,8 +63,8 @@ void NROM::ChrWrite(uint8_t M, uint16_t address)
     }
 }
 
-NROM::NROM(std::string& filename)
-    : file(*new boost::iostreams::mapped_file_source(filename)),
+NROM::NROM(const std::string& filename):
+    file(*new boost::iostreams::mapped_file_source(filename)),
     mirroring(Cart::MirrorMode::HORIZONTAL)
 {
     if (file.is_open())

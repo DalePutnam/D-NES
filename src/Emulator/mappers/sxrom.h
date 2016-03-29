@@ -43,7 +43,7 @@ public:
     uint8_t ChrRead(uint16_t address);
     void ChrWrite(uint8_t M, uint16_t address);
 
-    SXROM(std::string& filename, NES& nes, CPU& cpu);
+    SXROM(const std::string& filename, NES& nes, CPU& cpu);
     ~SXROM();
 };
 

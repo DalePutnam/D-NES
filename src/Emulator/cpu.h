@@ -165,7 +165,7 @@ class CPU
     void HandleNMI(); // Handle non-maskable interrupt
     void HandleIRQ(); // Handle standard interrupt
 
-    bool ExecuteInstruction(); // Execute next instruction
+    void Step(); // Execute next instruction
 
     void SetControllerStrobe(bool strobe);
     uint8_t GetControllerOneShift();

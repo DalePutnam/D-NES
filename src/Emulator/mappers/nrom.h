@@ -34,7 +34,7 @@ public:
     uint8_t ChrRead(uint16_t address);
     void ChrWrite(uint8_t M, uint16_t address);
 
-    NROM(std::string& filename);
+    NROM(const std::string& filename);
     ~NROM();
 };
 

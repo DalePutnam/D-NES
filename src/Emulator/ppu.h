@@ -10,6 +10,7 @@
 
 #include <queue>
 #include <atomic>
+#include <functional>
 #include <boost/cstdint.hpp>
 #include <boost/chrono/chrono.hpp>
 
@@ -22,9 +23,10 @@ class CPU;
 class PPU
 {
     NES& nes;
-	IDisplay& display;
 	CPU* cpu;
     Cart* cart;
+
+    uint8_t frameBuffer[256 * 240 * 3];
 
 	enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
     
@@ -127,8 +129,10 @@ class PPU
     uint8_t ReadNameTable(uint16_t address);
     void WriteNameTable(uint16_t address, uint8_t value);
 
+    std::function<void(uint8_t*)> DrawFrame;
+
 public:
-    PPU(NES& nes, IDisplay& display);
+    PPU(NES& nes, std::function<void(uint8_t*)>* frameCompleteCallback);
 	~PPU();
 
 	void AttachCPU(CPU& cpu);

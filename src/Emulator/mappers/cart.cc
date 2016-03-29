@@ -12,7 +12,7 @@
 #include "nrom.h"
 #include "sxrom.h"
 
-Cart& Cart::Create(std::string& filename, NES& nes, CPU& cpu)
+Cart& Cart::Create(const std::string& filename, NES& nes, CPU& cpu)
 {
     // Open file stream to ROM file
     std::ifstream rom(filename.c_str(), std::ifstream::in | std::ifstream::binary);

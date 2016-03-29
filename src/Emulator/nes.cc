@@ -5,26 +5,32 @@
  *      Author: Dale
  */
 
-#include "nes.h"
-#include "mappers/nrom.h"
 #include <boost/algorithm/string.hpp>
 
-NES::NES(std::string filename, IDisplay& display, bool cpuLogEnabled) : 
+#include "nes.h"
+#include "mappers/nrom.h"
+
+NES::NES(const NesParams& params) :
     stop(true),
     pause(false),
     nmi(false),
-	cpu(*new CPU(*this, cpuLogEnabled)),
-    ppu(*new PPU(*this, display)),
-	cart(Cart::Create(filename, *this, cpu))
+    cpu(*new CPU(*this, params.CpuLogEnabled)),
+    ppu(*new PPU(*this, params.FrameCompleteCallback)),
+    cart(Cart::Create(params.RomPath, *this, cpu))
 {
-	cpu.AttachPPU(ppu);
-	cpu.AttachCart(cart);
+    cpu.AttachPPU(ppu);
+    cpu.AttachCart(cart);
 
-	ppu.AttachCPU(cpu);
-	ppu.AttachCart(cart);
+    ppu.AttachCPU(cpu);
+    ppu.AttachCart(cart);
+
+    if (!params.FrameLimitEnabled)
+    {
+        ppu.DisableFrameLimit();
+    }
 
     std::vector<std::string> stringList;
-    boost::algorithm::split(stringList, filename, boost::is_any_of("\\/"));
+    boost::algorithm::split(stringList, params.RomPath, boost::is_any_of("\\/"));
     gameName = stringList.back().substr(0, stringList.back().length() - 4);
 }
 
@@ -97,7 +103,7 @@ bool NES::IsPaused()
     return cpu.IsPaused();
 }
 
-void NES::Start()
+void NES::Run()
 {
     stopMutex.lock();
     stop = false;

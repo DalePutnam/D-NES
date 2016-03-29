@@ -345,15 +345,17 @@ void PPU::SpriteEvaluation()
 
 void PPU::Render()
 {
+    uint32_t pixel;
+
 	if (!showSprites && !showBackground)
 	{
-		if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF)
-		{
-			display.NextPixel(rgbLookupTable[Read(ppuAddress)]);
-		}
+        if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF)
+        {
+            pixel = rgbLookupTable[Read(ppuAddress)];
+        }
 		else
 		{
-			display.NextPixel(rgbLookupTable[Read(0x3F00)]);
+			pixel = rgbLookupTable[Read(0x3F00)];
 		}
 	}
 	else
@@ -457,8 +459,25 @@ void PPU::Render()
 			paletteIndex = 0x3F00;
 		}
 
-		display.NextPixel(rgbLookupTable[Read(paletteIndex)]);
+        pixel = rgbLookupTable[Read(paletteIndex)];
 	}
+    
+    uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
+    uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
+    uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
+    uint32_t index = (dot - 1) + (line * 256);
+
+    frameBuffer[index * 3] = red;
+    frameBuffer[(index * 3) + 1] = green;
+    frameBuffer[(index * 3) + 2] = blue;
+
+    if (dot == 256 && line == 239)
+    {
+        if (DrawFrame)
+        {
+            DrawFrame(frameBuffer);
+        }
+    }
 }
 
 void PPU::IncrementXScroll()
@@ -683,18 +702,17 @@ uint16_t PPU::GetCurrentScanline()
     }
 }
 
-PPU::PPU(NES& nes, IDisplay& display) :
-	nes(nes),
-	display(display),
-	cpu(0),
-	cart(0),
-	intervalStart(boost::chrono::high_resolution_clock::now()),
-	limitTo60FPS(true),
-	clock(0),
-	dot(0),
-	line(0),
-	even(false),
-	suppressNMI(false),
+PPU::PPU(NES& nes, std::function<void(uint8_t*)>* frameCompleteCallback) :
+    nes(nes),
+    cpu(nullptr),
+    cart(nullptr),
+    intervalStart(boost::chrono::high_resolution_clock::now()),
+    limitTo60FPS(true),
+    clock(0),
+    dot(0),
+    line(0),
+    even(false),
+    suppressNMI(false),
     interruptActive(false),
     nmiOccuredCycle(0),
     ppuAddressIncrement(false),
@@ -733,22 +751,27 @@ PPU::PPU(NES& nes, IDisplay& display) :
     backgroundAttribute(0),
     spriteCount(0)
 {
-	for (int i = 0; i < 0x400; ++i)
-	{
-		nameTable0[i] = 0;
-		nameTable1[i] = 0;
-	}
+    if (frameCompleteCallback != nullptr)
+    {
+        DrawFrame = *frameCompleteCallback;
+    }
 
-	for (int i = 0; i < 0x100; ++i)
-	{
-		primaryOAM[i] = 0;
-	}
+    for (int i = 0; i < 0x400; ++i)
+    {
+        nameTable0[i] = 0;
+        nameTable1[i] = 0;
+    }
 
-	for (int i = 0; i < 0x20; ++i)
-	{
-		secondaryOAM[i] = 0;
-		palettes[i] = 0;
-	}
+    for (int i = 0; i < 0x100; ++i)
+    {
+        primaryOAM[i] = 0;
+    }
+
+    for (int i = 0; i < 0x20; ++i)
+    {
+        secondaryOAM[i] = 0;
+        palettes[i] = 0;
+    }
 
     for (int i = 0; i < 8; ++i)
     {

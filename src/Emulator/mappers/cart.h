@@ -19,7 +19,7 @@ class CPU;
 class Cart
 {
 public:
-    static Cart& Create(std::string& filename, NES& nes, CPU& cpu);
+    static Cart& Create(const std::string& filename, NES& nes, CPU& cpu);
 
     enum MirrorMode
     {

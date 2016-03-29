@@ -111,7 +111,7 @@ void SXROM::ChrWrite(uint8_t M, uint16_t address)
 
 uint8_t SXROM::PrgRead(uint16_t address)
 {
-    // Battery backed memory, not implemented
+    // Battery backed memory
     if (address >= 0x0000 && address < 0x2000)
     {
         if (!!(prgRegister & 0x10))
@@ -225,9 +225,9 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-SXROM::SXROM(std::string& filename, NES& nes, CPU& cpu) :
+SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu):
     file(*new boost::iostreams::mapped_file_source(filename)),
-    save(0),
+    save(nullptr),
     nes(nes),
 	cpu(cpu),
     lastWriteCycle(0),
@@ -271,7 +271,7 @@ SXROM::SXROM(std::string& filename, NES& nes, CPU& cpu) :
             {
                 boost::iostreams::mapped_file_params params(path.string());
                 params.new_file_size = 0x2000;
-		params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
+		        params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
 
                 save = new boost::iostreams::mapped_file(params);
             }

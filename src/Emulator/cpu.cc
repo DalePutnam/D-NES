@@ -1405,9 +1405,9 @@ void CPU::Run()
         logStream = new std::ofstream(logName);
     }
 
-    while (!nes.IsStopped()) // Run until illegal opcode or stop command issued
+    while (!nes.IsStopped()) // Run stop command issued
     {
-        if (!ExecuteInstruction()) break;
+        Step();
 
         if (pauseFlag.load())
         {
@@ -1422,7 +1422,7 @@ void CPU::Run()
 
 // Execute the next instruction at PC and return true
 // or return false if the next value is not an opcode
-bool CPU::ExecuteInstruction()
+void CPU::Step()
 {
 	if (logFlag)
 	{
@@ -2065,12 +2065,10 @@ bool CPU::ExecuteInstruction()
         TYA();
         break;
     default: // Otherwise illegal OpCode
-        return false;
+        throw std::exception();
     }
 
     if (IsLogEnabled()) PrintLog();
-
-    return true;
 }
 
 void CPU::LogProgramCounter()
@@ -2087,7 +2085,6 @@ void CPU::LogRegisters()
         scanline = -1;
     }
 
-	//sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, static_cast<uint32_t>(clock % 341), scanline);
     sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, ppu->GetCurrentDot(), scanline);
 }
 

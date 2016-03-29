@@ -43,12 +43,12 @@ SettingsWindow::SettingsWindow()
     cancel = new wxButton(this, wxID_CANCEL, "Cancel");
 
     wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
-    hbox1->Add(ok, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
-    hbox1->Add(cancel, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    hbox1->Add(ok, 0, wxALIGN_CENTER_VERTICAL);
+    hbox1->Add(cancel, 0, wxALIGN_CENTER_VERTICAL);
 
     wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(notebook, 1, wxEXPAND | wxALL);
-    vbox->Add(hbox1, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    vbox->Add(hbox1, 0, wxALIGN_RIGHT);
 
     SetSizer(vbox);
     Fit();

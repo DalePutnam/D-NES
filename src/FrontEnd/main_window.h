@@ -3,7 +3,14 @@
 #ifndef MAIN_WINDOW_H_
 #define MAIN_WINDOW_H_
 
+#include <mutex>
+#include <atomic>
+#include <thread>
+
+#include <boost/chrono/chrono.hpp>
+
 #include "wx/menu.h"
+#include "wx/event.h"
 #include "wx/image.h"
 #include "wx/panel.h"
 #include "wx/frame.h"
@@ -12,15 +19,20 @@
 #include "wx/treelist.h"
 #include "wx/listctrl.h"
 
-#include "nes.h"
 #include "game_list.h"
-#include "nes_thread.h"
 #include "game_window.h"
 #include "ppu_debug_window.h"
 
+class NES;
+
+wxDECLARE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
+
 class MainWindow : public wxFrame
 {
-    NESThread* nesThread;
+    NES* nes;
+    std::thread* thread;
+    std::mutex sizeMutex;
+
     PPUDebugWindow* ppuDebugWindow;
     
     wxPanel* panel;
@@ -34,8 +46,14 @@ class MainWindow : public wxFrame
     wxBoxSizer* vbox;
     GameList* romList;
 
+    int fpsCounter;
+    std::atomic<int> currentFPS;
+    boost::chrono::steady_clock::time_point intervalStart;
+    int pixelCount;
+    uint8_t frameBuffer[256 * 240 * 3];
     wxImage frame;
-    wxSize gameSize;
+    std::atomic<wxSize> gameSize;
+    std::atomic<bool> frameSizeDirty;
 
     void StartEmulator(std::string& filename);
     void UpdateImage(unsigned char* data);
@@ -63,10 +81,10 @@ public:
     MainWindow();
     ~MainWindow();
 
+    void NextPixel(uint32_t pixel);
+    void DrawFrame(uint8_t* frameBuffer);
     void StopEmulator(bool showRomList = true);
     void PPUDebugClose();
-
-    NESThread* GetNESThread();
 };
 
 const int ID_OPEN_ROM = 100;

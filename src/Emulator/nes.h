@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <iostream>
+#include <functional>
 #include <boost/cstdint.hpp>
 
 #include "cpu.h"
@@ -19,11 +20,23 @@
 #include "mappers/cart.h"
 #include "Interfaces/idisplay.h"
 
+struct NesParams
+{
+    std::string RomPath;
+    bool CpuLogEnabled;
+    bool FrameLimitEnabled;
+    std::function<void(uint8_t*)>* FrameCompleteCallback;
+
+    NesParams():
+        RomPath(""),
+        CpuLogEnabled(false),
+        FrameLimitEnabled(false),
+        FrameCompleteCallback(nullptr)
+    {}
+};
+
 class NES
 {
-    //Clock masterClock;
-    //uint32_t clock;
-    //int scanline;
     bool stop;
     bool pause;
     bool nmi;
@@ -38,8 +51,8 @@ class NES
     std::mutex pauseMutex;
 
 public:
-
-    NES(std::string filename, IDisplay& display, bool cpuLogEnabled = false);
+    NES(const NesParams& params);
+    ~NES();
 
     std::string& GetGameName();
 
@@ -60,13 +73,11 @@ public:
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
 
-    void Start();
+    void Run();
     void Stop();
     void Resume();
     void Pause();
     void Reset();
-
-    ~NES();
 };
 
 #endif /* NES_H_ */
