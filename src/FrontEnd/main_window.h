@@ -30,8 +30,7 @@ wxDECLARE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 class MainWindow : public wxFrame
 {
     NES* nes;
-    std::thread* thread;
-    std::mutex sizeMutex;
+    std::mutex PpuDebugMutex;
 
     PPUDebugWindow* ppuDebugWindow;
     
@@ -49,21 +48,15 @@ class MainWindow : public wxFrame
     int fpsCounter;
     std::atomic<int> currentFPS;
     boost::chrono::steady_clock::time_point intervalStart;
-    int pixelCount;
-    uint8_t frameBuffer[256 * 240 * 3];
-    wxImage frame;
     std::atomic<wxSize> gameSize;
-    std::atomic<bool> frameSizeDirty;
 
     void StartEmulator(std::string& filename);
-    void UpdateImage(unsigned char* data);
 
     void ToggleCPULog(wxCommandEvent& event);
 	void ToggleFrameLimit(wxCommandEvent& event);
     void OnSettings(wxCommandEvent& event);
     void OnROMDoubleClick(wxListEvent& event);
     void OnOpenROM(wxCommandEvent& event);
-    void OnThreadUpdate(wxThreadEvent& event);
     void OnEmulatorResume(wxCommandEvent& event);
     void OnEmulatorStop(wxCommandEvent& event);
     void OnEmulatorPause(wxCommandEvent& event);
@@ -77,12 +70,13 @@ class MainWindow : public wxFrame
     void OnKeyDown(wxKeyEvent& event);
     void OnKeyUp(wxKeyEvent& event);
 
+    void OnEmulatorError(std::string err);
+    void OnEmulatorFrameComplete(uint8_t* frameBuffer);
+
 public:
     MainWindow();
     ~MainWindow();
 
-    void NextPixel(uint32_t pixel);
-    void DrawFrame(uint8_t* frameBuffer);
     void StopEmulator(bool showRomList = true);
     void PPUDebugClose();
 };

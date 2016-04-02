@@ -82,7 +82,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h" />
-    <ClInclude Include="Interfaces\idisplay.h" />
     <ClInclude Include="mappers\cart.h" />
     <ClInclude Include="mappers\nrom.h" />
     <ClInclude Include="mappers\sxrom.h" />

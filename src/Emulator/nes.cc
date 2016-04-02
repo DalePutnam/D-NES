@@ -5,6 +5,7 @@
  *      Author: Dale
  */
 
+#include <exception>
 #include <boost/algorithm/string.hpp>
 
 #include "nes.h"
@@ -15,7 +16,7 @@ NES::NES(const NesParams& params) :
     pause(false),
     nmi(false),
     cpu(*new CPU(*this, params.CpuLogEnabled)),
-    ppu(*new PPU(*this, params.FrameCompleteCallback)),
+    ppu(*new PPU(*this)),
     cart(Cart::Create(params.RomPath, *this, cpu))
 {
     cpu.AttachPPU(ppu);
@@ -84,7 +85,7 @@ void NES::GetPalette(int palette, uint8_t* pixels)
     ppu.GetPalette(palette, pixels);
 }
 
-void NES::GetPrimaryOAM(int sprite, uint8_t* pixels)
+void NES::GetPrimarySprite(int sprite, uint8_t* pixels)
 {
     ppu.GetPrimaryOAM(sprite, pixels);
 }
@@ -103,13 +104,35 @@ bool NES::IsPaused()
     return cpu.IsPaused();
 }
 
+void NES::Start()
+{
+    if (!nesThread.joinable())
+    {
+        nesThread = std::thread(&NES::Run, this);
+    }
+    else
+    {
+        throw std::runtime_error("There is already a thread running on this NES instance.");
+    }
+}
+
 void NES::Run()
 {
     stopMutex.lock();
     stop = false;
     stopMutex.unlock();
 
-    cpu.Run();
+    try
+    {
+        cpu.Run();
+    }
+    catch (std::exception& e)
+    {
+        if (OnError)
+        {
+            OnError(e.what());
+        }
+    }    
 
     stopMutex.lock();
     stop = true;
@@ -125,6 +148,16 @@ void NES::Stop()
     if (cpu.IsPaused())
     {
         cpu.Resume();
+    }
+
+    if (nesThread.joinable())
+    {
+        if (std::this_thread::get_id() == nesThread.get_id())
+        {
+            throw std::runtime_error("NES Thread tried to stop itself!");
+        }
+
+        nesThread.join();
     }
 }
 

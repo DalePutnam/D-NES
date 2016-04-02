@@ -15,7 +15,6 @@
 #include <boost/chrono/chrono.hpp>
 
 #include "mappers/cart.h"
-#include "Interfaces/idisplay.h"
 
 class NES;
 class CPU;
@@ -129,14 +128,25 @@ class PPU
     uint8_t ReadNameTable(uint16_t address);
     void WriteNameTable(uint16_t address, uint8_t value);
 
-    std::function<void(uint8_t*)> DrawFrame;
+    std::function<void(uint8_t*)> OnFrameComplete;
 
 public:
-    PPU(NES& nes, std::function<void(uint8_t*)>* frameCompleteCallback);
-	~PPU();
+    PPU(NES& nes);
+    ~PPU();
 
 	void AttachCPU(CPU& cpu);
 	void AttachCart(Cart& cart);
+
+    void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
+    {
+        OnFrameComplete = Fn;
+    }
+
+    template<class T>
+    void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
+    {
+        OnFrameComplete = std::bind(Fn, Obj, std::placeholders::_1);
+    }
 
     uint16_t GetCurrentDot();
     uint16_t GetCurrentScanline();

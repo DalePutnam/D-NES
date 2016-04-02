@@ -1,18 +1,15 @@
 #ifndef SXROM_H_
 #define SXROM_H_
 
-#include <boost/cstdint.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 
 #include "cart.h"
-#include "../clock.h"
 
 class NES;
 class CPU;
 
 class SXROM : public Cart
 {
-    boost::iostreams::mapped_file_source& file;
     boost::iostreams::mapped_file* save;
 
     NES& nes;

@@ -473,9 +473,9 @@ void PPU::Render()
 
     if (dot == 256 && line == 239)
     {
-        if (DrawFrame)
+        if (OnFrameComplete)
         {
-            DrawFrame(frameBuffer);
+            OnFrameComplete(frameBuffer);
         }
     }
 }
@@ -702,7 +702,7 @@ uint16_t PPU::GetCurrentScanline()
     }
 }
 
-PPU::PPU(NES& nes, std::function<void(uint8_t*)>* frameCompleteCallback) :
+PPU::PPU(NES& nes) :
     nes(nes),
     cpu(nullptr),
     cart(nullptr),
@@ -751,11 +751,6 @@ PPU::PPU(NES& nes, std::function<void(uint8_t*)>* frameCompleteCallback) :
     backgroundAttribute(0),
     spriteCount(0)
 {
-    if (frameCompleteCallback != nullptr)
-    {
-        DrawFrame = *frameCompleteCallback;
-    }
-
     for (int i = 0; i < 0x400; ++i)
     {
         nameTable0[i] = 0;

@@ -16,9 +16,6 @@
     <Filter Include="Header Files\Mappers">
       <UniqueIdentifier>{69aa2b97-c5a0-447a-bf06-c2276d7e6495}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Interfaces">
-      <UniqueIdentifier>{b39af449-660b-442a-b3a2-92797d1333a3}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Mappers">
       <UniqueIdentifier>{5f44222b-4992-43d8-b028-cd22ac026d36}</UniqueIdentifier>
     </Filter>
@@ -38,9 +35,6 @@
     </ClInclude>
     <ClInclude Include="mappers\nrom.h">
       <Filter>Header Files\Mappers</Filter>
-    </ClInclude>
-    <ClInclude Include="Interfaces\idisplay.h">
-      <Filter>Header Files\Interfaces</Filter>
     </ClInclude>
     <ClInclude Include="mappers\sxrom.h">
       <Filter>Header Files\Mappers</Filter>

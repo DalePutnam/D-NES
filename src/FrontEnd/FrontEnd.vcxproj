@@ -82,9 +82,7 @@
   <ItemGroup>
     <ClInclude Include="app.h" />
     <ClInclude Include="game_list.h" />
-    <ClInclude Include="game_window.h" />
     <ClInclude Include="main_window.h" />
-    <ClInclude Include="nes_thread.h" />
     <ClInclude Include="pattern_table_display.h" />
     <ClInclude Include="ppu_debug_window.h" />
     <ClInclude Include="settings_window.h" />
@@ -93,9 +91,7 @@
   <ItemGroup>
     <ClCompile Include="app.cc" />
     <ClCompile Include="game_list.cc" />
-    <ClCompile Include="game_window.cc" />
     <ClCompile Include="main_window.cc" />
-    <ClCompile Include="nes_thread.cc" />
     <ClCompile Include="pattern_table_display.cc" />
     <ClCompile Include="ppu_debug_window.cc" />
     <ClCompile Include="settings_window.cc" />

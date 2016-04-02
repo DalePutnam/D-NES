@@ -14,84 +14,118 @@
 
 wxDEFINE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
-namespace
+void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
 {
-    void Run(MainWindow* window, NES* nes)
+    using namespace boost::chrono;
+
+    wxImage image(256, 240, frameBuffer, true);
+    wxBitmap bitmap(image, 24);
+    wxMemoryDC mdc(bitmap);
+    wxClientDC cdc(this);
+    cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
+
+    if (ppuDebugWindow != nullptr)
     {
-        try
+        std::lock_guard<std::mutex> lock(PpuDebugMutex);
+
+        if (ppuDebugWindow != nullptr)
         {
-            nes->Run();
-        }
-        catch (const std::exception& /* e */)
-        {
-            wxThreadEvent evt(wxEVT_NES_UNEXPECTED_SHUTDOWN);
-            wxQueueEvent(window, evt.Clone());
-            window->SetFocus();
+            for (int i = 0; i < 64; ++i)
+            {
+                if (i < 2)
+                {
+                    uint8_t patternTable[256 * 128 * 3];
+                    nes->GetPatternTable(i, ppuDebugWindow->GetCurrentPalette(), patternTable);
+                    ppuDebugWindow->UpdatePatternTable(i, patternTable);
+                }
+
+                if (i < 4)
+                {
+                    uint8_t nameTable[256 * 240 * 3];
+                    nes->GetNameTable(i, nameTable);
+                    ppuDebugWindow->UpdateNameTable(i, nameTable);
+                }
+
+                if (i < 8)
+                {
+                    uint8_t palette[64 * 16 * 3];
+                    nes->GetPalette(i, palette);
+                    ppuDebugWindow->UpdatePalette(i, palette);
+                }
+
+                uint8_t sprite[8 * 8 * 3];
+                nes->GetPrimarySprite(i, sprite);
+                ppuDebugWindow->UpdatePrimarySprite(i, sprite);
+            }
         }
     }
+
+    fpsCounter++;
+
+    steady_clock::time_point now = steady_clock::now();
+    microseconds time_span = duration_cast<microseconds>(now - intervalStart);
+    if (time_span.count() >= 1000000)
+    {
+        currentFPS = fpsCounter;
+        fpsCounter = 0;
+        intervalStart = steady_clock::now();
+
+        std::ostringstream oss;
+        oss << currentFPS << " FPS - " << nes->GetGameName();
+        SetTitle(oss.str());
+    }
+}
+
+void MainWindow::OnEmulatorError(std::string err)
+{
+    wxThreadEvent evt(wxEVT_NES_UNEXPECTED_SHUTDOWN);
+    evt.SetString(err);
+
+    wxQueueEvent(this, evt.Clone());
+    SetFocus();
 }
 
 void MainWindow::StartEmulator(std::string& filename)
 {
-    try
+    if (nes == nullptr)
     {
-        if (nes == nullptr)
+        NesParams params;
+        params.RomPath = filename;
+        params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
+        params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
+
+        try
         {
-            std::function<void(uint8_t*)> FrameCallback = [this](uint8_t* inFrameBuffer)
-            {
-                using namespace boost::chrono;
-
-                wxImage image(256, 240, inFrameBuffer, true);
-                wxBitmap bitmap(image, 24);
-                wxMemoryDC mdc(bitmap);
-                wxClientDC cdc(this);
-                cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
-
-                fpsCounter++;
-
-                steady_clock::time_point now = steady_clock::now();
-                microseconds time_span = duration_cast<microseconds>(now - intervalStart);
-                if (time_span.count() >= 1000000)
-                {
-                    currentFPS = fpsCounter;
-                    fpsCounter = 0;
-                    intervalStart = steady_clock::now();
-
-                    std::ostringstream oss;
-                    oss << currentFPS << " FPS - " << nes->GetGameName();
-                    SetTitle(oss.str());
-                }
-            };
-
-            intervalStart = boost::chrono::steady_clock::now();
-
-            NesParams params;
-            params.RomPath = filename;
-            params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
-            params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
-            params.FrameCompleteCallback = &FrameCallback;
-
             nes = new NES(params);
-            thread = new std::thread(Run, this, nes);
+            nes->BindFrameCompleteCallback(&MainWindow::OnEmulatorFrameComplete, this);
+            nes->BindErrorCallback(&MainWindow::OnEmulatorError, this);
+        }
+        catch (std::exception &e)
+        {
+            wxMessageDialog message(nullptr, e.what(), "ERROR", wxOK | wxICON_ERROR);
+            message.ShowModal();
 
-            romList = 0;
-            vbox->Clear(true);
-            SetTitle(nes->GetGameName());
-            SetClientSize(gameSize);
+            delete nes;
+            nes = nullptr;
+            return;
+        }
+
+        fpsCounter = 0;
+        intervalStart = boost::chrono::steady_clock::now();
+        nes->Start();
+
+        romList = 0;
+        vbox->Clear(true);
+        SetTitle(nes->GetGameName());
+        SetClientSize(gameSize);
 
 #ifndef _WINDOWS
-	        panel->SetFocus();
+        panel->SetFocus();
 #endif
-        }
-        else
-        {
-            wxMessageDialog message(NULL, "Emulator Instance Already Running", "Cannot Complete Action", wxOK);
-            message.ShowModal();
-        }
     }
-    catch (std::string& err)
+    else
     {
-        wxMessageDialog message(NULL, err, "ERROR", wxOK | wxICON_ERROR);
+        wxMessageDialog message(NULL, "Emulator Instance Already Running", "Cannot Complete Action", wxOK);
         message.ShowModal();
     }
 }
@@ -101,13 +135,8 @@ void MainWindow::StopEmulator(bool showRomList)
     if (nes != nullptr)
     {
         nes->Stop();
-        thread->join();
-
         delete nes;
-        delete thread;
-
         nes = nullptr;
-        thread = nullptr;
 
         if (showRomList)
         {
@@ -118,17 +147,11 @@ void MainWindow::StopEmulator(bool showRomList)
             SetTitle("D-NES");
         }
 
-        if (ppuDebugWindow)
+        if (ppuDebugWindow != nullptr)
         {
             ppuDebugWindow->ClearAll();
         }
     }
-}
-
-void MainWindow::UpdateImage(unsigned char* data)
-{
-// 	wxClientDC dc(this);
-// 	nesThread->DrawFrame(dc, GetVirtualSize().GetX(), GetVirtualSize().GetY());
 }
 
 void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
@@ -198,31 +221,6 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
     }
 }
 
-void MainWindow::OnThreadUpdate(wxThreadEvent& WXUNUSED(event))
-{
-//     if (nesThread)
-//     {
-// 		wxClientDC dc(this);
-// 		nesThread->DrawFrame(dc, GetVirtualSize().GetX(), GetVirtualSize().GetY());
-// 
-//         if (ppuDebugWindow)
-//         {
-//             for (int i = 0; i < 64; ++i)
-//             {
-//                 if (i < 2) ppuDebugWindow->UpdatePatternTable(i, nesThread->GetPatternTable(i, ppuDebugWindow->GetCurrentPalette()));
-//                 if (i < 4) ppuDebugWindow->UpdateNameTable(i, nesThread->GetNameTable(i));
-// 
-//                 if (i < 8)
-//                 {
-//                     ppuDebugWindow->UpdatePalette(i, nesThread->GetPalette(i));
-//                 }
-// 
-//                 ppuDebugWindow->UpdatePrimarySprite(i, nesThread->GetPrimarySprite(i));
-//             }
-//         }
-//     }
-}
-
 void MainWindow::OnEmulatorResume(wxCommandEvent& WXUNUSED(event))
 {
     if (nes != nullptr)
@@ -272,7 +270,7 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
-    if (!ppuDebugWindow)
+    if (ppuDebugWindow != nullptr)
     {
         ppuDebugWindow = new PPUDebugWindow(this);
         ppuDebugWindow->Show();
@@ -281,23 +279,20 @@ void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::PPUDebugClose()
 {
-    if (ppuDebugWindow)
+    if (ppuDebugWindow != nullptr)
     {
+        std::lock_guard<std::mutex> lock(PpuDebugMutex);
+
         ppuDebugWindow->Destroy();
-        ppuDebugWindow = 0;
+        ppuDebugWindow = nullptr;
     }
 }
 
-void MainWindow::OnUnexpectedShutdown(wxThreadEvent& WXUNUSED(event))
+void MainWindow::OnUnexpectedShutdown(wxThreadEvent& event)
 {
-    wxMessageDialog message(NULL, "Emulator Crashed", "ERROR", wxOK | wxICON_ERROR);
+    wxMessageDialog message(nullptr, event.GetString(), "ERROR", wxOK | wxICON_ERROR);
     message.ShowModal();
     StopEmulator();
-}
-
-void MainWindow::OnFPSUpdate(wxThreadEvent& WXUNUSED(event))
-{
-
 }
 
 void MainWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
@@ -390,82 +385,14 @@ void MainWindow::OnKeyUp(wxKeyEvent& event)
     }
 }
 
-void MainWindow::NextPixel(uint32_t pixel)
-{
-    unsigned char red = static_cast<unsigned char>((pixel & 0xFF0000) >> 16);
-    unsigned char green = static_cast<unsigned char>((pixel & 0x00FF00) >> 8);
-    unsigned char blue = static_cast<unsigned char>(pixel & 0x0000FF);
-
-    frameBuffer[pixelCount * 3] = red;
-    frameBuffer[(pixelCount * 3) + 1] = green;
-    frameBuffer[(pixelCount * 3) + 2] = blue;
-
-    ++pixelCount;
-
-    if (pixelCount == 256 * 240)
-    {
-        using namespace boost::chrono;
-
-        wxImage image(256, 240, frameBuffer, true);
-        wxBitmap bitmap(image, 24);
-        wxMemoryDC mdc(bitmap);
-        wxClientDC cdc(this);
-        cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
-
-        pixelCount = 0;
-        fpsCounter++;
-
-        steady_clock::time_point now = steady_clock::now();
-        microseconds time_span = duration_cast<microseconds>(now - intervalStart);
-        if (time_span.count() >= 1000000)
-        {
-            currentFPS = fpsCounter;
-            fpsCounter = 0;
-            intervalStart = steady_clock::now();
-            
-            std::ostringstream oss;
-            oss << currentFPS << " FPS - " << nes->GetGameName();
-            SetTitle(oss.str());
-        }
-    }
-}
-
-void MainWindow::DrawFrame(uint8_t* inFrameBuffer)
-{
-    using namespace boost::chrono;
-
-    wxImage image(256, 240, inFrameBuffer, true);
-    wxBitmap bitmap(image, 24);
-    wxMemoryDC mdc(bitmap);
-    wxClientDC cdc(this);
-    cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
-
-    fpsCounter++;
-
-    steady_clock::time_point now = steady_clock::now();
-    microseconds time_span = duration_cast<microseconds>(now - intervalStart);
-    if (time_span.count() >= 1000000)
-    {
-        currentFPS = fpsCounter;
-        fpsCounter = 0;
-        intervalStart = steady_clock::now();
-
-        std::ostringstream oss;
-        oss << currentFPS << " FPS - " << nes->GetGameName();
-        SetTitle(oss.str());
-    }
-}
-
 MainWindow::MainWindow(): 
     wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460)),
     nes(nullptr),
-    thread(nullptr),
     fpsCounter(0),
     currentFPS(0),
     intervalStart(boost::chrono::steady_clock::now()),
     ppuDebugWindow(0),
-    gameSize(wxSize(256, 240)),
-    frameSizeDirty(false)
+    gameSize(wxSize(256, 240))
 {
     file = new wxMenu;
     file->Append(ID_OPEN_ROM, wxT("&Open ROM"));
@@ -521,8 +448,6 @@ MainWindow::MainWindow():
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
 	Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
 
-//     Bind(wxEVT_COMMAND_NESTHREAD_FRAME_UPDATE, wxThreadEventHandler(MainWindow::OnThreadUpdate), this, wxID_ANY);
-//     Bind(wxEVT_COMMAND_NESTHREAD_FPS_UPDATE, wxThreadEventHandler(MainWindow::OnFPSUpdate), this, wxID_ANY);
     Bind(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
 
     Bind(wxEVT_SIZING, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);

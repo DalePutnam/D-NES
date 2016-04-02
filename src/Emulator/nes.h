@@ -10,28 +10,24 @@
 
 #include <mutex>
 #include <string>
+#include <thread>
 #include <iostream>
 #include <functional>
-#include <boost/cstdint.hpp>
 
 #include "cpu.h"
 #include "ppu.h"
-#include "clock.h"
 #include "mappers/cart.h"
-#include "Interfaces/idisplay.h"
 
 struct NesParams
 {
     std::string RomPath;
     bool CpuLogEnabled;
     bool FrameLimitEnabled;
-    std::function<void(uint8_t*)>* FrameCompleteCallback;
 
     NesParams():
         RomPath(""),
         CpuLogEnabled(false),
-        FrameLimitEnabled(false),
-        FrameCompleteCallback(nullptr)
+        FrameLimitEnabled(false)
     {}
 };
 
@@ -41,6 +37,7 @@ class NES
     bool pause;
     bool nmi;
 
+    std::thread nesThread;
     std::string gameName;
 
 	CPU& cpu;
@@ -50,11 +47,35 @@ class NES
     std::mutex stopMutex;
     std::mutex pauseMutex;
 
+    std::function<void(std::string)> OnError;
+
 public:
     NES(const NesParams& params);
     ~NES();
 
     std::string& GetGameName();
+
+    void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
+    {
+        ppu.BindFrameCompleteCallback(Fn);
+    }
+
+    template<class T>
+    void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
+    {
+        ppu.BindFrameCompleteCallback(Fn, Obj);
+    }
+
+    void BindErrorCallback(void(*Fn)(std::string))
+    {
+        OnError = Fn;
+    }
+
+    template<class T>
+    void BindErrorCallback(void(T::*Fn)(std::string), T* Obj)
+    {
+        OnError = std::bind(Fn, Obj, std::placeholders::_1);
+    }
 
     bool IsStopped();
     bool IsPaused();
@@ -71,10 +92,20 @@ public:
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
-    void GetPrimaryOAM(int sprite, uint8_t* pixels);
+    void GetPrimarySprite(int sprite, uint8_t* pixels);
 
+    // Launch the emulator on a new thread.
+    // This function returns immediately.
+    void Start();
+
+    // Run the emulator on the current thread.
+    // This function runs until the emulator stops.
     void Run();
+
+    // Instructs the emulator to stop and then blocks until it does.
+    // Once this function returns this object may be safely deleted.
     void Stop();
+
     void Resume();
     void Pause();
     void Reset();

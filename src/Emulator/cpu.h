@@ -163,7 +163,7 @@ class CPU
 
     void CheckNMI();
     void HandleNMI(); // Handle non-maskable interrupt
-    void HandleIRQ(); // Handle standard interrupt
+    void CheckIRQ(); // Handle standard interrupt
 
     void Step(); // Execute next instruction
 

@@ -33,12 +33,6 @@
     <ClInclude Include="settings_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="game_window.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="nes_thread.h">
-      <Filter>Header Files\Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="ppu_debug_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -61,12 +55,6 @@
     </ClCompile>
     <ClCompile Include="settings_window.cc">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="game_window.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="nes_thread.cc">
-      <Filter>Source Files\Utilities</Filter>
     </ClCompile>
     <ClCompile Include="ppu_debug_window.cc">
       <Filter>Source Files</Filter>

@@ -1,6 +1,8 @@
 #ifndef PPU_DEBUG_WINDOW_H_
 #define PPU_DEBUG_WINDOW_H_
 
+#include <mutex>
+
 #include "wx/frame.h"
 #include "wx/panel.h"
 #include "pattern_table_display.h"

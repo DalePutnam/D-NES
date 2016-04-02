@@ -21,7 +21,7 @@ Cart::MirrorMode SXROM::GetMirrorMode()
     case 3:
         return MirrorMode::HORIZONTAL;
     default:
-        throw "WTF!";
+        throw std::runtime_error("If you're seeing this something has gone horribly wrong.");
     }
 }
 
@@ -226,7 +226,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 }
 
 SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu):
-    file(*new boost::iostreams::mapped_file_source(filename)),
+    Cart(filename),
     save(nullptr),
     nes(nes),
 	cpu(cpu),
@@ -282,7 +282,7 @@ SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu):
             }
             else
             {
-                throw "Open Save File Failed";
+                throw std::runtime_error("SXROM failed to open save file.");
             }
         }
         else
@@ -308,15 +308,12 @@ SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu):
     }
     else
     {
-        std::cout << "Open Failed!!" << std::endl;
+        throw std::runtime_error("SXROM failed to open file.");
     }
 }
 
 SXROM::~SXROM()
 {
-    file.close();
-    delete &file;
-
     if (save)
     {
         save->close();

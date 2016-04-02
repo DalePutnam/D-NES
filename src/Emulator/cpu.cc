@@ -2065,7 +2065,7 @@ void CPU::Step()
         TYA();
         break;
     default: // Otherwise illegal OpCode
-        throw std::exception();
+        throw std::runtime_error("CPU tried to execute invalid opcode!");
     }
 
     if (IsLogEnabled()) PrintLog();

@@ -64,7 +64,7 @@ void NROM::ChrWrite(uint8_t M, uint16_t address)
 }
 
 NROM::NROM(const std::string& filename):
-    file(*new boost::iostreams::mapped_file_source(filename)),
+    Cart(filename),
     mirroring(Cart::MirrorMode::HORIZONTAL)
 {
     if (file.is_open())
@@ -96,15 +96,12 @@ NROM::NROM(const std::string& filename):
     }
     else
     {
-        std::cout << "Open Failed!!" << std::endl;
+        throw std::runtime_error("NROM failed to open file.");
     }
 }
 
 NROM::~NROM()
 {
-    file.close();
-    delete &file;
-
     if (chrSize == 0)
     {
         delete[] chrRam;

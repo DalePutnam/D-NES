@@ -4,9 +4,11 @@
  *  Created on: Jul 8, 2014
  *      Author: Dale
  */
-#include <iostream>
+
 #include <fstream>
 #include <sstream>
+#include <iostream>
+#include <exception>
 
 #include "cart.h"
 #include "nrom.h"
@@ -45,24 +47,30 @@ Cart& Cart::Create(const std::string& filename, NES& nes, CPU& cpu)
             default:
                 std::ostringstream oss;
                 oss << "Mapper " << (int)mapper_number << " specified by " << filename << " does not exist.";
-                throw oss.str();
+                throw std::runtime_error(oss.str());
             }
         }
         else
         {
-            throw std::string("Invalid ROM format");
+            throw std::runtime_error("Invalid ROM format");
         }
     }
     else
     {
         std::ostringstream oss;
         oss << "Unable to open " << filename;
-        throw oss.str();
+        throw std::runtime_error(oss.str());
     }
 
-    throw "WTF";
+    throw std::runtime_error("WTF");
 }
 
-Cart::~Cart() {}
+Cart::Cart(const std::string& filename): file(*new boost::iostreams::mapped_file_source(filename)) {}
+
+Cart::~Cart()
+{
+    file.close();
+    delete &file;
+}
 
 
