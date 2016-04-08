@@ -10,8 +10,8 @@
 
 #include <queue>
 #include <atomic>
+#include <cstdint>
 #include <functional>
-#include <boost/cstdint.hpp>
 #include <boost/chrono/chrono.hpp>
 
 #include "mappers/cart.h"

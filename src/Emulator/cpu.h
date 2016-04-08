@@ -15,6 +15,7 @@
 #include <mutex>
 #include <atomic>
 #include <fstream>
+#include <cstdint>
 #include <condition_variable>
 
 #include "mappers/cart.h"

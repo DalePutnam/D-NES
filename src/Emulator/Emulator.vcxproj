@@ -81,6 +81,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="apu.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="mappers\cart.h" />
     <ClInclude Include="mappers\nrom.h" />
@@ -89,6 +90,7 @@
     <ClInclude Include="ppu.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="apu.cc" />
     <ClCompile Include="cpu.cc" />
     <ClCompile Include="mappers\cart.cc" />
     <ClCompile Include="mappers\nrom.cc" />
