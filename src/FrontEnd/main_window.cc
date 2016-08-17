@@ -16,8 +16,6 @@ wxDEFINE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
 {
-	using namespace std::chrono;
-
     wxImage image(256, 240, frameBuffer, true);
     wxBitmap bitmap(image, 24);
     wxMemoryDC mdc(bitmap);
@@ -60,7 +58,9 @@ void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
         }
     }
 
-    fpsCounter++;
+	fpsCounter++;
+
+	using namespace std::chrono;
 
     steady_clock::time_point now = steady_clock::now();
     microseconds time_span = duration_cast<microseconds>(now - intervalStart);
