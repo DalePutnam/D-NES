@@ -820,7 +820,7 @@ PPU::PPU(NES& nes) :
     nes(nes),
     cpu(nullptr),
     cart(nullptr),
-    intervalStart(boost::chrono::high_resolution_clock::now()),
+	intervalStart(std::chrono::high_resolution_clock::now()),
     limitTo60FPS(true),
     clock(0),
     dot(0),
@@ -1241,16 +1241,16 @@ void PPU::Run()
 
                 if (line == 239 && dot == 256 && limitTo60FPS)
                 {
-                    using namespace boost::chrono;
+					using namespace std::chrono;
 
                     high_resolution_clock::time_point now = high_resolution_clock::now();
-                    nanoseconds span = duration_cast<nanoseconds>(now - intervalStart);
+					microseconds span = duration_cast<microseconds>(now - intervalStart);
 
                     //while (span.count() < 16666667)
-                    while (span.count() < 16666000)
+					while (span.count() < 16878)
                     {
                         now = high_resolution_clock::now();
-                        span = duration_cast<nanoseconds>(now - intervalStart);
+						span = duration_cast<microseconds>(now - intervalStart);
                     }
 
                     intervalStart = high_resolution_clock::now();

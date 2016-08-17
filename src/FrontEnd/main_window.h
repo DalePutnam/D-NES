@@ -6,8 +6,7 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
-
-#include <boost/chrono/chrono.hpp>
+#include <chrono>
 
 #include "wx/menu.h"
 #include "wx/event.h"
@@ -47,7 +46,7 @@ class MainWindow : public wxFrame
 
     int fpsCounter;
     std::atomic<int> currentFPS;
-    boost::chrono::steady_clock::time_point intervalStart;
+	std::chrono::steady_clock::time_point intervalStart;
     std::atomic<wxSize> gameSize;
 
     void StartEmulator(std::string& filename);
