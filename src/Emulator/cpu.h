@@ -22,11 +22,13 @@
 
 class NES;
 class PPU;
+class APU;
 
 class CPU
 {
 	NES& nes;
 	PPU* ppu;
+    APU* apu;
 	Cart* cart;
 
 	uint64_t clock;
@@ -61,6 +63,9 @@ class CPU
     bool nmiLineStatus;
 	bool nmiRaised;
 	bool nmiPending;
+
+    bool isStalled;
+    bool irqPending;
 
     // Registers
     uint16_t PC; // Program Counter
@@ -164,7 +169,8 @@ class CPU
 
     void CheckNMI();
     void HandleNMI(); // Handle non-maskable interrupt
-    void CheckIRQ(); // Handle standard interrupt
+    void CheckIRQ();
+    void HandleIRQ(); // Handle standard interrupt
 
     void Step(); // Execute next instruction
 
@@ -195,7 +201,10 @@ public:
 
     CPU(NES& nes, bool logEnabled = false);
 	void AttachPPU(PPU& ppu);
+    void AttachAPU(APU& apu);
 	void AttachCart(Cart& cart);
+
+    void SetStalled(bool stalled);
 
 	uint64_t GetClock();
 

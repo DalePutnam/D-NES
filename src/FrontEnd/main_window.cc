@@ -270,7 +270,7 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
-    if (ppuDebugWindow != nullptr)
+    if (ppuDebugWindow == nullptr)
     {
         ppuDebugWindow = new PPUDebugWindow(this);
         ppuDebugWindow->Show();
@@ -391,7 +391,7 @@ MainWindow::MainWindow():
     fpsCounter(0),
     currentFPS(0),
     intervalStart(boost::chrono::steady_clock::now()),
-    ppuDebugWindow(0),
+    ppuDebugWindow(nullptr),
     gameSize(wxSize(256, 240))
 {
     file = new wxMenu;

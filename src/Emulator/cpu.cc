@@ -12,6 +12,7 @@
 #include "cpu.h"
 #include "nes.h"
 #include "ppu.h"
+#include "apu.h"
 
 uint8_t CPU::DebugRead(uint16_t address)
 {
@@ -39,6 +40,8 @@ void CPU::IncrementClock()
 {
 	clock += 3;
 
+    //apu->Step();
+
     if (ppuRendevous > 0)
     {
         ppuRendevous -= 3;
@@ -50,6 +53,11 @@ uint8_t CPU::Read(uint16_t address)
 	uint8_t value;
 
 	IncrementClock();
+
+    while (isStalled)
+    {
+        IncrementClock();
+    }
 
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
@@ -92,6 +100,7 @@ uint8_t CPU::Read(uint16_t address)
     }
 
     CheckNMI();
+    CheckIRQ();
 
 	return value;
 }
@@ -172,6 +181,7 @@ void CPU::Write(uint8_t M, uint16_t address)
     }
 
     CheckNMI();
+    CheckIRQ();
 }
 
 int8_t CPU::Relative()
@@ -1224,7 +1234,6 @@ void CPU::CheckNMI()
 
         if (!nmiLineStatus && nmiLine)
         {
-
             if (clock - nmiOccuredCycle >= 2)
             {
                 nmiPending = true;
@@ -1255,7 +1264,34 @@ void CPU::HandleNMI()
 
     P |= 0x4;
 
-    PC = Read(0xFFFA) + (((uint16_t) Read(0xFFFB)) * 0x100);
+    PC = Read(0xFFFA) + (static_cast<uint16_t>(Read(0xFFFB)) * 0x100);
+}
+
+void CPU::CheckIRQ()
+{
+    // If IRQ line is high and interrupt inhibit flag is false
+    /*if (apu->CheckIRQ() && !(P & 0x4))
+    {
+        irqPending = true;
+    }*/
+}
+
+void CPU::HandleIRQ()
+{
+    uint8_t highPC = static_cast<uint8_t>(PC >> 8);
+    uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
+
+    Read(PC);
+    Read(PC);
+
+    Write(highPC, 0x100 + S);
+    Write(lowPC, 0x100 + (S - 1));
+    Write(P | 0x20, 0x100 + (S - 2));
+    S -= 3;
+
+    P |= 0x4;
+
+    PC = Read(0xFFFE) + (static_cast<uint16_t>(Read(0xFFFF)) * 0x100);
 }
 
 void CPU::SetControllerStrobe(bool strobe)
@@ -1282,10 +1318,11 @@ CPU::CPU(NES& nes, bool logEnabled) :
 	isPaused(false),
 	logFlag(false),
 	logEnabled(logEnabled),
-	logStream(0),
+	logStream(nullptr),
 	nes(nes),
-	ppu(0),
-	cart(0),
+	ppu(nullptr),
+    apu(nullptr),
+	cart(nullptr),
 	clock(0),
 	controllerStrobe(0),
 	controllerOneShift(0),
@@ -1294,6 +1331,8 @@ CPU::CPU(NES& nes, bool logEnabled) :
     nmiLineStatus(false),
 	nmiRaised(false),
 	nmiPending(false),
+    isStalled(false),
+    irqPending(false),
     S(0xFD),
     P(0x24),
     A(0),
@@ -1316,12 +1355,22 @@ void CPU::AttachPPU(PPU& ppu)
 	this->ppu = &ppu;
 }
 
+void CPU::AttachAPU(APU& apu)
+{
+    this->apu = &apu;
+}
+
 void CPU::AttachCart(Cart& cart)
 {
 	this->cart = &cart;
 
 	// Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
 	PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
+}
+
+void CPU::SetStalled(bool stalled)
+{
+    isStalled = stalled;
 }
 
 bool CPU::IsLogEnabled()
@@ -1433,9 +1482,14 @@ void CPU::Step()
 	if (nmiPending)
 	{
 		nmiPending = false;
-
 		HandleNMI();
 	}
+
+    if (irqPending)
+    {
+        irqPending = false;
+        HandleIRQ();
+    }
 
 	if (IsLogEnabled())
 	{
