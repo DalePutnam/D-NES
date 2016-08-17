@@ -16,7 +16,7 @@ wxDEFINE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
 {
-    using namespace boost::chrono;
+	using namespace std::chrono;
 
     wxImage image(256, 240, frameBuffer, true);
     wxBitmap bitmap(image, 24);
@@ -111,7 +111,7 @@ void MainWindow::StartEmulator(std::string& filename)
         }
 
         fpsCounter = 0;
-        intervalStart = boost::chrono::steady_clock::now();
+        intervalStart = std::chrono::steady_clock::now();
         nes->Start();
 
         romList = 0;
@@ -390,7 +390,7 @@ MainWindow::MainWindow():
     nes(nullptr),
     fpsCounter(0),
     currentFPS(0),
-    intervalStart(boost::chrono::steady_clock::now()),
+	intervalStart(std::chrono::steady_clock::now()),
     ppuDebugWindow(nullptr),
     gameSize(wxSize(256, 240))
 {

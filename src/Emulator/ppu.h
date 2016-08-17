@@ -10,9 +10,9 @@
 
 #include <queue>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <functional>
-#include <boost/chrono/chrono.hpp>
 
 #include "mappers/cart.h"
 
@@ -32,7 +32,7 @@ class PPU
     static const uint32_t rgbLookupTable[64];
     static const uint32_t resetDelay;
 
-    boost::chrono::high_resolution_clock::time_point intervalStart;
+	std::chrono::high_resolution_clock::time_point intervalStart;
 	std::atomic<bool> limitTo60FPS;
 
     uint64_t clock;
