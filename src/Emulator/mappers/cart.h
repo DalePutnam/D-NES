@@ -20,7 +20,7 @@ protected:
     boost::iostreams::mapped_file_source& file;
 
 public:
-    static Cart& Create(const std::string& filename, NES& nes, CPU& cpu);
+    static Cart& Create(const std::string& filename, CPU& cpu);
 
     enum MirrorMode
     {

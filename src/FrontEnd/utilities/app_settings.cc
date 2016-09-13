@@ -6,44 +6,44 @@
  */
 
 #include <fstream>
-#include <boost/property_tree/xml_parser.hpp>
+#include <wx/filename.h>
+
 #include "app_settings.h"
 
-AppSettings* AppSettings::instance = 0; // Initialize static instance field
+AppSettings* AppSettings::instance = nullptr; // Initialize static instance field
 
 AppSettings::AppSettings()
 {
-    try
-    {
-        // Get settings from file
-        boost::property_tree::xml_parser::read_xml("./config.xml", settings);
-    }
-    catch (...)
-    {
-        std::ofstream ofs("config.xml");
-        ofs << "<frontend>" << std::endl;
-        ofs << "\t<rompath></rompath>" << std::endl;
-        ofs << "</frontend>" << std::endl;
-        ofs.close();
+	wxFileName configName = wxFileConfig::GetLocalFile("config.txt");
+	configName.AppendDir("D-NES");
 
-        boost::property_tree::xml_parser::read_xml("./config.xml", settings);
-    }
+	if (!configName.DirExists())
+    {
+		configName.Mkdir();
+	}
+
+	settings = new wxFileConfig("D-NES", "", "D-NES/config.txt", "", wxCONFIG_USE_LOCAL_FILE);
 }
 
-AppSettings::~AppSettings() {}
+AppSettings::~AppSettings()
+{
+	delete settings;
+}
 
-void AppSettings::save()
+void AppSettings::Save()
 {
     // save settings to file
-    boost::property_tree::xml_parser::write_xml("./config.xml", settings);
+	settings->Flush();
 }
 
-AppSettings* AppSettings::getInstance()
+AppSettings* AppSettings::GetInstance()
 {
-    if (instance == 0) // If instance doesn't exist
+    if (instance == nullptr) // If instance doesn't exist
     {
         // Create and return new instance
         instance = new AppSettings();
+		atexit(AppSettings::CleanUp);
+
         return instance;
     }
     else
@@ -52,7 +52,7 @@ AppSettings* AppSettings::getInstance()
     }
 }
 
-void AppSettings::cleanUp()
+void AppSettings::CleanUp()
 {
     delete instance;
 }

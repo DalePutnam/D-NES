@@ -12,8 +12,7 @@ class SXROM : public Cart
 {
     boost::iostreams::mapped_file* save;
 
-    NES& nes;
-    CPU& cpu;
+	CPU& cpu;
 
     unsigned long long lastWriteCycle;
     uint8_t counter;
@@ -40,7 +39,7 @@ public:
     uint8_t ChrRead(uint16_t address);
     void ChrWrite(uint8_t M, uint16_t address);
 
-    SXROM(const std::string& filename, NES& nes, CPU& cpu);
+    SXROM(const std::string& filename, CPU& cpu);
     ~SXROM();
 };
 

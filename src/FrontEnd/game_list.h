@@ -1,8 +1,8 @@
 #ifndef GAME_LIST_H_
 #define GAME_LIST_H_
 
-#include "wx/window.h"
-#include "wx/listctrl.h"
+#include <wx/window.h>
+#include <wx/listctrl.h>
 
 class GameList : public wxListCtrl
 {

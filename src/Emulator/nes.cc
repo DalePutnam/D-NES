@@ -18,7 +18,7 @@ NES::NES(const NesParams& params) :
     apu(*new APU(*this)), // APU first since it may throw an exception
     cpu(*new CPU(*this, params.CpuLogEnabled)),
     ppu(*new PPU(*this)),
-    cart(Cart::Create(params.RomPath, *this, cpu))
+    cart(Cart::Create(params.RomPath, cpu))
 {
     apu.AttachCPU(cpu);
     apu.AttachCart(cart);

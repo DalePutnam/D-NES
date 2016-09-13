@@ -8,15 +8,15 @@
 #include <thread>
 #include <chrono>
 
-#include "wx/menu.h"
-#include "wx/event.h"
-#include "wx/image.h"
-#include "wx/panel.h"
-#include "wx/frame.h"
-#include "wx/sizer.h"
-#include "wx/statusbr.h"
-#include "wx/treelist.h"
-#include "wx/listctrl.h"
+#include <wx/menu.h>
+#include <wx/event.h>
+#include <wx/image.h>
+#include <wx/panel.h>
+#include <wx/frame.h>
+#include <wx/sizer.h>
+#include <wx/statusbr.h>
+#include <wx/treelist.h>
+#include <wx/listctrl.h>
 
 #include "game_list.h"
 #include "game_window.h"
@@ -49,7 +49,7 @@ class MainWindow : public wxFrame
 	std::chrono::steady_clock::time_point intervalStart;
     std::atomic<wxSize> gameSize;
 
-    void StartEmulator(std::string& filename);
+    void StartEmulator(const std::string& filename);
 
     void ToggleCPULog(wxCommandEvent& event);
     void ToggleFrameLimit(wxCommandEvent& event);

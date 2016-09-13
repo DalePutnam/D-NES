@@ -1,11 +1,10 @@
 #include <sstream>
 #include <iostream>
 
-#include "wx/msgdlg.h"
-#include "wx/filedlg.h"
-#include "wx/dcclient.h"
-#include "wx/dcmemory.h"
-#include "boost/filesystem.hpp"
+#include <wx/msgdlg.h>
+#include <wx/filedlg.h>
+#include <wx/dcclient.h>
+#include <wx/dcmemory.h>
 
 #include "nes.h"
 #include "main_window.h"
@@ -85,12 +84,12 @@ void MainWindow::OnEmulatorError(std::string err)
     SetFocus();
 }
 
-void MainWindow::StartEmulator(std::string& filename)
+void MainWindow::StartEmulator(const std::string& filename)
 {
     if (nes == nullptr)
     {
         NesParams params;
-        params.RomPath = filename;
+		params.RomPath = filename;
         params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
         params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
         params.SoundMuted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
@@ -229,24 +228,27 @@ void MainWindow::OnSettings(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnROMDoubleClick(wxListEvent& event)
 {
-    AppSettings* settings = AppSettings::getInstance();
+    AppSettings* settings = AppSettings::GetInstance();
     wxString filename = romList->GetItemText(event.GetIndex(), 0);
 
-    std::string romName = settings->get<std::string>("frontend.rompath") + "/" + filename.ToStdString();
-    StartEmulator(romName);
+	wxString romName;
+	settings->Read<wxString>("ROMPath", &romName, "");
+	romName += "/" + filename;
+    StartEmulator(romName.ToStdString());
 }
 
 void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 {
-    AppSettings* settings = AppSettings::getInstance();
-    wxFileDialog dialog(NULL, "Open ROM", settings->get<std::string>("frontend.rompath"), wxEmptyString, "NES Files (*.nes)|*.nes|All Files (*.*)|*.*");
+    AppSettings* settings = AppSettings::GetInstance();
+	
+	wxString romPath;
+	settings->Read<wxString>("ROMPath", &romPath, "");
+
+    wxFileDialog dialog(NULL, "Open ROM", romPath, wxEmptyString, "NES Files (*.nes)|*.nes|All Files (*.*)|*.*");
 
     if (dialog.ShowModal() == wxID_OK)
     {
-        wxString filename = dialog.GetPath();
-
-        std::string romName = filename.ToStdString();
-        StartEmulator(romName);
+        StartEmulator(dialog.GetPath().ToStdString());
     }
 }
 

@@ -225,18 +225,17 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu) :
-    Cart(filename),
-    save(nullptr),
-    nes(nes),
-    cpu(cpu),
-    lastWriteCycle(0),
-    counter(0),
-    tempRegister(0),
-    controlRegister(0x0C),
-    chrRegister1(0),
-    chrRegister2(0),
-    prgRegister(0)
+SXROM::SXROM(const std::string& filename, CPU& cpu)
+	: Cart(filename)
+    , save(nullptr)
+	, cpu(cpu)
+    , lastWriteCycle(0)
+    , counter(0)
+    , tempRegister(0)
+    , controlRegister(0x0C)
+    , chrRegister1(0)
+    , chrRegister2(0)
+    , prgRegister(0)
 {
     if (file.is_open())
     {

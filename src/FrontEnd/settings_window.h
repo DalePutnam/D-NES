@@ -3,10 +3,10 @@
 #ifndef SETTINGS_WINDOW_H_
 #define SETTINGS_WINDOW_H_
 
-#include "wx/dialog.h"
-#include "wx/textctrl.h"
-#include "wx/button.h"
-#include "wx/notebook.h"
+#include <wx/dialog.h>
+#include <wx/textctrl.h>
+#include <wx/button.h>
+#include <wx/notebook.h>
 
 class SettingsWindow : public wxDialog
 {

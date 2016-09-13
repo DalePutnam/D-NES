@@ -1,14 +1,17 @@
-#include "wx/sizer.h"
-#include "wx/dirdlg.h"
-#include "wx/stattext.h"
+#include <wx/sizer.h>
+#include <wx/dirdlg.h>
+#include <wx/stattext.h>
 
 #include "settings_window.h"
 #include "utilities/app_settings.h"
 
 void SettingsWindow::PopulateFields()
 {
-    AppSettings* settings = AppSettings::getInstance();
-    *romDirectory << settings->get<std::string>("frontend.rompath");
+    AppSettings* settings = AppSettings::GetInstance();
+	wxString romPath;
+	settings->Read<wxString>("ROMPath", &romPath, "");
+
+	*romDirectory << romPath;
 }
 
 void SettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))
@@ -60,7 +63,7 @@ SettingsWindow::SettingsWindow()
 
 void SettingsWindow::SaveSettings()
 {
-    AppSettings* settings = AppSettings::getInstance();
-    settings->put<wxString>("frontend.rompath", romDirectory->GetLineText(0));
-    settings->save();
+    AppSettings* settings = AppSettings::GetInstance();
+    settings->Write<wxString>("ROMPath", romDirectory->GetLineText(0));
+    settings->Save();
 }

@@ -1,6 +1,7 @@
-#include "wx/image.h"
-#include "wx/bitmap.h"
-#include "wx/dcclient.h"
+#include <wx/image.h>
+#include <wx/bitmap.h>
+#include <wx/dcclient.h>
+
 #include "pattern_table_display.h"
 
 void PatternTableDisplay::OnClicked(wxMouseEvent& WXUNUSED(event))
