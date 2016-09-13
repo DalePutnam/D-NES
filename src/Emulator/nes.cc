@@ -17,7 +17,7 @@ NES::NES(const NesParams& params) :
     nmi(false),
     cpu(*new CPU(*this, params.CpuLogEnabled)),
     ppu(*new PPU(*this)),
-    cart(Cart::Create(params.RomPath, *this, cpu))
+    cart(Cart::Create(params.RomPath, cpu))
 {
     cpu.AttachPPU(ppu);
     cpu.AttachCart(cart);

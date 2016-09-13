@@ -9,39 +9,39 @@
 #define APP_SETTINGS_H_
 
 #include <string>
-#include <boost/property_tree/ptree.hpp>
+#include <wx/fileconf.h>
 
 class AppSettings
 {
     // Singleton
     static AppSettings* instance;
+	static void CleanUp(); // Destroy single instance
+
     AppSettings();
     AppSettings(const AppSettings&); // Prevent construction by copying
     AppSettings& operator=(const AppSettings&); // Prevent assignment
     ~AppSettings(); // Prevent unwanted destruction
 
     // Application Settings
-    boost::property_tree::ptree settings;
-
+	wxFileConfig* settings;
 public:
 
-    static AppSettings* getInstance(); // Get single instance
-    static void cleanUp(); // Destroy single instance
+    static AppSettings* GetInstance(); // Get single instance
 
-    void save(); // Write out to file
+    void Save(); // Write out to file
 
     // Get a setting
     template<typename T>
-    T get(std::string name)
+	bool Read(const wxString& name, T* value, const T& defaultValue)
     {
-        return settings.get<T>(name);
+		return settings->Read(name, value, defaultValue);
     }
 
     // Change a setting
     template<typename T>
-    void put(std::string name, const T& value)
+    bool Write(const wxString& name, const T& value)
     {
-        settings.put(name, value);
+		return settings->Write(name, value);
     }
 };
 

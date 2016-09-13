@@ -14,7 +14,7 @@
 #include "nrom.h"
 #include "sxrom.h"
 
-Cart& Cart::Create(const std::string& filename, NES& nes, CPU& cpu)
+Cart& Cart::Create(const std::string& filename, CPU& cpu)
 {
     // Open file stream to ROM file
     std::ifstream rom(filename.c_str(), std::ifstream::in | std::ifstream::binary);
@@ -43,7 +43,7 @@ Cart& Cart::Create(const std::string& filename, NES& nes, CPU& cpu)
             case 0x00:
                 return *new NROM(filename);
             case 0x01:
-                return *new SXROM(filename, nes, cpu);
+                return *new SXROM(filename, cpu);
             default:
                 std::ostringstream oss;
                 oss << "Mapper " << (int)mapper_number << " specified by " << filename << " does not exist.";
@@ -65,7 +65,9 @@ Cart& Cart::Create(const std::string& filename, NES& nes, CPU& cpu)
     throw std::runtime_error("WTF");
 }
 
-Cart::Cart(const std::string& filename): file(*new boost::iostreams::mapped_file_source(filename)) {}
+Cart::Cart(const std::string& filename)
+	: file(*new boost::iostreams::mapped_file_source(filename))
+{}
 
 Cart::~Cart()
 {

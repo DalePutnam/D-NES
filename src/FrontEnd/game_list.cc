@@ -1,5 +1,9 @@
+#include <sstream>
+#include <wx/dir.h>
+#include <wx/arrstr.h>
+#include <wx/filename.h>
+
 #include "game_list.h"
-#include "boost/filesystem.hpp"
 #include "utilities/app_settings.h"
 
 void GameList::OnSize(wxSizeEvent& event)
@@ -22,33 +26,29 @@ GameList::GameList(wxWindow* parent) :
 
 void GameList::PopulateList()
 {
-    namespace fs = boost::filesystem;
+    AppSettings* settings = AppSettings::GetInstance();
 
-    AppSettings* settings = AppSettings::getInstance();
-    fs::path filePath(settings->get<std::string>("frontend.rompath")); // Get path from settings
+	wxString romPath;
+	settings->Read<wxString>("ROMPath", &romPath, "");
 
     DeleteAllItems();
 
-    if (fs::exists(filePath))
+    if (wxDir::Exists(romPath))
     {
-        if (fs::is_directory(filePath))
-        {
-            for (fs::directory_iterator it(filePath); it != fs::directory_iterator(); ++it)
-            {
-                // If the file is a regular file and it has a .nes extension, add it to the list
-                if (fs::is_regular_file(it->path())
-                    && it->path().has_extension()
-                    && std::string(".nes").compare(it->path().extension().string()) == 0)
-                {
-                    int index = InsertItem(GetItemCount(), it->path().filename().string());
+		wxArrayString romList;
+		wxDir::GetAllFiles(romPath, &romList, "*.nes", wxDIR_FILES);
 
-                    // Get file size in Kibibytes
-                    std::ostringstream oss;
-                    oss << file_size(it->path()) / 1024 << " KiB";
+		for (const wxString& romName : romList)
+		{
+			wxFileName rom(romName);
 
-                    SetItem(index, 1, oss.str());
-                }
-            }
-        }
+			int index = InsertItem(GetItemCount(), rom.GetFullName());
+
+			// Get file size in Kibibytes
+			std::ostringstream oss;
+			oss << rom.GetSize() / 1024 << " KiB";
+
+			SetItem(index, 1, oss.str());
+		}
     }
 }

@@ -1,10 +1,10 @@
 #ifndef PATTERN_TABLE_DISPLAY_H_
 #define PATTERN_TABLE_DISPLAY_H_
 
-#include "wx/sizer.h"
-#include "wx/panel.h"
-#include "wx/window.h"
-#include "wx/statbox.h"
+#include <wx/sizer.h>
+#include <wx/panel.h>
+#include <wx/window.h>
+#include <wx/statbox.h>
 
 class PatternTableDisplay : public wxPanel
 {

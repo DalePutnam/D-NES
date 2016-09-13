@@ -1,12 +1,12 @@
+#include <wx/sizer.h>
+#include <wx/stattext.h>
+#include <wx/statbox.h>
+#include <wx/image.h>
+#include <wx/bitmap.h>
+#include <wx/dcclient.h>
+
 #include "main_window.h"
 #include "ppu_debug_window.h"
-
-#include "wx/sizer.h"
-#include "wx/stattext.h"
-#include "wx/statbox.h"
-#include "wx/image.h"
-#include "wx/bitmap.h"
-#include "wx/dcclient.h"
 
 void PPUDebugWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
