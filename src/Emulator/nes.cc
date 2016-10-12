@@ -6,7 +6,6 @@
  */
 
 #include <exception>
-#include <boost/algorithm/string.hpp>
 
 #include "nes.h"
 #include "mappers/nrom.h"
@@ -35,10 +34,18 @@ NES::NES(const NesParams& params) :
 
     apu.SetMuted(params.SoundMuted);
     apu.SetFiltersEnabled(params.FiltersEnabled);
+	
+	// Get just the file name from the rom path
 
-    std::vector<std::string> stringList;
-    boost::algorithm::split(stringList, params.RomPath, boost::is_any_of("\\/"));
-    gameName = stringList.back().substr(0, stringList.back().length() - 4);
+	const std::string& romPath = params.RomPath;
+	for (int i = romPath.length() - 1; i >= 0; --i)
+	{
+		if (romPath[i] == '\\' || romPath[i] == '/')
+		{
+			gameName = romPath.substr(i + 1, romPath.length() - i - 1);
+			break;
+		}
+	}
 }
 
 std::string& NES::GetGameName()
