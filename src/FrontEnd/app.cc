@@ -7,7 +7,6 @@
 // App Implementation
 bool MyApp::OnInit()
 {
-    //atexit(AppSettings::CleanUp);
     MainWindow* window = new MainWindow();
     window->Show(true);
     return true;
