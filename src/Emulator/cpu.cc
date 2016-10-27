@@ -40,7 +40,7 @@ void CPU::IncrementClock()
 {
 	clock += 3;
 
-    //apu->Step();
+    apu->Step();
 
     if (ppuRendevous > 0)
     {
@@ -52,12 +52,11 @@ uint8_t CPU::Read(uint16_t address)
 {
 	uint8_t value;
 
-	IncrementClock();
-
-    while (isStalled)
-    {
-        IncrementClock();
-    }
+	do
+	{
+		IncrementClock();
+	} while (isStalled);
+	
 
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
@@ -86,6 +85,10 @@ uint8_t CPU::Read(uint16_t address)
 			value = 0xFF;
         }
     }
+	else if (address == 0x4015)
+	{
+		value = apu->ReadAPUStatus();
+	}
     else if (address == 0x4016)
     {
 		value = GetControllerOneShift();
@@ -171,6 +174,33 @@ void CPU::Write(uint8_t M, uint16_t address)
 			ppu->WritePPUDATA(M);
         }
     }
+	else if ((address >= 0x4000 && address <= 0x4015) || address == 0x4017)
+	{
+		switch (address) 
+		{
+		case 0x4000: apu->WritePulseOneRegister(0, M); break;
+		case 0x4001: apu->WritePulseOneRegister(1, M); break;
+		case 0x4002: apu->WritePulseOneRegister(2, M); break;
+		case 0x4003: apu->WritePulseOneRegister(3, M); break;
+		case 0x4004: apu->WritePulseTwoRegister(0, M); break;
+		case 0x4005: apu->WritePulseTwoRegister(1, M); break;
+		case 0x4006: apu->WritePulseTwoRegister(2, M); break;
+		case 0x4007: apu->WritePulseTwoRegister(3, M); break;
+		case 0x4008: apu->WriteTriangleRegister(0, M); break;
+		case 0x400A: apu->WriteTriangleRegister(1, M); break;
+		case 0x400B: apu->WriteTriangleRegister(2, M); break;
+		case 0x400C: apu->WriteNoiseRegister(0, M); break;
+		case 0x400E: apu->WriteNoiseRegister(1, M); break;
+		case 0x400F: apu->WriteNoiseRegister(2, M); break;
+		case 0x4010: apu->WriteDmcRegister(0, M); break;
+		case 0x4011: apu->WriteDmcRegister(1, M); break;
+		case 0x4012: apu->WriteDmcRegister(2, M); break;
+		case 0x4013: apu->WriteDmcRegister(3, M); break;
+		case 0x4015: apu->WriteAPUStatus(M); break;
+		case 0x4017: apu->WriteAPUFrameCounter(M); break;
+		default: break;
+		}
+	}
     else if (address == 0x4016)
     {
         SetControllerStrobe(!!(M & 0x1));
@@ -1270,10 +1300,10 @@ void CPU::HandleNMI()
 void CPU::CheckIRQ()
 {
     // If IRQ line is high and interrupt inhibit flag is false
-    /*if (apu->CheckIRQ() && !(P & 0x4))
+    if (apu->CheckIRQ() && !(P & 0x4))
     {
         irqPending = true;
-    }*/
+    }
 }
 
 void CPU::HandleIRQ()

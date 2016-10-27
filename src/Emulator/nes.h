@@ -16,6 +16,7 @@
 
 #include "cpu.h"
 #include "ppu.h"
+#include "apu.h"
 #include "mappers/cart.h"
 
 struct NesParams
@@ -40,6 +41,7 @@ class NES
     std::thread nesThread;
     std::string gameName;
 
+	APU& apu;
 	CPU& cpu;
 	PPU& ppu;
     Cart& cart;

@@ -1,6 +1,6 @@
-//#ifndef APU_H_
-//#define APU_H_
-#if 0
+#ifndef APU_H_
+#define APU_H_
+
 #include <cstdint>
 
 class NES;
@@ -9,13 +9,6 @@ class Cart;
 
 class APU
 {
-public:
-    enum PulseRegister { One, Two, Three, Four };
-    enum TriangleRegister { One, Two, Three };
-    enum NoiseRegister { One, Two, Three };
-    enum DmcRegister { One, Two, Three, Four };
-
-private:
     static const uint8_t LengthCounterLookupTable[32];
 
     class PulseUnit
@@ -44,9 +37,10 @@ private:
     public:
         PulseUnit(bool IsPulseUnitOne);
 
-        void WriteRegister(PulseRegister reg, uint8_t value);
+        void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
         bool GetEnabled();
+		uint8_t GetLengthCounter();
 
         void ClockTimer();
         void ClockSweep();
@@ -72,9 +66,10 @@ private:
     public:
         TriangleUnit();
 
-        void WriteRegister(TriangleRegister reg, uint8_t value);
+        void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
         bool GetEnabled();
+		uint8_t GetLengthCounter();
 
         void ClockTimer();
         void ClockLinearCounter();
@@ -103,9 +98,10 @@ private:
     public:
         NoiseUnit();
 
-        void WriteRegister(NoiseRegister reg, uint8_t value);
+        void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
         bool GetEnabled();
+		uint8_t GetLengthCounter();
 
         void ClockTimer();
         void ClockEnvelope();
@@ -141,8 +137,9 @@ private:
     public:
         DmcUnit(APU& apu);
 
-        void WriteRegister(DmcRegister reg, uint8_t value);
+        void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
+		uint16_t GetSampleBytesRemaining();
         bool GetEnabled();
         void ClearInterrupt();
         bool CheckIRQ();
@@ -171,6 +168,8 @@ private:
     bool SequenceMode; // True: 5-step sequence, False: 4-step sequence
     bool InterruptInhibit;
     bool FrameInterruptFlag;
+	bool FrameResetFlag;
+	uint8_t FrameResetCountdown;
 
 public:
     APU(NES& nes);
@@ -179,15 +178,18 @@ public:
     void AttachCPU(CPU& cpu);
     void AttachCart(Cart& cart);
 
+	void PauseAudio();
+	void ResumeAudio();
+
     void Step();
 
     bool CheckIRQ();
 
-    void WritePulseOneRegister(PulseRegister reg, uint8_t value);
-    void WritePulseTwoRegister(PulseRegister reg, uint8_t value);
-    void WriteTriangleRegister(TriangleRegister reg, uint8_t value);
-    void WriteNoiseRegister(NoiseRegister reg, uint8_t value);
-    void WriteDmcRegister(DmcRegister reg, uint8_t value);
+    void WritePulseOneRegister(uint8_t reg, uint8_t value);
+    void WritePulseTwoRegister(uint8_t reg, uint8_t value);
+    void WriteTriangleRegister(uint8_t reg, uint8_t value);
+    void WriteNoiseRegister(uint8_t reg, uint8_t value);
+    void WriteDmcRegister(uint8_t reg, uint8_t value);
 
     void WriteAPUStatus(uint8_t value);
     uint8_t ReadAPUStatus();

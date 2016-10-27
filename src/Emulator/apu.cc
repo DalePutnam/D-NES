@@ -1,14 +1,16 @@
+#include <exception>
+#include <math.h>
+
 #include "apu.h"
 #include "cpu.h"
 
-#if 0
+#define MIN(a,b) ((a)<=(b)) ? (a) : (b);
 
 const uint8_t APU::LengthCounterLookupTable[32] = 
 {
     10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
     12,  16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
 };
-
 
 //**********************************************************************
 // APU Pulse Unit
@@ -17,24 +19,24 @@ const uint8_t APU::LengthCounterLookupTable[32] =
 const uint8_t APU::PulseUnit::Sequences[4] = { 0x40, 0x60, 0x78, 0x9F };
 
 APU::PulseUnit::PulseUnit(bool IsPulseUnitOne) :
-    Timer(0),
-    TimerPeriod(0),
-    SequenceCount(0),
-    LengthCounter(0),
-    EnvelopeDividerVolume(0),
-    EnvelopeDividerCounter(0),
-    EnvelopeCounter(0xF),
-    SweepShiftCount(0),
-    SweepDivider(0),
-    SweepDividerCounter(0),
-    LengthHaltEnvelopeLoopFlag(false),
-    ConstantVolumeFlag(false),
-    SweepEnableFlag(false),
-    SweepReloadFlag(false),
-    SweepNegateFlag(false),
-    EnvelopeStartFlag(false),
-    EnabledFlag(false),
-    PulseOneFlag(IsPulseUnitOne)
+	Timer(0),
+	TimerPeriod(0),
+	SequenceCount(0),
+	LengthCounter(0),
+	EnvelopeDividerVolume(0),
+	EnvelopeDividerCounter(0),
+	EnvelopeCounter(0xF),
+	SweepShiftCount(0),
+	SweepDivider(0),
+	SweepDividerCounter(0),
+	LengthHaltEnvelopeLoopFlag(false),
+	ConstantVolumeFlag(false),
+	SweepEnableFlag(false),
+	SweepReloadFlag(false),
+	SweepNegateFlag(false),
+	EnvelopeStartFlag(false),
+	EnabledFlag(false),
+	PulseOneFlag(IsPulseUnitOne)
 {}
 
 void APU::PulseUnit::SetEnabled(bool enabled)
@@ -51,28 +53,33 @@ bool APU::PulseUnit::GetEnabled()
     return EnabledFlag;
 }
 
-void APU::PulseUnit::WriteRegister(PulseRegister reg, uint8_t value)
+uint8_t APU::PulseUnit::GetLengthCounter()
+{
+	return LengthCounter;
+}
+
+void APU::PulseUnit::WriteRegister(uint8_t reg, uint8_t value)
 {
     switch (reg)
     {
-    case PulseRegister::One:
+    case 0:
         DutyCycle = value >> 6;
         LengthHaltEnvelopeLoopFlag = !!(value & 0x20);
         ConstantVolumeFlag = !!(value & 0x10);
         EnvelopeDividerVolume = (value & 0x0F);
         break;
-    case PulseRegister::Two:
+    case 1:
         SweepEnableFlag = !!(value & 0x80);;
         SweepDivider = value >> 4;
         SweepNegateFlag = !!(value & 0x08);
         SweepShiftCount = (value & 0x07);
         SweepReloadFlag = true;
         break;
-    case PulseRegister::Three:
+    case 2:
         //Timer = (Timer | 0xFF00) | value;
         TimerPeriod = (TimerPeriod | 0xFF00) | value;
         break;
-    case PulseRegister::Four:
+    case 3:
         //Timer = (Timer | 0x00FF) | (static_cast<uint16_t>(value & 0x07) << 8);
         TimerPeriod = (TimerPeriod | 0x00FF) | (static_cast<uint16_t>(value & 0x07) << 8);
         EnvelopeStartFlag = true;
@@ -84,6 +91,8 @@ void APU::PulseUnit::WriteRegister(PulseRegister reg, uint8_t value)
         }
 
         break;
+	default:
+		throw std::runtime_error("APU::PulseUnit tried to write to non-existant register");
     }
 }
 
@@ -240,18 +249,23 @@ bool APU::TriangleUnit::GetEnabled()
     return EnabledFlag;
 }
 
-void APU::TriangleUnit::WriteRegister(TriangleRegister reg, uint8_t value)
+uint8_t APU::TriangleUnit::GetLengthCounter()
+{
+	return LengthCounter;
+}
+
+void APU::TriangleUnit::WriteRegister(uint8_t reg, uint8_t value)
 {
     switch (reg)
     {
-    case TriangleRegister::One:
+    case 0:
         LengthHaltControlFlag = !!(value & 0x80);
         LinearCounterPeriod = value & 0x7F;
         break;
-    case TriangleRegister::Two:
+    case 1:
         TimerPeriod = (TimerPeriod | 0xFF00) | value;
         break;
-    case TriangleRegister::Three:
+    case 2:
         TimerPeriod = (TimerPeriod | 0x00FF) | (static_cast<uint16_t>(value & 0x7) << 8);
         LinearCounterReloadFlag = true;
 
@@ -261,6 +275,8 @@ void APU::TriangleUnit::WriteRegister(TriangleRegister reg, uint8_t value)
         }
 
         break;
+	default:
+		throw std::runtime_error("APU::TriangleUnit tried to write to non-existant register");
     }
 }
 
@@ -356,26 +372,33 @@ bool APU::NoiseUnit::GetEnabled()
     return EnabledFlag;
 }
 
-void APU::NoiseUnit::WriteRegister(NoiseRegister reg, uint8_t value)
+uint8_t APU::NoiseUnit::GetLengthCounter()
+{
+	return LengthCounter;
+}
+
+void APU::NoiseUnit::WriteRegister(uint8_t reg, uint8_t value)
 {
     switch (reg)
     {
-    case NoiseRegister::One:
+    case 0:
         LengthHaltEnvelopeLoopFlag = !!(value & 0x20);
         ConstantVolumeFlag = !!(value & 0x10);
         EnvelopeDividerVolume = value & 0x0F;
         break;
-    case NoiseRegister::Two:
+    case 1:
         ModeFlag = !!(value & 0x80);
         TimerPeriodIndex = value & 0x0F;
         break;
-    case NoiseRegister::Three:
+    case 2:
         if (EnabledFlag)
         {
             LengthCounter = LengthCounterLookupTable[value >> 3];
         }
         EnvelopeStartFlag = true;
         break;
+	default:
+		throw std::runtime_error("APU::NoiseUnit tried to write to non-existant register");
     }
 }
 
@@ -495,11 +518,15 @@ APU::DmcUnit::DmcUnit(APU& apu) :
 
 void APU::DmcUnit::SetEnabled(bool enabled)
 {
-    //EnabledFlag = enabled;
     if (!enabled)
     {
         SampleBytesRemaining = 0;
     }
+	else if (SampleBytesRemaining == 0)
+	{
+		CurrentAddress = SampleAddress;
+		SampleBytesRemaining = SampleLength;
+	}
 }
 
 bool APU::DmcUnit::GetEnabled()
@@ -507,16 +534,21 @@ bool APU::DmcUnit::GetEnabled()
     return SampleBytesRemaining > 0;
 }
 
+uint16_t APU::DmcUnit::GetSampleBytesRemaining()
+{
+	return SampleBytesRemaining;
+}
+
 void APU::DmcUnit::ClearInterrupt()
 {
     InterruptFlag = false;
 }
 
-void APU::DmcUnit::WriteRegister(DmcRegister reg, uint8_t value)
+void APU::DmcUnit::WriteRegister(uint8_t reg, uint8_t value)
 {
     switch (reg)
     {
-    case DmcRegister::One:
+    case 0:
         InterruptEnabledFlag = !!(value & 0x80);
         SampleLoopFlag = !!(value & 0x60);
         TimerPeriodIndex = value & 0x0F;
@@ -526,15 +558,17 @@ void APU::DmcUnit::WriteRegister(DmcRegister reg, uint8_t value)
             InterruptFlag = false;
         }
         break;
-    case DmcRegister::Two:
+    case 1:
         OutputLevel = value & 0x7F;
         break;
-    case DmcRegister::Three:
+    case 2:
         SampleAddress = 0xC000 | (static_cast<uint16_t>(value) << 6);
         break;
-    case DmcRegister::Four:
+    case 3:
         SampleLength = 0x0001 | (static_cast<uint16_t>(value) << 4);
         break;
+	default:
+		throw std::runtime_error("APU::DmcUnit tried to write to non-existant register");
     }
 }
 
@@ -548,25 +582,34 @@ void APU::DmcUnit::ClockTimer()
     // Memory Reader
     if (InMemoryStall)
     {
-        if (MemoryStallCountdown > 0)
+        if (--MemoryStallCountdown == 0)
         {
-            --MemoryStallCountdown;
-        }
-
-        if (MemoryStallCountdown == 0)
-        {
-            SampleBuffer = Apu.cart->PrgRead(CurrentAddress);
+            SampleBuffer = Apu.cart->PrgRead(CurrentAddress - 0x6000);
             SampleBufferEmptyFlag = false;
-            --SampleBytesRemaining;
-
-            if (CurrentAddress == 0xFFFF)
-            {
-                CurrentAddress = 0x8000;
-            }
-            else
-            {
-                ++CurrentAddress;
-            }
+            
+			if (--SampleBytesRemaining == 0)
+			{
+				if (SampleLoopFlag)
+				{
+					CurrentAddress = SampleAddress;
+					SampleBytesRemaining = SampleLength;
+				}
+				else if (InterruptEnabledFlag)
+				{
+					InterruptFlag = true;
+				}
+			}
+			else
+			{
+				if (CurrentAddress == 0xFFFF)
+				{
+					CurrentAddress = 0x8000;
+				}
+				else
+				{
+					++CurrentAddress;
+				}
+			}
 
             InMemoryStall = false;
             Apu.Cpu->SetStalled(false);
@@ -602,10 +645,10 @@ void APU::DmcUnit::ClockTimer()
                     OutputLevel -= 2;
                 }
             }
-
-            SampleShiftRegister >> 1;
-            --SampleBitsRemaining;
         }
+
+		SampleShiftRegister >>= 1;
+		--SampleBitsRemaining;
 
         if (SampleBitsRemaining == 0)
         {
@@ -642,21 +685,36 @@ uint8_t APU::DmcUnit::operator()()
 //**********************************************************************
 
 APU::APU(NES& nes) :
-    Nes(nes),
-    Cpu(nullptr),
-    cart(nullptr),
-    PulseOne(true),
-    PulseTwo(false),
-    Dmc(*this),
-    Clock(0),
-    SequenceCount(0),
-    SequenceMode(false),
-    InterruptInhibit(true),
-    FrameInterruptFlag(false)
-{}
+	Nes(nes),
+	Cpu(nullptr),
+	cart(nullptr),
+	PulseOne(true),
+	PulseTwo(false),
+	Dmc(*this),
+	Clock(0),
+	SequenceCount(0),
+	SequenceMode(false),
+	InterruptInhibit(true),
+	FrameInterruptFlag(false),
+	FrameResetFlag(false),
+	FrameResetCountdown(0)
+{
+	PulseOutLookupTable[0] = 0;
+	for (int i = 1; i < 31; ++i)
+	{
+		PulseOutLookupTable[i] = 95.52f / ((8128.0f / i) + 100.0f);
+	}
+
+	TriangleNoiseDmcOutLookupTable[0] = 0;
+	for (int i = 1; i < 203; ++i)
+	{
+		TriangleNoiseDmcOutLookupTable[i] = 163.67f / ((24329.0f / i) + 100.0f);
+	}
+}
 
 APU::~APU() 
-{}
+{
+}
 
 void APU::AttachCPU(CPU& cpu)
 {
@@ -668,9 +726,94 @@ void APU::AttachCart(Cart& cart)
     this->cart = &cart;
 }
 
+void APU::PauseAudio()
+{
+	
+}
+
+void APU::ResumeAudio()
+{
+	
+}
+
 void APU::Step()
 {
+	++Clock;
 
+	Triangle.ClockTimer();
+	if (Clock % 2 == 0)
+	{
+		PulseOne.ClockTimer();
+		PulseTwo.ClockTimer();
+		Noise.ClockTimer();
+		Dmc.ClockTimer();
+
+		// Made need to move this to after the sequence count
+		if (FrameResetFlag)
+		{
+			if (--FrameResetCountdown == 0)
+			{
+				Clock = 0;
+				FrameResetFlag = false;
+			}
+		}
+	}
+
+	if (SequenceMode)
+	{
+		if (Clock == 7457 || Clock == 22371 || Clock == 14913 || Clock == 37281)
+		{
+			PulseOne.ClockEnvelope();
+			PulseTwo.ClockEnvelope();
+			Triangle.ClockLinearCounter();
+			Noise.ClockEnvelope();
+
+			if (Clock == 14913 || Clock == 37281)
+			{
+				PulseOne.ClockLengthCounter();
+				PulseOne.ClockSweep();
+				PulseTwo.ClockLengthCounter();
+				PulseTwo.ClockSweep();
+				Triangle.ClockLengthCounter();
+				Noise.ClockLengthCounter();
+			}
+		}
+
+		if (Clock == 37282)
+		{
+			Clock = 0;
+		}
+	}
+	else
+	{
+		if (Clock == 7457 || Clock == 22371 || Clock == 14913 || Clock == 29829)
+		{
+			PulseOne.ClockEnvelope();
+			PulseTwo.ClockEnvelope();
+			Triangle.ClockLinearCounter();
+			Noise.ClockEnvelope();
+
+			if (Clock == 14913 || Clock == 29829)
+			{
+				PulseOne.ClockLengthCounter();
+				PulseOne.ClockSweep();
+				PulseTwo.ClockLengthCounter();
+				PulseTwo.ClockSweep();
+				Triangle.ClockLengthCounter();
+				Noise.ClockLengthCounter();
+			}
+		}
+
+		if (Clock >= 29828 && Clock <= 29830 && !InterruptInhibit)
+		{
+			FrameInterruptFlag = true;
+		}
+
+		if (Clock == 29830)
+		{
+			Clock = 0;
+		}
+	}
 }
 
 bool APU::CheckIRQ()
@@ -678,27 +821,27 @@ bool APU::CheckIRQ()
     return FrameInterruptFlag || Dmc.CheckIRQ();
 }
 
-void APU::WritePulseOneRegister(PulseRegister reg, uint8_t value)
+void APU::WritePulseOneRegister(uint8_t reg, uint8_t value)
 {
     PulseOne.WriteRegister(reg, value);
 }
 
-void APU::WritePulseTwoRegister(PulseRegister reg, uint8_t value)
+void APU::WritePulseTwoRegister(uint8_t reg, uint8_t value)
 {
     PulseTwo.WriteRegister(reg, value);
 }
 
-void APU::WriteTriangleRegister(TriangleRegister reg, uint8_t value)
+void APU::WriteTriangleRegister(uint8_t reg, uint8_t value)
 {
     Triangle.WriteRegister(reg, value);
 }
 
-void APU::WriteNoiseRegister(NoiseRegister reg, uint8_t value)
+void APU::WriteNoiseRegister(uint8_t reg, uint8_t value)
 {
     Noise.WriteRegister(reg, value);
 }
 
-void APU::WriteDmcRegister(DmcRegister reg, uint8_t value)
+void APU::WriteDmcRegister(uint8_t reg, uint8_t value)
 {
     Dmc.WriteRegister(reg, value);
 }
@@ -717,14 +860,15 @@ void APU::WriteAPUStatus(uint8_t value)
 uint8_t APU::ReadAPUStatus()
 {
     uint8_t value = 0;
-    value |= FrameInterruptFlag << 7;
-    value |= Dmc.CheckIRQ() << 6;
-    value |= Dmc.GetEnabled() << 4;
-    value |= Noise.GetEnabled() << 3;
-    value |= Triangle.GetEnabled() << 2;
-    value |= PulseTwo.GetEnabled() << 1;
-    value |= PulseOne.GetEnabled();
+	value |= Dmc.CheckIRQ() << 7;
+    value |= FrameInterruptFlag << 6;
+    value |= (Dmc.GetSampleBytesRemaining() != 0) << 4;
+	value |= (Noise.GetLengthCounter() != 0) << 3;
+	value |= (Triangle.GetLengthCounter() != 0) << 2;
+	value |= (PulseTwo.GetLengthCounter() != 0) << 1;
+	value |= (PulseOne.GetLengthCounter() != 0) << 0;
 
+	// TODO: Add check for case where flag was set this cycle
     FrameInterruptFlag = false;
 
     return value;
@@ -740,6 +884,21 @@ void APU::WriteAPUFrameCounter(uint8_t value)
         FrameInterruptFlag = false;
     }
 
-    // TODO: 3 or 4 clock cycles from now, the frame counter should be restarted
+	if (SequenceMode)
+	{
+		PulseOne.ClockEnvelope();
+		PulseTwo.ClockEnvelope();
+		Triangle.ClockLinearCounter();
+		Noise.ClockEnvelope();
+
+		PulseOne.ClockLengthCounter();
+		PulseOne.ClockSweep();
+		PulseTwo.ClockLengthCounter();
+		PulseTwo.ClockSweep();
+		Triangle.ClockLengthCounter();
+		Noise.ClockLengthCounter();
+	}
+
+	FrameResetFlag = true;
+	FrameResetCountdown = 2;
 }
-#endif

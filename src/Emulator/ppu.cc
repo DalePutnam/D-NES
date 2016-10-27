@@ -710,7 +710,7 @@ PPU::PPU(NES& nes) :
     limitTo60FPS(true),
     clock(0),
     dot(0),
-    line(0),
+    line(241),
     even(false),
     suppressNMI(false),
     interruptActive(false),
