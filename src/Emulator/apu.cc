@@ -1,10 +1,8 @@
 #include <exception>
-#include <math.h>
+#include <cstring>
 
 #include "apu.h"
 #include "cpu.h"
-
-#define MIN(a,b) ((a)<=(b)) ? (a) : (b);
 
 const uint8_t APU::LengthCounterLookupTable[32] = 
 {
@@ -16,7 +14,7 @@ const uint8_t APU::LengthCounterLookupTable[32] =
 // APU Pulse Unit
 //**********************************************************************
 
-const uint8_t APU::PulseUnit::Sequences[4] = { 0x40, 0x60, 0x78, 0x9F };
+const uint8_t APU::PulseUnit::Sequences[4] = { 0x02, 0x06, 0x1E, 0xF9 };
 
 APU::PulseUnit::PulseUnit(bool IsPulseUnitOne) :
 	Timer(0),
@@ -76,12 +74,10 @@ void APU::PulseUnit::WriteRegister(uint8_t reg, uint8_t value)
         SweepReloadFlag = true;
         break;
     case 2:
-        //Timer = (Timer | 0xFF00) | value;
-        TimerPeriod = (TimerPeriod | 0xFF00) | value;
+        TimerPeriod = (TimerPeriod & 0xFF00) | value;
         break;
     case 3:
-        //Timer = (Timer | 0x00FF) | (static_cast<uint16_t>(value & 0x07) << 8);
-        TimerPeriod = (TimerPeriod | 0x00FF) | (static_cast<uint16_t>(value & 0x07) << 8);
+        TimerPeriod = (TimerPeriod & 0x00FF) | (static_cast<uint16_t>(value & 0x07) << 8);
         EnvelopeStartFlag = true;
         SequenceCount = 0;
         
@@ -142,7 +138,7 @@ void APU::PulseUnit::ClockSweep()
         else
         {
             uint16_t TargetPeriod = TimerPeriod + (TimerPeriod >> SweepShiftCount);
-            if (TargetPeriod > 0x7FF && TimerPeriod < 0x8)
+            if (TargetPeriod < 0x7FF && TimerPeriod > 0x8)
             {
                 TimerPeriod = TargetPeriod % 0x7FF;
             }
@@ -263,10 +259,10 @@ void APU::TriangleUnit::WriteRegister(uint8_t reg, uint8_t value)
         LinearCounterPeriod = value & 0x7F;
         break;
     case 1:
-        TimerPeriod = (TimerPeriod | 0xFF00) | value;
+        TimerPeriod = (TimerPeriod & 0xFF00) | value;
         break;
     case 2:
-        TimerPeriod = (TimerPeriod | 0x00FF) | (static_cast<uint16_t>(value & 0x7) << 8);
+        TimerPeriod = (TimerPeriod & 0x00FF) | (static_cast<uint16_t>(value & 0x7) << 8);
         LinearCounterReloadFlag = true;
 
         if (EnabledFlag)
@@ -324,14 +320,7 @@ void APU::TriangleUnit::ClockLengthCounter()
 
 uint8_t APU::TriangleUnit::operator()()
 {
-    if (EnabledFlag && LengthCounter != 0 && LinearCounter != 0)
-    {
-        return Sequence[SequenceCount];
-    }
-    else
-    {
-        return 0;
-    }
+	return Sequence[SequenceCount];
 }
 
 //**********************************************************************
@@ -411,11 +400,11 @@ void APU::NoiseUnit::ClockTimer()
         uint16_t Feedback;
         if (ModeFlag)
         {
-            Feedback = ((LinearFeedbackShiftRegister << 6) & 0x0040) ^ (LinearFeedbackShiftRegister & 0x0040) << 8;
+            Feedback = (((LinearFeedbackShiftRegister << 6) & 0x0040) ^ (LinearFeedbackShiftRegister & 0x0040)) << 8;
         }
         else
         {
-            Feedback = ((LinearFeedbackShiftRegister << 1) & 0x0002) ^ (LinearFeedbackShiftRegister & 0x0002) << 13;
+            Feedback = (((LinearFeedbackShiftRegister << 1) & 0x0002) ^ (LinearFeedbackShiftRegister & 0x0002)) << 13;
         }
 
         LinearFeedbackShiftRegister = (LinearFeedbackShiftRegister >> 1) | Feedback;
@@ -469,7 +458,7 @@ void APU::NoiseUnit::ClockLengthCounter()
 
 uint8_t APU::NoiseUnit::operator()()
 {
-    if (EnabledFlag && LengthCounter != 0 && !!(LengthHaltEnvelopeLoopFlag & 0x0001))
+    if (LengthCounter != 0 && !(LinearFeedbackShiftRegister & 0x0001))
     {
         if (ConstantVolumeFlag)
         {
@@ -550,10 +539,10 @@ void APU::DmcUnit::WriteRegister(uint8_t reg, uint8_t value)
     {
     case 0:
         InterruptEnabledFlag = !!(value & 0x80);
-        SampleLoopFlag = !!(value & 0x60);
+        SampleLoopFlag = !!(value & 0x40);
         TimerPeriodIndex = value & 0x0F;
 
-        if (!(value & 0x80))
+        if (!InterruptEnabledFlag)
         {
             InterruptFlag = false;
         }
@@ -697,23 +686,63 @@ APU::APU(NES& nes) :
 	InterruptInhibit(true),
 	FrameInterruptFlag(false),
 	FrameResetFlag(false),
-	FrameResetCountdown(0)
+	FrameResetCountdown(0),
+	XAudio2Instance(nullptr),
+	XAudio2MasteringVoice(nullptr),
+	XAudio2SourceVoice(nullptr),
+	BufferIndex(0),
+	CurrentBuffer(0),
+	CyclesPerSample(CPU_FREQUENCY / AUDIO_SAMPLE_RATE),
+	CyclesToNextSample(0)
 {
-	PulseOutLookupTable[0] = 0;
-	for (int i = 1; i < 31; ++i)
+	WAVEFORMATEX WaveFormat = {0};
+	WaveFormat.nChannels = 1;
+	WaveFormat.nSamplesPerSec = AUDIO_SAMPLE_RATE;
+	WaveFormat.wBitsPerSample = sizeof(float) * 8;
+	WaveFormat.nAvgBytesPerSec = AUDIO_SAMPLE_RATE * sizeof(float);
+	WaveFormat.nBlockAlign = sizeof(float);
+	WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+
+	HRESULT hr;
+	hr = XAudio2Create(&XAudio2Instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
+	if (FAILED(hr)) goto FailedExit;
+
+	hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice);
+	if (FAILED(hr)) goto FailedExit;
+
+	hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
+	if (FAILED(hr)) goto FailedExit;
+
+	for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
 	{
-		PulseOutLookupTable[i] = 95.52f / ((8128.0f / i) + 100.0f);
+		OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
 	}
 
-	TriangleNoiseDmcOutLookupTable[0] = 0;
-	for (int i = 1; i < 203; ++i)
-	{
-		TriangleNoiseDmcOutLookupTable[i] = 163.67f / ((24329.0f / i) + 100.0f);
-	}
+	XAudio2SourceVoice->Start(0);
+
+	return;
+
+FailedExit:
+	if (XAudio2Instance) XAudio2Instance->Release();
+	if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
+	if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
+
+	throw std::runtime_error("APU: Failed to initialize XAudio2");
 }
 
 APU::~APU() 
 {
+	XAudio2SourceVoice->Stop();
+	XAudio2SourceVoice->FlushSourceBuffers();
+
+	XAudio2Instance->Release();
+	XAudio2MasteringVoice->DestroyVoice();
+	XAudio2SourceVoice->DestroyVoice();
+
+	for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
+	{
+		delete OutputBuffers[i];
+	}
 }
 
 void APU::AttachCPU(CPU& cpu)
@@ -724,16 +753,6 @@ void APU::AttachCPU(CPU& cpu)
 void APU::AttachCart(Cart& cart)
 {
     this->cart = &cart;
-}
-
-void APU::PauseAudio()
-{
-	
-}
-
-void APU::ResumeAudio()
-{
-	
 }
 
 void APU::Step()
@@ -814,6 +833,51 @@ void APU::Step()
 			Clock = 0;
 		}
 	}
+
+	if (CyclesToNextSample == 0)
+	{
+		// Decided to use the exact calculation rather than the lookup tables for this
+
+		float pulse1 = PulseOne();
+		float pulse2 = PulseTwo();
+		float triangle = Triangle();
+		float noise = Noise();
+		float dmc = Dmc();
+
+		float PulseOut = 0.0f;
+		float TndOut = 0.0f;
+		
+		if (pulse1 != 0.0f || pulse2 != 0.0f)
+		{
+			PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
+		}
+
+		if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
+		{
+			TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
+		}
+
+		float OutputLevel = PulseOut + TndOut;
+
+		float* Buffer = OutputBuffers[CurrentBuffer];
+		Buffer[BufferIndex++] = (OutputLevel * 2.0f) - 1.0f;
+
+		if (BufferIndex == AUDIO_BUFFER_SIZE)
+		{
+			CurrentBuffer = (CurrentBuffer + 1) % NUM_AUDIO_BUFFERS;
+			BufferIndex = 0;
+			
+			XAUDIO2_BUFFER XAudio2Buffer = {0};
+			XAudio2Buffer.AudioBytes = AUDIO_BUFFER_SIZE * sizeof(float);
+			XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
+
+			XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
+		}
+
+		CyclesToNextSample = CyclesPerSample;
+	}
+
+	--CyclesToNextSample;
 }
 
 bool APU::CheckIRQ()

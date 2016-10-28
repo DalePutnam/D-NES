@@ -2,10 +2,16 @@
 #define APU_H_
 
 #include <cstdint>
+#include <xaudio2.h>
 
 class NES;
 class CPU;
 class Cart;
+
+#define NUM_AUDIO_BUFFERS 2000
+#define AUDIO_SAMPLE_RATE 48000
+#define AUDIO_BUFFER_SIZE (AUDIO_SAMPLE_RATE / 1000)
+#define CPU_FREQUENCY 1789773
 
 class APU
 {
@@ -84,7 +90,7 @@ class APU
 
         uint16_t Timer;
         uint8_t TimerPeriodIndex;
-        uint8_t LinearFeedbackShiftRegister;
+        uint16_t LinearFeedbackShiftRegister;
         uint8_t LengthCounter;
         uint8_t EnvelopeDividerVolume;
         uint8_t EnvelopeDividerCounter;
@@ -162,14 +168,21 @@ class APU
     uint64_t Clock;
     uint32_t SequenceCount;
 
-    float PulseOutLookupTable[31];
-    float TriangleNoiseDmcOutLookupTable[203];
-
     bool SequenceMode; // True: 5-step sequence, False: 4-step sequence
     bool InterruptInhibit;
     bool FrameInterruptFlag;
 	bool FrameResetFlag;
 	uint8_t FrameResetCountdown;
+
+	IXAudio2* XAudio2Instance;
+	IXAudio2MasteringVoice* XAudio2MasteringVoice;
+	IXAudio2SourceVoice* XAudio2SourceVoice;
+
+	uint32_t BufferIndex;
+	uint32_t CurrentBuffer;
+	uint32_t CyclesPerSample;
+	uint32_t CyclesToNextSample;
+	float* OutputBuffers[NUM_AUDIO_BUFFERS];
 
 public:
     APU(NES& nes);
@@ -177,9 +190,6 @@ public:
 
     void AttachCPU(CPU& cpu);
     void AttachCart(Cart& cart);
-
-	void PauseAudio();
-	void ResumeAudio();
 
     void Step();
 
