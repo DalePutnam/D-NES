@@ -4,7 +4,7 @@ A Nintendo Entertainment System emulator I've been working on in my spare time.
 
 CPU: Working, but no support for unofficial opcodes.  
 PPU (Video): Working, but I'm still working out some of the more obscure behaviour.  
-APU (Audio): Unimplemented.  
+APU (Audio): Working mostly. Still need to add high/low pass filters and do some more verification.  
 Input: Very simple implementation. No ability to remap inputs.  
 
 ## Build Instructions
@@ -24,7 +24,7 @@ Requirements: Visual Studio 2015
 10. Build both the Debug and Release configurations. Once done close the solution.
 11. The build environment is now set up. Open D-NES.sln and build either Debug or Release.
 
-### Linux
+### Linux (Broken currently)
 
 1. Download the repository to the location of your choice.
 2. Use your preferred package manager to install boost and wxWidgets-3.0
