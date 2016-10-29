@@ -65,7 +65,7 @@ Cart& Cart::Create(const std::string& filename, NES& nes, CPU& cpu)
     throw std::runtime_error("WTF");
 }
 
-Cart::Cart(const std::string& filename): file(*new boost::iostreams::mapped_file_source(filename)) {}
+Cart::Cart(const std::string& filename) : file(*new boost::iostreams::mapped_file_source(filename)) {}
 
 Cart::~Cart()
 {

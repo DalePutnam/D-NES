@@ -63,7 +63,7 @@ void NROM::ChrWrite(uint8_t M, uint16_t address)
     }
 }
 
-NROM::NROM(const std::string& filename):
+NROM::NROM(const std::string& filename) :
     Cart(filename),
     mirroring(Cart::MirrorMode::HORIZONTAL)
 {

@@ -8,9 +8,9 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-/*
- * 6502 CPU Simulator
- */
+ /*
+  * 6502 CPU Simulator
+  */
 
 #include <mutex>
 #include <atomic>
@@ -26,12 +26,12 @@ class APU;
 
 class CPU
 {
-	NES& nes;
-	PPU* ppu;
+    NES& nes;
+    PPU* ppu;
     APU* apu;
-	Cart* cart;
+    Cart* cart;
 
-	uint64_t clock;
+    uint64_t clock;
 
     // CPU Main Memory
     uint8_t memory[0x800];
@@ -61,8 +61,8 @@ class CPU
     // Cycles to next NMI check
     int ppuRendevous;
     bool nmiLineStatus;
-	bool nmiRaised;
-	bool nmiPending;
+    bool nmiRaised;
+    bool nmiPending;
 
     bool isStalled;
     bool irqPending;
@@ -75,7 +75,7 @@ class CPU
     uint8_t X; // X Index
     uint8_t Y; // Y Index
 
-	void IncrementClock();
+    void IncrementClock();
 
     uint8_t Read(uint16_t address);
     void Write(uint8_t M, uint16_t address);
@@ -200,16 +200,16 @@ class CPU
 public:
 
     CPU(NES& nes, bool logEnabled = false);
-	void AttachPPU(PPU& ppu);
+    void AttachPPU(PPU& ppu);
     void AttachAPU(APU& apu);
-	void AttachCart(Cart& cart);
+    void AttachCart(Cart& cart);
 
     void SetStalled(bool stalled);
 
-	uint64_t GetClock();
+    uint64_t GetClock();
 
-	void SetControllerOneState(uint8_t state);
-	uint8_t GetControllerOneState();
+    void SetControllerOneState(uint8_t state);
+    uint8_t GetControllerOneState();
 
     void Run(); // Run CPU
     void Reset(); // Reset the CPU to starting conditions

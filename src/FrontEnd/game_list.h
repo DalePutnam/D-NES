@@ -11,7 +11,7 @@ class GameList : public wxListCtrl
 public:
 
     GameList(wxWindow* parent);
-    
+
     void PopulateList();
 };
 

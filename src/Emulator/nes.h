@@ -25,7 +25,7 @@ struct NesParams
     bool CpuLogEnabled;
     bool FrameLimitEnabled;
 
-    NesParams():
+    NesParams() :
         RomPath(""),
         CpuLogEnabled(false),
         FrameLimitEnabled(false)
@@ -41,9 +41,9 @@ class NES
     std::thread nesThread;
     std::string gameName;
 
-	APU& apu;
-	CPU& cpu;
-	PPU& ppu;
+    APU& apu;
+    CPU& cpu;
+    PPU& ppu;
     Cart& cart;
 
     std::mutex stopMutex;
@@ -85,10 +85,10 @@ public:
     void SetControllerOneState(uint8_t state);
     uint8_t GetControllerOneState();
 
-	void EnableFrameLimit();
-	void DisableFrameLimit();
-	
-	void EnableCPULog();
+    void EnableFrameLimit();
+    void DisableFrameLimit();
+
+    void EnableCPULog();
     void DisableCPULog();
 
     void GetNameTable(int table, uint8_t* pixels);

@@ -33,7 +33,7 @@ class MainWindow : public wxFrame
     std::mutex PpuDebugMutex;
 
     PPUDebugWindow* ppuDebugWindow;
-    
+
     wxPanel* panel;
     wxMenuBar* menuBar;
     wxMenu* file;
@@ -53,7 +53,7 @@ class MainWindow : public wxFrame
     void StartEmulator(std::string& filename);
 
     void ToggleCPULog(wxCommandEvent& event);
-	void ToggleFrameLimit(wxCommandEvent& event);
+    void ToggleFrameLimit(wxCommandEvent& event);
     void OnSettings(wxCommandEvent& event);
     void OnROMDoubleClick(wxListEvent& event);
     void OnOpenROM(wxCommandEvent& event);

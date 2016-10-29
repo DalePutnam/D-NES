@@ -13,7 +13,7 @@ class SXROM : public Cart
     boost::iostreams::mapped_file* save;
 
     NES& nes;
-	CPU& cpu;
+    CPU& cpu;
 
     unsigned long long lastWriteCycle;
     uint8_t counter;

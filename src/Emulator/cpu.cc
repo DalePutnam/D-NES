@@ -28,7 +28,7 @@ uint8_t CPU::DebugRead(uint16_t address)
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-		return cart->PrgRead(address - 0x6000);
+        return cart->PrgRead(address - 0x6000);
     }
     else
     {
@@ -38,7 +38,7 @@ uint8_t CPU::DebugRead(uint16_t address)
 
 void CPU::IncrementClock()
 {
-	clock += 3;
+    clock += 3;
 
     apu->Step();
 
@@ -50,13 +50,13 @@ void CPU::IncrementClock()
 
 uint8_t CPU::Read(uint16_t address)
 {
-	uint8_t value;
+    uint8_t value;
 
-	do
-	{
-		IncrementClock();
-	} while (isStalled);
-	
+    do
+    {
+        IncrementClock();
+    } while (isStalled);
+
 
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
@@ -70,47 +70,47 @@ uint8_t CPU::Read(uint16_t address)
 
         if (addr == 2)
         {
-			value = ppu->ReadPPUStatus();
+            value = ppu->ReadPPUStatus();
         }
         else if (addr == 4)
         {
-			value = ppu->ReadOAMData();
+            value = ppu->ReadOAMData();
         }
         else if (addr == 7)
         {
-			value = ppu->ReadPPUData();
+            value = ppu->ReadPPUData();
         }
         else
         {
-			value = 0xFF;
+            value = 0xFF;
         }
     }
-	else if (address == 0x4015)
-	{
-		value = apu->ReadAPUStatus();
-	}
+    else if (address == 0x4015)
+    {
+        value = apu->ReadAPUStatus();
+    }
     else if (address == 0x4016)
     {
-		value = GetControllerOneShift();
+        value = GetControllerOneShift();
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-		value = cart->PrgRead(address - 0x6000);
+        value = cart->PrgRead(address - 0x6000);
     }
     else
     {
-		value = 0x00;
+        value = 0x00;
     }
 
     CheckNMI();
     CheckIRQ();
 
-	return value;
+    return value;
 }
 
 void CPU::Write(uint8_t M, uint16_t address)
 {
-	// Note: THIS IS NOT THREAD SAFE
+    // Note: THIS IS NOT THREAD SAFE
     IncrementClock();
 
     // OAM DMA
@@ -132,7 +132,7 @@ void CPU::Write(uint8_t M, uint16_t address)
         {
             uint8_t value = Read(page + i);
             IncrementClock();
-			ppu->WriteOAMDATA(value);
+            ppu->WriteOAMDATA(value);
         }
     }
     // Any address less then 0x2000 is just the
@@ -147,67 +147,67 @@ void CPU::Write(uint8_t M, uint16_t address)
 
         if (addr == 0)
         {
-			ppu->WritePPUCTRL(M);
+            ppu->WritePPUCTRL(M);
         }
         else if (addr == 1)
         {
-			ppu->WritePPUMASK(M);
+            ppu->WritePPUMASK(M);
         }
         else if (addr == 3)
         {
-			ppu->WriteOAMADDR(M);
+            ppu->WriteOAMADDR(M);
         }
         else if (addr == 4)
         {
-			ppu->WriteOAMDATA(M);
+            ppu->WriteOAMDATA(M);
         }
         else if (addr == 5)
         {
-			ppu->WritePPUSCROLL(M);
+            ppu->WritePPUSCROLL(M);
         }
         else if (addr == 6)
         {
-			ppu->WritePPUADDR(M);
+            ppu->WritePPUADDR(M);
         }
         else if (addr == 7)
         {
-			ppu->WritePPUDATA(M);
+            ppu->WritePPUDATA(M);
         }
     }
-	else if ((address >= 0x4000 && address <= 0x4015) || address == 0x4017)
-	{
-		switch (address) 
-		{
-		case 0x4000: apu->WritePulseOneRegister(0, M); break;
-		case 0x4001: apu->WritePulseOneRegister(1, M); break;
-		case 0x4002: apu->WritePulseOneRegister(2, M); break;
-		case 0x4003: apu->WritePulseOneRegister(3, M); break;
-		case 0x4004: apu->WritePulseTwoRegister(0, M); break;
-		case 0x4005: apu->WritePulseTwoRegister(1, M); break;
-		case 0x4006: apu->WritePulseTwoRegister(2, M); break;
-		case 0x4007: apu->WritePulseTwoRegister(3, M); break;
-		case 0x4008: apu->WriteTriangleRegister(0, M); break;
-		case 0x400A: apu->WriteTriangleRegister(1, M); break;
-		case 0x400B: apu->WriteTriangleRegister(2, M); break;
-		case 0x400C: apu->WriteNoiseRegister(0, M); break;
-		case 0x400E: apu->WriteNoiseRegister(1, M); break;
-		case 0x400F: apu->WriteNoiseRegister(2, M); break;
-		case 0x4010: apu->WriteDmcRegister(0, M); break;
-		case 0x4011: apu->WriteDmcRegister(1, M); break;
-		case 0x4012: apu->WriteDmcRegister(2, M); break;
-		case 0x4013: apu->WriteDmcRegister(3, M); break;
-		case 0x4015: apu->WriteAPUStatus(M); break;
-		case 0x4017: apu->WriteAPUFrameCounter(M); break;
-		default: break;
-		}
-	}
+    else if ((address >= 0x4000 && address <= 0x4015) || address == 0x4017)
+    {
+        switch (address)
+        {
+        case 0x4000: apu->WritePulseOneRegister(0, M); break;
+        case 0x4001: apu->WritePulseOneRegister(1, M); break;
+        case 0x4002: apu->WritePulseOneRegister(2, M); break;
+        case 0x4003: apu->WritePulseOneRegister(3, M); break;
+        case 0x4004: apu->WritePulseTwoRegister(0, M); break;
+        case 0x4005: apu->WritePulseTwoRegister(1, M); break;
+        case 0x4006: apu->WritePulseTwoRegister(2, M); break;
+        case 0x4007: apu->WritePulseTwoRegister(3, M); break;
+        case 0x4008: apu->WriteTriangleRegister(0, M); break;
+        case 0x400A: apu->WriteTriangleRegister(1, M); break;
+        case 0x400B: apu->WriteTriangleRegister(2, M); break;
+        case 0x400C: apu->WriteNoiseRegister(0, M); break;
+        case 0x400E: apu->WriteNoiseRegister(1, M); break;
+        case 0x400F: apu->WriteNoiseRegister(2, M); break;
+        case 0x4010: apu->WriteDmcRegister(0, M); break;
+        case 0x4011: apu->WriteDmcRegister(1, M); break;
+        case 0x4012: apu->WriteDmcRegister(2, M); break;
+        case 0x4013: apu->WriteDmcRegister(3, M); break;
+        case 0x4015: apu->WriteAPUStatus(M); break;
+        case 0x4017: apu->WriteAPUFrameCounter(M); break;
+        default: break;
+        }
+    }
     else if (address == 0x4016)
     {
         SetControllerStrobe(!!(M & 0x1));
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-		cart->PrgWrite(M, address - 0x6000);
+        cart->PrgWrite(M, address - 0x6000);
     }
 
     CheckNMI();
@@ -653,7 +653,7 @@ void CPU::BRK()
 
     P |= 0x4;
 
-    PC = Read(0xFFFE) + (((uint16_t) Read(0xFFFF)) * 0x100);
+    PC = Read(0xFFFE) + (((uint16_t)Read(0xFFFF)) * 0x100);
 }
 
 // Branch if Overflow Clear
@@ -1344,23 +1344,23 @@ uint8_t CPU::GetControllerOneShift()
 }
 
 CPU::CPU(NES& nes, bool logEnabled) :
-	pauseFlag(false),
-	isPaused(false),
-	logFlag(false),
-	logEnabled(logEnabled),
-	logStream(nullptr),
-	nes(nes),
-	ppu(nullptr),
+    pauseFlag(false),
+    isPaused(false),
+    logFlag(false),
+    logEnabled(logEnabled),
+    logStream(nullptr),
+    nes(nes),
+    ppu(nullptr),
     apu(nullptr),
-	cart(nullptr),
-	clock(0),
-	controllerStrobe(0),
-	controllerOneShift(0),
-	controllerOneState(0),
-	ppuRendevous(0),
+    cart(nullptr),
+    clock(0),
+    controllerStrobe(0),
+    controllerOneShift(0),
+    controllerOneState(0),
+    ppuRendevous(0),
     nmiLineStatus(false),
-	nmiRaised(false),
-	nmiPending(false),
+    nmiRaised(false),
+    nmiPending(false),
     isStalled(false),
     irqPending(false),
     S(0xFD),
@@ -1377,12 +1377,12 @@ CPU::CPU(NES& nes, bool logEnabled) :
 
 uint64_t CPU::GetClock()
 {
-	return clock;
+    return clock;
 }
 
 void CPU::AttachPPU(PPU& ppu)
 {
-	this->ppu = &ppu;
+    this->ppu = &ppu;
 }
 
 void CPU::AttachAPU(APU& apu)
@@ -1392,10 +1392,10 @@ void CPU::AttachAPU(APU& apu)
 
 void CPU::AttachCart(Cart& cart)
 {
-	this->cart = &cart;
+    this->cart = &cart;
 
-	// Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-	PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
+    // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
+    PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
 }
 
 void CPU::SetStalled(bool stalled)
@@ -1503,17 +1503,17 @@ void CPU::Run()
 // or return false if the next value is not an opcode
 void CPU::Step()
 {
-	if (logFlag)
-	{
-		logFlag = false;
-		logEnabled = true;
-	}
+    if (logFlag)
+    {
+        logFlag = false;
+        logEnabled = true;
+    }
 
-	if (nmiPending)
-	{
-		nmiPending = false;
-		HandleNMI();
-	}
+    if (nmiPending)
+    {
+        nmiPending = false;
+        HandleNMI();
+    }
 
     if (irqPending)
     {
@@ -1521,17 +1521,17 @@ void CPU::Step()
         HandleIRQ();
     }
 
-	if (IsLogEnabled())
-	{
+    if (IsLogEnabled())
+    {
         ppu->Run();
 
-		LogProgramCounter();
-		LogRegisters();
-	}
+        LogProgramCounter();
+        LogRegisters();
+    }
 
     uint8_t opcode = Read(PC++); // Retrieve opcode from memory
-	uint16_t addr;
-	uint8_t value;
+    uint16_t addr;
+    uint8_t value;
 
     if (IsLogEnabled()) LogOpcode(opcode);
 

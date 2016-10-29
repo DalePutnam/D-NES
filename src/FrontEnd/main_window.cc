@@ -171,17 +171,17 @@ void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
 {
-	if (nes != nullptr)
-	{
-		if (emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked())
-		{
-			nes->EnableFrameLimit();
-		}
-		else
-		{
-			nes->DisableFrameLimit();
-		}
-	}
+    if (nes != nullptr)
+    {
+        if (emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked())
+        {
+            nes->EnableFrameLimit();
+        }
+        else
+        {
+            nes->DisableFrameLimit();
+        }
+    }
 }
 
 void MainWindow::OnSettings(wxCommandEvent& WXUNUSED(event))
@@ -263,7 +263,7 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 
     if (nes != nullptr)
     {
-		SetClientSize(gameSize);
+        SetClientSize(gameSize);
     }
 }
 
@@ -385,7 +385,7 @@ void MainWindow::OnKeyUp(wxKeyEvent& event)
     }
 }
 
-MainWindow::MainWindow(): 
+MainWindow::MainWindow() :
     wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460)),
     nes(nullptr),
     fpsCounter(0),
@@ -411,8 +411,8 @@ MainWindow::MainWindow():
     emulator->Append(ID_EMULATOR_STOP, wxT("&Stop"));
     emulator->AppendSeparator();
     emulator->AppendSubMenu(size, wxT("&Size"));
-	emulator->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
-	emulator->FindItem(ID_EMULATOR_LIMIT)->Check();
+    emulator->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
+    emulator->FindItem(ID_EMULATOR_LIMIT)->Check();
     emulator->AppendSeparator();
     emulator->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
@@ -446,7 +446,7 @@ MainWindow::MainWindow():
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_3X);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_4X);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
-	Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
 
     Bind(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
 
@@ -467,7 +467,7 @@ MainWindow::MainWindow():
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(romList, 1, wxEXPAND | wxALL);
     SetSizer(vbox);
-    
+
     SetMinClientSize(wxSize(256, 240));
     Centre();
 }

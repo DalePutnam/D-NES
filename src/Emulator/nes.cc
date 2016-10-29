@@ -15,16 +15,16 @@ NES::NES(const NesParams& params) :
     stop(true),
     pause(false),
     nmi(false),
-	apu(*new APU(*this)), // APU first since it may throw an exception
+    apu(*new APU(*this)), // APU first since it may throw an exception
     cpu(*new CPU(*this, params.CpuLogEnabled)),
     ppu(*new PPU(*this)),
     cart(Cart::Create(params.RomPath, *this, cpu))
 {
-	apu.AttachCPU(cpu);
-	apu.AttachCart(cart);
+    apu.AttachCPU(cpu);
+    apu.AttachCart(cart);
 
     cpu.AttachPPU(ppu);
-	cpu.AttachAPU(apu);
+    cpu.AttachAPU(apu);
     cpu.AttachCart(cart);
 
     ppu.AttachCPU(cpu);
@@ -57,12 +57,12 @@ uint8_t NES::GetControllerOneState()
 
 void NES::EnableFrameLimit()
 {
-	ppu.EnableFrameLimit();
+    ppu.EnableFrameLimit();
 }
 
 void NES::DisableFrameLimit()
 {
-	ppu.DisableFrameLimit();
+    ppu.DisableFrameLimit();
 }
 
 void NES::EnableCPULog()
@@ -137,7 +137,7 @@ void NES::Run()
         {
             OnError(e.what());
         }
-    }    
+    }
 
     stopMutex.lock();
     stop = true;

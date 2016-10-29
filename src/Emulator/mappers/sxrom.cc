@@ -28,7 +28,7 @@ Cart::MirrorMode SXROM::GetMirrorMode()
 uint8_t SXROM::ChrRead(uint16_t address)
 {
     bool modeSize = !!(controlRegister & 0x10);
-    
+
     if (modeSize)
     {
         if (address < 0x1000)
@@ -57,7 +57,7 @@ uint8_t SXROM::ChrRead(uint16_t address)
             else
             {
                 return chr[(addr + (0x1000 * page)) % chrSize];
-            }      
+            }
         }
     }
     else
@@ -150,7 +150,7 @@ uint8_t SXROM::PrgRead(uint16_t address)
                 {
                     uint32_t addr = address - 0x2000;
                     return prg[addr % prgSize];
-                    
+
                 }
                 else
                 {
@@ -225,11 +225,11 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu):
+SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu) :
     Cart(filename),
     save(nullptr),
     nes(nes),
-	cpu(cpu),
+    cpu(cpu),
     lastWriteCycle(0),
     counter(0),
     tempRegister(0),
@@ -255,7 +255,7 @@ SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu):
             std::string gameName = stringList.back().substr(0, stringList.back().length() - 4);
 
             boost::filesystem::path gameDir = "saves";
-            
+
             if (!boost::filesystem::exists(gameDir))
             {
                 boost::filesystem::create_directory(gameDir);
@@ -271,7 +271,7 @@ SXROM::SXROM(const std::string& filename, NES& nes, CPU& cpu):
             {
                 boost::iostreams::mapped_file_params params(path.string());
                 params.new_file_size = 0x2000;
-		        params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
+                params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
 
                 save = new boost::iostreams::mapped_file(params);
             }

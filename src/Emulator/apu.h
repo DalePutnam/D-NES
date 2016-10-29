@@ -46,7 +46,7 @@ class APU
         void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
         bool GetEnabled();
-		uint8_t GetLengthCounter();
+        uint8_t GetLengthCounter();
 
         void ClockTimer();
         void ClockSweep();
@@ -75,7 +75,7 @@ class APU
         void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
         bool GetEnabled();
-		uint8_t GetLengthCounter();
+        uint8_t GetLengthCounter();
 
         void ClockTimer();
         void ClockLinearCounter();
@@ -107,7 +107,7 @@ class APU
         void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
         bool GetEnabled();
-		uint8_t GetLengthCounter();
+        uint8_t GetLengthCounter();
 
         void ClockTimer();
         void ClockEnvelope();
@@ -145,7 +145,7 @@ class APU
 
         void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
-		uint16_t GetSampleBytesRemaining();
+        uint16_t GetSampleBytesRemaining();
         bool GetEnabled();
         void ClearInterrupt();
         bool CheckIRQ();
@@ -171,18 +171,18 @@ class APU
     bool SequenceMode; // True: 5-step sequence, False: 4-step sequence
     bool InterruptInhibit;
     bool FrameInterruptFlag;
-	bool FrameResetFlag;
-	uint8_t FrameResetCountdown;
+    bool FrameResetFlag;
+    uint8_t FrameResetCountdown;
 
-	IXAudio2* XAudio2Instance;
-	IXAudio2MasteringVoice* XAudio2MasteringVoice;
-	IXAudio2SourceVoice* XAudio2SourceVoice;
+    IXAudio2* XAudio2Instance;
+    IXAudio2MasteringVoice* XAudio2MasteringVoice;
+    IXAudio2SourceVoice* XAudio2SourceVoice;
 
-	uint32_t BufferIndex;
-	uint32_t CurrentBuffer;
-	uint32_t CyclesPerSample;
-	uint32_t CyclesToNextSample;
-	float* OutputBuffers[NUM_AUDIO_BUFFERS];
+    uint32_t BufferIndex;
+    uint32_t CurrentBuffer;
+    uint32_t CyclesPerSample;
+    uint32_t CyclesToNextSample;
+    float* OutputBuffers[NUM_AUDIO_BUFFERS];
 
 public:
     APU(NES& nes);

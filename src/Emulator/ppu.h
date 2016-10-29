@@ -22,24 +22,24 @@ class CPU;
 class PPU
 {
     NES& nes;
-	CPU* cpu;
+    CPU* cpu;
     Cart* cart;
 
     uint8_t frameBuffer[256 * 240 * 3];
 
-	enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
-    
+    enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
+
     static const uint32_t rgbLookupTable[64];
     static const uint32_t resetDelay;
 
     boost::chrono::high_resolution_clock::time_point intervalStart;
-	std::atomic<bool> limitTo60FPS;
+    std::atomic<bool> limitTo60FPS;
 
     uint64_t clock;
     uint16_t dot;
     uint16_t line;
     bool even;
-	bool suppressNMI;
+    bool suppressNMI;
     bool interruptActive;
     uint64_t nmiOccuredCycle;
 
@@ -78,7 +78,7 @@ class PPU
     bool addressLatch;
 
     // Register Buffer
-	std::queue<std::tuple<uint64_t, uint8_t, Register>> registerBuffer;
+    std::queue<std::tuple<uint64_t, uint8_t, Register>> registerBuffer;
 
     // PPU Data Read Buffer
     uint8_t dataBuffer;
@@ -109,7 +109,7 @@ class PPU
     uint8_t backgroundAttributeShift1;
     uint8_t backgroundAttribute;
 
-	uint8_t spriteCount;
+    uint8_t spriteCount;
     uint8_t spriteShift0[8];
     uint8_t spriteShift1[8];
     uint8_t spriteAttribute[8];
@@ -134,8 +134,8 @@ public:
     PPU(NES& nes);
     ~PPU();
 
-	void AttachCPU(CPU& cpu);
-	void AttachCart(Cart& cart);
+    void AttachCPU(CPU& cpu);
+    void AttachCart(Cart& cart);
 
     void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
     {
@@ -151,12 +151,12 @@ public:
     uint16_t GetCurrentDot();
     uint16_t GetCurrentScanline();
 
-	void Run();
-	int ScheduleSync();
-	bool CheckNMI(uint64_t& occuredCycle);
+    void Run();
+    int ScheduleSync();
+    bool CheckNMI(uint64_t& occuredCycle);
 
-	void EnableFrameLimit();
-	void DisableFrameLimit();
+    void EnableFrameLimit();
+    void DisableFrameLimit();
 
     uint8_t ReadPPUStatus();
     uint8_t ReadOAMData();
