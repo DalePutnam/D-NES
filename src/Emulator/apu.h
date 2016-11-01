@@ -1,7 +1,9 @@
 #ifndef APU_H_
 #define APU_H_
 
+#include <mutex>
 #include <cstdint>
+
 #include <xaudio2.h>
 
 class NES;
@@ -9,9 +11,6 @@ class CPU;
 class Cart;
 
 #define NUM_AUDIO_BUFFERS 2000
-#define AUDIO_SAMPLE_RATE 48000
-#define AUDIO_BUFFER_SIZE (AUDIO_SAMPLE_RATE / 1000)
-#define CPU_FREQUENCY 1789773
 
 class APU
 {
@@ -165,6 +164,8 @@ class APU
     NoiseUnit Noise;
     DmcUnit Dmc;
 
+    std::mutex ControlMutex;
+
     uint64_t Clock;
     uint32_t SequenceCount;
 
@@ -183,7 +184,10 @@ class APU
     uint32_t CyclesPerSample;
     uint32_t CyclesToNextSample;
     float* OutputBuffers[NUM_AUDIO_BUFFERS];
-
+    bool FilterStart;
+    
+    bool IsMuted;
+    bool FilteringEnabled;
 public:
     APU(NES& nes);
     ~APU();
@@ -204,6 +208,9 @@ public:
     void WriteAPUStatus(uint8_t value);
     uint8_t ReadAPUStatus();
     void WriteAPUFrameCounter(uint8_t value);
+
+    void SetMuted(bool mute);
+    void SetFiltersEnabled(bool enabled);
 };
 
 #endif // APU_H_

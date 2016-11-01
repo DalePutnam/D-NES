@@ -184,6 +184,24 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
     }
 }
 
+void MainWindow::ToggleMute(wxCommandEvent& event)
+{
+    if (nes != nullptr)
+    {
+        bool muted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
+        nes->ApuSetMuted(muted);
+    }
+}
+
+void MainWindow::ToggleFilters(wxCommandEvent& event)
+{
+    if (nes != nullptr)
+    {
+        bool enabled = emulator->FindItem(ID_EMULATOR_FILTER)->IsChecked();
+        nes->ApuSetFiltersEnabled(enabled);
+    }
+}
+
 void MainWindow::OnSettings(wxCommandEvent& WXUNUSED(event))
 {
     SettingsWindow settings;
@@ -413,6 +431,9 @@ MainWindow::MainWindow() :
     emulator->AppendSubMenu(size, wxT("&Size"));
     emulator->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
     emulator->FindItem(ID_EMULATOR_LIMIT)->Check();
+    emulator->AppendCheckItem(ID_EMULATOR_MUTE, wxT("&Mute"));
+    emulator->AppendCheckItem(ID_EMULATOR_FILTER, wxT("&Filters Enabled"));
+    emulator->FindItem(ID_EMULATOR_FILTER)->Check();
     emulator->AppendSeparator();
     emulator->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
@@ -447,6 +468,8 @@ MainWindow::MainWindow() :
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_4X);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleMute), this, ID_EMULATOR_MUTE);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFilters), this, ID_EMULATOR_FILTER);
 
     Bind(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
 

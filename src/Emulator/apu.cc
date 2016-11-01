@@ -4,6 +4,14 @@
 #include "apu.h"
 #include "cpu.h"
 
+#define AUDIO_SAMPLE_RATE 48000
+#define AUDIO_BUFFER_SIZE (AUDIO_SAMPLE_RATE / 1000)
+#define CPU_FREQUENCY 1789773
+
+#define HIGHPASS_90HZ 0.98835620f
+#define HIGHPASS_440HZ 0.94554076f
+#define LOWPASS_14KHZ 0.64696691f
+
 const uint8_t APU::LengthCounterLookupTable[32] =
 {
     10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
@@ -107,19 +115,8 @@ void APU::PulseUnit::ClockTimer()
 
 void APU::PulseUnit::ClockSweep()
 {
-    if (SweepDividerCounter != 0 && !SweepReloadFlag)
+    if (SweepDividerCounter == 0 && SweepEnableFlag && SweepShiftCount != 0)
     {
-        --SweepDividerCounter;
-    }
-    else if ((SweepDividerCounter == 0 || SweepReloadFlag) && SweepEnableFlag)
-    {
-        SweepDividerCounter = SweepDivider;
-
-        if (SweepReloadFlag)
-        {
-            SweepReloadFlag = false;
-        }
-
         if (SweepNegateFlag)
         {
             if (TimerPeriod >= 8)
@@ -138,11 +135,25 @@ void APU::PulseUnit::ClockSweep()
         else
         {
             uint16_t TargetPeriod = TimerPeriod + (TimerPeriod >> SweepShiftCount);
-            if (TargetPeriod < 0x7FF && TimerPeriod > 0x8)
+            if (TargetPeriod <= 0x7FF && TimerPeriod >= 8)
             {
-                TimerPeriod = TargetPeriod % 0x7FF;
+                TimerPeriod = TargetPeriod;
             }
         }
+    }
+
+    if (SweepReloadFlag)
+    {
+        SweepDividerCounter = SweepDivider;
+        SweepReloadFlag = false;
+    }
+    else if (SweepDividerCounter == 0)
+    {
+        SweepDividerCounter = SweepDivider;
+    }
+    else 
+    {
+        --SweepDividerCounter;
     }
 }
 
@@ -190,7 +201,9 @@ void APU::PulseUnit::ClockLengthCounter()
 uint8_t APU::PulseUnit::operator()()
 {
     uint8_t SequenceValue = (Sequences[DutyCycle] >> SequenceCount) & 0x1;
-    uint16_t TargetPeriod = TimerPeriod + (TimerPeriod >> SweepShiftCount);
+
+    // Target period only matters in add mode
+    uint16_t TargetPeriod = SweepNegateFlag ? 0 : TimerPeriod + (TimerPeriod >> SweepShiftCount);
 
     if (SequenceValue == 0 || TargetPeriod > 0x7FF || LengthCounter == 0 || TimerPeriod < 8)
     {
@@ -466,7 +479,7 @@ uint8_t APU::NoiseUnit::operator()()
         }
         else
         {
-            return EnvelopeDividerCounter;
+            return EnvelopeCounter;
         }
     }
     else
@@ -611,8 +624,6 @@ void APU::DmcUnit::ClockTimer()
         Apu.Cpu->SetStalled(true);
     }
 
-    --Timer;
-
     if (Timer == 0)
     {
         Timer = TimerPeriods[TimerPeriodIndex];
@@ -655,18 +666,15 @@ void APU::DmcUnit::ClockTimer()
             }
         }
     }
+    else
+    {
+        --Timer;
+    }
 }
 
 uint8_t APU::DmcUnit::operator()()
 {
-    if (SilenceFlag)
-    {
-        return 0;
-    }
-    else
-    {
-        return OutputLevel;
-    }
+    return OutputLevel;
 }
 
 //**********************************************************************
@@ -693,7 +701,10 @@ APU::APU(NES& nes) :
     BufferIndex(0),
     CurrentBuffer(0),
     CyclesPerSample(CPU_FREQUENCY / AUDIO_SAMPLE_RATE),
-    CyclesToNextSample(0)
+    CyclesToNextSample(0),
+    FilterStart(true),
+    IsMuted(false),
+    FilteringEnabled(true)
 {
     WAVEFORMATEX WaveFormat = { 0 };
     WaveFormat.nChannels = 1;
@@ -833,48 +844,85 @@ void APU::Step()
             Clock = 0;
         }
     }
-
+    
     if (CyclesToNextSample == 0)
     {
-        // Decided to use the exact calculation rather than the lookup tables for this
-
-        float pulse1 = PulseOne();
-        float pulse2 = PulseTwo();
-        float triangle = Triangle();
-        float noise = Noise();
-        float dmc = Dmc();
-
-        float PulseOut = 0.0f;
-        float TndOut = 0.0f;
-
-        if (pulse1 != 0.0f || pulse2 != 0.0f)
-        {
-            PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
-        }
-
-        if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
-        {
-            TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
-        }
-
-        float OutputLevel = PulseOut + TndOut;
-
-        float* Buffer = OutputBuffers[CurrentBuffer];
-        Buffer[BufferIndex++] = (OutputLevel * 2.0f) - 1.0f;
-
-        if (BufferIndex == AUDIO_BUFFER_SIZE)
-        {
-            CurrentBuffer = (CurrentBuffer + 1) % NUM_AUDIO_BUFFERS;
-            BufferIndex = 0;
-
-            XAUDIO2_BUFFER XAudio2Buffer = { 0 };
-            XAudio2Buffer.AudioBytes = AUDIO_BUFFER_SIZE * sizeof(float);
-            XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
-
-            XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
-        }
-
         CyclesToNextSample = CyclesPerSample;
+
+        std::lock_guard<std::mutex> Lock(ControlMutex);
+
+        if (!IsMuted)
+        {
+            // Decided to use the exact calculation rather than the lookup tables for this
+
+            float pulse1 = PulseOne();
+            float pulse2 = PulseTwo();
+            float triangle = Triangle();
+            float noise = Noise();
+            float dmc = Dmc();
+
+            float PulseOut = 0.0f;
+            float TndOut = 0.0f;
+            
+            if (pulse1 != 0.0f || pulse2 != 0.0f)
+            {
+                PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
+            }
+
+            if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
+            {
+                TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
+            }
+            
+            float RawOutput = ((PulseOut + TndOut) * 2.0f) - 1.0f;
+
+            float FinalOutput;
+            if (FilteringEnabled)
+            {
+                static float PreviousIn[2];
+                static float PreviousOut[3];
+
+                // Low and High pass filters applied
+                if (FilterStart)
+                {
+                    PreviousIn[0] = PreviousIn[1] = RawOutput;
+                    PreviousOut[0] = PreviousOut[1] = PreviousOut[2] = RawOutput;
+                    FinalOutput = RawOutput;
+                    FilterStart = false;
+                }
+                else
+                {
+                    PreviousOut[0] = HIGHPASS_90HZ * (PreviousOut[0] + RawOutput - PreviousIn[0]);
+                    PreviousIn[0] = RawOutput;
+
+                    PreviousOut[1] = HIGHPASS_440HZ * (PreviousOut[1] + PreviousOut[0] - PreviousIn[1]);
+                    PreviousIn[1] = PreviousOut[0];
+
+                    PreviousOut[2] = PreviousOut[2] + (LOWPASS_14KHZ * (PreviousOut[1] - PreviousOut[2]));
+                    FinalOutput = PreviousOut[2];
+                }
+                
+            }
+            else
+            {
+                FinalOutput = RawOutput;
+            }
+
+            float* Buffer = OutputBuffers[CurrentBuffer];
+            Buffer[BufferIndex++] = FinalOutput;
+
+            if (BufferIndex == AUDIO_BUFFER_SIZE)
+            {
+                CurrentBuffer = (CurrentBuffer + 1) % NUM_AUDIO_BUFFERS;
+                BufferIndex = 0;
+
+                XAUDIO2_BUFFER XAudio2Buffer = { 0 };
+                XAudio2Buffer.AudioBytes = AUDIO_BUFFER_SIZE * sizeof(float);
+                XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
+
+                XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
+            }
+        }
     }
 
     --CyclesToNextSample;
@@ -965,4 +1013,43 @@ void APU::WriteAPUFrameCounter(uint8_t value)
 
     FrameResetFlag = true;
     FrameResetCountdown = 2;
+}
+
+void APU::SetMuted(bool mute)
+{
+    if (mute && !IsMuted)
+    {
+        std::lock_guard<std::mutex> Lock(ControlMutex);
+
+        XAudio2SourceVoice->Stop(0);
+        XAudio2SourceVoice->FlushSourceBuffers();
+        IsMuted = true;
+    }
+    else if (!mute && IsMuted)
+    {
+        std::lock_guard<std::mutex> Lock(ControlMutex);
+
+        XAudio2SourceVoice->Start(0);
+        CurrentBuffer = 0;
+        BufferIndex = 0;
+        FilterStart = false;
+        IsMuted = false;
+    }
+}
+
+void APU::SetFiltersEnabled(bool enabled)
+{
+    if (enabled && !FilteringEnabled)
+    {
+        std::lock_guard<std::mutex> Lock(ControlMutex);
+
+        FilteringEnabled = true;
+        FilterStart = false;
+    }
+    else if (!enabled && FilteringEnabled)
+    {
+        std::lock_guard<std::mutex> Lock(ControlMutex);
+
+        FilteringEnabled = false;
+    }
 }

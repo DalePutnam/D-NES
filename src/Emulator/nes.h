@@ -96,6 +96,9 @@ public:
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimarySprite(int sprite, uint8_t* pixels);
 
+    void ApuSetMuted(bool muted);
+    void ApuSetFiltersEnabled(bool enabled);
+
     // Launch the emulator on a new thread.
     // This function returns immediately.
     void Start();

@@ -95,6 +95,16 @@ void NES::GetPrimarySprite(int sprite, uint8_t* pixels)
     ppu.GetPrimaryOAM(sprite, pixels);
 }
 
+void NES::ApuSetMuted(bool muted)
+{
+    apu.SetMuted(muted);
+}
+
+void NES::ApuSetFiltersEnabled(bool enabled)
+{
+    apu.SetFiltersEnabled(enabled);
+}
+
 bool NES::IsStopped()
 {
     bool isStopped;

@@ -54,6 +54,8 @@ class MainWindow : public wxFrame
 
     void ToggleCPULog(wxCommandEvent& event);
     void ToggleFrameLimit(wxCommandEvent& event);
+    void ToggleMute(wxCommandEvent& event);
+    void ToggleFilters(wxCommandEvent& event);
     void OnSettings(wxCommandEvent& event);
     void OnROMDoubleClick(wxListEvent& event);
     void OnOpenROM(wxCommandEvent& event);
@@ -93,5 +95,7 @@ const int ID_EMULATOR_SCALE_2X = 108;
 const int ID_EMULATOR_SCALE_3X = 109;
 const int ID_EMULATOR_SCALE_4X = 110;
 const int ID_EMULATOR_LIMIT = 111;
+const int ID_EMULATOR_MUTE = 112;
+const int ID_EMULATOR_FILTER = 113;
 
 #endif
