@@ -1369,10 +1369,7 @@ CPU::CPU(NES& nes, bool logEnabled) :
     X(0),
     Y(0)
 {
-    for (int i = 0; i < 0x800; i++)
-    {
-        memory[i] = 0x00;
-    }
+    memset(memory, 0, sizeof(uint8_t) * 0x800);
 }
 
 uint64_t CPU::GetClock()

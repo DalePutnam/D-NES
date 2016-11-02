@@ -65,7 +65,6 @@ class MainWindow : public wxFrame
     void OnEmulatorScale(wxCommandEvent& event);
     void OnPPUDebug(wxCommandEvent& event);
     void OnUnexpectedShutdown(wxThreadEvent& event);
-    void OnFPSUpdate(wxThreadEvent& event);
     void OnQuit(wxCommandEvent& event);
     void OnSize(wxSizeEvent& event);
 

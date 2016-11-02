@@ -25,10 +25,16 @@ struct NesParams
     bool CpuLogEnabled;
     bool FrameLimitEnabled;
 
+    // APU Settings
+    bool SoundMuted;
+    bool FiltersEnabled;
+
     NesParams() :
         RomPath(""),
         CpuLogEnabled(false),
-        FrameLimitEnabled(false)
+        FrameLimitEnabled(false),
+        SoundMuted(false),
+        FiltersEnabled(true)
     {}
 };
 

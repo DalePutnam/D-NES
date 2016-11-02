@@ -1,16 +1,65 @@
 #include <exception>
 #include <cstring>
+#include <cmath>
 
 #include "apu.h"
 #include "cpu.h"
 
 #define AUDIO_SAMPLE_RATE 48000
-#define AUDIO_BUFFER_SIZE (AUDIO_SAMPLE_RATE / 1000)
+#define AUDIO_BUFFER_SIZE (AUDIO_SAMPLE_RATE / 240)
 #define CPU_FREQUENCY 1789773
+#define clamp(val, low, hi) (((val)<(low))?(low):(((val)>(hi))?(hi):(val)))
 
-#define HIGHPASS_90HZ 0.98835620f
-#define HIGHPASS_440HZ 0.94554076f
-#define LOWPASS_14KHZ 0.64696691f
+//**********************************************************************
+// Butterworth filter
+//**********************************************************************
+
+#define PI 3.14159265f
+
+APU::Filter::Filter(float frequency, float resonance, uint32_t sampleRate, bool isLowPass)
+{
+    if (isLowPass)
+    {
+        c = 1.0f / std::tan(PI * frequency / sampleRate);
+        a1 = 1.0f / (1.0f + resonance * c + c * c);
+        a2 = 2.0f * a1;
+        a3 = a1;
+        b1 = 2.0f * (1.0f - c * c) * a1;
+        b2 = (1.0f - resonance * c + c * c) * a1;
+    }
+    else
+    {
+        c = std::tan(PI * frequency / sampleRate);
+        a1 = 1.0f / (1.0f + resonance * c + c * c);
+        a2 = -2.0f * a1;
+        a3 = a1;
+        b1 = 2.0f * (c * c - 1.0f) * a1;
+        b2 = (1.0f - resonance * c + c * c) * a1;
+    }
+
+    memset(InputHistory, 0, sizeof(float) * 2);
+    memset(OutputHistory, 0, sizeof(float) * 2);
+}
+
+void APU::Filter::Reset()
+{
+    memset(InputHistory, 0, sizeof(float) * 2);
+    memset(OutputHistory, 0, sizeof(float) * 2);
+}
+
+float APU::Filter::operator()(float sample)
+{
+    float output = (a1 * sample) + (a2 * InputHistory[0]) + (a3 * InputHistory[1]) - (b1 * OutputHistory[0]) - (b2 * OutputHistory[1]);
+
+    InputHistory[1] = InputHistory[0];
+    InputHistory[0] = sample;
+
+    OutputHistory[1] = OutputHistory[0];
+    OutputHistory[0] = output;
+
+    return output;
+}
+      
 
 const uint8_t APU::LengthCounterLookupTable[32] =
 {
@@ -702,9 +751,21 @@ APU::APU(NES& nes) :
     CurrentBuffer(0),
     CyclesPerSample(CPU_FREQUENCY / AUDIO_SAMPLE_RATE),
     CyclesToNextSample(0),
-    FilterStart(true),
     IsMuted(false),
-    FilteringEnabled(true)
+    FilteringEnabled(false),
+    HighPass90Hz(90.0f, 1.0f, AUDIO_SAMPLE_RATE, false),
+    HighPass440Hz(440.0f, 1.0f, AUDIO_SAMPLE_RATE, false),
+    LowPass14KHz(14000.0f, 1.0f, AUDIO_SAMPLE_RATE, true),
+    PulseOneVolume(1.0f),
+    PulseOneEnabled(true),
+    PulseTwoVolume(1.0f),
+    PulseTwoEnabled(true),
+    TriangleVolume(1.0f),
+    TriangleEnabled(true),
+    NoiseVolume(1.0f),
+    NoiseEnabled(true),
+    DmcVolume(1.0f),
+    DmcEnabled(true)
 {
     WAVEFORMATEX WaveFormat = { 0 };
     WaveFormat.nChannels = 1;
@@ -844,7 +905,7 @@ void APU::Step()
             Clock = 0;
         }
     }
-    
+
     if (CyclesToNextSample == 0)
     {
         CyclesToNextSample = CyclesPerSample;
@@ -854,12 +915,11 @@ void APU::Step()
         if (!IsMuted)
         {
             // Decided to use the exact calculation rather than the lookup tables for this
-
-            float pulse1 = PulseOne();
-            float pulse2 = PulseTwo();
-            float triangle = Triangle();
-            float noise = Noise();
-            float dmc = Dmc();
+            float pulse1 = PulseOneEnabled ? PulseOne() * PulseOneVolume : 0.0f;
+            float pulse2 = PulseTwoEnabled ? PulseTwo() * PulseTwoVolume : 0.0f;
+            float triangle = TriangleEnabled ? Triangle() * TriangleVolume : 0.0f;
+            float noise = NoiseEnabled ? Noise() * NoiseVolume : 0.0f;
+            float dmc = DmcEnabled ? Dmc() * DmcVolume : 0.0f;
 
             float PulseOut = 0.0f;
             float TndOut = 0.0f;
@@ -879,29 +939,9 @@ void APU::Step()
             float FinalOutput;
             if (FilteringEnabled)
             {
-                static float PreviousIn[2];
-                static float PreviousOut[3];
-
-                // Low and High pass filters applied
-                if (FilterStart)
-                {
-                    PreviousIn[0] = PreviousIn[1] = RawOutput;
-                    PreviousOut[0] = PreviousOut[1] = PreviousOut[2] = RawOutput;
-                    FinalOutput = RawOutput;
-                    FilterStart = false;
-                }
-                else
-                {
-                    PreviousOut[0] = HIGHPASS_90HZ * (PreviousOut[0] + RawOutput - PreviousIn[0]);
-                    PreviousIn[0] = RawOutput;
-
-                    PreviousOut[1] = HIGHPASS_440HZ * (PreviousOut[1] + PreviousOut[0] - PreviousIn[1]);
-                    PreviousIn[1] = PreviousOut[0];
-
-                    PreviousOut[2] = PreviousOut[2] + (LOWPASS_14KHZ * (PreviousOut[1] - PreviousOut[2]));
-                    FinalOutput = PreviousOut[2];
-                }
-                
+                RawOutput = HighPass90Hz(RawOutput);
+                RawOutput = HighPass440Hz(RawOutput);
+                FinalOutput = LowPass14KHz(RawOutput);
             }
             else
             {
@@ -1032,8 +1072,11 @@ void APU::SetMuted(bool mute)
         XAudio2SourceVoice->Start(0);
         CurrentBuffer = 0;
         BufferIndex = 0;
-        FilterStart = false;
         IsMuted = false;
+
+        HighPass90Hz.Reset();
+        HighPass440Hz.Reset();
+        LowPass14KHz.Reset();
     }
 }
 
@@ -1044,7 +1087,10 @@ void APU::SetFiltersEnabled(bool enabled)
         std::lock_guard<std::mutex> Lock(ControlMutex);
 
         FilteringEnabled = true;
-        FilterStart = false;
+
+        HighPass90Hz.Reset();
+        HighPass440Hz.Reset();
+        LowPass14KHz.Reset();
     }
     else if (!enabled && FilteringEnabled)
     {
@@ -1053,3 +1099,79 @@ void APU::SetFiltersEnabled(bool enabled)
         FilteringEnabled = false;
     }
 }
+
+void APU::SetPulseOneEnabled(bool enabled)
+{
+    PulseOneEnabled = enabled;
+}
+
+void APU::SetPulseOneVolume(float volume)
+{
+    PulseOneVolume = clamp(volume, 0.0f, 1.0f);
+}
+
+float APU::GetPulseOneVolume()
+{
+    return PulseOneVolume;
+}
+
+void APU::SetPulseTwoEnabled(bool enabled)
+{
+    PulseTwoEnabled = enabled;
+}
+
+void APU::SetPulseTwoVolume(float volume)
+{
+    PulseTwoVolume = clamp(volume, 0.0f, 1.0f);
+}
+
+float APU::GetPulseTwoVolume()
+{
+    return PulseTwoVolume;
+}
+
+void APU::SetTriangleEnabled(bool enabled)
+{
+    TriangleEnabled = enabled;
+}
+
+void APU::SetTriangleVolume(float volume)
+{
+    TriangleVolume = clamp(volume, 0.0f, 1.0f);
+}
+
+float APU::GetTriangleVolume()
+{
+    return TriangleVolume;
+}
+
+void APU::SetNoiseEnabled(bool enabled)
+{
+    NoiseEnabled = enabled;
+}
+
+void APU::SetNoiseVolume(float volume)
+{
+    NoiseVolume = clamp(volume, 0.0f, 1.0f);
+}
+
+float APU::GetNoiseVolume()
+{
+    return NoiseVolume;
+}
+
+void APU::SetDmcEnabled(bool enabled)
+{
+    DmcEnabled = enabled;
+}
+
+void APU::SetDmcVolume(float volume)
+{
+    DmcVolume = clamp(volume, 0.0f, 1.0f);
+}
+
+float APU::GetDmcVolume()
+{
+    return DmcVolume;
+}
+

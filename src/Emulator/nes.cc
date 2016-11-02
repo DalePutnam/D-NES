@@ -35,6 +35,16 @@ NES::NES(const NesParams& params) :
         ppu.DisableFrameLimit();
     }
 
+    if (params.SoundMuted)
+    {
+        apu.SetMuted(true);
+    }
+
+    if (params.FiltersEnabled)
+    {
+        apu.SetFiltersEnabled(true);
+    }
+
     std::vector<std::string> stringList;
     boost::algorithm::split(stringList, params.RomPath, boost::is_any_of("\\/"));
     gameName = stringList.back().substr(0, stringList.back().length() - 4);

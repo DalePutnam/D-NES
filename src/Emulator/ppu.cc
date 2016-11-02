@@ -5,6 +5,7 @@
  *      Author: Dale
  */
 #include <cassert>
+#include <cstring>
 #include "ppu.h"
 #include "nes.h"
 
@@ -751,30 +752,15 @@ PPU::PPU(NES& nes) :
     backgroundAttribute(0),
     spriteCount(0)
 {
-    for (int i = 0; i < 0x400; ++i)
-    {
-        nameTable0[i] = 0;
-        nameTable1[i] = 0;
-    }
-
-    for (int i = 0; i < 0x100; ++i)
-    {
-        primaryOAM[i] = 0;
-    }
-
-    for (int i = 0; i < 0x20; ++i)
-    {
-        secondaryOAM[i] = 0;
-        palettes[i] = 0;
-    }
-
-    for (int i = 0; i < 8; ++i)
-    {
-        spriteShift0[i] = 0;
-        spriteShift1[i] = 0;
-        spriteAttribute[i] = 0;
-        spriteCounter[i] = 0;
-    }
+    memset(nameTable0, 0, sizeof(uint8_t) * 0x400);
+    memset(nameTable1, 0, sizeof(uint8_t) * 0x400);
+    memset(primaryOAM, 0, sizeof(uint8_t) * 0x100);
+    memset(secondaryOAM, 0, sizeof(uint8_t) * 0x20);
+    memset(palettes, 0, sizeof(uint8_t) * 0x20);
+    memset(spriteShift0, 0, sizeof(uint8_t) * 8);
+    memset(spriteShift1, 0, sizeof(uint8_t) * 8);
+    memset(spriteAttribute, 0, sizeof(uint8_t) * 8);
+    memset(spriteCounter, 0, sizeof(uint8_t) * 8);
 }
 
 void PPU::AttachCPU(CPU& cpu)
@@ -1146,7 +1132,8 @@ void PPU::Run()
                     high_resolution_clock::time_point now = high_resolution_clock::now();
                     nanoseconds span = duration_cast<nanoseconds>(now - intervalStart);
 
-                    while (span.count() < 16666667)
+                    //while (span.count() < 16666667)
+                    while (span.count() < 16666000)
                     {
                         now = high_resolution_clock::now();
                         span = duration_cast<nanoseconds>(now - intervalStart);

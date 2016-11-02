@@ -93,6 +93,8 @@ void MainWindow::StartEmulator(std::string& filename)
         params.RomPath = filename;
         params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
         params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
+        params.SoundMuted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
+        params.FiltersEnabled = emulator->FindItem(ID_EMULATOR_FILTER)->IsChecked();
 
         try
         {
@@ -161,10 +163,16 @@ void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
         if (settings->FindItem(ID_CPU_LOG)->IsChecked())
         {
             nes->EnableCPULog();
+            nes->ApuSetMuted(true);
         }
         else
         {
             nes->DisableCPULog();
+
+            if (!emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked())
+            {
+                nes->ApuSetMuted(false);
+            }
         }
     }
 }
@@ -433,7 +441,6 @@ MainWindow::MainWindow() :
     emulator->FindItem(ID_EMULATOR_LIMIT)->Check();
     emulator->AppendCheckItem(ID_EMULATOR_MUTE, wxT("&Mute"));
     emulator->AppendCheckItem(ID_EMULATOR_FILTER, wxT("&Filters Enabled"));
-    emulator->FindItem(ID_EMULATOR_FILTER)->Check();
     emulator->AppendSeparator();
     emulator->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
 

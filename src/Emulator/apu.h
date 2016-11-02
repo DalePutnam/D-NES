@@ -2,6 +2,7 @@
 #define APU_H_
 
 #include <mutex>
+#include <atomic>
 #include <cstdint>
 
 #include <xaudio2.h>
@@ -10,10 +11,26 @@ class NES;
 class CPU;
 class Cart;
 
-#define NUM_AUDIO_BUFFERS 2000
+#define NUM_AUDIO_BUFFERS 500
 
 class APU
 {
+    // Butterworth filter implementation shamelessly stolen from
+    // http://stackoverflow.com/questions/8079526/lowpass-and-high-pass-filter-in-c-sharp
+    class Filter
+    {
+        float c, a1, a2, a3, b1, b2;
+
+        float InputHistory[2];
+        float OutputHistory[2];
+
+    public:
+        Filter(float frequency, float resonance, uint32_t sampleRate, bool isLowPass);
+        void Reset();
+
+        float operator()(float sample);
+    };
+
     static const uint8_t LengthCounterLookupTable[32];
 
     class PulseUnit
@@ -184,10 +201,24 @@ class APU
     uint32_t CyclesPerSample;
     uint32_t CyclesToNextSample;
     float* OutputBuffers[NUM_AUDIO_BUFFERS];
-    bool FilterStart;
     
     bool IsMuted;
     bool FilteringEnabled;
+
+    Filter HighPass90Hz;
+    Filter HighPass440Hz;
+    Filter LowPass14KHz;
+
+    std::atomic<float> PulseOneVolume;
+    std::atomic<bool> PulseOneEnabled;
+    std::atomic<float> PulseTwoVolume;
+    std::atomic<bool> PulseTwoEnabled;
+    std::atomic<float> TriangleVolume;
+    std::atomic<bool> TriangleEnabled;
+    std::atomic<float> NoiseVolume;
+    std::atomic<bool> NoiseEnabled;
+    std::atomic<float> DmcVolume;
+    std::atomic<bool> DmcEnabled;
 public:
     APU(NES& nes);
     ~APU();
@@ -211,6 +242,21 @@ public:
 
     void SetMuted(bool mute);
     void SetFiltersEnabled(bool enabled);
+    void SetPulseOneEnabled(bool enabled);
+    void SetPulseOneVolume(float volume);
+    float GetPulseOneVolume();
+    void SetPulseTwoEnabled(bool enabled);
+    void SetPulseTwoVolume(float volume);
+    float GetPulseTwoVolume();
+    void SetTriangleEnabled(bool enabled);
+    void SetTriangleVolume(float volume);
+    float GetTriangleVolume();
+    void SetNoiseEnabled(bool enabled);
+    void SetNoiseVolume(float volume);
+    float GetNoiseVolume();
+    void SetDmcEnabled(bool enabled);
+    void SetDmcVolume(float volume);
+    float GetDmcVolume();
 };
 
 #endif // APU_H_
