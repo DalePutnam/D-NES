@@ -1246,8 +1246,7 @@ void PPU::Run()
                     high_resolution_clock::time_point now = high_resolution_clock::now();
 					microseconds span = duration_cast<microseconds>(now - intervalStart);
 
-                    //while (span.count() < 16666667)
-					while (span.count() < 16878)
+					while (span.count() < 16666)
                     {
                         now = high_resolution_clock::now();
 						span = duration_cast<microseconds>(now - intervalStart);
