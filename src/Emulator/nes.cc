@@ -46,6 +46,7 @@ NES::NES(const NesParams& params) :
 			break;
 		}
 	}
+
 }
 
 std::string& NES::GetGameName()
