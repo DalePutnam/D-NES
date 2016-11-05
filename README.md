@@ -4,8 +4,8 @@ A Nintendo Entertainment System emulator I've been working on in my spare time.
 
 CPU: Working, but no support for unofficial opcodes.  
 PPU (Video): Working, but I'm still working out some of the more obscure behaviour.  
-APU (Audio): Working mostly. Still need to add high/low pass filters and do some more verification.  
-Input: Very simple implementation. No ability to remap inputs.  
+APU (Audio): Working. Still some issues with popping, but otherwise it's functional.  
+Input: Very simple implementation. No ability to remap inputs. One controller only.  
 
 ## Build Instructions
 ### Windows
