@@ -66,7 +66,7 @@ Cart& Cart::Create(const std::string& filename, CPU& cpu)
 }
 
 Cart::Cart(const std::string& filename)
-	: file(*new boost::iostreams::mapped_file_source(filename))
+    : file(*new boost::iostreams::mapped_file_source(filename))
 {}
 
 Cart::~Cart()

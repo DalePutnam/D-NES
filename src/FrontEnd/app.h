@@ -1,5 +1,4 @@
-#ifndef APP_H_
-#define APP_H_
+#pragma once
 
 #include <wx/app.h>
 
@@ -8,5 +7,3 @@ class MyApp : public wxApp
 public:
     virtual bool OnInit();
 };
-
-#endif

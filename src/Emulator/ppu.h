@@ -5,8 +5,7 @@
  *      Author: Dale
  */
 
-#ifndef PPU_H_
-#define PPU_H_
+#pragma once
 
 #include <queue>
 #include <atomic>
@@ -32,7 +31,7 @@ class PPU
     static const uint32_t rgbLookupTable[64];
     static constexpr uint32_t resetDelay = 88974;
 
-	std::chrono::high_resolution_clock::time_point intervalStart;
+    std::chrono::high_resolution_clock::time_point intervalStart;
     std::atomic<bool> limitTo60FPS;
 
     uint64_t clock;
@@ -181,5 +180,3 @@ public:
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
 };
-
-#endif /* PPU_H_ */

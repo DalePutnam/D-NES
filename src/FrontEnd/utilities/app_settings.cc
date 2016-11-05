@@ -14,26 +14,26 @@ AppSettings* AppSettings::instance = nullptr; // Initialize static instance fiel
 
 AppSettings::AppSettings()
 {
-	wxFileName configName = wxFileConfig::GetLocalFile("config.txt");
-	configName.AppendDir("D-NES");
+    wxFileName configName = wxFileConfig::GetLocalFile("config.txt");
+    configName.AppendDir("D-NES");
 
-	if (!configName.DirExists())
+    if (!configName.DirExists())
     {
-		configName.Mkdir();
-	}
+        configName.Mkdir();
+    }
 
-	settings = new wxFileConfig("D-NES", "", "D-NES/config.txt", "", wxCONFIG_USE_LOCAL_FILE);
+    settings = new wxFileConfig("D-NES", "", "D-NES/config.txt", "", wxCONFIG_USE_LOCAL_FILE);
 }
 
 AppSettings::~AppSettings()
 {
-	delete settings;
+    delete settings;
 }
 
 void AppSettings::Save()
 {
     // save settings to file
-	settings->Flush();
+    settings->Flush();
 }
 
 AppSettings* AppSettings::GetInstance()
@@ -42,7 +42,7 @@ AppSettings* AppSettings::GetInstance()
     {
         // Create and return new instance
         instance = new AppSettings();
-		atexit(AppSettings::CleanUp);
+        atexit(AppSettings::CleanUp);
 
         return instance;
     }

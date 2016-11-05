@@ -1,7 +1,6 @@
 /* All Settings window */
 
-#ifndef SETTINGS_WINDOW_H_
-#define SETTINGS_WINDOW_H_
+#pragma once
 
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
@@ -26,5 +25,3 @@ public:
 };
 
 const int ID_DIR_SELECT = 200;
-
-#endif

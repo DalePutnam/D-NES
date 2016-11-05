@@ -15,8 +15,8 @@ void GameList::OnSize(wxSizeEvent& event)
     event.Skip();
 }
 
-GameList::GameList(wxWindow* parent) :
-    wxListCtrl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL)
+GameList::GameList(wxWindow* parent)
+    : wxListCtrl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL)
 {
     AppendColumn("File Name");
     AppendColumn("File Size");
@@ -28,27 +28,27 @@ void GameList::PopulateList()
 {
     AppSettings* settings = AppSettings::GetInstance();
 
-	wxString romPath;
-	settings->Read<wxString>("ROMPath", &romPath, "");
+    wxString romPath;
+    settings->Read<wxString>("ROMPath", &romPath, "");
 
     DeleteAllItems();
 
     if (wxDir::Exists(romPath))
     {
-		wxArrayString romList;
-		wxDir::GetAllFiles(romPath, &romList, "*.nes", wxDIR_FILES);
+        wxArrayString romList;
+        wxDir::GetAllFiles(romPath, &romList, "*.nes", wxDIR_FILES);
 
-		for (const wxString& romName : romList)
-		{
-			wxFileName rom(romName);
+        for (const wxString& romName : romList)
+        {
+            wxFileName rom(romName);
 
-			int index = InsertItem(GetItemCount(), rom.GetFullName());
+            int index = InsertItem(GetItemCount(), rom.GetFullName());
 
-			// Get file size in Kibibytes
-			std::ostringstream oss;
-			oss << rom.GetSize() / 1024 << " KiB";
+            // Get file size in Kibibytes
+            std::ostringstream oss;
+            oss << rom.GetSize() / 1024 << " KiB";
 
-			SetItem(index, 1, oss.str());
-		}
+            SetItem(index, 1, oss.str());
+        }
     }
 }

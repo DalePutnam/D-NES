@@ -5,8 +5,7 @@
  *      Author: Dale
  */
 
-#ifndef NES_H_
-#define NES_H_
+#pragma once
 
 #include <mutex>
 #include <string>
@@ -124,5 +123,3 @@ public:
     void Pause();
     void Reset();
 };
-
-#endif /* NES_H_ */

@@ -226,9 +226,9 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 }
 
 SXROM::SXROM(const std::string& filename, CPU& cpu)
-	: Cart(filename)
+    : Cart(filename)
     , save(nullptr)
-	, cpu(cpu)
+    , cpu(cpu)
     , lastWriteCycle(0)
     , counter(0)
     , tempRegister(0)

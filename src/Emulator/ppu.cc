@@ -213,18 +213,18 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 
 void PPU::RenderNtscPixel(int pixel)
 {
-    static constexpr float levels[16] = 
-    { 
-      // Normal Levels
-        -0.116f/12.f, 0.000f/12.f, 0.307f/12.f, 0.714f/12.f,
-         0.399f/12.f, 0.684f/12.f, 1.000f/12.f, 1.000f/12.f,
-      // Attenuated Levels                                                     
-        -0.087f/12.f, 0.000f/12.f, 0.229f/12.f, 0.532f/12.f, 
-         0.298f/12.f, 0.510f/12.f, 0.746f/12.f, 0.746f/12.f
+    static constexpr float levels[16] =
+    {
+        // Normal Levels
+          -0.116f / 12.f, 0.000f / 12.f, 0.307f / 12.f, 0.714f / 12.f,
+           0.399f / 12.f, 0.684f / 12.f, 1.000f / 12.f, 1.000f / 12.f,
+           // Attenuated Levels                                                     
+          -0.087f / 12.f, 0.000f / 12.f, 0.229f / 12.f, 0.532f / 12.f,
+           0.298f / 12.f, 0.510f / 12.f, 0.746f / 12.f, 0.746f / 12.f
     };
 
     auto SignalLevel = [=](int phase)
-    {   
+    {
         // Decode the NES color.
         int color = (pixel & 0x0F);    // 0..15 "cccc"
         int level = (pixel >> 4) & 3;  // 0..3  "ll"
@@ -265,7 +265,7 @@ void PPU::RenderNtscLine()
 {
     static constexpr int width = 256;
     static constexpr float sineTable[12] =
-    {  
+    {
         0.89101f,  0.54464f,  0.05234f, -0.45399f, -0.83867f, -0.99863f,
        -0.89101f, -0.54464f, -0.05234f,  0.45399f,  0.83867f,  0.99863f
     };
@@ -289,9 +289,9 @@ void PPU::RenderNtscLine()
 
         auto clamp = [](float v) { return (v > 255.0f) ? 255.0f : ((v < 0.0f) ? 0.0f : v); };
 
-        int red   = static_cast<int>(clamp(255.95f * (y +  0.946882f*i +  0.623557f*q)));
+        int red = static_cast<int>(clamp(255.95f * (y + 0.946882f*i + 0.623557f*q)));
         int green = static_cast<int>(clamp(255.95f * (y + -0.274788f*i + -0.635691f*q)));
-        int blue  = static_cast<int>(clamp(255.95f * (y + -1.108545f*i +  1.709007f*q)));
+        int blue = static_cast<int>(clamp(255.95f * (y + -1.108545f*i + 1.709007f*q)));
 
         int index = x | (line << 8);
 
@@ -816,55 +816,55 @@ uint16_t PPU::GetCurrentScanline()
     }
 }
 
-PPU::PPU(NES& nes) :
-    nes(nes),
-    cpu(nullptr),
-    cart(nullptr),
-	intervalStart(std::chrono::high_resolution_clock::now()),
-    limitTo60FPS(true),
-    clock(0),
-    dot(0),
-    line(241),
-    even(false),
-    suppressNMI(false),
-    interruptActive(false),
-    nmiOccuredCycle(0),
-    ppuAddressIncrement(false),
-    baseSpriteTableAddress(0),
-    baseBackgroundTableAddress(0),
-    spriteSize(false),
-    nmiEnabled(false),
-    grayscale(false),
-    showBackgroundLeft(0),
-    showSpritesLeft(0),
-    showBackground(0),
-    showSprites(0),
-    intenseRed(0),
-    intenseGreen(0),
-    intenseBlue(0),
-    lowerBits(0x06),
-    spriteOverflow(false),
-    sprite0Hit(false),
-    inVBLANK(false),
-    nmiOccured(false),
-    sprite0SecondaryOAM(false),
-    oamAddress(0),
-    ppuAddress(0),
-    ppuTempAddress(0),
-    fineXScroll(0),
-    addressLatch(false),
-    dataBuffer(0),
-    nameTableByte(0),
-    attributeByte(0),
-    tileBitmapLow(0),
-    tileBitmapHigh(0),
-    backgroundShift0(0),
-    backgroundShift1(0),
-    backgroundAttributeShift0(0),
-    backgroundAttributeShift1(0),
-    backgroundAttribute(0),
-    spriteCount(0),
-    ntscMode(false)
+PPU::PPU(NES& nes)
+    : nes(nes)
+    , cpu(nullptr)
+    , cart(nullptr)
+    , intervalStart(std::chrono::high_resolution_clock::now())
+    , limitTo60FPS(true)
+    , clock(0)
+    , dot(0)
+    , line(241)
+    , even(false)
+    , suppressNMI(false)
+    , interruptActive(false)
+    , nmiOccuredCycle(0)
+    , ppuAddressIncrement(false)
+    , baseSpriteTableAddress(0)
+    , baseBackgroundTableAddress(0)
+    , spriteSize(false)
+    , nmiEnabled(false)
+    , grayscale(false)
+    , showBackgroundLeft(0)
+    , showSpritesLeft(0)
+    , showBackground(0)
+    , showSprites(0)
+    , intenseRed(0)
+    , intenseGreen(0)
+    , intenseBlue(0)
+    , lowerBits(0x06)
+    , spriteOverflow(false)
+    , sprite0Hit(false)
+    , inVBLANK(false)
+    , nmiOccured(false)
+    , sprite0SecondaryOAM(false)
+    , oamAddress(0)
+    , ppuAddress(0)
+    , ppuTempAddress(0)
+    , fineXScroll(0)
+    , addressLatch(false)
+    , dataBuffer(0)
+    , nameTableByte(0)
+    , attributeByte(0)
+    , tileBitmapLow(0)
+    , tileBitmapHigh(0)
+    , backgroundShift0(0)
+    , backgroundShift1(0)
+    , backgroundAttributeShift0(0)
+    , backgroundAttributeShift1(0)
+    , backgroundAttribute(0)
+    , spriteCount(0)
+    , ntscMode(false)
 {
     memset(nameTable0, 0, sizeof(uint8_t) * 0x400);
     memset(nameTable1, 0, sizeof(uint8_t) * 0x400);
@@ -1178,22 +1178,7 @@ void PPU::Run()
                         backgroundAttribute = attributeByte;
                     }
 
-                    // 					if (cycle % 2 == 0)
-                    // 					{
-                    // 						if (line != 261) // Render on all visible lines
-                    // 						{
-                    // 							Render();
-                    // 						}
-                    // 
-                    // 						IncrementClock();
-                    // 
-                    //                         if (cpu->GetClock() < clock) return;
-                    // 
-                    // 						UpdateState();
-                    // 						++cycle;
-                    // 					}
-
-                                        // Perform fetches
+                    // Perform fetches
                     if (cycle == 1)
                     {
                         nameTableByte = ReadNameTable(0x2000 | (ppuAddress & 0x0FFF)); // Get the Name Table byte, a pointer into the pattern table
@@ -1241,15 +1226,15 @@ void PPU::Run()
 
                 if (line == 239 && dot == 256 && limitTo60FPS)
                 {
-					using namespace std::chrono;
+                    using namespace std::chrono;
 
                     high_resolution_clock::time_point now = high_resolution_clock::now();
-					microseconds span = duration_cast<microseconds>(now - intervalStart);
+                    microseconds span = duration_cast<microseconds>(now - intervalStart);
 
-					while (span.count() < 16666)
+                    while (span.count() < 16666)
                     {
                         now = high_resolution_clock::now();
-						span = duration_cast<microseconds>(now - intervalStart);
+                        span = duration_cast<microseconds>(now - intervalStart);
                     }
 
                     intervalStart = high_resolution_clock::now();
@@ -1368,7 +1353,7 @@ void PPU::Run()
                 if (showSprites || showBackground)
                 {
                     //*************************************************************************************
-                    // Background Fetch Phase
+                    // Background Fetch Phase (Again)
                     //*************************************************************************************
                     uint8_t cycle = (dot - 1) % 8; // The current point in the background fetch cycle
 
@@ -1380,17 +1365,7 @@ void PPU::Run()
                         backgroundAttribute = attributeByte;
                     }
 
-                    // 					if (cycle % 2 == 0)
-                    // 					{
-                    // 						IncrementClock();
-                    // 
-                    //                         if (cpu->GetClock() < clock) return;
-                    // 
-                    // 						UpdateState();
-                    // 						++cycle;
-                    // 					}
-
-                                        // Perform fetches
+                    // Perform fetches
                     if (cycle == 1)
                     {
                         nameTableByte = ReadNameTable(0x2000 | (ppuAddress & 0x0FFF)); // Get the Name Table byte, a pointer into the pattern table
@@ -1454,16 +1429,6 @@ void PPU::Run()
 
                     uint8_t cycle = (dot - 337) % 2;
 
-                    // 					if (cycle == 0)
-                    // 					{
-                    // 						IncrementClock();
-                    // 
-                    //                         if (cpu->GetClock() < clock) return;
-                    // 
-                    // 						UpdateState();
-                    // 						++cycle;
-                    // 					}
-
                     if (cycle == 1)
                     {
                         ReadNameTable(0x2000 | (ppuAddress & 0x0FFF));
@@ -1500,33 +1465,6 @@ void PPU::Run()
 
                 IncrementClock();
             }
-            //             else if (inVBLANK)
-            // 			{
-            // 				UpdateState();
-            // 
-            //                 uint64_t timeToSync = cpu->GetClock() - ppuClock + 1;
-            //                 uint64_t timeToEndVBlank = (341 - dot) + ((260 - line) * 341) + 1;
-            // 
-            //                 if (timeToEndVBlank > timeToSync)
-            //                 {
-            //                     line += static_cast<int16_t>(timeToSync / 341);
-            //                     dot += static_cast<int16_t>(timeToSync % 341);
-            // 
-            //                     if (dot > 340)
-            //                     {
-            //                         dot %= 341;
-            //                         ++line;
-            //                     }
-            // 
-            //                     ppuClock += timeToSync;
-            //                 }
-            //                 else
-            //                 {
-            //                     ppuClock += timeToEndVBlank;
-            //                     dot = 1;
-            //                     line = 261;
-            //                 }
-            //             }
             else
             {
                 if (!nmiOccured || !nmiEnabled)

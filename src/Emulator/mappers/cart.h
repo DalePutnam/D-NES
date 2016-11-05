@@ -5,8 +5,7 @@
  *      Author: Dale
  */
 
-#ifndef MAPPER_H_
-#define MAPPER_H_
+#pragma once
 
 #include <string>
 #include <boost/iostreams/device/mapped_file.hpp>
@@ -41,8 +40,3 @@ public:
     virtual uint8_t ChrRead(uint16_t address) = 0;
     virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
 };
-
-
-
-
-#endif /* MAPPER_H_ */

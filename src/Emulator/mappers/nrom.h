@@ -5,8 +5,7 @@
  *      Author: Dale
  */
 
-#ifndef NROM_H_
-#define NROM_H_
+#pragma once
 
 #include <boost/iostreams/device/mapped_file.hpp>
 
@@ -34,7 +33,3 @@ public:
     NROM(const std::string& filename);
     ~NROM();
 };
-
-
-
-#endif /* NROM_H_ */

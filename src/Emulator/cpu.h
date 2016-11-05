@@ -5,8 +5,7 @@
  *      Author: Dale
  */
 
-#ifndef CPU_H_
-#define CPU_H_
+#pragma once
 
  /*
   * 6502 CPU Simulator
@@ -223,6 +222,3 @@ public:
 
     ~CPU();
 };
-
-
-#endif /* CPU_H_ */

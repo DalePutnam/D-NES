@@ -1343,31 +1343,31 @@ uint8_t CPU::GetControllerOneShift()
     return result;
 }
 
-CPU::CPU(NES& nes, bool logEnabled) :
-    pauseFlag(false),
-    isPaused(false),
-    logFlag(false),
-    logEnabled(logEnabled),
-    logStream(nullptr),
-    nes(nes),
-    ppu(nullptr),
-    apu(nullptr),
-    cart(nullptr),
-    clock(0),
-    controllerStrobe(0),
-    controllerOneShift(0),
-    controllerOneState(0),
-    ppuRendevous(0),
-    nmiLineStatus(false),
-    nmiRaised(false),
-    nmiPending(false),
-    isStalled(false),
-    irqPending(false),
-    S(0xFD),
-    P(0x24),
-    A(0),
-    X(0),
-    Y(0)
+CPU::CPU(NES& nes, bool logEnabled)
+    : pauseFlag(false)
+    , isPaused(false)
+    , logFlag(false)
+    , logEnabled(logEnabled)
+    , logStream(nullptr)
+    , nes(nes)
+    , ppu(nullptr)
+    , apu(nullptr)
+    , cart(nullptr)
+    , clock(0)
+    , controllerStrobe(0)
+    , controllerOneShift(0)
+    , controllerOneState(0)
+    , ppuRendevous(0)
+    , nmiLineStatus(false)
+    , nmiRaised(false)
+    , nmiPending(false)
+    , isStalled(false)
+    , irqPending(false)
+    , S(0xFD)
+    , P(0x24)
+    , A(0)
+    , X(0)
+    , Y(0)
 {
     memset(memory, 0, sizeof(uint8_t) * 0x800);
 }

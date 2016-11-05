@@ -1,5 +1,4 @@
-#ifndef APU_H_
-#define APU_H_
+#pragma once
 
 #include <mutex>
 #include <atomic>
@@ -202,7 +201,7 @@ class APU
     uint32_t CyclesPerSample;
     uint32_t CyclesToNextSample;
     float* OutputBuffers[NUM_AUDIO_BUFFERS];
-    
+
     bool IsMuted;
     bool FilteringEnabled;
 
@@ -259,5 +258,3 @@ public:
     void SetDmcVolume(float volume);
     float GetDmcVolume();
 };
-
-#endif // APU_H_

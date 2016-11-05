@@ -57,9 +57,9 @@ void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
         }
     }
 
-	fpsCounter++;
+    fpsCounter++;
 
-	using namespace std::chrono;
+    using namespace std::chrono;
 
     steady_clock::time_point now = steady_clock::now();
     microseconds time_span = duration_cast<microseconds>(now - intervalStart);
@@ -89,7 +89,7 @@ void MainWindow::StartEmulator(const std::string& filename)
     if (nes == nullptr)
     {
         NesParams params;
-		params.RomPath = filename;
+        params.RomPath = filename;
         params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
         params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
         params.SoundMuted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
@@ -205,7 +205,7 @@ void MainWindow::ToggleFilters(wxCommandEvent& event)
 
 void MainWindow::ToggleNtscDecoding(wxCommandEvent& event)
 {
-    if (nes != nullptr) 
+    if (nes != nullptr)
     {
         bool enabled = emulator->FindItem(ID_EMULATOR_NTSC_DECODE)->IsChecked();
         nes->PpuSetNtscDecoderEnabled(enabled);
@@ -231,18 +231,18 @@ void MainWindow::OnROMDoubleClick(wxListEvent& event)
     AppSettings* settings = AppSettings::GetInstance();
     wxString filename = romList->GetItemText(event.GetIndex(), 0);
 
-	wxString romName;
-	settings->Read<wxString>("ROMPath", &romName, "");
-	romName += "/" + filename;
+    wxString romName;
+    settings->Read<wxString>("ROMPath", &romName, "");
+    romName += "/" + filename;
     StartEmulator(romName.ToStdString());
 }
 
 void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 {
     AppSettings* settings = AppSettings::GetInstance();
-	
-	wxString romPath;
-	settings->Read<wxString>("ROMPath", &romPath, "");
+
+    wxString romPath;
+    settings->Read<wxString>("ROMPath", &romPath, "");
 
     wxFileDialog dialog(NULL, "Open ROM", romPath, wxEmptyString, "NES Files (*.nes)|*.nes|All Files (*.*)|*.*");
 
@@ -416,14 +416,14 @@ void MainWindow::OnKeyUp(wxKeyEvent& event)
     }
 }
 
-MainWindow::MainWindow() :
-    wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460)),
-    nes(nullptr),
-    fpsCounter(0),
-    currentFPS(0),
-	intervalStart(std::chrono::steady_clock::now()),
-    ppuDebugWindow(nullptr),
-    gameSize(wxSize(256, 240))
+MainWindow::MainWindow()
+    : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460))
+    , nes(nullptr)
+    , fpsCounter(0)
+    , currentFPS(0)
+    , intervalStart(std::chrono::steady_clock::now())
+    , ppuDebugWindow(nullptr)
+    , gameSize(wxSize(256, 240))
 {
     file = new wxMenu;
     file->Append(ID_OPEN_ROM, wxT("&Open ROM"));

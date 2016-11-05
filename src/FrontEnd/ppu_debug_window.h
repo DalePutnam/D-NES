@@ -1,5 +1,4 @@
-#ifndef PPU_DEBUG_WINDOW_H_
-#define PPU_DEBUG_WINDOW_H_
+#pragma once
 
 #include <mutex>
 #include <wx/frame.h>
@@ -35,5 +34,3 @@ public:
     void ClearAll();
     int GetCurrentPalette();
 };
-
-#endif

@@ -10,14 +10,14 @@
 #include "nes.h"
 #include "mappers/nrom.h"
 
-NES::NES(const NesParams& params) :
-    stop(true),
-    pause(false),
-    nmi(false),
-    apu(*new APU(*this)), // APU first since it may throw an exception
-    cpu(*new CPU(*this, params.CpuLogEnabled)),
-    ppu(*new PPU(*this)),
-    cart(Cart::Create(params.RomPath, cpu))
+NES::NES(const NesParams& params)
+    : stop(true)
+    , pause(false)
+    , nmi(false)
+    , apu(*new APU(*this)) // APU first since it may throw an exception
+    , cpu(*new CPU(*this, params.CpuLogEnabled))
+    , ppu(*new PPU(*this))
+    , cart(Cart::Create(params.RomPath, cpu))
 {
     apu.AttachCPU(cpu);
     apu.AttachCart(cart);
@@ -34,18 +34,18 @@ NES::NES(const NesParams& params) :
 
     apu.SetMuted(params.SoundMuted);
     apu.SetFiltersEnabled(params.FiltersEnabled);
-	
-	// Get just the file name from the rom path
 
-	const std::string& romPath = params.RomPath;
-	for (int i = romPath.length() - 1; i >= 0; --i)
-	{
-		if (romPath[i] == '\\' || romPath[i] == '/')
-		{
-			gameName = romPath.substr(i + 1, romPath.length() - i - 1);
-			break;
-		}
-	}
+    // Get just the file name from the rom path
+
+    const std::string& romPath = params.RomPath;
+    for (int i = romPath.length() - 1; i >= 0; --i)
+    {
+        if (romPath[i] == '\\' || romPath[i] == '/')
+        {
+            gameName = romPath.substr(i + 1, romPath.length() - i - 1);
+            break;
+        }
+    }
 
 }
 

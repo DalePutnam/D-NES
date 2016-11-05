@@ -1,5 +1,4 @@
-#ifndef GAME_LIST_H_
-#define GAME_LIST_H_
+#pragma once
 
 #include <wx/window.h>
 #include <wx/listctrl.h>
@@ -14,5 +13,3 @@ public:
 
     void PopulateList();
 };
-
-#endif

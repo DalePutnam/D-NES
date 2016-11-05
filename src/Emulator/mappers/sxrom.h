@@ -1,5 +1,4 @@
-#ifndef SXROM_H_
-#define SXROM_H_
+#pragma once
 
 #include <boost/iostreams/device/mapped_file.hpp>
 
@@ -12,7 +11,7 @@ class SXROM : public Cart
 {
     boost::iostreams::mapped_file* save;
 
-	CPU& cpu;
+    CPU& cpu;
 
     unsigned long long lastWriteCycle;
     uint8_t counter;
@@ -42,7 +41,3 @@ public:
     SXROM(const std::string& filename, CPU& cpu);
     ~SXROM();
 };
-
-
-
-#endif /* SXROM_H_ */

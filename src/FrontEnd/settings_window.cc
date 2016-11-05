@@ -8,10 +8,10 @@
 void SettingsWindow::PopulateFields()
 {
     AppSettings* settings = AppSettings::GetInstance();
-	wxString romPath;
-	settings->Read<wxString>("ROMPath", &romPath, "");
+    wxString romPath;
+    settings->Read<wxString>("ROMPath", &romPath, "");
 
-	*romDirectory << romPath;
+    *romDirectory << romPath;
 }
 
 void SettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))

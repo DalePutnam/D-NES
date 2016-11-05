@@ -1,7 +1,6 @@
 /* The main window for the application */
 
-#ifndef MAIN_WINDOW_H_
-#define MAIN_WINDOW_H_
+#pragma once
 
 #include <mutex>
 #include <atomic>
@@ -46,7 +45,7 @@ class MainWindow : public wxFrame
 
     int fpsCounter;
     std::atomic<int> currentFPS;
-	std::chrono::steady_clock::time_point intervalStart;
+    std::chrono::steady_clock::time_point intervalStart;
     std::atomic<wxSize> gameSize;
 
     void StartEmulator(const std::string& filename);
@@ -97,5 +96,3 @@ const int ID_EMULATOR_LIMIT = 111;
 const int ID_EMULATOR_MUTE = 112;
 const int ID_EMULATOR_FILTER = 113;
 const int ID_EMULATOR_NTSC_DECODE = 114;
-
-#endif

@@ -59,7 +59,7 @@ float APU::Filter::operator()(float sample)
 
     return output;
 }
-      
+
 
 const uint8_t APU::LengthCounterLookupTable[32] =
 {
@@ -73,25 +73,25 @@ const uint8_t APU::LengthCounterLookupTable[32] =
 
 const uint8_t APU::PulseUnit::Sequences[4] = { 0x02, 0x06, 0x1E, 0xF9 };
 
-APU::PulseUnit::PulseUnit(bool IsPulseUnitOne) :
-    Timer(0),
-    TimerPeriod(0),
-    SequenceCount(0),
-    LengthCounter(0),
-    EnvelopeDividerVolume(0),
-    EnvelopeDividerCounter(0),
-    EnvelopeCounter(0xF),
-    SweepShiftCount(0),
-    SweepDivider(0),
-    SweepDividerCounter(0),
-    LengthHaltEnvelopeLoopFlag(false),
-    ConstantVolumeFlag(false),
-    SweepEnableFlag(false),
-    SweepReloadFlag(false),
-    SweepNegateFlag(false),
-    EnvelopeStartFlag(false),
-    EnabledFlag(false),
-    PulseOneFlag(IsPulseUnitOne)
+APU::PulseUnit::PulseUnit(bool IsPulseUnitOne)
+    : Timer(0)
+    , TimerPeriod(0)
+    , SequenceCount(0)
+    , LengthCounter(0)
+    , EnvelopeDividerVolume(0)
+    , EnvelopeDividerCounter(0)
+    , EnvelopeCounter(0xF)
+    , SweepShiftCount(0)
+    , SweepDivider(0)
+    , SweepDividerCounter(0)
+    , LengthHaltEnvelopeLoopFlag(false)
+    , ConstantVolumeFlag(false)
+    , SweepEnableFlag(false)
+    , SweepReloadFlag(false)
+    , SweepNegateFlag(false)
+    , EnvelopeStartFlag(false)
+    , EnabledFlag(false)
+    , PulseOneFlag(IsPulseUnitOne)
 {}
 
 void APU::PulseUnit::SetEnabled(bool enabled)
@@ -200,7 +200,7 @@ void APU::PulseUnit::ClockSweep()
     {
         SweepDividerCounter = SweepDivider;
     }
-    else 
+    else
     {
         --SweepDividerCounter;
     }
@@ -281,16 +281,16 @@ const uint8_t APU::TriangleUnit::Sequence[32] =
      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
 };
 
-APU::TriangleUnit::TriangleUnit() :
-    Timer(0),
-    TimerPeriod(0),
-    SequenceCount(0),
-    LinearCounter(0),
-    LinearCounterPeriod(0),
-    LengthCounter(0),
-    LengthHaltControlFlag(false),
-    LinearCounterReloadFlag(false),
-    EnabledFlag(false)
+APU::TriangleUnit::TriangleUnit()
+    : Timer(0)
+    , TimerPeriod(0)
+    , SequenceCount(0)
+    , LinearCounter(0)
+    , LinearCounterPeriod(0)
+    , LengthCounter(0)
+    , LengthHaltControlFlag(false)
+    , LinearCounterReloadFlag(false)
+    , EnabledFlag(false)
 {}
 
 void APU::TriangleUnit::SetEnabled(bool enabled)
@@ -394,19 +394,19 @@ const uint16_t APU::NoiseUnit::TimerPeriods[16] =
     4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-APU::NoiseUnit::NoiseUnit() :
-    Timer(TimerPeriods[0]),
-    TimerPeriodIndex(0),
-    LinearFeedbackShiftRegister(1),
-    LengthCounter(0),
-    EnvelopeDividerVolume(0),
-    EnvelopeDividerCounter(0),
-    EnvelopeCounter(0xF),
-    LengthHaltEnvelopeLoopFlag(false),
-    ConstantVolumeFlag(false),
-    EnvelopeStartFlag(false),
-    ModeFlag(false),
-    EnabledFlag(false)
+APU::NoiseUnit::NoiseUnit()
+    : Timer(TimerPeriods[0])
+    , TimerPeriodIndex(0)
+    , LinearFeedbackShiftRegister(1)
+    , LengthCounter(0)
+    , EnvelopeDividerVolume(0)
+    , EnvelopeDividerCounter(0)
+    , EnvelopeCounter(0xF)
+    , LengthHaltEnvelopeLoopFlag(false)
+    , ConstantVolumeFlag(false)
+    , EnvelopeStartFlag(false)
+    , ModeFlag(false)
+    , EnabledFlag(false)
 {}
 
 void APU::NoiseUnit::SetEnabled(bool enabled)
@@ -546,25 +546,25 @@ const uint16_t APU::DmcUnit::TimerPeriods[16] =
 // APU DMC Unit
 //**********************************************************************
 
-APU::DmcUnit::DmcUnit(APU& apu) :
-    Apu(apu),
-    Timer(TimerPeriods[0]),
-    TimerPeriodIndex(0),
-    OutputLevel(0),
-    SampleAddress(0xC000),
-    CurrentAddress(0xC000),
-    SampleLength(1),
-    SampleBytesRemaining(0),
-    SampleBuffer(0),
-    SampleShiftRegister(0),
-    SampleBitsRemaining(8),
-    MemoryStallCountdown(0),
-    InterruptFlag(false),
-    InterruptEnabledFlag(false),
-    SampleLoopFlag(false),
-    SampleBufferEmptyFlag(true),
-    InMemoryStall(false),
-    SilenceFlag(true)
+APU::DmcUnit::DmcUnit(APU& apu)
+    : Apu(apu)
+    , Timer(TimerPeriods[0])
+    , TimerPeriodIndex(0)
+    , OutputLevel(0)
+    , SampleAddress(0xC000)
+    , CurrentAddress(0xC000)
+    , SampleLength(1)
+    , SampleBytesRemaining(0)
+    , SampleBuffer(0)
+    , SampleShiftRegister(0)
+    , SampleBitsRemaining(8)
+    , MemoryStallCountdown(0)
+    , InterruptFlag(false)
+    , InterruptEnabledFlag(false)
+    , SampleLoopFlag(false)
+    , SampleBufferEmptyFlag(true)
+    , InMemoryStall(false)
+    , SilenceFlag(true)
 {}
 
 void APU::DmcUnit::SetEnabled(bool enabled)
@@ -730,42 +730,42 @@ uint8_t APU::DmcUnit::operator()()
 // APU Main Unit
 //**********************************************************************
 
-APU::APU(NES& nes) :
-    Nes(nes),
-    Cpu(nullptr),
-    cart(nullptr),
-    PulseOne(true),
-    PulseTwo(false),
-    Dmc(*this),
-    Clock(0),
-    SequenceCount(0),
-    SequenceMode(false),
-    InterruptInhibit(true),
-    FrameInterruptFlag(false),
-    FrameResetFlag(false),
-    FrameResetCountdown(0),
-    XAudio2Instance(nullptr),
-    XAudio2MasteringVoice(nullptr),
-    XAudio2SourceVoice(nullptr),
-    BufferIndex(0),
-    CurrentBuffer(0),
-    CyclesPerSample(CPU_FREQUENCY / AUDIO_SAMPLE_RATE),
-    CyclesToNextSample(0),
-    IsMuted(false),
-    FilteringEnabled(false),
-    HighPass90Hz(90.0f, 1.0f, AUDIO_SAMPLE_RATE, false),
-    HighPass440Hz(440.0f, 1.0f, AUDIO_SAMPLE_RATE, false),
-    LowPass14KHz(14000.0f, 1.0f, AUDIO_SAMPLE_RATE, true),
-    PulseOneVolume(1.0f),
-    PulseOneEnabled(true),
-    PulseTwoVolume(1.0f),
-    PulseTwoEnabled(true),
-    TriangleVolume(1.0f),
-    TriangleEnabled(true),
-    NoiseVolume(1.0f),
-    NoiseEnabled(true),
-    DmcVolume(1.0f),
-    DmcEnabled(true)
+APU::APU(NES& nes)
+    : Nes(nes)
+    , Cpu(nullptr)
+    , cart(nullptr)
+    , PulseOne(true)
+    , PulseTwo(false)
+    , Dmc(*this)
+    , Clock(0)
+    , SequenceCount(0)
+    , SequenceMode(false)
+    , InterruptInhibit(true)
+    , FrameInterruptFlag(false)
+    , FrameResetFlag(false)
+    , FrameResetCountdown(0)
+    , XAudio2Instance(nullptr)
+    , XAudio2MasteringVoice(nullptr)
+    , XAudio2SourceVoice(nullptr)
+    , BufferIndex(0)
+    , CurrentBuffer(0)
+    , CyclesPerSample(CPU_FREQUENCY / AUDIO_SAMPLE_RATE)
+    , CyclesToNextSample(0)
+    , IsMuted(false)
+    , FilteringEnabled(false)
+    , HighPass90Hz(90.0f, 1.0f, AUDIO_SAMPLE_RATE, false)
+    , HighPass440Hz(440.0f, 1.0f, AUDIO_SAMPLE_RATE, false)
+    , LowPass14KHz(14000.0f, 1.0f, AUDIO_SAMPLE_RATE, true)
+    , PulseOneVolume(1.0f)
+    , PulseOneEnabled(true)
+    , PulseTwoVolume(1.0f)
+    , PulseTwoEnabled(true)
+    , TriangleVolume(1.0f)
+    , TriangleEnabled(true)
+    , NoiseVolume(1.0f)
+    , NoiseEnabled(true)
+    , DmcVolume(1.0f)
+    , DmcEnabled(true)
 {
     WAVEFORMATEX WaveFormat = { 0 };
     WaveFormat.nChannels = 1;
@@ -923,7 +923,7 @@ void APU::Step()
 
             float PulseOut = 0.0f;
             float TndOut = 0.0f;
-            
+
             if (pulse1 != 0.0f || pulse2 != 0.0f)
             {
                 PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
@@ -933,7 +933,7 @@ void APU::Step()
             {
                 TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
             }
-            
+
             float RawOutput = ((PulseOut + TndOut) * 2.0f) - 1.0f;
 
             float FinalOutput;

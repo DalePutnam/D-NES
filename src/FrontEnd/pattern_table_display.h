@@ -1,5 +1,4 @@
-#ifndef PATTERN_TABLE_DISPLAY_H_
-#define PATTERN_TABLE_DISPLAY_H_
+#pragma once
 
 #include <wx/sizer.h>
 #include <wx/panel.h>
@@ -8,7 +7,7 @@
 
 class PatternTableDisplay : public wxPanel
 {
-    int currentPallete;
+    int currentPalette;
 
     wxPanel* table1;
     wxPanel* table2;
@@ -22,5 +21,3 @@ public:
     void Clear();
     int GetCurrentPalette();
 };
-
-#endif

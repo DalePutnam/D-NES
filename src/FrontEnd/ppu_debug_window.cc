@@ -19,9 +19,9 @@ void PPUDebugWindow::OnPatternTableClicked(wxMouseEvent& WXUNUSED(event))
 }
 
 PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
-    : wxFrame(mainWindow, wxID_ANY, "PPU Debug", wxDefaultPosition, wxDefaultSize, (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX),
-    mainWindow(mainWindow),
-    paletteIndex(0)
+    : wxFrame(mainWindow, wxID_ANY, "PPU Debug", wxDefaultPosition, wxDefaultSize, (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX)
+    , mainWindow(mainWindow)
+    , paletteIndex(0)
 {
     patternTableDisplay = new PatternTableDisplay(this);
 
