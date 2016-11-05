@@ -23,7 +23,10 @@ struct NesParams
 {
     std::string RomPath;
     bool CpuLogEnabled;
+
+    // PPU Settings
     bool FrameLimitEnabled;
+    bool NtscDecoderEnabled;
 
     // APU Settings
     bool SoundMuted;
@@ -32,9 +35,10 @@ struct NesParams
     NesParams() :
         RomPath(""),
         CpuLogEnabled(false),
-        FrameLimitEnabled(false),
+        FrameLimitEnabled(true),
+        NtscDecoderEnabled(false),
         SoundMuted(false),
-        FiltersEnabled(true)
+        FiltersEnabled(false)
     {}
 };
 
@@ -56,6 +60,9 @@ class NES
     std::mutex pauseMutex;
 
     std::function<void(std::string)> OnError;
+
+    // Main run function, launched in a new thread by NES::Start
+    void Run();
 
 public:
     NES(const NesParams& params);
@@ -91,9 +98,6 @@ public:
     void SetControllerOneState(uint8_t state);
     uint8_t GetControllerOneState();
 
-    void EnableFrameLimit();
-    void DisableFrameLimit();
-
     void EnableCPULog();
     void DisableCPULog();
 
@@ -102,16 +106,15 @@ public:
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimarySprite(int sprite, uint8_t* pixels);
 
+    void PpuSetFrameLimitEnabled(bool enabled);
+    void PpuSetNtscDecoderEnabled(bool enabled);
+
     void ApuSetMuted(bool muted);
     void ApuSetFiltersEnabled(bool enabled);
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
     void Start();
-
-    // Run the emulator on the current thread.
-    // This function runs until the emulator stops.
-    void Run();
 
     // Instructs the emulator to stop and then blocks until it does.
     // Once this function returns this object may be safely deleted.

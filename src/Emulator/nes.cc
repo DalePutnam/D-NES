@@ -30,20 +30,11 @@ NES::NES(const NesParams& params) :
     ppu.AttachCPU(cpu);
     ppu.AttachCart(cart);
 
-    if (!params.FrameLimitEnabled)
-    {
-        ppu.DisableFrameLimit();
-    }
+    ppu.SetFrameLimitEnabled(params.FrameLimitEnabled);
+    ppu.SetNtscDecodingEnabled(params.NtscDecoderEnabled);
 
-    if (params.SoundMuted)
-    {
-        apu.SetMuted(true);
-    }
-
-    if (params.FiltersEnabled)
-    {
-        apu.SetFiltersEnabled(true);
-    }
+    apu.SetMuted(params.SoundMuted);
+    apu.SetFiltersEnabled(params.FiltersEnabled);
 
     std::vector<std::string> stringList;
     boost::algorithm::split(stringList, params.RomPath, boost::is_any_of("\\/"));
@@ -63,16 +54,6 @@ void NES::SetControllerOneState(uint8_t state)
 uint8_t NES::GetControllerOneState()
 {
     return cpu.GetControllerOneState();
-}
-
-void NES::EnableFrameLimit()
-{
-    ppu.EnableFrameLimit();
-}
-
-void NES::DisableFrameLimit()
-{
-    ppu.DisableFrameLimit();
 }
 
 void NES::EnableCPULog()
@@ -103,6 +84,16 @@ void NES::GetPalette(int palette, uint8_t* pixels)
 void NES::GetPrimarySprite(int sprite, uint8_t* pixels)
 {
     ppu.GetPrimaryOAM(sprite, pixels);
+}
+
+void NES::PpuSetFrameLimitEnabled(bool enabled)
+{
+    ppu.SetFrameLimitEnabled(enabled);
+}
+
+void NES::PpuSetNtscDecoderEnabled(bool enabled)
+{
+    ppu.SetNtscDecodingEnabled(enabled);
 }
 
 void NES::ApuSetMuted(bool muted)

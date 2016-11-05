@@ -181,14 +181,8 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
 {
     if (nes != nullptr)
     {
-        if (emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked())
-        {
-            nes->EnableFrameLimit();
-        }
-        else
-        {
-            nes->DisableFrameLimit();
-        }
+        bool enabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
+        nes->PpuSetFrameLimitEnabled(enabled);
     }
 }
 
@@ -207,6 +201,15 @@ void MainWindow::ToggleFilters(wxCommandEvent& event)
     {
         bool enabled = emulator->FindItem(ID_EMULATOR_FILTER)->IsChecked();
         nes->ApuSetFiltersEnabled(enabled);
+    }
+}
+
+void MainWindow::ToggleNtscDecoding(wxCommandEvent& event)
+{
+    if (nes != nullptr) 
+    {
+        bool enabled = emulator->FindItem(ID_EMULATOR_NTSC_DECODE)->IsChecked();
+        nes->PpuSetNtscDecoderEnabled(enabled);
     }
 }
 
@@ -439,6 +442,7 @@ MainWindow::MainWindow() :
     emulator->AppendSubMenu(size, wxT("&Size"));
     emulator->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
     emulator->FindItem(ID_EMULATOR_LIMIT)->Check();
+    emulator->AppendCheckItem(ID_EMULATOR_NTSC_DECODE, wxT("&Enable NTSC Decoding"));
     emulator->AppendCheckItem(ID_EMULATOR_MUTE, wxT("&Mute"));
     emulator->AppendCheckItem(ID_EMULATOR_FILTER, wxT("&Filters Enabled"));
     emulator->AppendSeparator();
@@ -477,6 +481,7 @@ MainWindow::MainWindow() :
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleMute), this, ID_EMULATOR_MUTE);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFilters), this, ID_EMULATOR_FILTER);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleNtscDecoding), this, ID_EMULATOR_NTSC_DECODE);
 
     Bind(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
 

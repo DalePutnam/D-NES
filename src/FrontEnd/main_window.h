@@ -56,6 +56,7 @@ class MainWindow : public wxFrame
     void ToggleFrameLimit(wxCommandEvent& event);
     void ToggleMute(wxCommandEvent& event);
     void ToggleFilters(wxCommandEvent& event);
+    void ToggleNtscDecoding(wxCommandEvent& event);
     void OnSettings(wxCommandEvent& event);
     void OnROMDoubleClick(wxListEvent& event);
     void OnOpenROM(wxCommandEvent& event);
@@ -96,5 +97,6 @@ const int ID_EMULATOR_SCALE_4X = 110;
 const int ID_EMULATOR_LIMIT = 111;
 const int ID_EMULATOR_MUTE = 112;
 const int ID_EMULATOR_FILTER = 113;
+const int ID_EMULATOR_NTSC_DECODE = 114;
 
 #endif

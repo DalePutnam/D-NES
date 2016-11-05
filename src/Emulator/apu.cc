@@ -14,13 +14,13 @@
 // Butterworth filter
 //**********************************************************************
 
-#define PI 3.14159265f
-
 APU::Filter::Filter(float frequency, float resonance, uint32_t sampleRate, bool isLowPass)
 {
+    static constexpr float pi = 3.14159265f;
+
     if (isLowPass)
     {
-        c = 1.0f / std::tan(PI * frequency / sampleRate);
+        c = 1.0f / std::tan(pi * frequency / sampleRate);
         a1 = 1.0f / (1.0f + resonance * c + c * c);
         a2 = 2.0f * a1;
         a3 = a1;
@@ -29,7 +29,7 @@ APU::Filter::Filter(float frequency, float resonance, uint32_t sampleRate, bool 
     }
     else
     {
-        c = std::tan(PI * frequency / sampleRate);
+        c = std::tan(pi * frequency / sampleRate);
         a1 = 1.0f / (1.0f + resonance * c + c * c);
         a2 = -2.0f * a1;
         a3 = a1;

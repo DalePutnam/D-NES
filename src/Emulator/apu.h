@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 
 #include <xaudio2.h>

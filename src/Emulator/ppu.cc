@@ -4,10 +4,13 @@
  *  Created on: Oct 9, 2014
  *      Author: Dale
  */
+
 #include <cassert>
 #include <cstring>
+#include <cmath>
 #include "ppu.h"
 #include "nes.h"
+
 
 const uint32_t PPU::rgbLookupTable[64] =
 {
@@ -16,8 +19,6 @@ const uint32_t PPU::rgbLookupTable[64] =
     0xECEEEC, 0x4C9AEC, 0x787CEC, 0xB062EC, 0xE454EC, 0xEC58B4, 0xEC6A64, 0xD48820, 0xA0AA00, 0x74C400, 0x4CD020, 0x38CC6C, 0x38B4CC, 0x3C3C3C, 0x000000, 0x000000,
     0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490, 0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
 };
-
-const uint32_t PPU::resetDelay = 88974;
 
 void PPU::GetNameTable(int table, uint8_t* pixels)
 {
@@ -210,6 +211,97 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
     }
 }
 
+void PPU::RenderNtscPixel(int pixel)
+{
+    static constexpr float levels[16] = 
+    { 
+      // Normal Levels
+        -0.116f/12.f, 0.000f/12.f, 0.307f/12.f, 0.714f/12.f,
+         0.399f/12.f, 0.684f/12.f, 1.000f/12.f, 1.000f/12.f,
+      // Attenuated Levels                                                     
+        -0.087f/12.f, 0.000f/12.f, 0.229f/12.f, 0.532f/12.f, 
+         0.298f/12.f, 0.510f/12.f, 0.746f/12.f, 0.746f/12.f
+    };
+
+    auto SignalLevel = [=](int phase)
+    {   
+        // Decode the NES color.
+        int color = (pixel & 0x0F);    // 0..15 "cccc"
+        int level = (pixel >> 4) & 3;  // 0..3  "ll"
+        int emphasis = (pixel >> 6);   // 0..7  "eee"
+        if (color > 13) { level = 1; } // For colors 14..15, level 1 is forced.
+
+                                       // The square wave for this color alternates between these two voltages:
+        int low = level;
+        int high = level + 4;
+
+        if (color == 0) { low = high; } // For color 0, only high level is emitted
+        if (color > 12) { high = low; } // For colors 13..15, only low level is emitted
+
+         // Generate the square wave
+        auto InColorPhase = [=](int color) { return (color + phase) % 12 < 6; }; // Inline function
+        int index = InColorPhase(color) ? high : low;
+
+        // When de-emphasis bits are set, some parts of the signal are attenuated:
+        if (((emphasis & 1) && InColorPhase(0)) || ((emphasis & 2) && InColorPhase(4)) || ((emphasis & 4) && InColorPhase(8)))
+        {
+            return levels[index + 8];
+        }
+        else
+        {
+            return levels[index];
+        }
+    };
+
+    int phase = (clock << 3) % 12;
+    for (int p = 0; p < 8; ++p) // Each pixel produces distinct 8 samples of NTSC signal.
+    {
+        int index = ((dot - 1) << 3) + p;
+        signalLevels[index] = SignalLevel((phase + p) % 12);
+    }
+}
+
+void PPU::RenderNtscLine()
+{
+    static constexpr int width = 256;
+    static constexpr float sineTable[12] =
+    {  
+        0.89101f,  0.54464f,  0.05234f, -0.45399f, -0.83867f, -0.99863f,
+       -0.89101f, -0.54464f, -0.05234f,  0.45399f,  0.83867f,  0.99863f
+    };
+
+    int phase = ((clock - width + 1) << 3) % 12;
+
+    for (unsigned int x = 0; x < width; ++x)
+    {
+        // Determine the region of scanline signal to sample. Take 12 samples.
+        int center = ((x * width * 8) / width) + 4;
+        int begin = center - 6; if (begin < 0) begin = 0;
+        int end = center + 6; if (end > (width << 3)) end = (width << 3);
+        float y = 0.f, i = 0.f, q = 0.f; // Calculate the color in YIQ.
+        for (int p = begin; p < end; ++p) // Collect and accumulate samples
+        {
+            float level = signalLevels[p];
+            y = y + level;
+            i = i + level * sineTable[(phase + p + 3) % 12];
+            q = q + level * sineTable[(phase + p) % 12];
+        }
+
+        auto clamp = [](float v) { return (v > 255.0f) ? 255.0f : ((v < 0.0f) ? 0.0f : v); };
+
+        int red   = static_cast<int>(clamp(255.95f * (y +  0.946882f*i +  0.623557f*q)));
+        int green = static_cast<int>(clamp(255.95f * (y + -0.274788f*i + -0.635691f*q)));
+        int blue  = static_cast<int>(clamp(255.95f * (y + -1.108545f*i +  1.709007f*q)));
+
+        int index = x | (line << 8);
+
+        frameBuffer[index * 3] = red;
+        frameBuffer[(index * 3) + 1] = green;
+        frameBuffer[(index * 3) + 2] = blue;
+    }
+}
+
+
 void PPU::UpdateState()
 {
     //assert(registerBuffer.size() > 0 ? std::get<0>(registerBuffer.front()) >= clock : true);
@@ -346,17 +438,17 @@ void PPU::SpriteEvaluation()
 
 void PPU::Render()
 {
-    uint32_t pixel;
+    uint16_t colour;
 
     if (!showSprites && !showBackground)
     {
         if (ppuAddress >= 0x3F00 && ppuAddress <= 0x3FFF)
         {
-            pixel = rgbLookupTable[Read(ppuAddress)];
+            colour = Read(ppuAddress);
         }
         else
         {
-            pixel = rgbLookupTable[Read(0x3F00)];
+            colour = Read(0x3F00);
         }
     }
     else
@@ -460,17 +552,38 @@ void PPU::Render()
             paletteIndex = 0x3F00;
         }
 
-        pixel = rgbLookupTable[Read(paletteIndex)];
+        colour = Read(paletteIndex);
     }
 
-    uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
-    uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
-    uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
-    uint32_t index = (dot - 1) + (line * 256);
+    // Can only switch render modes at the start of the frame
+    if (dot == 1 && line == 0 && ntscMode != requestNtscMode)
+    {
+        ntscMode = requestNtscMode;
+    }
 
-    frameBuffer[index * 3] = red;
-    frameBuffer[(index * 3) + 1] = green;
-    frameBuffer[(index * 3) + 2] = blue;
+    if (ntscMode)
+    {
+        uint16_t pixel = colour & 0x3F;
+        pixel = pixel | (intenseRed << 6);
+        pixel = pixel | (intenseGreen << 7);
+        pixel = pixel | (intenseBlue << 8);
+
+        RenderNtscPixel(pixel);
+        if (dot == 256) RenderNtscLine();
+    }
+    else
+    {
+        uint32_t pixel = rgbLookupTable[colour];
+
+        uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
+        uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
+        uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
+        uint32_t index = (dot - 1) + (line * 256);
+
+        frameBuffer[index * 3] = red;
+        frameBuffer[(index * 3) + 1] = green;
+        frameBuffer[(index * 3) + 2] = blue;
+    }
 
     if (dot == 256 && line == 239)
     {
@@ -750,7 +863,8 @@ PPU::PPU(NES& nes) :
     backgroundAttributeShift0(0),
     backgroundAttributeShift1(0),
     backgroundAttribute(0),
-    spriteCount(0)
+    spriteCount(0),
+    ntscMode(false)
 {
     memset(nameTable0, 0, sizeof(uint8_t) * 0x400);
     memset(nameTable1, 0, sizeof(uint8_t) * 0x400);
@@ -773,14 +887,14 @@ void PPU::AttachCart(Cart& cart)
     this->cart = &cart;
 }
 
-void PPU::EnableFrameLimit()
+void PPU::SetFrameLimitEnabled(bool enabled)
 {
-    limitTo60FPS = true;
+    limitTo60FPS = enabled;
 }
 
-void PPU::DisableFrameLimit()
+void PPU::SetNtscDecodingEnabled(bool enabled)
 {
-    limitTo60FPS = false;
+    requestNtscMode = enabled;
 }
 
 uint8_t PPU::ReadPPUStatus()

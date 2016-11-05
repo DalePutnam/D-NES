@@ -30,7 +30,7 @@ class PPU
     enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
 
     static const uint32_t rgbLookupTable[64];
-    static const uint32_t resetDelay;
+    static constexpr uint32_t resetDelay = 88974;
 
     boost::chrono::high_resolution_clock::time_point intervalStart;
     std::atomic<bool> limitTo60FPS;
@@ -115,6 +115,13 @@ class PPU
     uint8_t spriteAttribute[8];
     uint8_t spriteCounter[8];
 
+    bool ntscMode;
+    std::atomic<bool> requestNtscMode;
+    float signalLevels[256 * 8];
+
+    void RenderNtscPixel(int pixel);
+    void RenderNtscLine();
+
     void UpdateState();
     void SpriteEvaluation();
     void Render();
@@ -155,8 +162,8 @@ public:
     int ScheduleSync();
     bool CheckNMI(uint64_t& occuredCycle);
 
-    void EnableFrameLimit();
-    void DisableFrameLimit();
+    void SetFrameLimitEnabled(bool enabled);
+    void SetNtscDecodingEnabled(bool enabled);
 
     uint8_t ReadPPUStatus();
     uint8_t ReadOAMData();
