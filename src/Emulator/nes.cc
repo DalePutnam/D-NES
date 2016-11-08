@@ -15,7 +15,7 @@ NES::NES(const NesParams& params)
     , pause(false)
     , nmi(false)
     , apu(*new APU(*this)) // APU first since it may throw an exception
-    , cpu(*new CPU(*this, params.CpuLogEnabled))
+    , cpu(*new CPU(*this))
     , ppu(*new PPU(*this))
     , cart(Cart::Create(params.RomPath, cpu))
 {
@@ -28,6 +28,8 @@ NES::NES(const NesParams& params)
 
     ppu.AttachCPU(cpu);
     ppu.AttachCart(cart);
+
+    cpu.SetLogEnabled(params.CpuLogEnabled);
 
     ppu.SetFrameLimitEnabled(params.FrameLimitEnabled);
     ppu.SetNtscDecodingEnabled(params.NtscDecoderEnabled);
@@ -64,14 +66,9 @@ uint8_t NES::GetControllerOneState()
     return cpu.GetControllerOneState();
 }
 
-void NES::EnableCPULog()
+void NES::CpuSetLogEnabled(bool enabled)
 {
-    cpu.EnableLog();
-}
-
-void NES::DisableCPULog()
-{
-    cpu.DisableLog();
+    cpu.SetLogEnabled(enabled);
 }
 
 void NES::GetNameTable(int table, uint8_t* pixels)

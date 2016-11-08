@@ -97,8 +97,7 @@ public:
     void SetControllerOneState(uint8_t state);
     uint8_t GetControllerOneState();
 
-    void EnableCPULog();
-    void DisableCPULog();
+    void CpuSetLogEnabled(bool enabled);
 
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);

@@ -159,19 +159,18 @@ void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
 {
     if (nes != nullptr)
     {
-        if (settings->FindItem(ID_CPU_LOG)->IsChecked())
+        bool enabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
+        nes->CpuSetLogEnabled(enabled);
+
+        bool muted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
+
+        if (!muted && enabled)
         {
-            nes->EnableCPULog();
             nes->ApuSetMuted(true);
         }
-        else
+        else if (!muted && !enabled)
         {
-            nes->DisableCPULog();
-
-            if (!emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked())
-            {
-                nes->ApuSetMuted(false);
-            }
+            nes->ApuSetMuted(false);
         }
     }
 }

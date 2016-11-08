@@ -7,7 +7,6 @@
 
 #include <string>
 #include <cstring>
-#include <cstdio>
 
 #include "cpu.h"
 #include "nes.h"
@@ -232,7 +231,7 @@ uint8_t CPU::Accumulator()
 
     if (IsLogEnabled())
     {
-        sprintf(addressing, "A                          ");
+        LogAccumulator();
     }
 
     return A;
@@ -1343,12 +1342,12 @@ uint8_t CPU::GetControllerOneShift()
     return result;
 }
 
-CPU::CPU(NES& nes, bool logEnabled)
+CPU::CPU(NES& nes)
     : pauseFlag(false)
     , isPaused(false)
-    , logFlag(false)
-    , logEnabled(logEnabled)
-    , logStream(nullptr)
+    , logEnabled(false)
+    , enableLogFlag(false)
+    , logFile(nullptr)
     , nes(nes)
     , ppu(nullptr)
     , apu(nullptr)
@@ -1370,6 +1369,12 @@ CPU::CPU(NES& nes, bool logEnabled)
     , Y(0)
 {
     memset(memory, 0, sizeof(uint8_t) * 0x800);
+
+    sprintf(addressing, "");
+    sprintf(instruction, "");
+    sprintf(programCounter, "");
+    sprintf(addressingArg1, "");
+    sprintf(addressingArg2, "");
 }
 
 uint64_t CPU::GetClock()
@@ -1405,51 +1410,30 @@ bool CPU::IsLogEnabled()
     return logEnabled;
 }
 
-void CPU::EnableLog()
-{
-    if (!logEnabled && !logFlag)
-    {
-        logFlag = true;
-        long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        std::string logName = nes.GetGameName() + "_" + std::to_string(time) + ".log";
-        logStream = new std::ofstream(logName);
-    }
-}
-
-void CPU::DisableLog()
-{
-    if (logEnabled || logFlag)
-    {
-        logFlag = false;
-        logEnabled = false;
-        logStream->close();
-        delete logStream;
-        logStream = 0;
-    }
-}
-
 CPU::~CPU()
 {
-    if (logStream)
+    if (logEnabled && logFile != nullptr)
     {
-        logStream->close();
-        delete logStream;
+        fclose(logFile);
     }
 }
 
 void CPU::SetControllerOneState(uint8_t state)
 {
-    controllerOneState.store(state);
+    controllerOneState = state;
 }
 
 uint8_t CPU::GetControllerOneState()
 {
-    return controllerOneState.load();
+    return controllerOneState;
 }
 
 void CPU::Pause()
 {
-    pauseFlag = true;
+    if (!isPaused)
+    {
+        pauseFlag = true;
+    }
 }
 
 void CPU::Resume()
@@ -1464,6 +1448,11 @@ bool CPU::IsPaused()
     return isPaused;
 }
 
+void CPU::SetLogEnabled(bool enabled)
+{
+    enableLogFlag = enabled;
+}
+
 // Currently unimplemented
 void CPU::Reset()
 {
@@ -1473,26 +1462,45 @@ void CPU::Reset()
 // Run the CPU
 void CPU::Run()
 {
-    // Initialize Logger if it is enabled and has not already been initialized
-    if (logEnabled && !logStream)
-    {
-        long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        std::string logName = nes.GetGameName() + "_" + std::to_string(time) + ".log";
-        logStream = new std::ofstream(logName);
-    }
-
     while (!nes.IsStopped()) // Run stop command issued
     {
-        Step();
-
-        if (pauseFlag.load())
+        if (pauseFlag)
         {
-            pauseFlag = false;
             std::unique_lock<std::mutex> lock(pauseMutex);
             isPaused = true;
+
             pauseCV.wait(lock);
             isPaused = false;
+            pauseFlag = false;
         }
+
+        if (enableLogFlag != logEnabled)
+        {
+            logEnabled = enableLogFlag;
+
+            if (logEnabled)
+            {
+                long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+                std::string logName = nes.GetGameName() + "_" + std::to_string(time) + ".log";
+                logFile = fopen(logName.c_str(), "w");
+
+                if (logFile == nullptr)
+                {
+                    std::string message = "Failed to open log file: ";
+                    message += logName;
+
+                    throw std::runtime_error(message);
+                }
+            }
+            else
+            {
+                fclose(logFile);
+                logFile = nullptr;
+            }
+            
+        }
+
+        Step();
     }
 }
 
@@ -1500,12 +1508,6 @@ void CPU::Run()
 // or return false if the next value is not an opcode
 void CPU::Step()
 {
-    if (logFlag)
-    {
-        logFlag = false;
-        logEnabled = true;
-    }
-
     if (nmiPending)
     {
         nmiPending = false;
@@ -2176,38 +2178,43 @@ void CPU::LogOpcode(uint8_t opcode)
 
 void CPU::LogInstructionName(std::string name)
 {
-    sprintf(instruction, " %s", name.c_str());
+    sprintf(instruction, "%s", name.c_str());
+}
+
+void CPU::LogAccumulator()
+{
+    sprintf(addressing, "A");
 }
 
 void CPU::LogRelative(uint8_t value)
 {
 
-    sprintf(addressing, "$%04X                      ", PC + static_cast<int8_t>(value));
+    sprintf(addressing, "$%04X", PC + static_cast<int8_t>(value));
     sprintf(addressingArg1, "%02X", static_cast<uint8_t>(value));
 }
 
 void CPU::LogImmediate(uint8_t arg1)
 {
-    sprintf(addressing, "#$%02X                       ", arg1);
+    sprintf(addressing, "#$%02X", arg1);
     sprintf(addressingArg1, "%02X", arg1);
 }
 
 void CPU::LogZeroPage(uint8_t address)
 {
-    sprintf(addressing, "$%02X = %02X                   ", address, DebugRead(address));
+    sprintf(addressing, "$%02X = %02X", address, DebugRead(address));
     sprintf(addressingArg1, "%02X", address);
 }
 
 
 void CPU::LogZeroPageX(uint8_t initialAddress, uint8_t finalAddress)
 {
-    sprintf(addressing, "$%02X,X @ %02X = %02X            ", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(addressing, "$%02X,X @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", initialAddress);
 }
 
 void CPU::LogZeroPageY(uint8_t initialAddress, uint8_t finalAddress)
 {
-    sprintf(addressing, "$%02X,Y @ %02X = %02X            ", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(addressing, "$%02X,Y @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", initialAddress);
 }
 
@@ -2215,11 +2222,11 @@ void CPU::LogAbsolute(uint8_t lowByte, uint8_t highByte, uint16_t address, bool 
 {
     if (!isJump)
     {
-        sprintf(addressing, "$%04X = %02X                 ", address, DebugRead(address));
+        sprintf(addressing, "$%04X = %02X", address, DebugRead(address));
     }
     else
     {
-        sprintf(addressing, "$%04X                      ", address);
+        sprintf(addressing, "$%04X", address);
     }
 
     sprintf(addressingArg1, "%02X", lowByte);
@@ -2228,34 +2235,34 @@ void CPU::LogAbsolute(uint8_t lowByte, uint8_t highByte, uint16_t address, bool 
 
 void CPU::LogAbsoluteX(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(addressing, "$%04X,X @ %04X = %02X        ", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(addressing, "$%04X,X @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", lowByte);
     sprintf(addressingArg2, "%02X", highByte);
 }
 
 void CPU::LogAbsoluteY(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(addressing, "$%04X,Y @ %04X = %02X        ", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(addressing, "$%04X,Y @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", lowByte);
     sprintf(addressingArg2, "%02X", highByte);
 }
 
 void CPU::LogIndirect(uint8_t lowIndirect, uint8_t highIndirect, uint16_t indirect, uint16_t address)
 {
-    sprintf(addressing, "($%04X) = %04X             ", indirect, address);
+    sprintf(addressing, "($%04X) = %04X", indirect, address);
     sprintf(addressingArg1, "%02X", lowIndirect);
     sprintf(addressingArg2, "%02X", highIndirect);
 }
 
 void CPU::LogIndexedIndirect(uint8_t pointer, uint8_t lowIndirect, uint16_t address)
 {
-    sprintf(addressing, "($%02X,X) @ %02X = %04X = %02X   ", pointer, lowIndirect, address, DebugRead(address));
+    sprintf(addressing, "($%02X,X) @ %02X = %04X = %02X", pointer, lowIndirect, address, DebugRead(address));
     sprintf(addressingArg1, "%02X", pointer);
 }
 
 void CPU::LogIndirectIndexed(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(addressing, "($%02X),Y = %04X @ %04X = %02X ", pointer, initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(addressing, "($%02X),Y = %04X @ %04X = %02X", pointer, initialAddress, finalAddress, DebugRead(finalAddress));
     sprintf(addressingArg1, "%02X", pointer);
 }
 
@@ -2263,40 +2270,10 @@ void CPU::PrintLog()
 {
     using namespace std;
 
-    ofstream& out = *logStream;
-    out << programCounter << "  ";
-    out << opcode << " ";
-
-    if (strlen(addressingArg1) > 0)
+    if (logFile != nullptr)
     {
-        out << addressingArg1 << " ";
+        fprintf(logFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", programCounter, opcode, addressingArg1, addressingArg2, instruction, addressing, registers);
     }
-    else
-    {
-        out << "   ";
-    }
-
-    if (strlen(addressingArg2) > 0)
-    {
-        out << addressingArg2 << " ";
-    }
-    else
-    {
-        out << "   ";
-    }
-
-    out << instruction << " ";
-
-    if (strlen(addressing) > 0)
-    {
-        out << addressing << " ";
-    }
-    else
-    {
-        out << "                            ";
-    }
-
-    out << registers << endl;
 
     sprintf(registers, "");
     sprintf(addressing, "");

@@ -13,7 +13,7 @@
 
 #include <mutex>
 #include <atomic>
-#include <fstream>
+#include <cstdio>
 #include <cstdint>
 #include <condition_variable>
 
@@ -40,9 +40,9 @@ class CPU
     std::condition_variable pauseCV;
     volatile bool isPaused;
 
-    std::atomic<bool> logFlag;
-    std::atomic<bool> logEnabled;
-    std::ofstream* logStream;
+    bool logEnabled;
+    std::atomic<bool> enableLogFlag;
+    std::FILE* logFile;
 
     // Debug Strings
     char programCounter[5];
@@ -183,6 +183,7 @@ class CPU
     void LogRegisters();
     void LogOpcode(uint8_t opcode);
     void LogInstructionName(std::string name);
+    void LogAccumulator();
     void LogRelative(uint8_t value);
     void LogImmediate(uint8_t value);
     void LogZeroPage(uint8_t address);
@@ -198,7 +199,9 @@ class CPU
 
 public:
 
-    CPU(NES& nes, bool logEnabled = false);
+    CPU(NES& nes);
+    ~CPU();
+
     void AttachPPU(PPU& ppu);
     void AttachAPU(APU& apu);
     void AttachCart(Cart& cart);
@@ -217,8 +220,5 @@ public:
 
     bool IsPaused();
 
-    void EnableLog();
-    void DisableLog();
-
-    ~CPU();
+    void SetLogEnabled(bool enabled);
 };
