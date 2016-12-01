@@ -42,6 +42,9 @@
     <ClInclude Include="apu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="mappers\mapper_base.h">
+      <Filter>Header Files\Mappers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
