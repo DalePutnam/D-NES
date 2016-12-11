@@ -5,16 +5,40 @@
 #include <chrono>
 #include <cstdint>
 
+#ifdef _WINDOWS
 #include <xaudio2.h>
+#elif 0
+#endif
 
 class NES;
 class CPU;
 class Cart;
 
-#define NUM_AUDIO_BUFFERS 500
-
 class APU
 {
+    class AudioBackend {
+    public:
+        AudioBackend();
+        ~AudioBackend();
+        void SetMuted(bool mute);
+        void operator<<(float sample);
+    private:
+        static constexpr uint32_t NUM_AUDIO_BUFFERS = 500;
+
+        bool IsMuted;
+        uint32_t BufferIndex;
+        uint32_t CurrentBuffer;
+        float* OutputBuffers[NUM_AUDIO_BUFFERS];
+
+#ifdef _WINDOWS
+        IXAudio2* XAudio2Instance;
+        IXAudio2MasteringVoice* XAudio2MasteringVoice;
+        IXAudio2SourceVoice* XAudio2SourceVoice;
+#elif 0
+#endif
+    };
+
+
     // Butterworth filter implementation shamelessly stolen from
     // http://stackoverflow.com/questions/8079526/lowpass-and-high-pass-filter-in-c-sharp
     class Filter
@@ -25,7 +49,7 @@ class APU
         float OutputHistory[2];
 
     public:
-        Filter(float frequency, float resonance, uint32_t sampleRate, bool isLowPass);
+        Filter(float frequency, float resonance, bool isLowPass);
         void Reset();
 
         float operator()(float sample);
@@ -171,6 +195,12 @@ class APU
         uint8_t operator()();
     };
 
+    static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
+    static constexpr uint32_t AUDIO_BUFFER_SIZE = AUDIO_SAMPLE_RATE / 240;
+    static constexpr uint32_t CPU_FREQUENCY = 1789773;
+    static constexpr uint32_t CYCLES_PER_SAMPLE = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
+
+
     NES& Nes;
     CPU* Cpu;
     Cart* cart;
@@ -192,15 +222,7 @@ class APU
     bool FrameResetFlag;
     uint8_t FrameResetCountdown;
 
-    IXAudio2* XAudio2Instance;
-    IXAudio2MasteringVoice* XAudio2MasteringVoice;
-    IXAudio2SourceVoice* XAudio2SourceVoice;
-
-    uint32_t BufferIndex;
-    uint32_t CurrentBuffer;
-    uint32_t CyclesPerSample;
     uint32_t CyclesToNextSample;
-    float* OutputBuffers[NUM_AUDIO_BUFFERS];
 
     bool IsMuted;
     bool FilteringEnabled;
@@ -208,6 +230,8 @@ class APU
     Filter HighPass90Hz;
     Filter HighPass440Hz;
     Filter LowPass14KHz;
+
+    AudioBackend Backend;
 
     std::atomic<float> PulseOneVolume;
     std::atomic<bool> PulseOneEnabled;

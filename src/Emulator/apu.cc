@@ -5,22 +5,130 @@
 #include "apu.h"
 #include "cpu.h"
 
-#define AUDIO_SAMPLE_RATE 48000
-#define AUDIO_BUFFER_SIZE (AUDIO_SAMPLE_RATE / 240)
-#define CPU_FREQUENCY 1789773
-#define clamp(val, low, hi) (((val)<(low))?(low):(((val)>(hi))?(hi):(val)))
+namespace {
+    template<typename T>
+    T clamp(T val, T low, T hi)
+    {
+        return (val < low) ? low : ((val > hi) ? hi : val);
+    }
+};
+
+//**********************************************************************
+// Audio Backend
+//**********************************************************************
+
+APU::AudioBackend::AudioBackend()
+    : BufferIndex(0)
+    , CurrentBuffer(0)
+{
+#ifdef _WINDOWS
+    WAVEFORMATEX WaveFormat = { 0 };
+    WaveFormat.nChannels = 1;
+    WaveFormat.nSamplesPerSec = AUDIO_SAMPLE_RATE;
+    WaveFormat.wBitsPerSample = sizeof(float) * 8;
+    WaveFormat.nAvgBytesPerSec = AUDIO_SAMPLE_RATE * sizeof(float);
+    WaveFormat.nBlockAlign = sizeof(float);
+    WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+
+    HRESULT hr;
+    hr = XAudio2Create(&XAudio2Instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    if (FAILED(hr)) goto FailedExit;
+
+    hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice);
+    if (FAILED(hr)) goto FailedExit;
+
+    hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
+    if (FAILED(hr)) goto FailedExit;
+
+    for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
+    {
+        OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
+    }
+
+    XAudio2SourceVoice->Start(0);
+
+    return;
+
+FailedExit:
+    if (XAudio2Instance) XAudio2Instance->Release();
+    if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
+    if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
+
+    throw std::runtime_error("APU: Failed to initialize XAudio2");
+#elif 0
+#endif
+}
+
+APU::AudioBackend::~AudioBackend()
+{
+    XAudio2SourceVoice->Stop();
+    XAudio2SourceVoice->FlushSourceBuffers();
+
+    XAudio2Instance->Release();
+    XAudio2MasteringVoice->DestroyVoice();
+    XAudio2SourceVoice->DestroyVoice();
+
+    for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
+    {
+        delete OutputBuffers[i];
+    }
+}
+
+void APU::AudioBackend::SetMuted(bool mute)
+{
+    if (mute && !IsMuted)
+    {
+#ifdef _WINDOWS
+        XAudio2SourceVoice->Stop(0);
+        XAudio2SourceVoice->FlushSourceBuffers();
+#elif 0
+#endif
+        IsMuted = true;
+    }
+    else if (!mute && IsMuted)
+    {
+#ifdef _WINDOWS
+        XAudio2SourceVoice->Start(0);
+#elif 0
+#endif
+        CurrentBuffer = 0;
+        BufferIndex = 0;
+        IsMuted = false;
+    }
+}
+
+void APU::AudioBackend::operator<<(float sample)
+{
+    float* Buffer = OutputBuffers[CurrentBuffer];
+    Buffer[BufferIndex++] = sample;
+
+    if (BufferIndex == AUDIO_BUFFER_SIZE)
+    {
+        CurrentBuffer = (CurrentBuffer + 1) % NUM_AUDIO_BUFFERS;
+        BufferIndex = 0;
+
+#ifdef _WINDOWS
+        XAUDIO2_BUFFER XAudio2Buffer = { 0 };
+        XAudio2Buffer.AudioBytes = AUDIO_BUFFER_SIZE * sizeof(float);
+        XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
+
+        XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
+#elif 0
+#endif
+    }
+}
 
 //**********************************************************************
 // Butterworth filter
 //**********************************************************************
 
-APU::Filter::Filter(float frequency, float resonance, uint32_t sampleRate, bool isLowPass)
+APU::Filter::Filter(float frequency, float resonance, bool isLowPass)
 {
     static constexpr float pi = 3.14159265f;
 
     if (isLowPass)
     {
-        c = 1.0f / std::tan(pi * frequency / sampleRate);
+        c = 1.0f / std::tan(pi * frequency / AUDIO_SAMPLE_RATE);
         a1 = 1.0f / (1.0f + resonance * c + c * c);
         a2 = 2.0f * a1;
         a3 = a1;
@@ -29,7 +137,7 @@ APU::Filter::Filter(float frequency, float resonance, uint32_t sampleRate, bool 
     }
     else
     {
-        c = std::tan(pi * frequency / sampleRate);
+        c = std::tan(pi * frequency / AUDIO_SAMPLE_RATE);
         a1 = 1.0f / (1.0f + resonance * c + c * c);
         a2 = -2.0f * a1;
         a3 = a1;
@@ -744,18 +852,12 @@ APU::APU(NES& nes)
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
-    , XAudio2Instance(nullptr)
-    , XAudio2MasteringVoice(nullptr)
-    , XAudio2SourceVoice(nullptr)
-    , BufferIndex(0)
-    , CurrentBuffer(0)
-    , CyclesPerSample(CPU_FREQUENCY / AUDIO_SAMPLE_RATE)
     , CyclesToNextSample(0)
     , IsMuted(false)
     , FilteringEnabled(false)
-    , HighPass90Hz(90.0f, 1.0f, AUDIO_SAMPLE_RATE, false)
-    , HighPass440Hz(440.0f, 1.0f, AUDIO_SAMPLE_RATE, false)
-    , LowPass14KHz(14000.0f, 1.0f, AUDIO_SAMPLE_RATE, true)
+    , HighPass90Hz(90.0f, 1.0f, false)
+    , HighPass440Hz(440.0f, 1.0f, false)
+    , LowPass14KHz(14000.0f, 1.0f, true)
     , PulseOneVolume(1.0f)
     , PulseOneEnabled(true)
     , PulseTwoVolume(1.0f)
@@ -767,54 +869,10 @@ APU::APU(NES& nes)
     , DmcVolume(1.0f)
     , DmcEnabled(true)
 {
-    WAVEFORMATEX WaveFormat = { 0 };
-    WaveFormat.nChannels = 1;
-    WaveFormat.nSamplesPerSec = AUDIO_SAMPLE_RATE;
-    WaveFormat.wBitsPerSample = sizeof(float) * 8;
-    WaveFormat.nAvgBytesPerSec = AUDIO_SAMPLE_RATE * sizeof(float);
-    WaveFormat.nBlockAlign = sizeof(float);
-    WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-
-    HRESULT hr;
-    hr = XAudio2Create(&XAudio2Instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
-    if (FAILED(hr)) goto FailedExit;
-
-    hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice);
-    if (FAILED(hr)) goto FailedExit;
-
-    hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
-    if (FAILED(hr)) goto FailedExit;
-
-    for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
-    {
-        OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
-    }
-
-    XAudio2SourceVoice->Start(0);
-
-    return;
-
-FailedExit:
-    if (XAudio2Instance) XAudio2Instance->Release();
-    if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
-    if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
-
-    throw std::runtime_error("APU: Failed to initialize XAudio2");
 }
 
 APU::~APU()
 {
-    XAudio2SourceVoice->Stop();
-    XAudio2SourceVoice->FlushSourceBuffers();
-
-    XAudio2Instance->Release();
-    XAudio2MasteringVoice->DestroyVoice();
-    XAudio2SourceVoice->DestroyVoice();
-
-    for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
-    {
-        delete OutputBuffers[i];
-    }
 }
 
 void APU::AttachCPU(CPU& cpu)
@@ -908,7 +966,7 @@ void APU::Step()
 
     if (CyclesToNextSample == 0)
     {
-        CyclesToNextSample = CyclesPerSample;
+        CyclesToNextSample = CYCLES_PER_SAMPLE;
 
         std::lock_guard<std::mutex> Lock(ControlMutex);
 
@@ -948,20 +1006,7 @@ void APU::Step()
                 FinalOutput = RawOutput;
             }
 
-            float* Buffer = OutputBuffers[CurrentBuffer];
-            Buffer[BufferIndex++] = FinalOutput;
-
-            if (BufferIndex == AUDIO_BUFFER_SIZE)
-            {
-                CurrentBuffer = (CurrentBuffer + 1) % NUM_AUDIO_BUFFERS;
-                BufferIndex = 0;
-
-                XAUDIO2_BUFFER XAudio2Buffer = { 0 };
-                XAudio2Buffer.AudioBytes = AUDIO_BUFFER_SIZE * sizeof(float);
-                XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
-
-                XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
-            }
+            Backend << FinalOutput;
         }
     }
 
@@ -1061,17 +1106,14 @@ void APU::SetMuted(bool mute)
     {
         std::lock_guard<std::mutex> Lock(ControlMutex);
 
-        XAudio2SourceVoice->Stop(0);
-        XAudio2SourceVoice->FlushSourceBuffers();
+        Backend.SetMuted(mute);
         IsMuted = true;
     }
     else if (!mute && IsMuted)
     {
         std::lock_guard<std::mutex> Lock(ControlMutex);
 
-        XAudio2SourceVoice->Start(0);
-        CurrentBuffer = 0;
-        BufferIndex = 0;
+        Backend.SetMuted(mute);
         IsMuted = false;
 
         HighPass90Hz.Reset();
