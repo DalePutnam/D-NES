@@ -174,9 +174,9 @@ void NES::Reset() {}
 
 NES::~NES()
 {
-    delete &apu;
-    delete &cpu;
-    delete &ppu;
-    delete &cart;
+    delete apu;
+    delete cpu;
+    delete ppu;
+    delete cart;
 }
 
