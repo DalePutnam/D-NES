@@ -15,11 +15,8 @@ class CPU;
 
 class Cart
 {
-protected:
-    boost::iostreams::mapped_file_source& file;
-
 public:
-    static Cart& Create(const std::string& filename, CPU& cpu);
+    static Cart* Create(const std::string& filename, CPU* cpu);
 
     enum MirrorMode
     {
@@ -39,4 +36,7 @@ public:
 
     virtual uint8_t ChrRead(uint16_t address) = 0;
     virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
+
+protected:
+    boost::iostreams::mapped_file_source& file;
 };

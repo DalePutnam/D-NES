@@ -10,18 +10,58 @@
 #elif 0
 #endif
 
-class NES;
 class CPU;
 class Cart;
 
 class APU
 {
+public:
+    APU();
+    ~APU();
+
+    void AttachCPU(CPU* cpu);
+    void AttachCart(Cart* cart);
+
+    void Step();
+
+    bool CheckIRQ();
+
+    void WritePulseOneRegister(uint8_t reg, uint8_t value);
+    void WritePulseTwoRegister(uint8_t reg, uint8_t value);
+    void WriteTriangleRegister(uint8_t reg, uint8_t value);
+    void WriteNoiseRegister(uint8_t reg, uint8_t value);
+    void WriteDmcRegister(uint8_t reg, uint8_t value);
+
+    void WriteAPUStatus(uint8_t value);
+    uint8_t ReadAPUStatus();
+    void WriteAPUFrameCounter(uint8_t value);
+
+    void SetMuted(bool mute);
+    void SetFiltersEnabled(bool enabled);
+    void SetPulseOneEnabled(bool enabled);
+    void SetPulseOneVolume(float volume);
+    float GetPulseOneVolume();
+    void SetPulseTwoEnabled(bool enabled);
+    void SetPulseTwoVolume(float volume);
+    float GetPulseTwoVolume();
+    void SetTriangleEnabled(bool enabled);
+    void SetTriangleVolume(float volume);
+    float GetTriangleVolume();
+    void SetNoiseEnabled(bool enabled);
+    void SetNoiseVolume(float volume);
+    float GetNoiseVolume();
+    void SetDmcEnabled(bool enabled);
+    void SetDmcVolume(float volume);
+    float GetDmcVolume();
+
+private:
     class AudioBackend {
     public:
         AudioBackend();
         ~AudioBackend();
         void SetMuted(bool mute);
         void operator<<(float sample);
+
     private:
         static constexpr uint32_t NUM_AUDIO_BUFFERS = 500;
 
@@ -43,22 +83,37 @@ class APU
     // http://stackoverflow.com/questions/8079526/lowpass-and-high-pass-filter-in-c-sharp
     class Filter
     {
-        float c, a1, a2, a3, b1, b2;
-
-        float InputHistory[2];
-        float OutputHistory[2];
-
     public:
         Filter(float frequency, float resonance, bool isLowPass);
+        float operator()(float sample);
         void Reset();
 
-        float operator()(float sample);
+    private:
+        float c, a1, a2, a3, b1, b2;
+        float InputHistory[2];
+        float OutputHistory[2];
     };
 
     static const uint8_t LengthCounterLookupTable[32];
 
     class PulseUnit
     {
+    public:
+        PulseUnit(bool IsPulseUnitOne);
+
+        void WriteRegister(uint8_t reg, uint8_t value);
+        void SetEnabled(bool enabled);
+        bool GetEnabled();
+        uint8_t GetLengthCounter();
+
+        void ClockTimer();
+        void ClockSweep();
+        void ClockEnvelope();
+        void ClockLengthCounter();
+
+        uint8_t operator()();
+
+    private:
         static const uint8_t Sequences[4];
 
         uint16_t Timer;
@@ -80,35 +135,10 @@ class APU
         bool EnvelopeStartFlag;
         bool EnabledFlag;
         bool PulseOneFlag;
-    public:
-        PulseUnit(bool IsPulseUnitOne);
-
-        void WriteRegister(uint8_t reg, uint8_t value);
-        void SetEnabled(bool enabled);
-        bool GetEnabled();
-        uint8_t GetLengthCounter();
-
-        void ClockTimer();
-        void ClockSweep();
-        void ClockEnvelope();
-        void ClockLengthCounter();
-
-        uint8_t operator()();
     };
 
     class TriangleUnit
     {
-        static const uint8_t Sequence[32];
-
-        uint16_t Timer;
-        uint16_t TimerPeriod;
-        uint8_t SequenceCount;
-        uint8_t LinearCounter;
-        uint8_t LinearCounterPeriod;
-        uint8_t LengthCounter;
-        bool LengthHaltControlFlag;
-        bool LinearCounterReloadFlag;
-        bool EnabledFlag;
     public:
         TriangleUnit();
 
@@ -122,10 +152,38 @@ class APU
         void ClockLengthCounter();
 
         uint8_t operator()();
+
+    private:
+        static const uint8_t Sequence[32];
+
+        uint16_t Timer;
+        uint16_t TimerPeriod;
+        uint8_t SequenceCount;
+        uint8_t LinearCounter;
+        uint8_t LinearCounterPeriod;
+        uint8_t LengthCounter;
+        bool LengthHaltControlFlag;
+        bool LinearCounterReloadFlag;
+        bool EnabledFlag;
     };
 
     class NoiseUnit
     {
+    public:
+        NoiseUnit();
+
+        void WriteRegister(uint8_t reg, uint8_t value);
+        void SetEnabled(bool enabled);
+        bool GetEnabled();
+        uint8_t GetLengthCounter();
+
+        void ClockTimer();
+        void ClockEnvelope();
+        void ClockLengthCounter();
+
+        uint8_t operator()();
+
+    private:
         static const uint16_t TimerPeriods[16];
 
         uint16_t Timer;
@@ -140,24 +198,25 @@ class APU
         bool EnvelopeStartFlag;
         bool ModeFlag;
         bool EnabledFlag;
-
-    public:
-        NoiseUnit();
-
-        void WriteRegister(uint8_t reg, uint8_t value);
-        void SetEnabled(bool enabled);
-        bool GetEnabled();
-        uint8_t GetLengthCounter();
-
-        void ClockTimer();
-        void ClockEnvelope();
-        void ClockLengthCounter();
-
-        uint8_t operator()();
     };
 
     class DmcUnit
     {
+    public:
+        DmcUnit(APU& apu);
+
+        void WriteRegister(uint8_t reg, uint8_t value);
+        void SetEnabled(bool enabled);
+        uint16_t GetSampleBytesRemaining();
+        bool GetEnabled();
+        void ClearInterrupt();
+        bool CheckIRQ();
+
+        void ClockTimer();
+
+        uint8_t operator()();
+
+    private:
         static const uint16_t TimerPeriods[16];
 
         APU& Apu;
@@ -179,20 +238,6 @@ class APU
         bool SampleBufferEmptyFlag;
         bool InMemoryStall;
         bool SilenceFlag;
-
-    public:
-        DmcUnit(APU& apu);
-
-        void WriteRegister(uint8_t reg, uint8_t value);
-        void SetEnabled(bool enabled);
-        uint16_t GetSampleBytesRemaining();
-        bool GetEnabled();
-        void ClearInterrupt();
-        bool CheckIRQ();
-
-        void ClockTimer();
-
-        uint8_t operator()();
     };
 
     static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
@@ -200,8 +245,6 @@ class APU
     static constexpr uint32_t CPU_FREQUENCY = 1789773;
     static constexpr uint32_t CYCLES_PER_SAMPLE = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
 
-
-    NES& Nes;
     CPU* Cpu;
     Cart* cart;
 
@@ -243,42 +286,4 @@ class APU
     std::atomic<bool> NoiseEnabled;
     std::atomic<float> DmcVolume;
     std::atomic<bool> DmcEnabled;
-public:
-    APU(NES& nes);
-    ~APU();
-
-    void AttachCPU(CPU& cpu);
-    void AttachCart(Cart& cart);
-
-    void Step();
-
-    bool CheckIRQ();
-
-    void WritePulseOneRegister(uint8_t reg, uint8_t value);
-    void WritePulseTwoRegister(uint8_t reg, uint8_t value);
-    void WriteTriangleRegister(uint8_t reg, uint8_t value);
-    void WriteNoiseRegister(uint8_t reg, uint8_t value);
-    void WriteDmcRegister(uint8_t reg, uint8_t value);
-
-    void WriteAPUStatus(uint8_t value);
-    uint8_t ReadAPUStatus();
-    void WriteAPUFrameCounter(uint8_t value);
-
-    void SetMuted(bool mute);
-    void SetFiltersEnabled(bool enabled);
-    void SetPulseOneEnabled(bool enabled);
-    void SetPulseOneVolume(float volume);
-    float GetPulseOneVolume();
-    void SetPulseTwoEnabled(bool enabled);
-    void SetPulseTwoVolume(float volume);
-    float GetPulseTwoVolume();
-    void SetTriangleEnabled(bool enabled);
-    void SetTriangleVolume(float volume);
-    float GetTriangleVolume();
-    void SetNoiseEnabled(bool enabled);
-    void SetNoiseVolume(float volume);
-    float GetNoiseVolume();
-    void SetDmcEnabled(bool enabled);
-    void SetDmcVolume(float volume);
-    float GetDmcVolume();
 };

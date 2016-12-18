@@ -12,24 +12,12 @@
 
 class AppSettings
 {
-    // Singleton
-    static AppSettings* instance;
-    static void CleanUp(); // Destroy single instance
-
-    AppSettings();
-    AppSettings(const AppSettings&); // Prevent construction by copying
-    AppSettings& operator=(const AppSettings&); // Prevent assignment
-    ~AppSettings(); // Prevent unwanted destruction
-
-    // Application Settings
-    wxFileConfig* settings;
 public:
-
     static AppSettings* GetInstance(); // Get single instance
 
     void Save(); // Write out to file
 
-    // Get a setting
+                 // Get a setting
     template<typename T>
     bool Read(const wxString& name, T* value, const T& defaultValue)
     {
@@ -42,4 +30,18 @@ public:
     {
         return settings->Write(name, value);
     }
+
+private:
+    // Singleton
+    static AppSettings* instance;
+    static void CleanUp(); // Destroy single instance
+
+    AppSettings();
+    AppSettings(const AppSettings&); // Prevent construction by copying
+    AppSettings& operator=(const AppSettings&); // Prevent assignment
+    ~AppSettings(); // Prevent unwanted destruction
+
+    // Application Settings
+    wxFileConfig* settings;
+
 };

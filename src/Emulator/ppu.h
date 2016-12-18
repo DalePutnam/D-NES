@@ -15,12 +15,55 @@
 
 #include "mappers/cart.h"
 
-class NES;
 class CPU;
 
 class PPU
 {
-    NES& nes;
+public:
+    PPU();
+    ~PPU();
+
+    void AttachCPU(CPU* cpu);
+    void AttachCart(Cart* cart);
+
+    void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
+    {
+        OnFrameComplete = Fn;
+    }
+
+    template<class T>
+    void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
+    {
+        OnFrameComplete = std::bind(Fn, Obj, std::placeholders::_1);
+    }
+
+    uint16_t GetCurrentDot();
+    uint16_t GetCurrentScanline();
+
+    void Run();
+    int ScheduleSync();
+    bool CheckNMI(uint64_t& occuredCycle);
+
+    void SetFrameLimitEnabled(bool enabled);
+    void SetNtscDecodingEnabled(bool enabled);
+
+    uint8_t ReadPPUStatus();
+    uint8_t ReadOAMData();
+    uint8_t ReadPPUData();
+    void WritePPUCTRL(uint8_t M);
+    void WritePPUMASK(uint8_t M);
+    void WriteOAMADDR(uint8_t M);
+    void WriteOAMDATA(uint8_t M);
+    void WritePPUSCROLL(uint8_t M);
+    void WritePPUADDR(uint8_t M);
+    void WritePPUDATA(uint8_t M);
+
+    void GetNameTable(int table, uint8_t* pixels);
+    void GetPatternTable(int table, int palette, uint8_t* pixels);
+    void GetPalette(int palette, uint8_t* pixels);
+    void GetPrimaryOAM(int sprite, uint8_t* pixels);
+
+private:
     CPU* cpu;
     Cart* cart;
 
@@ -135,48 +178,4 @@ class PPU
     void WriteNameTable(uint16_t address, uint8_t value);
 
     std::function<void(uint8_t*)> OnFrameComplete;
-
-public:
-    PPU(NES& nes);
-    ~PPU();
-
-    void AttachCPU(CPU& cpu);
-    void AttachCart(Cart& cart);
-
-    void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
-    {
-        OnFrameComplete = Fn;
-    }
-
-    template<class T>
-    void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
-    {
-        OnFrameComplete = std::bind(Fn, Obj, std::placeholders::_1);
-    }
-
-    uint16_t GetCurrentDot();
-    uint16_t GetCurrentScanline();
-
-    void Run();
-    int ScheduleSync();
-    bool CheckNMI(uint64_t& occuredCycle);
-
-    void SetFrameLimitEnabled(bool enabled);
-    void SetNtscDecodingEnabled(bool enabled);
-
-    uint8_t ReadPPUStatus();
-    uint8_t ReadOAMData();
-    uint8_t ReadPPUData();
-    void WritePPUCTRL(uint8_t M);
-    void WritePPUMASK(uint8_t M);
-    void WriteOAMADDR(uint8_t M);
-    void WriteOAMDATA(uint8_t M);
-    void WritePPUSCROLL(uint8_t M);
-    void WritePPUADDR(uint8_t M);
-    void WritePPUDATA(uint8_t M);
-
-    void GetNameTable(int table, uint8_t* pixels);
-    void GetPatternTable(int table, int palette, uint8_t* pixels);
-    void GetPalette(int palette, uint8_t* pixels);
-    void GetPrimaryOAM(int sprite, uint8_t* pixels);
 };

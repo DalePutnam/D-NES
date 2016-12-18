@@ -19,13 +19,38 @@
 
 #include "mappers/cart.h"
 
-class NES;
 class PPU;
 class APU;
 
 class CPU
 {
-    NES& nes;
+public:
+    CPU(const std::string& gameName);
+    ~CPU();
+
+    void AttachPPU(PPU* ppu);
+    void AttachAPU(APU* apu);
+    void AttachCart(Cart* cart);
+
+    void SetStalled(bool stalled);
+
+    uint64_t GetClock();
+
+    void SetControllerOneState(uint8_t state);
+    uint8_t GetControllerOneState();
+
+    void Run(); // Run CPU
+    void Stop();
+
+    void Reset(); // Reset the CPU to starting conditions
+    void Pause();
+    void Resume();
+
+    bool IsPaused();
+
+    void SetLogEnabled(bool enabled);
+
+private:
     PPU* ppu;
     APU* apu;
     Cart* cart;
@@ -35,13 +60,16 @@ class CPU
     // CPU Main Memory
     uint8_t memory[0x800];
 
+    std::atomic<bool> stopFlag;
+
     std::atomic<bool> pauseFlag;
+    std::atomic<bool> isPaused;
     std::mutex pauseMutex;
     std::condition_variable pauseCV;
-    volatile bool isPaused;
 
     bool logEnabled;
     std::atomic<bool> enableLogFlag;
+    std::string gameName;
     std::FILE* logFile;
 
     // Debug Strings
@@ -196,29 +224,4 @@ class CPU
     void LogIndexedIndirect(uint8_t pointer, uint8_t lowIndirect, uint16_t address);
     void LogIndirectIndexed(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress);
     void PrintLog();
-
-public:
-
-    CPU(NES& nes);
-    ~CPU();
-
-    void AttachPPU(PPU& ppu);
-    void AttachAPU(APU& apu);
-    void AttachCart(Cart& cart);
-
-    void SetStalled(bool stalled);
-
-    uint64_t GetClock();
-
-    void SetControllerOneState(uint8_t state);
-    uint8_t GetControllerOneState();
-
-    void Run(); // Run CPU
-    void Reset(); // Reset the CPU to starting conditions
-    void Pause();
-    void Resume();
-
-    bool IsPaused();
-
-    void SetLogEnabled(bool enabled);
 };

@@ -188,9 +188,9 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
         }
         else
         {
-            if (cpu.GetClock() - lastWriteCycle > 6)
+            if (cpu->GetClock() - lastWriteCycle > 6)
             {
-                lastWriteCycle = cpu.GetClock();
+                lastWriteCycle = cpu->GetClock();
                 tempRegister = tempRegister | ((M & 0x1) << counter);
                 ++counter;
             }
@@ -225,7 +225,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-SXROM::SXROM(const std::string& filename, CPU& cpu)
+SXROM::SXROM(const std::string& filename, CPU* cpu)
     : Cart(filename)
     , save(nullptr)
     , cpu(cpu)

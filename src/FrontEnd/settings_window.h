@@ -9,6 +9,11 @@
 
 class SettingsWindow : public wxDialog
 {
+public:
+    SettingsWindow();
+    void SaveSettings();
+
+private:
     wxNotebook* notebook;
     wxTextCtrl* romDirectory;
     wxButton* directorySelect;
@@ -17,11 +22,6 @@ class SettingsWindow : public wxDialog
 
     void PopulateFields();
     void OnDirectorySelect(wxCommandEvent& event);;
-
-public:
-    SettingsWindow();
-
-    void SaveSettings();
 };
 
 const int ID_DIR_SELECT = 200;

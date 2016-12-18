@@ -27,6 +27,14 @@ wxDECLARE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 class MainWindow : public wxFrame
 {
+public:
+    MainWindow();
+    ~MainWindow();
+
+    void StopEmulator(bool showRomList = true);
+    void PPUDebugClose();
+
+private:
     NES* nes;
     std::mutex PpuDebugMutex;
 
@@ -72,13 +80,6 @@ class MainWindow : public wxFrame
 
     void OnEmulatorError(std::string err);
     void OnEmulatorFrameComplete(uint8_t* frameBuffer);
-
-public:
-    MainWindow();
-    ~MainWindow();
-
-    void StopEmulator(bool showRomList = true);
-    void PPUDebugClose();
 };
 
 const int ID_OPEN_ROM = 100;

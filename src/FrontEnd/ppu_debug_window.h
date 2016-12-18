@@ -10,6 +10,17 @@ class MainWindow;
 
 class PPUDebugWindow : public wxFrame
 {
+public:
+    explicit PPUDebugWindow(MainWindow* mainWindow);
+
+    void UpdateNameTable(int tableID, unsigned char* data);
+    void UpdatePatternTable(int tableID, unsigned char* data);
+    void UpdatePalette(int tableID, unsigned char* data);
+    void UpdatePrimarySprite(int sprite, unsigned char* data);
+    void ClearAll();
+    int GetCurrentPalette();
+
+private:
     MainWindow* mainWindow;
 
     int paletteIndex;
@@ -23,14 +34,4 @@ class PPUDebugWindow : public wxFrame
 
     void OnQuit(wxCommandEvent& event);
     void OnPatternTableClicked(wxMouseEvent& event);
-
-public:
-    explicit PPUDebugWindow(MainWindow* mainWindow);
-
-    void UpdateNameTable(int tableID, unsigned char* data);
-    void UpdatePatternTable(int tableID, unsigned char* data);
-    void UpdatePalette(int tableID, unsigned char* data);
-    void UpdatePrimarySprite(int sprite, unsigned char* data);
-    void ClearAll();
-    int GetCurrentPalette();
 };

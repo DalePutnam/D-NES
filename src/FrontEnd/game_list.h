@@ -5,11 +5,10 @@
 
 class GameList : public wxListCtrl
 {
-    void OnSize(wxSizeEvent& event);
-
 public:
-
     GameList(wxWindow* parent);
-
     void PopulateList();
+
+private:
+    void OnSize(wxSizeEvent& event);
 };

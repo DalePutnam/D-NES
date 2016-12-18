@@ -11,36 +11,11 @@
 #include "mappers/nrom.h"
 
 NES::NES(const NesParams& params)
-    : stop(true)
-    , pause(false)
-    , nmi(false)
-    , apu(*new APU(*this)) // APU first since it may throw an exception
-    , cpu(*new CPU(*this))
-    , ppu(*new PPU(*this))
-    , cart(Cart::Create(params.RomPath, cpu))
 {
-    apu.AttachCPU(cpu);
-    apu.AttachCart(cart);
-
-    cpu.AttachPPU(ppu);
-    cpu.AttachAPU(apu);
-    cpu.AttachCart(cart);
-
-    ppu.AttachCPU(cpu);
-    ppu.AttachCart(cart);
-
-    cpu.SetLogEnabled(params.CpuLogEnabled);
-
-    ppu.SetFrameLimitEnabled(params.FrameLimitEnabled);
-    ppu.SetNtscDecodingEnabled(params.NtscDecoderEnabled);
-
-    apu.SetMuted(params.SoundMuted);
-    apu.SetFiltersEnabled(params.FiltersEnabled);
-
     // Get just the file name from the rom path
 
     const std::string& romPath = params.RomPath;
-    for (int i = romPath.length() - 1; i >= 0; --i)
+    for (size_t i = romPath.length() - 1; i >= 0; --i)
     {
         if (romPath[i] == '\\' || romPath[i] == '/')
         {
@@ -49,6 +24,28 @@ NES::NES(const NesParams& params)
         }
     }
 
+    apu = new APU; // APU first since it may throw an exception
+    cpu = new CPU(gameName);
+    ppu = new PPU;
+    cart = Cart::Create(params.RomPath, cpu);
+
+    apu->AttachCPU(cpu);
+    apu->AttachCart(cart);
+
+    cpu->AttachPPU(ppu);
+    cpu->AttachAPU(apu);
+    cpu->AttachCart(cart);
+
+    ppu->AttachCPU(cpu);
+    ppu->AttachCart(cart);
+
+    cpu->SetLogEnabled(params.CpuLogEnabled);
+
+    ppu->SetFrameLimitEnabled(params.FrameLimitEnabled);
+    ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
+
+    apu->SetMuted(params.SoundMuted);
+    apu->SetFiltersEnabled(params.FiltersEnabled);
 }
 
 std::string& NES::GetGameName()
@@ -58,71 +55,67 @@ std::string& NES::GetGameName()
 
 void NES::SetControllerOneState(uint8_t state)
 {
-    cpu.SetControllerOneState(state);
+    cpu->SetControllerOneState(state);
 }
 
 uint8_t NES::GetControllerOneState()
 {
-    return cpu.GetControllerOneState();
+    return cpu->GetControllerOneState();
 }
 
 void NES::CpuSetLogEnabled(bool enabled)
 {
-    cpu.SetLogEnabled(enabled);
+    cpu->SetLogEnabled(enabled);
 }
 
 void NES::GetNameTable(int table, uint8_t* pixels)
 {
-    ppu.GetNameTable(table, pixels);
+    ppu->GetNameTable(table, pixels);
 }
 
 void NES::GetPatternTable(int table, int palette, uint8_t* pixels)
 {
-    ppu.GetPatternTable(table, palette, pixels);
+    ppu->GetPatternTable(table, palette, pixels);
 }
 
 void NES::GetPalette(int palette, uint8_t* pixels)
 {
-    ppu.GetPalette(palette, pixels);
+    ppu->GetPalette(palette, pixels);
 }
 
 void NES::GetPrimarySprite(int sprite, uint8_t* pixels)
 {
-    ppu.GetPrimaryOAM(sprite, pixels);
+    ppu->GetPrimaryOAM(sprite, pixels);
 }
 
 void NES::PpuSetFrameLimitEnabled(bool enabled)
 {
-    ppu.SetFrameLimitEnabled(enabled);
+    ppu->SetFrameLimitEnabled(enabled);
 }
 
 void NES::PpuSetNtscDecoderEnabled(bool enabled)
 {
-    ppu.SetNtscDecodingEnabled(enabled);
+    ppu->SetNtscDecodingEnabled(enabled);
 }
 
 void NES::ApuSetMuted(bool muted)
 {
-    apu.SetMuted(muted);
+    apu->SetMuted(muted);
 }
 
 void NES::ApuSetFiltersEnabled(bool enabled)
 {
-    apu.SetFiltersEnabled(enabled);
+    apu->SetFiltersEnabled(enabled);
 }
 
 bool NES::IsStopped()
 {
-    bool isStopped;
-    stopMutex.lock();
-    isStopped = stop;
-    stopMutex.unlock();
-    return isStopped;
+    return !nesThread.joinable();
 }
 
 bool NES::IsPaused()
 {
-    return cpu.IsPaused();
+    return cpu->IsPaused();
 }
 
 void NES::Start()
@@ -139,13 +132,9 @@ void NES::Start()
 
 void NES::Run()
 {
-    stopMutex.lock();
-    stop = false;
-    stopMutex.unlock();
-
     try
     {
-        cpu.Run();
+        cpu->Run();
     }
     catch (std::exception& e)
     {
@@ -154,22 +143,11 @@ void NES::Run()
             OnError(e.what());
         }
     }
-
-    stopMutex.lock();
-    stop = true;
-    stopMutex.unlock();
 }
 
 void NES::Stop()
 {
-    stopMutex.lock();
-    stop = true;
-    stopMutex.unlock();
-
-    if (cpu.IsPaused())
-    {
-        cpu.Resume();
-    }
+    cpu->Stop();
 
     if (nesThread.joinable())
     {
@@ -184,18 +162,19 @@ void NES::Stop()
 
 void NES::Resume()
 {
-    cpu.Resume();
+    cpu->Resume();
 }
 
 void NES::Pause()
 {
-    cpu.Pause();
+    cpu->Pause();
 }
 
 void NES::Reset() {}
 
 NES::~NES()
 {
+    delete &apu;
     delete &cpu;
     delete &ppu;
     delete &cart;

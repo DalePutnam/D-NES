@@ -13,14 +13,6 @@
 
 class NROM : public Cart
 {
-    MirrorMode mirroring;
-    int chrSize;
-    int prgSize;
-
-    const int8_t* prg;
-    const int8_t* chr;
-    int8_t* chrRam;
-
 public:
     MirrorMode GetMirrorMode();
 
@@ -32,4 +24,13 @@ public:
 
     NROM(const std::string& filename);
     ~NROM();
+
+private:
+    MirrorMode mirroring;
+    int chrSize;
+    int prgSize;
+
+    const int8_t* prg;
+    const int8_t* chr;
+    int8_t* chrRam;
 };

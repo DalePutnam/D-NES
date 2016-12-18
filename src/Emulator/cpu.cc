@@ -9,7 +9,6 @@
 #include <cstring>
 
 #include "cpu.h"
-#include "nes.h"
 #include "ppu.h"
 #include "apu.h"
 
@@ -1342,13 +1341,14 @@ uint8_t CPU::GetControllerOneShift()
     return result;
 }
 
-CPU::CPU(NES& nes)
-    : pauseFlag(false)
+CPU::CPU(const std::string& gameName)
+    : stopFlag(false)
+    , pauseFlag(false)
     , isPaused(false)
     , logEnabled(false)
     , enableLogFlag(false)
+    , gameName(gameName)
     , logFile(nullptr)
-    , nes(nes)
     , ppu(nullptr)
     , apu(nullptr)
     , cart(nullptr)
@@ -1382,19 +1382,19 @@ uint64_t CPU::GetClock()
     return clock;
 }
 
-void CPU::AttachPPU(PPU& ppu)
+void CPU::AttachPPU(PPU* ppu)
 {
-    this->ppu = &ppu;
+    this->ppu = ppu;
 }
 
-void CPU::AttachAPU(APU& apu)
+void CPU::AttachAPU(APU* apu)
 {
-    this->apu = &apu;
+    this->apu = apu;
 }
 
-void CPU::AttachCart(Cart& cart)
+void CPU::AttachCart(Cart* cart)
 {
-    this->cart = &cart;
+    this->cart = cart;
 
     // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
     PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
@@ -1462,18 +1462,8 @@ void CPU::Reset()
 // Run the CPU
 void CPU::Run()
 {
-    while (!nes.IsStopped()) // Run stop command issued
+    while (!stopFlag) // Run stop command issued
     {
-        if (pauseFlag)
-        {
-            std::unique_lock<std::mutex> lock(pauseMutex);
-            isPaused = true;
-
-            pauseCV.wait(lock);
-            isPaused = false;
-            pauseFlag = false;
-        }
-
         if (enableLogFlag != logEnabled)
         {
             logEnabled = enableLogFlag;
@@ -1481,7 +1471,7 @@ void CPU::Run()
             if (logEnabled)
             {
                 long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-                std::string logName = nes.GetGameName() + "_" + std::to_string(time) + ".log";
+                std::string logName = gameName + "_" + std::to_string(time) + ".log";
                 logFile = fopen(logName.c_str(), "w");
 
                 if (logFile == nullptr)
@@ -1501,6 +1491,27 @@ void CPU::Run()
         }
 
         Step();
+
+        if (pauseFlag)
+        {
+            std::unique_lock<std::mutex> lock(pauseMutex);
+            isPaused = true;
+
+            pauseCV.wait(lock);
+            isPaused = false;
+            pauseFlag = false;
+        }
+    }
+}
+
+void CPU::Stop()
+{
+    stopFlag = true;
+    
+    // If pause, resume so that run exits
+    if (isPaused)
+    {
+        Resume();
     }
 }
 

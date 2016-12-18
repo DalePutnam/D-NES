@@ -50,9 +50,9 @@ APU::AudioBackend::AudioBackend()
     return;
 
 FailedExit:
-    if (XAudio2Instance) XAudio2Instance->Release();
-    if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
     if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
+    if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
+    if (XAudio2Instance) XAudio2Instance->Release();
 
     throw std::runtime_error("APU: Failed to initialize XAudio2");
 #elif 0
@@ -61,12 +61,15 @@ FailedExit:
 
 APU::AudioBackend::~AudioBackend()
 {
+#ifdef _WINDOWS
     XAudio2SourceVoice->Stop();
     XAudio2SourceVoice->FlushSourceBuffers();
 
-    XAudio2Instance->Release();
-    XAudio2MasteringVoice->DestroyVoice();
     XAudio2SourceVoice->DestroyVoice();
+    XAudio2MasteringVoice->DestroyVoice();
+    XAudio2Instance->Release();
+#elif 0
+#endif
 
     for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
     {
@@ -838,9 +841,8 @@ uint8_t APU::DmcUnit::operator()()
 // APU Main Unit
 //**********************************************************************
 
-APU::APU(NES& nes)
-    : Nes(nes)
-    , Cpu(nullptr)
+APU::APU()
+    : Cpu(nullptr)
     , cart(nullptr)
     , PulseOne(true)
     , PulseTwo(false)
@@ -875,14 +877,14 @@ APU::~APU()
 {
 }
 
-void APU::AttachCPU(CPU& cpu)
+void APU::AttachCPU(CPU* cpu)
 {
-    Cpu = &cpu;
+    Cpu = cpu;
 }
 
-void APU::AttachCart(Cart& cart)
+void APU::AttachCart(Cart* cart)
 {
-    this->cart = &cart;
+    this->cart = cart;
 }
 
 void APU::Step()

@@ -43,26 +43,6 @@ struct NesParams
 
 class NES
 {
-    bool stop;
-    bool pause;
-    bool nmi;
-
-    std::thread nesThread;
-    std::string gameName;
-
-    APU& apu;
-    CPU& cpu;
-    PPU& ppu;
-    Cart& cart;
-
-    std::mutex stopMutex;
-    std::mutex pauseMutex;
-
-    std::function<void(std::string)> OnError;
-
-    // Main run function, launched in a new thread by NES::Start
-    void Run();
-
 public:
     NES(const NesParams& params);
     ~NES();
@@ -71,13 +51,13 @@ public:
 
     void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
     {
-        ppu.BindFrameCompleteCallback(Fn);
+        ppu->BindFrameCompleteCallback(Fn);
     }
 
     template<class T>
     void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
     {
-        ppu.BindFrameCompleteCallback(Fn, Obj);
+        ppu->BindFrameCompleteCallback(Fn, Obj);
     }
 
     void BindErrorCallback(void(*Fn)(std::string))
@@ -121,4 +101,18 @@ public:
     void Resume();
     void Pause();
     void Reset();
+
+private:
+    // Main run function, launched in a new thread by NES::Start
+    void Run();
+
+    std::thread nesThread;
+    std::string gameName;
+
+    APU* apu;
+    CPU* cpu;
+    PPU* ppu;
+    Cart* cart;
+
+    std::function<void(std::string)> OnError;
 };

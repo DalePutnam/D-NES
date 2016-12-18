@@ -9,7 +9,7 @@
 #include <cstring>
 #include <cmath>
 #include "ppu.h"
-#include "nes.h"
+#include "cpu.h"
 
 
 const uint32_t PPU::rgbLookupTable[64] =
@@ -816,9 +816,8 @@ uint16_t PPU::GetCurrentScanline()
     }
 }
 
-PPU::PPU(NES& nes)
-    : nes(nes)
-    , cpu(nullptr)
+PPU::PPU()
+    : cpu(nullptr)
     , cart(nullptr)
     , intervalStart(std::chrono::high_resolution_clock::now())
     , limitTo60FPS(true)
@@ -877,14 +876,14 @@ PPU::PPU(NES& nes)
     memset(spriteCounter, 0, sizeof(uint8_t) * 8);
 }
 
-void PPU::AttachCPU(CPU& cpu)
+void PPU::AttachCPU(CPU* cpu)
 {
-    this->cpu = &cpu;
+    this->cpu = cpu;
 }
 
-void PPU::AttachCart(Cart& cart)
+void PPU::AttachCart(Cart* cart)
 {
-    this->cart = &cart;
+    this->cart = cart;
 }
 
 void PPU::SetFrameLimitEnabled(bool enabled)
