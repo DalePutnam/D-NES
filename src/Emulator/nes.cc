@@ -6,6 +6,7 @@
  */
 
 #include <exception>
+#include <boost/algorithm/string.hpp>
 
 #include "nes.h"
 #include "mappers/nrom.h"
@@ -13,21 +14,14 @@
 NES::NES(const NesParams& params)
 {
     // Get just the file name from the rom path
-
-    const std::string& romPath = params.RomPath;
-    for (size_t i = romPath.length() - 1; i >= 0; --i)
-    {
-        if (romPath[i] == '\\' || romPath[i] == '/')
-        {
-            gameName = romPath.substr(i + 1, romPath.length() - i - 1);
-            break;
-        }
-    }
+    std::vector<std::string> stringList;
+    boost::algorithm::split(stringList, params.RomPath, boost::is_any_of("\\/"));
+    gameName = stringList.back().substr(0, stringList.back().length() - 4);
 
     apu = new APU; // APU first since it may throw an exception
     cpu = new CPU(gameName);
     ppu = new PPU;
-    cart = Cart::Create(params.RomPath, cpu);
+    cart = new Cart(params.RomPath); 
 
     apu->AttachCPU(cpu);
     apu->AttachCart(cart);
@@ -38,6 +32,8 @@ NES::NES(const NesParams& params)
 
     ppu->AttachCPU(cpu);
     ppu->AttachCart(cart);
+
+    cart->AttachCPU(cpu);
 
     cpu->SetLogEnabled(params.CpuLogEnabled);
 

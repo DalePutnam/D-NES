@@ -1,6 +1,6 @@
+#include <cstring>
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include "sxrom.h"
 #include "../nes.h"
@@ -13,13 +13,13 @@ Cart::MirrorMode SXROM::GetMirrorMode()
     switch (mirroring)
     {
     case 0:
-        return MirrorMode::SINGLE_SCREEN_A;
+        return Cart::MirrorMode::SINGLE_SCREEN_A;
     case 1:
-        return MirrorMode::SINGLE_SCREEN_B;
+        return Cart::MirrorMode::SINGLE_SCREEN_B;
     case 2:
-        return MirrorMode::VERTICAL;
+        return Cart::MirrorMode::VERTICAL;
     case 3:
-        return MirrorMode::HORIZONTAL;
+        return Cart::MirrorMode::HORIZONTAL;
     default:
         throw std::runtime_error("If you're seeing this something has gone horribly wrong.");
     }
@@ -225,10 +225,9 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-SXROM::SXROM(const std::string& filename, CPU* cpu)
-    : Cart(filename)
+SXROM::SXROM(boost::iostreams::mapped_file_source* file, const std::string& gameName)
+    : MapperBase(file)
     , save(nullptr)
-    , cpu(cpu)
     , lastWriteCycle(0)
     , counter(0)
     , tempRegister(0)
@@ -237,22 +236,18 @@ SXROM::SXROM(const std::string& filename, CPU* cpu)
     , chrRegister2(0)
     , prgRegister(0)
 {
-    if (file.is_open())
+    if (romFile->is_open())
     {
         // Read Byte 4 from the file to get the program size
         // For the type of ROM the emulator currently supports
         // this will be either 1 or 2 representing 0x4000 or 0x8000 bytes
-        prgSize = file.data()[4] * 0x4000;
-        chrSize = file.data()[5] * 0x2000;
+        prgSize = romFile->data()[4] * 0x4000;
+        chrSize = romFile->data()[5] * 0x2000;
 
-        int8_t flags6 = file.data()[6];
+        int8_t flags6 = romFile->data()[6];
 
         if (flags6 & 0x2)
         {
-            std::vector<std::string> stringList;
-            boost::algorithm::split(stringList, filename, boost::is_any_of("\\/"));
-            std::string gameName = stringList.back().substr(0, stringList.back().length() - 4);
-
             boost::filesystem::path gameDir = "saves";
 
             if (!boost::filesystem::exists(gameDir))
@@ -281,33 +276,31 @@ SXROM::SXROM(const std::string& filename, CPU* cpu)
             }
             else
             {
-                throw std::runtime_error("SXROM failed to open save file.");
+                throw std::runtime_error("SXROM failed to open save romFile->");
             }
         }
         else
         {
             wram = new int8_t[0x2000];
+            memset(wram, 0, sizeof(int8_t) * 0x2000);
         }
 
-        prg = reinterpret_cast<const int8_t*>(file.data() + 16); // Data pointer plus the size of the file header
+        prg = reinterpret_cast<const int8_t*>(romFile->data() + 16); // Data pointer plus the size of the file header
 
         // initialize chr RAM or read chr to memory
         if (chrSize == 0)
         {
             chrRam = new int8_t[0x2000];
-            for (int i = 0; i < 0x2000; i++)
-            {
-                chrRam[i] = 0;
-            }
+            memset(chrRam, 0, sizeof(int8_t) * 0x2000);
         }
         else
         {
-            chr = reinterpret_cast<const int8_t*>(file.data() + prgSize + 16);
+            chr = reinterpret_cast<const int8_t*>(romFile->data() + prgSize + 16);
         }
     }
     else
     {
-        throw std::runtime_error("SXROM failed to open file.");
+        throw std::runtime_error("SXROM failed to open romFile->");
     }
 }
 

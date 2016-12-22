@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <condition_variable>
 
-#include "mappers/cart.h"
+#include "cart.h"
 
 class PPU;
 class APU;
@@ -60,8 +60,9 @@ private:
     // CPU Main Memory
     uint8_t memory[0x800];
 
-    std::atomic<bool> stopFlag;
+    bool startupFlag;
 
+    std::atomic<bool> stopFlag;
     std::atomic<bool> pauseFlag;
     std::atomic<bool> isPaused;
     std::mutex pauseMutex;

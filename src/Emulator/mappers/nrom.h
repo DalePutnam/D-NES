@@ -7,30 +7,23 @@
 
 #pragma once
 
-#include <boost/iostreams/device/mapped_file.hpp>
+#include "mapper_base.h"
 
-#include "cart.h"
-
-class NROM : public Cart
+class NROM : public MapperBase
 {
 public:
-    MirrorMode GetMirrorMode();
-
-    uint8_t PrgRead(uint16_t address);
-    void PrgWrite(uint8_t M, uint16_t address);
-
-    uint8_t ChrRead(uint16_t address);
-    void ChrWrite(uint8_t M, uint16_t address);
-
-    NROM(const std::string& filename);
+    NROM(boost::iostreams::mapped_file_source* file);
     ~NROM();
 
-private:
-    MirrorMode mirroring;
-    int chrSize;
-    int prgSize;
+    Cart::MirrorMode GetMirrorMode() override;
 
-    const int8_t* prg;
-    const int8_t* chr;
+    uint8_t PrgRead(uint16_t address) override;
+    void PrgWrite(uint8_t M, uint16_t address) override;
+
+    uint8_t ChrRead(uint16_t address) override;
+    void ChrWrite(uint8_t M, uint16_t address) override;
+
+private:
+    Cart::MirrorMode mirroring;
     int8_t* chrRam;
 };

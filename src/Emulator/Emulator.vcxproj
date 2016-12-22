@@ -149,8 +149,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="apu.h" />
+    <ClInclude Include="cart.h" />
     <ClInclude Include="cpu.h" />
-    <ClInclude Include="mappers\cart.h" />
     <ClInclude Include="mappers\mapper_base.h" />
     <ClInclude Include="mappers\nrom.h" />
     <ClInclude Include="mappers\sxrom.h" />
@@ -159,8 +159,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="apu.cc" />
+    <ClCompile Include="cart.cc" />
     <ClCompile Include="cpu.cc" />
-    <ClCompile Include="mappers\cart.cc" />
+    <ClCompile Include="mappers\mapper_base.cc" />
     <ClCompile Include="mappers\nrom.cc" />
     <ClCompile Include="mappers\sxrom.cc" />
     <ClCompile Include="nes.cc" />

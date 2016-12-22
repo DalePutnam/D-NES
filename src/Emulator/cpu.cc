@@ -1342,7 +1342,8 @@ uint8_t CPU::GetControllerOneShift()
 }
 
 CPU::CPU(const std::string& gameName)
-    : stopFlag(false)
+    : startupFlag(true)
+    , stopFlag(false)
     , pauseFlag(false)
     , isPaused(false)
     , logEnabled(false)
@@ -1395,9 +1396,6 @@ void CPU::AttachAPU(APU* apu)
 void CPU::AttachCart(Cart* cart)
 {
     this->cart = cart;
-
-    // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-    PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
 }
 
 void CPU::SetStalled(bool stalled)
@@ -1462,6 +1460,28 @@ void CPU::Reset()
 // Run the CPU
 void CPU::Run()
 {
+    if (startupFlag)
+    {
+        if (ppu == nullptr)
+        {
+            throw std::runtime_error("CPU: No PPU attached");
+        }
+        else if (apu == nullptr)
+        {
+            throw std::runtime_error("CPU: No APU attached");
+        }
+        else if (cart == nullptr)
+        {
+            throw std::runtime_error("CPU: No Cartridge attached");
+        }
+        else
+        {
+            // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
+            PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
+            startupFlag = false;
+        }
+    }
+
     while (!stopFlag) // Run stop command issued
     {
         if (enableLogFlag != logEnabled)

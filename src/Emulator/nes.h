@@ -16,7 +16,7 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "apu.h"
-#include "mappers/cart.h"
+#include "cart.h"
 
 struct NesParams
 {

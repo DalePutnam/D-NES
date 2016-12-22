@@ -2,28 +2,27 @@
 
 #include <boost/iostreams/device/mapped_file.hpp>
 
-#include "cart.h"
+#include "mapper_base.h"
 
 class CPU;
 
-class SXROM : public Cart
+class SXROM : public MapperBase
 {
 public:
-    MirrorMode GetMirrorMode();
-
-    uint8_t PrgRead(uint16_t address);
-    void PrgWrite(uint8_t M, uint16_t address);
-
-    uint8_t ChrRead(uint16_t address);
-    void ChrWrite(uint8_t M, uint16_t address);
-
-    SXROM(const std::string& filename, CPU* cpu);
+    SXROM(boost::iostreams::mapped_file_source* file, const std::string& gameName);
     ~SXROM();
+
+    Cart::MirrorMode GetMirrorMode() override;
+
+    uint8_t PrgRead(uint16_t address) override;
+    void PrgWrite(uint8_t M, uint16_t address) override;
+
+    uint8_t ChrRead(uint16_t address) override;
+    void ChrWrite(uint8_t M, uint16_t address) override;
 
 private:
     boost::iostreams::mapped_file* save;
-
-    CPU* cpu;
+    std::string gameName;
 
     unsigned long long lastWriteCycle;
     uint8_t counter;
@@ -33,11 +32,6 @@ private:
     uint8_t chrRegister2;
     uint8_t prgRegister;
 
-    int chrSize;
-    int prgSize;
-
     int8_t* wram;
     int8_t* chrRam;
-    const int8_t* prg;
-    const int8_t* chr;
 };

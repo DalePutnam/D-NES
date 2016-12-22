@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <functional>
 
-#include "mappers/cart.h"
+#include "cart.h"
 
 class CPU;
 

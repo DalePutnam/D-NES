@@ -30,9 +30,6 @@
     <ClInclude Include="ppu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="mappers\cart.h">
-      <Filter>Header Files\Mappers</Filter>
-    </ClInclude>
     <ClInclude Include="mappers\nrom.h">
       <Filter>Header Files\Mappers</Filter>
     </ClInclude>
@@ -45,6 +42,9 @@
     <ClInclude Include="mappers\mapper_base.h">
       <Filter>Header Files\Mappers</Filter>
     </ClInclude>
+    <ClInclude Include="cart.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
@@ -56,9 +56,6 @@
     <ClCompile Include="ppu.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="mappers\cart.cc">
-      <Filter>Source Files\Mappers</Filter>
-    </ClCompile>
     <ClCompile Include="mappers\nrom.cc">
       <Filter>Source Files\Mappers</Filter>
     </ClCompile>
@@ -66,6 +63,12 @@
       <Filter>Source Files\Mappers</Filter>
     </ClCompile>
     <ClCompile Include="apu.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mappers\mapper_base.cc">
+      <Filter>Source Files\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="cart.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
