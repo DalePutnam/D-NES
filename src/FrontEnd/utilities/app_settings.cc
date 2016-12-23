@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <wx/filename.h>
+#include <wx/wfstream.h>
 
 #include "app_settings.h"
 
@@ -14,26 +15,44 @@ AppSettings* AppSettings::instance = nullptr; // Initialize static instance fiel
 
 AppSettings::AppSettings()
 {
-    wxFileName configName = wxFileConfig::GetLocalFile("config.txt");
-    configName.AppendDir("D-NES");
+    wxFileInputStream configStream(wxGetCwd() + "/config.txt");
 
-    if (!configName.DirExists())
+    if (configStream.IsOk())
     {
-        configName.Mkdir();
+        settings = new wxFileConfig(configStream);
+    }
+    else
+    {
+        settings = new wxFileConfig();
     }
 
-    settings = new wxFileConfig("D-NES", "", "D-NES/config.txt", "", wxCONFIG_USE_LOCAL_FILE);
+
+    if (!settings->HasEntry("/Paths/RomPath"))
+    {
+        settings->Write("/Paths/RomPath", wxGetCwd());
+    }
+
+    if (!settings->HasEntry("/Paths/RomSavePath"))
+    {
+        wxFileName file(wxGetCwd(), "saves");
+        settings->Write("/Paths/RomSavePath", file.GetFullPath());
+    }    
 }
 
 AppSettings::~AppSettings()
 {
+    Save();
     delete settings;
 }
 
 void AppSettings::Save()
 {
-    // save settings to file
-    settings->Flush();
+    wxFileOutputStream configStream(wxGetCwd() + "/config.txt");
+
+    if (configStream.IsOk())
+    {
+        settings->Save(configStream);
+    }
 }
 
 AppSettings* AppSettings::GetInstance()

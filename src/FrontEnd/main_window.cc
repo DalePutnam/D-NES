@@ -88,9 +88,11 @@ void MainWindow::StartEmulator(const std::string& filename)
 {
     if (nes == nullptr)
     {
+        AppSettings* appSettings = AppSettings::GetInstance();
+
         NesParams params;
         params.RomPath = filename;
-        params.SavePath = wxGetCwd().ToStdString() + "/saves";
+        appSettings->Read("/Paths/RomSavePath", &params.SavePath);
         params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
         params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
         params.SoundMuted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
@@ -232,7 +234,7 @@ void MainWindow::OnROMDoubleClick(wxListEvent& event)
     wxString filename = romList->GetItemText(event.GetIndex(), 0);
 
     wxString romName;
-    settings->Read<wxString>("ROMPath", &romName, "");
+    settings->Read("/Paths/RomPath", &romName);
     romName += "/" + filename;
     StartEmulator(romName.ToStdString());
 }
@@ -242,7 +244,7 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
     AppSettings* settings = AppSettings::GetInstance();
 
     wxString romPath;
-    settings->Read<wxString>("ROMPath", &romPath, "");
+    settings->Read("/Paths/RomPath", &romPath);
 
     wxFileDialog dialog(NULL, "Open ROM", romPath, wxEmptyString, "NES Files (*.nes)|*.nes|All Files (*.*)|*.*");
 

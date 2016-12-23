@@ -19,9 +19,19 @@ public:
 
                  // Get a setting
     template<typename T>
-    bool Read(const wxString& name, T* value, const T& defaultValue)
+    bool Read(const wxString& name, T* value)
     {
-        return settings->Read(name, value, defaultValue);
+        return settings->Read(name, value);
+    }
+
+    template<>
+    bool Read<std::string>(const wxString& name, std::string* value)
+    {
+        wxString str(*value);
+        bool result = settings->Read(name, &str);
+
+        *value = str.ToStdString();
+        return result;
     }
 
     // Change a setting

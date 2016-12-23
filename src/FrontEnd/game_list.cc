@@ -29,7 +29,7 @@ void GameList::PopulateList()
     AppSettings* settings = AppSettings::GetInstance();
 
     wxString romPath;
-    settings->Read<wxString>("ROMPath", &romPath, "");
+    settings->Read("/Paths/RomPath", &romPath);
 
     DeleteAllItems();
 

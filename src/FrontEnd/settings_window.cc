@@ -9,7 +9,7 @@ void SettingsWindow::PopulateFields()
 {
     AppSettings* settings = AppSettings::GetInstance();
     wxString romPath;
-    settings->Read<wxString>("ROMPath", &romPath, "");
+    settings->Read("/Paths/RomPath", &romPath);
 
     *romDirectory << romPath;
 }
@@ -64,6 +64,6 @@ SettingsWindow::SettingsWindow()
 void SettingsWindow::SaveSettings()
 {
     AppSettings* settings = AppSettings::GetInstance();
-    settings->Write<wxString>("ROMPath", romDirectory->GetLineText(0));
+    settings->Write("/Paths/RomPath", romDirectory->GetLineText(0));
     settings->Save();
 }
