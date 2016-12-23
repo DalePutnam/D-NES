@@ -18,7 +18,6 @@
 #include <wx/listctrl.h>
 
 #include "game_list.h"
-#include "game_window.h"
 #include "ppu_debug_window.h"
 
 class NES;
