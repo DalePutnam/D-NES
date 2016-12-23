@@ -1341,14 +1341,13 @@ uint8_t CPU::GetControllerOneShift()
     return result;
 }
 
-CPU::CPU(const std::string& gameName)
+CPU::CPU()
     : startupFlag(true)
     , stopFlag(false)
     , pauseFlag(false)
     , isPaused(false)
     , logEnabled(false)
     , enableLogFlag(false)
-    , gameName(gameName)
     , logFile(nullptr)
     , ppu(nullptr)
     , apu(nullptr)
@@ -1491,7 +1490,7 @@ void CPU::Run()
             if (logEnabled)
             {
                 long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-                std::string logName = gameName + "_" + std::to_string(time) + ".log";
+                std::string logName = cart->GetGameName() + "_" + std::to_string(time) + ".log";
                 logFile = fopen(logName.c_str(), "w");
 
                 if (logFile == nullptr)

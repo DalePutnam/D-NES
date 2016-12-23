@@ -1,23 +1,15 @@
-BOOST_ROOT = boost
-BOOST_B2 = $(BOOST_ROOT)/b2.exe
-BOOST_ARGS = toolset=msvc link=static --with-system --with-filesystem --with-iostreams
-
 WXWIDGETS_ROOT = wxWidgets
 
 !IF "$(PLATFORM)" == "x64"
 
 WXWIDGETS_ARGS = TARGET_CPU=amd64
 WXWIDGETS_LIB_DIR = $(WXWIDGETS_ROOT)/lib/vc_x64_lib
-BOOST_ARGS = $(BOOST_ARGS) address-model=64 --stagedir=stage_x64
-BOOST_LIB_DIR = $(BOOST_ROOT)/stage_x64/lib
 
 !ELSE
 
 WXWIDGETS_LIB_DIR = $(WXWIDGETS_ROOT)/lib/vc_lib
-BOOST_LIB_DIR = $(BOOST_ROOT)/stage/lib
 
 !ENDIF
-
 
 !IF "$(BUILD)" == "release"
 
@@ -25,39 +17,20 @@ WXWIDGETS_ARGS = $(WXWIDGETS_ARGS) BUILD=release
 WXWIDGETS_LIBS = \
 	$(WXWIDGETS_LIB_DIR)/wxbase31u.lib \
 	$(WXWIDGETS_LIB_DIR)/wxmsw31u_core.lib
-BOOST_ARGS = $(BOOST_ARGS) variant=release
-BOOST_LIBS = \
-	$(BOOST_LIB_DIR)/libboost_system-vc140-mt-1_60.lib \
-	$(BOOST_LIB_DIR)/libboost_filesystem-vc140-mt-1_60.lib \
-	$(BOOST_LIB_DIR)/libboost_iostreams-vc140-mt-1_60.lib
 
 !ELSE
 
 WXWIDGETS_LIBS = \
 	$(WXWIDGETS_LIB_DIR)/wxbase31ud.lib \
 	$(WXWIDGETS_LIB_DIR)/wxmsw31ud_core.lib
-BOOST_ARGS = $(BOOST_ARGS) variant=debug
-BOOST_LIBS = \
-	$(BOOST_LIB_DIR)/libboost_system-vc140-mt-gd-1_60.lib \
-	$(BOOST_LIB_DIR)/libboost_filesystem-vc140-mt-gd-1_60.lib \
-	$(BOOST_LIB_DIR)/libboost_iostreams-vc140-mt-gd-1_60.lib
 
 !ENDIF
 
-all : $(BOOST_B2) $(BOOST_LIBS) $(WXWIDGETS_LIBS)
+all : $(WXWIDGETS_LIBS)
 
 $(WXWIDGETS_LIBS) :
 	@echo Building wxWidgets
 	cd $(WXWIDGETS_ROOT)/build/msw
 	nmake /f makefile.vc $(WXWIDGETS_ARGS)
 	cd ../../..
-	
-$(BOOST_B2) :
-	cd $(BOOST_ROOT)
-	bootstrap.bat
-	cd ..
-	
-$(BOOST_LIBS) : $(BOOST_B2)
-	cd $(BOOST_ROOT)
-	b2.exe $(BOOST_ARGS)
-	cd ..
+

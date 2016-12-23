@@ -1,6 +1,5 @@
 #include <cstring>
 #include <iostream>
-#include <boost/filesystem.hpp>
 
 #include "sxrom.h"
 #include "../nes.h"
@@ -225,9 +224,8 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-SXROM::SXROM(boost::iostreams::mapped_file_source* file, const std::string& gameName)
-    : MapperBase(file)
-    , save(nullptr)
+SXROM::SXROM(const std::string& fileName, const std::string& saveDir)
+    : MapperBase(fileName, saveDir)
     , lastWriteCycle(0)
     , counter(0)
     , tempRegister(0)
@@ -236,88 +234,8 @@ SXROM::SXROM(boost::iostreams::mapped_file_source* file, const std::string& game
     , chrRegister2(0)
     , prgRegister(0)
 {
-    if (romFile->is_open())
-    {
-        // Read Byte 4 from the file to get the program size
-        // For the type of ROM the emulator currently supports
-        // this will be either 1 or 2 representing 0x4000 or 0x8000 bytes
-        prgSize = romFile->data()[4] * 0x4000;
-        chrSize = romFile->data()[5] * 0x2000;
-
-        int8_t flags6 = romFile->data()[6];
-
-        if (flags6 & 0x2)
-        {
-            boost::filesystem::path gameDir = "saves";
-
-            if (!boost::filesystem::exists(gameDir))
-            {
-                boost::filesystem::create_directory(gameDir);
-            }
-
-            boost::filesystem::path path = gameDir.string() + "/" + gameName + ".sav";
-
-            if (boost::filesystem::exists(path))
-            {
-                save = new boost::iostreams::mapped_file(path.string(), boost::iostreams::mapped_file::mapmode::readwrite);
-            }
-            else
-            {
-                boost::iostreams::mapped_file_params params(path.string());
-                params.new_file_size = 0x2000;
-                params.flags = boost::iostreams::mapped_file::mapmode::readwrite;
-
-                save = new boost::iostreams::mapped_file(params);
-            }
-
-            if (save->is_open())
-            {
-                wram = reinterpret_cast<int8_t*>(save->data());
-            }
-            else
-            {
-                throw std::runtime_error("SXROM failed to open save romFile->");
-            }
-        }
-        else
-        {
-            wram = new int8_t[0x2000];
-            memset(wram, 0, sizeof(int8_t) * 0x2000);
-        }
-
-        prg = reinterpret_cast<const int8_t*>(romFile->data() + 16); // Data pointer plus the size of the file header
-
-        // initialize chr RAM or read chr to memory
-        if (chrSize == 0)
-        {
-            chrRam = new int8_t[0x2000];
-            memset(chrRam, 0, sizeof(int8_t) * 0x2000);
-        }
-        else
-        {
-            chr = reinterpret_cast<const int8_t*>(romFile->data() + prgSize + 16);
-        }
-    }
-    else
-    {
-        throw std::runtime_error("SXROM failed to open romFile->");
-    }
 }
 
 SXROM::~SXROM()
 {
-    if (save)
-    {
-        save->close();
-        delete save;
-    }
-    else
-    {
-        delete[] wram;
-    }
-
-    if (chrSize == 0)
-    {
-        delete[] chrRam;
-    }
 }

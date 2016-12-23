@@ -25,7 +25,7 @@ class APU;
 class CPU
 {
 public:
-    CPU(const std::string& gameName);
+    CPU();
     ~CPU();
 
     void AttachPPU(PPU* ppu);
@@ -70,7 +70,6 @@ private:
 
     bool logEnabled;
     std::atomic<bool> enableLogFlag;
-    std::string gameName;
     std::FILE* logFile;
 
     // Debug Strings

@@ -6,22 +6,32 @@
  */
 
 #include <exception>
-#include <boost/algorithm/string.hpp>
 
 #include "nes.h"
 #include "mappers/nrom.h"
 
 NES::NES(const NesParams& params)
+    : apu(nullptr)
+    , cpu(nullptr)
+    , ppu(nullptr)
+    , cart(nullptr)
 {
-    // Get just the file name from the rom path
-    std::vector<std::string> stringList;
-    boost::algorithm::split(stringList, params.RomPath, boost::is_any_of("\\/"));
-    gameName = stringList.back().substr(0, stringList.back().length() - 4);
+    try
+    {
+        apu = new APU;
+        cpu = new CPU;
+        ppu = new PPU;
+        cart = new Cart(params.RomPath, params.SavePath);
+    }
+    catch (std::runtime_error& e) 
+    {
+        delete apu;
+        delete cpu;
+        delete ppu;
+        delete cart;
 
-    apu = new APU; // APU first since it may throw an exception
-    cpu = new CPU(gameName);
-    ppu = new PPU;
-    cart = new Cart(params.RomPath); 
+        throw e;
+    }
 
     apu->AttachCPU(cpu);
     apu->AttachCart(cart);
@@ -44,9 +54,9 @@ NES::NES(const NesParams& params)
     apu->SetFiltersEnabled(params.FiltersEnabled);
 }
 
-std::string& NES::GetGameName()
+const std::string& NES::GetGameName()
 {
-    return gameName;
+    return cart->GetGameName();
 }
 
 void NES::SetControllerOneState(uint8_t state)

@@ -90,6 +90,7 @@ void MainWindow::StartEmulator(const std::string& filename)
     {
         NesParams params;
         params.RomPath = filename;
+        params.SavePath = wxGetCwd().ToStdString() + "/saves";
         params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
         params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
         params.SoundMuted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();

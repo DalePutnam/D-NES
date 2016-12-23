@@ -5,9 +5,6 @@
  *      Author: Dale
  */
 
-#include <fstream>
-#include <iostream>
-
 #include "nrom.h"
 
 Cart::MirrorMode NROM::GetMirrorMode()
@@ -37,10 +34,7 @@ uint8_t NROM::PrgRead(uint16_t address)
 
 void NROM::PrgWrite(uint8_t M, uint16_t address)
 {
-    if (address >= 0x0000 && address < 0x2000)
-    {
 
-    }
 }
 
 uint8_t NROM::ChrRead(uint16_t address)
@@ -63,48 +57,12 @@ void NROM::ChrWrite(uint8_t M, uint16_t address)
     }
 }
 
-NROM::NROM(boost::iostreams::mapped_file_source* file)
-    : MapperBase(file)
-    , mirroring(Cart::MirrorMode::HORIZONTAL)
+NROM::NROM(const std::string& fileName, const std::string& saveDir)
+    : MapperBase(fileName, saveDir)
 {
-    if (romFile->is_open())
-    {
-        // Read Byte 4 from the file to get the program size
-        // For the type of ROM the emulator currently supports
-        // this will be either 1 or 2 representing 0x4000 or 0x8000 bytes
-        prgSize = romFile->data()[4] * 0x4000;
-        chrSize = romFile->data()[5] * 0x2000;
-
-        int8_t flags6 = romFile->data()[6];
-        mirroring = static_cast<Cart::MirrorMode>(flags6 & 0x01);
-
-        prg = reinterpret_cast<const int8_t*>(romFile->data() + 16); // Data pointer plus the size of the file header
-
-        // initialize chr RAM or read chr to memory
-        if (chrSize == 0)
-        {
-            chrRam = new int8_t[0x2000];
-            for (int i = 0; i < 0x2000; i++)
-            {
-                chrRam[i] = 0;
-            }
-        }
-        else
-        {
-            chr = reinterpret_cast<const int8_t*>(romFile->data() + prgSize + 16);
-        }
-    }
-    else
-    {
-        throw std::runtime_error("NROM failed to open file.");
-    }
 }
 
 NROM::~NROM()
 {
-    if (chrSize == 0)
-    {
-        delete[] chrRam;
-    }
 }
 

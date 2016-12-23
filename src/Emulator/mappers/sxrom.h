@@ -1,7 +1,5 @@
 #pragma once
 
-#include <boost/iostreams/device/mapped_file.hpp>
-
 #include "mapper_base.h"
 
 class CPU;
@@ -9,7 +7,7 @@ class CPU;
 class SXROM : public MapperBase
 {
 public:
-    SXROM(boost::iostreams::mapped_file_source* file, const std::string& gameName);
+    SXROM(const std::string& fileName, const std::string& saveDir);
     ~SXROM();
 
     Cart::MirrorMode GetMirrorMode() override;
@@ -21,9 +19,6 @@ public:
     void ChrWrite(uint8_t M, uint16_t address) override;
 
 private:
-    boost::iostreams::mapped_file* save;
-    std::string gameName;
-
     unsigned long long lastWriteCycle;
     uint8_t counter;
     uint8_t tempRegister;
@@ -31,7 +26,4 @@ private:
     uint8_t chrRegister1;
     uint8_t chrRegister2;
     uint8_t prgRegister;
-
-    int8_t* wram;
-    int8_t* chrRam;
 };

@@ -12,7 +12,7 @@
 class NROM : public MapperBase
 {
 public:
-    NROM(boost::iostreams::mapped_file_source* file);
+    NROM(const std::string& fileName, const std::string& saveDir);
     ~NROM();
 
     Cart::MirrorMode GetMirrorMode() override;
@@ -22,8 +22,4 @@ public:
 
     uint8_t ChrRead(uint16_t address) override;
     void ChrWrite(uint8_t M, uint16_t address) override;
-
-private:
-    Cart::MirrorMode mirroring;
-    int8_t* chrRam;
 };

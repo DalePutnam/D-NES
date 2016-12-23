@@ -21,6 +21,7 @@
 struct NesParams
 {
     std::string RomPath;
+    std::string SavePath;
     bool CpuLogEnabled;
 
     // PPU Settings
@@ -33,6 +34,7 @@ struct NesParams
 
     NesParams() :
         RomPath(""),
+        SavePath(""),
         CpuLogEnabled(false),
         FrameLimitEnabled(true),
         NtscDecoderEnabled(false),
@@ -47,7 +49,7 @@ public:
     NES(const NesParams& params);
     ~NES();
 
-    std::string& GetGameName();
+    const std::string& GetGameName();
 
     void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
     {
@@ -107,7 +109,6 @@ private:
     void Run();
 
     std::thread nesThread;
-    std::string gameName;
 
     APU* apu;
     CPU* cpu;

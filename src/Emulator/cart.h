@@ -23,8 +23,10 @@ public:
         SINGLE_SCREEN_B
     };
 
-    Cart(const std::string& filename);
+    Cart(const std::string& fileName, const std::string& saveDir);
     ~Cart();
+
+    const std::string& GetGameName();
 
     void AttachCPU(CPU* cpu);
     MirrorMode GetMirrorMode();

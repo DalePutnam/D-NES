@@ -5,65 +5,63 @@
  *      Author: Dale
  */
 
-#include <vector>
+#include <fstream>
 #include <sstream>
 #include <exception>
-#include <boost/algorithm/string.hpp>
-#include <boost/iostreams/device/mapped_file.hpp>
 
 #include "cart.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
 #include "mappers/sxrom.h"
 
-Cart::Cart(const std::string& filename)
+using namespace std;
+
+Cart::Cart(const string& fileName, const string& saveDir)
 {
-    boost::iostreams::mapped_file_source* file = new boost::iostreams::mapped_file_source(filename);
+    ifstream romStream(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 
-    std::vector<std::string> stringList;
-    boost::algorithm::split(stringList, filename, boost::is_any_of("\\/"));
-    std::string gameName = stringList.back().substr(0, stringList.back().length() - 4);
-
-    if (file->is_open())
+    if (romStream.good())
     {
-        const char* data = file->data();
+        char header[16];
+        romStream.read(header, 16);
+        romStream.close();
 
-        if (data[0] == 'N' && data[1] == 'E' && data[2] == 'S' && data[3] == 0x1A)
+        if (header[0] == 'N' && header[1] == 'E' && header[2] == 'S' && header[3] == '\x1A')
         {
-            uint8_t flags6 = data[6];
-            uint8_t flags7 = data[7];
-            uint8_t mapper_number = (flags7 & 0xF0) | (flags6 >> 4);
+            uint8_t flags6 = header[6];
+            uint8_t flags7 = header[7];
+            uint8_t mapperNumber = (flags7 & 0xF0) | (flags6 >> 4);
 
-            switch (mapper_number)
+            switch (mapperNumber)
             {
             case 0x00:
-                mapper = new NROM(file);
+                mapper = new NROM(fileName, saveDir);
                 break;
             case 0x01:
-                mapper = new SXROM(file, gameName);
+                mapper = new SXROM(fileName, saveDir);
                 break;
             default:
-                std::ostringstream oss;
-                oss << "Cart: Mapper " << static_cast<int>(mapper_number) << " specified by " << filename << " does not exist or is not supported.";
-                file->close();
-                delete file;
-                throw std::runtime_error(oss.str());
+                ostringstream oss;
+                oss << "Cart: Mapper " << static_cast<int>(mapperNumber) << " specified by " << fileName << " does not exist or is not supported.";
+                throw runtime_error(oss.str());
             }
-        }
-        else
-        {
-            throw std::runtime_error("Cart: Invalid ROM format");
         }
     }
     else
     {
-        throw std::runtime_error("Cart: Unable to open " + filename);
+        throw runtime_error("Cart: Unable to open " + fileName);
     }
+
 }
 
 Cart::~Cart()
 {
     delete mapper;
+}
+
+const string& Cart::GetGameName()
+{
+    return mapper->GetGameName();
 }
 
 void Cart::AttachCPU(CPU* cpu)
