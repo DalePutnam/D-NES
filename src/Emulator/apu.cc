@@ -73,7 +73,7 @@ APU::AudioBackend::~AudioBackend()
 
     for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
     {
-        delete OutputBuffers[i];
+        delete[] OutputBuffers[i];
     }
 }
 

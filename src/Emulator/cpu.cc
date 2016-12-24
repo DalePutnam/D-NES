@@ -18,7 +18,7 @@ uint8_t CPU::DebugRead(uint16_t address)
     // Internal Ram mirrored every 0x800 bytes
     if (address < 0x2000)
     {
-        return memory[address % 0x800];
+        return Memory[address % 0x800];
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
@@ -26,7 +26,7 @@ uint8_t CPU::DebugRead(uint16_t address)
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-        return cart->PrgRead(address - 0x6000);
+        return Cartridge->PrgRead(address - 0x6000);
     }
     else
     {
@@ -36,13 +36,13 @@ uint8_t CPU::DebugRead(uint16_t address)
 
 void CPU::IncrementClock()
 {
-    clock += 3;
+    Clock += 3;
 
-    apu->Step();
+    Apu->Step();
 
-    if (ppuRendevous > 0)
+    if (PpuRendevous > 0)
     {
-        ppuRendevous -= 3;
+        PpuRendevous -= 3;
     }
 }
 
@@ -53,14 +53,14 @@ uint8_t CPU::Read(uint16_t address)
     do
     {
         IncrementClock();
-    } while (isStalled);
+    } while (IsStalled);
 
 
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
     if (address < 0x2000)
     {
-        value = memory[address % 0x800];
+        value = Memory[address % 0x800];
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
@@ -68,15 +68,15 @@ uint8_t CPU::Read(uint16_t address)
 
         if (addr == 2)
         {
-            value = ppu->ReadPPUStatus();
+            value = Ppu->ReadPPUStatus();
         }
         else if (addr == 4)
         {
-            value = ppu->ReadOAMData();
+            value = Ppu->ReadOAMData();
         }
         else if (addr == 7)
         {
-            value = ppu->ReadPPUData();
+            value = Ppu->ReadPPUData();
         }
         else
         {
@@ -85,7 +85,7 @@ uint8_t CPU::Read(uint16_t address)
     }
     else if (address == 0x4015)
     {
-        value = apu->ReadAPUStatus();
+        value = Apu->ReadAPUStatus();
     }
     else if (address == 0x4016)
     {
@@ -93,7 +93,7 @@ uint8_t CPU::Read(uint16_t address)
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-        value = cart->PrgRead(address - 0x6000);
+        value = Cartridge->PrgRead(address - 0x6000);
     }
     else
     {
@@ -116,7 +116,7 @@ void CPU::Write(uint8_t M, uint16_t address)
     {
         uint16_t page = M * 0x100;
 
-        if (clock % 6 == 0)
+        if (Clock % 6 == 0)
         {
             IncrementClock();
         }
@@ -130,14 +130,14 @@ void CPU::Write(uint8_t M, uint16_t address)
         {
             uint8_t value = Read(page + i);
             IncrementClock();
-            ppu->WriteOAMDATA(value);
+            Ppu->WriteOAMDATA(value);
         }
     }
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
     else if (address < 0x2000)
     {
-        memory[address % 0x800] = M;
+        Memory[address % 0x800] = M;
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
@@ -145,57 +145,57 @@ void CPU::Write(uint8_t M, uint16_t address)
 
         if (addr == 0)
         {
-            ppu->WritePPUCTRL(M);
+            Ppu->WritePPUCTRL(M);
         }
         else if (addr == 1)
         {
-            ppu->WritePPUMASK(M);
+            Ppu->WritePPUMASK(M);
         }
         else if (addr == 3)
         {
-            ppu->WriteOAMADDR(M);
+            Ppu->WriteOAMADDR(M);
         }
         else if (addr == 4)
         {
-            ppu->WriteOAMDATA(M);
+            Ppu->WriteOAMDATA(M);
         }
         else if (addr == 5)
         {
-            ppu->WritePPUSCROLL(M);
+            Ppu->WritePPUSCROLL(M);
         }
         else if (addr == 6)
         {
-            ppu->WritePPUADDR(M);
+            Ppu->WritePPUADDR(M);
         }
         else if (addr == 7)
         {
-            ppu->WritePPUDATA(M);
+            Ppu->WritePPUDATA(M);
         }
     }
     else if ((address >= 0x4000 && address <= 0x4015) || address == 0x4017)
     {
         switch (address)
         {
-        case 0x4000: apu->WritePulseOneRegister(0, M); break;
-        case 0x4001: apu->WritePulseOneRegister(1, M); break;
-        case 0x4002: apu->WritePulseOneRegister(2, M); break;
-        case 0x4003: apu->WritePulseOneRegister(3, M); break;
-        case 0x4004: apu->WritePulseTwoRegister(0, M); break;
-        case 0x4005: apu->WritePulseTwoRegister(1, M); break;
-        case 0x4006: apu->WritePulseTwoRegister(2, M); break;
-        case 0x4007: apu->WritePulseTwoRegister(3, M); break;
-        case 0x4008: apu->WriteTriangleRegister(0, M); break;
-        case 0x400A: apu->WriteTriangleRegister(1, M); break;
-        case 0x400B: apu->WriteTriangleRegister(2, M); break;
-        case 0x400C: apu->WriteNoiseRegister(0, M); break;
-        case 0x400E: apu->WriteNoiseRegister(1, M); break;
-        case 0x400F: apu->WriteNoiseRegister(2, M); break;
-        case 0x4010: apu->WriteDmcRegister(0, M); break;
-        case 0x4011: apu->WriteDmcRegister(1, M); break;
-        case 0x4012: apu->WriteDmcRegister(2, M); break;
-        case 0x4013: apu->WriteDmcRegister(3, M); break;
-        case 0x4015: apu->WriteAPUStatus(M); break;
-        case 0x4017: apu->WriteAPUFrameCounter(M); break;
+        case 0x4000: Apu->WritePulseOneRegister(0, M); break;
+        case 0x4001: Apu->WritePulseOneRegister(1, M); break;
+        case 0x4002: Apu->WritePulseOneRegister(2, M); break;
+        case 0x4003: Apu->WritePulseOneRegister(3, M); break;
+        case 0x4004: Apu->WritePulseTwoRegister(0, M); break;
+        case 0x4005: Apu->WritePulseTwoRegister(1, M); break;
+        case 0x4006: Apu->WritePulseTwoRegister(2, M); break;
+        case 0x4007: Apu->WritePulseTwoRegister(3, M); break;
+        case 0x4008: Apu->WriteTriangleRegister(0, M); break;
+        case 0x400A: Apu->WriteTriangleRegister(1, M); break;
+        case 0x400B: Apu->WriteTriangleRegister(2, M); break;
+        case 0x400C: Apu->WriteNoiseRegister(0, M); break;
+        case 0x400E: Apu->WriteNoiseRegister(1, M); break;
+        case 0x400F: Apu->WriteNoiseRegister(2, M); break;
+        case 0x4010: Apu->WriteDmcRegister(0, M); break;
+        case 0x4011: Apu->WriteDmcRegister(1, M); break;
+        case 0x4012: Apu->WriteDmcRegister(2, M); break;
+        case 0x4013: Apu->WriteDmcRegister(3, M); break;
+        case 0x4015: Apu->WriteAPUStatus(M); break;
+        case 0x4017: Apu->WriteAPUFrameCounter(M); break;
         default: break;
         }
     }
@@ -205,7 +205,7 @@ void CPU::Write(uint8_t M, uint16_t address)
     }
     else if (address > 0x5FFF && address < 0x10000)
     {
-        cart->PrgWrite(M, address - 0x6000);
+        Cartridge->PrgWrite(M, address - 0x6000);
     }
 
     CheckNMI();
@@ -1247,33 +1247,33 @@ void CPU::TYA()
 
 void CPU::CheckNMI()
 {
-    if (nmiRaised)
+    if (NmiRaised)
     {
-        nmiRaised = false;
-        nmiPending = true;
+        NmiRaised = false;
+        NmiPending = true;
     }
 
-    if (ppuRendevous <= 0 || nmiLineStatus)
+    if (PpuRendevous <= 0 || NmiLineStatus)
     {
-        ppu->Run();
+        Ppu->Run();
 
         uint64_t nmiOccuredCycle;
-        bool nmiLine = ppu->CheckNMI(nmiOccuredCycle);
+        bool nmiLine = Ppu->CheckNMI(nmiOccuredCycle);
 
-        if (!nmiLineStatus && nmiLine)
+        if (!NmiLineStatus && nmiLine)
         {
-            if (clock - nmiOccuredCycle >= 2)
+            if (Clock - nmiOccuredCycle >= 2)
             {
-                nmiPending = true;
+                NmiPending = true;
             }
             else
             {
-                nmiRaised = true;
+                NmiRaised = true;
             }
         }
 
-        nmiLineStatus = nmiLine;
-        ppuRendevous = ppu->ScheduleSync();
+        NmiLineStatus = nmiLine;
+        PpuRendevous = Ppu->ScheduleSync();
     }
 }
 
@@ -1298,9 +1298,9 @@ void CPU::HandleNMI()
 void CPU::CheckIRQ()
 {
     // If IRQ line is high and interrupt inhibit flag is false
-    if (apu->CheckIRQ() && !(P & 0x4))
+    if (Apu->CheckIRQ() && !(P & 0x4))
     {
-        irqPending = true;
+        IrqPending = true;
     }
 }
 
@@ -1324,130 +1324,130 @@ void CPU::HandleIRQ()
 
 void CPU::SetControllerStrobe(bool strobe)
 {
-    controllerStrobe = strobe;
-    controllerOneShift = controllerOneState.load();
+    ControllerStrobe = strobe;
+    ControllerOneShift = ControllerOneState.load();
 }
 
 uint8_t CPU::GetControllerOneShift()
 {
-    if (controllerStrobe)
+    if (ControllerStrobe)
     {
-        controllerOneShift = controllerOneState.load();
+        ControllerOneShift = ControllerOneState.load();
     }
 
-    uint8_t result = controllerOneShift & 0x1;
-    controllerOneShift >>= 1;
+    uint8_t result = ControllerOneShift & 0x1;
+    ControllerOneShift >>= 1;
 
     return result;
 }
 
 CPU::CPU()
-    : startupFlag(true)
-    , stopFlag(false)
-    , pauseFlag(false)
-    , isPaused(false)
-    , logEnabled(false)
-    , enableLogFlag(false)
-    , logFile(nullptr)
-    , ppu(nullptr)
-    , apu(nullptr)
-    , cart(nullptr)
-    , clock(0)
-    , controllerStrobe(0)
-    , controllerOneShift(0)
-    , controllerOneState(0)
-    , ppuRendevous(0)
-    , nmiLineStatus(false)
-    , nmiRaised(false)
-    , nmiPending(false)
-    , isStalled(false)
-    , irqPending(false)
+    : StartupFlag(true)
+    , StopFlag(false)
+    , PauseFlag(false)
+    , Paused(false)
+    , LogEnabled(false)
+    , EnableLogFlag(false)
+    , LogFile(nullptr)
+    , Ppu(nullptr)
+    , Apu(nullptr)
+    , Cartridge(nullptr)
+    , Clock(0)
+    , ControllerStrobe(0)
+    , ControllerOneShift(0)
+    , ControllerOneState(0)
+    , PpuRendevous(0)
+    , NmiLineStatus(false)
+    , NmiRaised(false)
+    , NmiPending(false)
+    , IsStalled(false)
+    , IrqPending(false)
     , S(0xFD)
     , P(0x24)
     , A(0)
     , X(0)
     , Y(0)
 {
-    memset(memory, 0, sizeof(uint8_t) * 0x800);
+    memset(Memory, 0, sizeof(uint8_t) * 0x800);
 
-    sprintf(addressing, "");
-    sprintf(instruction, "");
-    sprintf(programCounter, "");
-    sprintf(addressingArg1, "");
-    sprintf(addressingArg2, "");
+    sprintf(Addressing, "");
+    sprintf(Instruction, "");
+    sprintf(ProgramCounter, "");
+    sprintf(AddressingArg1, "");
+    sprintf(AddressingArg2, "");
 }
 
 uint64_t CPU::GetClock()
 {
-    return clock;
+    return Clock;
 }
 
 void CPU::AttachPPU(PPU* ppu)
 {
-    this->ppu = ppu;
+    Ppu = ppu;
 }
 
 void CPU::AttachAPU(APU* apu)
 {
-    this->apu = apu;
+    Apu = apu;
 }
 
 void CPU::AttachCart(Cart* cart)
 {
-    this->cart = cart;
+    Cartridge = cart;
 }
 
 void CPU::SetStalled(bool stalled)
 {
-    isStalled = stalled;
+    IsStalled = stalled;
 }
 
 bool CPU::IsLogEnabled()
 {
-    return logEnabled;
+    return LogEnabled;
 }
 
 CPU::~CPU()
 {
-    if (logEnabled && logFile != nullptr)
+    if (LogEnabled && LogFile != nullptr)
     {
-        fclose(logFile);
+        fclose(LogFile);
     }
 }
 
 void CPU::SetControllerOneState(uint8_t state)
 {
-    controllerOneState = state;
+    ControllerOneState = state;
 }
 
 uint8_t CPU::GetControllerOneState()
 {
-    return controllerOneState;
+    return ControllerOneState;
 }
 
 void CPU::Pause()
 {
-    if (!isPaused)
+    if (!Paused)
     {
-        pauseFlag = true;
+        PauseFlag = true;
     }
 }
 
 void CPU::Resume()
 {
-    std::unique_lock<std::mutex> lock(pauseMutex);
-    pauseCV.notify_all();
+    std::unique_lock<std::mutex> lock(PauseMutex);
+    PauseCv.notify_all();
 }
 
 bool CPU::IsPaused()
 {
-    std::unique_lock<std::mutex> lock(pauseMutex);
-    return isPaused;
+    std::unique_lock<std::mutex> lock(PauseMutex);
+    return Paused;
 }
 
 void CPU::SetLogEnabled(bool enabled)
 {
-    enableLogFlag = enabled;
+    EnableLogFlag = enabled;
 }
 
 // Currently unimplemented
@@ -1459,17 +1459,17 @@ void CPU::Reset()
 // Run the CPU
 void CPU::Run()
 {
-    if (startupFlag)
+    if (StartupFlag)
     {
-        if (ppu == nullptr)
+        if (Ppu == nullptr)
         {
             throw std::runtime_error("CPU: No PPU attached");
         }
-        else if (apu == nullptr)
+        else if (Apu == nullptr)
         {
             throw std::runtime_error("CPU: No APU attached");
         }
-        else if (cart == nullptr)
+        else if (Cartridge == nullptr)
         {
             throw std::runtime_error("CPU: No Cartridge attached");
         }
@@ -1477,23 +1477,23 @@ void CPU::Run()
         {
             // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
             PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
-            startupFlag = false;
+            StartupFlag = false;
         }
     }
 
-    while (!stopFlag) // Run stop command issued
+    while (!StopFlag) // Run stop command issued
     {
-        if (enableLogFlag != logEnabled)
+        if (EnableLogFlag != LogEnabled)
         {
-            logEnabled = enableLogFlag;
+            LogEnabled = EnableLogFlag;
 
-            if (logEnabled)
+            if (LogEnabled)
             {
                 long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-                std::string logName = cart->GetGameName() + "_" + std::to_string(time) + ".log";
-                logFile = fopen(logName.c_str(), "w");
+                std::string logName = Cartridge->GetGameName() + "_" + std::to_string(time) + ".log";
+                LogFile = fopen(logName.c_str(), "w");
 
-                if (logFile == nullptr)
+                if (LogFile == nullptr)
                 {
                     std::string message = "Failed to open log file: ";
                     message += logName;
@@ -1503,32 +1503,32 @@ void CPU::Run()
             }
             else
             {
-                fclose(logFile);
-                logFile = nullptr;
+                fclose(LogFile);
+                LogFile = nullptr;
             }
             
         }
 
         Step();
 
-        if (pauseFlag)
+        if (PauseFlag)
         {
-            std::unique_lock<std::mutex> lock(pauseMutex);
-            isPaused = true;
+            std::unique_lock<std::mutex> lock(PauseMutex);
+            Paused = true;
 
-            pauseCV.wait(lock);
-            isPaused = false;
-            pauseFlag = false;
+            PauseCv.wait(lock);
+            Paused = false;
+            PauseFlag = false;
         }
     }
 }
 
 void CPU::Stop()
 {
-    stopFlag = true;
+    StopFlag = true;
     
     // If pause, resume so that run exits
-    if (isPaused)
+    if (Paused)
     {
         Resume();
     }
@@ -1538,21 +1538,21 @@ void CPU::Stop()
 // or return false if the next value is not an opcode
 void CPU::Step()
 {
-    if (nmiPending)
+    if (NmiPending)
     {
-        nmiPending = false;
+        NmiPending = false;
         HandleNMI();
     }
 
-    if (irqPending)
+    if (IrqPending)
     {
-        irqPending = false;
+        IrqPending = false;
         HandleIRQ();
     }
 
     if (IsLogEnabled())
     {
-        ppu->Run();
+        Ppu->Run();
 
         LogProgramCounter();
         LogRegisters();
@@ -2186,129 +2186,129 @@ void CPU::Step()
 
 void CPU::LogProgramCounter()
 {
-    sprintf(programCounter, "%04X", PC);
+    sprintf(ProgramCounter, "%04X", PC);
 }
 
 void CPU::LogRegisters()
 {
-    int32_t scanline = ppu->GetCurrentScanline();
+    int32_t scanline = Ppu->GetCurrentScanline();
 
     if (scanline == 261)
     {
         scanline = -1;
     }
 
-    sprintf(registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, ppu->GetCurrentDot(), scanline);
+    sprintf(Registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, Ppu->GetCurrentDot(), scanline);
 }
 
 void CPU::LogOpcode(uint8_t opcode)
 {
-    sprintf(this->opcode, "%02X", opcode);
+    sprintf(OpCode, "%02X", opcode);
 }
 
 void CPU::LogInstructionName(std::string name)
 {
-    sprintf(instruction, "%s", name.c_str());
+    sprintf(Instruction, "%s", name.c_str());
 }
 
 void CPU::LogAccumulator()
 {
-    sprintf(addressing, "A");
+    sprintf(Addressing, "A");
 }
 
 void CPU::LogRelative(uint8_t value)
 {
 
-    sprintf(addressing, "$%04X", PC + static_cast<int8_t>(value));
-    sprintf(addressingArg1, "%02X", static_cast<uint8_t>(value));
+    sprintf(Addressing, "$%04X", PC + static_cast<int8_t>(value));
+    sprintf(AddressingArg1, "%02X", static_cast<uint8_t>(value));
 }
 
 void CPU::LogImmediate(uint8_t arg1)
 {
-    sprintf(addressing, "#$%02X", arg1);
-    sprintf(addressingArg1, "%02X", arg1);
+    sprintf(Addressing, "#$%02X", arg1);
+    sprintf(AddressingArg1, "%02X", arg1);
 }
 
 void CPU::LogZeroPage(uint8_t address)
 {
-    sprintf(addressing, "$%02X = %02X", address, DebugRead(address));
-    sprintf(addressingArg1, "%02X", address);
+    sprintf(Addressing, "$%02X = %02X", address, DebugRead(address));
+    sprintf(AddressingArg1, "%02X", address);
 }
 
 
 void CPU::LogZeroPageX(uint8_t initialAddress, uint8_t finalAddress)
 {
-    sprintf(addressing, "$%02X,X @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
-    sprintf(addressingArg1, "%02X", initialAddress);
+    sprintf(Addressing, "$%02X,X @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(AddressingArg1, "%02X", initialAddress);
 }
 
 void CPU::LogZeroPageY(uint8_t initialAddress, uint8_t finalAddress)
 {
-    sprintf(addressing, "$%02X,Y @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
-    sprintf(addressingArg1, "%02X", initialAddress);
+    sprintf(Addressing, "$%02X,Y @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(AddressingArg1, "%02X", initialAddress);
 }
 
 void CPU::LogAbsolute(uint8_t lowByte, uint8_t highByte, uint16_t address, bool isJump)
 {
     if (!isJump)
     {
-        sprintf(addressing, "$%04X = %02X", address, DebugRead(address));
+        sprintf(Addressing, "$%04X = %02X", address, DebugRead(address));
     }
     else
     {
-        sprintf(addressing, "$%04X", address);
+        sprintf(Addressing, "$%04X", address);
     }
 
-    sprintf(addressingArg1, "%02X", lowByte);
-    sprintf(addressingArg2, "%02X", highByte);
+    sprintf(AddressingArg1, "%02X", lowByte);
+    sprintf(AddressingArg2, "%02X", highByte);
 }
 
 void CPU::LogAbsoluteX(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(addressing, "$%04X,X @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
-    sprintf(addressingArg1, "%02X", lowByte);
-    sprintf(addressingArg2, "%02X", highByte);
+    sprintf(Addressing, "$%04X,X @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(AddressingArg1, "%02X", lowByte);
+    sprintf(AddressingArg2, "%02X", highByte);
 }
 
 void CPU::LogAbsoluteY(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(addressing, "$%04X,Y @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
-    sprintf(addressingArg1, "%02X", lowByte);
-    sprintf(addressingArg2, "%02X", highByte);
+    sprintf(Addressing, "$%04X,Y @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(AddressingArg1, "%02X", lowByte);
+    sprintf(AddressingArg2, "%02X", highByte);
 }
 
 void CPU::LogIndirect(uint8_t lowIndirect, uint8_t highIndirect, uint16_t indirect, uint16_t address)
 {
-    sprintf(addressing, "($%04X) = %04X", indirect, address);
-    sprintf(addressingArg1, "%02X", lowIndirect);
-    sprintf(addressingArg2, "%02X", highIndirect);
+    sprintf(Addressing, "($%04X) = %04X", indirect, address);
+    sprintf(AddressingArg1, "%02X", lowIndirect);
+    sprintf(AddressingArg2, "%02X", highIndirect);
 }
 
 void CPU::LogIndexedIndirect(uint8_t pointer, uint8_t lowIndirect, uint16_t address)
 {
-    sprintf(addressing, "($%02X,X) @ %02X = %04X = %02X", pointer, lowIndirect, address, DebugRead(address));
-    sprintf(addressingArg1, "%02X", pointer);
+    sprintf(Addressing, "($%02X,X) @ %02X = %04X = %02X", pointer, lowIndirect, address, DebugRead(address));
+    sprintf(AddressingArg1, "%02X", pointer);
 }
 
 void CPU::LogIndirectIndexed(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(addressing, "($%02X),Y = %04X @ %04X = %02X", pointer, initialAddress, finalAddress, DebugRead(finalAddress));
-    sprintf(addressingArg1, "%02X", pointer);
+    sprintf(Addressing, "($%02X),Y = %04X @ %04X = %02X", pointer, initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(AddressingArg1, "%02X", pointer);
 }
 
 void CPU::PrintLog()
 {
     using namespace std;
 
-    if (logFile != nullptr)
+    if (LogFile != nullptr)
     {
-        fprintf(logFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", programCounter, opcode, addressingArg1, addressingArg2, instruction, addressing, registers);
+        fprintf(LogFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", ProgramCounter, OpCode, AddressingArg1, AddressingArg2, Instruction, Addressing, Registers);
     }
 
-    sprintf(registers, "");
-    sprintf(addressing, "");
-    sprintf(instruction, "");
-    sprintf(programCounter, "");
-    sprintf(addressingArg1, "");
-    sprintf(addressingArg2, "");
+    sprintf(Registers, "");
+    sprintf(Addressing, "");
+    sprintf(Instruction, "");
+    sprintf(ProgramCounter, "");
+    sprintf(AddressingArg1, "");
+    sprintf(AddressingArg1, "");
 }

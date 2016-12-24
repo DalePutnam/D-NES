@@ -35,10 +35,10 @@ Cart::Cart(const string& fileName, const string& saveDir)
             switch (mapperNumber)
             {
             case 0x00:
-                mapper = new NROM(fileName, saveDir);
+                Mapper = new NROM(fileName, saveDir);
                 break;
             case 0x01:
-                mapper = new SXROM(fileName, saveDir);
+                Mapper = new SXROM(fileName, saveDir);
                 break;
             default:
                 ostringstream oss;
@@ -56,41 +56,41 @@ Cart::Cart(const string& fileName, const string& saveDir)
 
 Cart::~Cart()
 {
-    delete mapper;
+    delete Mapper;
 }
 
 const string& Cart::GetGameName()
 {
-    return mapper->GetGameName();
+    return Mapper->GetGameName();
 }
 
 void Cart::AttachCPU(CPU* cpu)
 {
-    mapper->AttachCPU(cpu);
+    Mapper->AttachCPU(cpu);
 }
 
 Cart::MirrorMode Cart::GetMirrorMode()
 {
-    return mapper->GetMirrorMode();
+    return Mapper->GetMirrorMode();
 }
 
 uint8_t Cart::PrgRead(uint16_t address)
 {
-    return mapper->PrgRead(address);
+    return Mapper->PrgRead(address);
 }
 
 void Cart::PrgWrite(uint8_t M, uint16_t address)
 {
-    mapper->PrgWrite(M, address);
+    Mapper->PrgWrite(M, address);
 }
 
 uint8_t Cart::ChrRead(uint16_t address)
 {
-    return mapper->ChrRead(address);
+    return Mapper->ChrRead(address);
 }
 
 void Cart::ChrWrite(uint8_t M, uint16_t address)
 {
-    mapper->ChrWrite(M, address);
+    Mapper->ChrWrite(M, address);
 }
 

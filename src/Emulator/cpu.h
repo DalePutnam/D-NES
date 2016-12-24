@@ -51,48 +51,48 @@ public:
     void SetLogEnabled(bool enabled);
 
 private:
-    PPU* ppu;
-    APU* apu;
-    Cart* cart;
+    PPU* Ppu;
+    APU* Apu;
+    Cart* Cartridge;
 
-    uint64_t clock;
+    uint64_t Clock;
 
     // CPU Main Memory
-    uint8_t memory[0x800];
+    uint8_t Memory[0x800];
 
-    bool startupFlag;
+    bool StartupFlag;
 
-    std::atomic<bool> stopFlag;
-    std::atomic<bool> pauseFlag;
-    std::atomic<bool> isPaused;
-    std::mutex pauseMutex;
-    std::condition_variable pauseCV;
+    std::atomic<bool> StopFlag;
+    std::atomic<bool> PauseFlag;
+    std::atomic<bool> Paused;
+    std::mutex PauseMutex;
+    std::condition_variable PauseCv;
 
-    bool logEnabled;
-    std::atomic<bool> enableLogFlag;
-    std::FILE* logFile;
+    bool LogEnabled;
+    std::atomic<bool> EnableLogFlag;
+    std::FILE* LogFile;
 
     // Debug Strings
-    char programCounter[5];
-    char instruction[5];
-    char opcode[3];
-    char addressingArg1[3];
-    char addressingArg2[3];
-    char addressing[28];
-    char registers[41];
+    char ProgramCounter[5];
+    char Instruction[5];
+    char OpCode[3];
+    char AddressingArg1[3];
+    char AddressingArg2[3];
+    char Addressing[28];
+    char Registers[41];
 
-    bool controllerStrobe;
-    uint8_t controllerOneShift;
-    std::atomic<uint8_t> controllerOneState;
+    bool ControllerStrobe;
+    uint8_t ControllerOneShift;
+    std::atomic<uint8_t> ControllerOneState;
 
     // Cycles to next NMI check
-    int ppuRendevous;
-    bool nmiLineStatus;
-    bool nmiRaised;
-    bool nmiPending;
+    int PpuRendevous;
+    bool NmiLineStatus;
+    bool NmiRaised;
+    bool NmiPending;
 
-    bool isStalled;
-    bool irqPending;
+    bool IsStalled;
+    bool IrqPending;
 
     // Registers
     uint16_t PC; // Program Counter

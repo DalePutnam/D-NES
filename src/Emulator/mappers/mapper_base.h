@@ -24,19 +24,19 @@ public:
     virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
 
 protected:
-    int prgSize;
-    const uint8_t* prg;
-    int chrSize;
-    const uint8_t* chr;
-    uint8_t* chrRam;
-    int wramSize;
-    uint8_t* wram;
-    bool hasSaveMem;
+    int PrgSize;
+    const uint8_t* Prg;
+    int ChrSize;
+    const uint8_t* Chr;
+    uint8_t* ChrRam;
+    int WramSize;
+    uint8_t* Wram;
+    bool HasSaveMem;
 
-    Cart::MirrorMode mirroring;
+    Cart::MirrorMode Mirroring;
 
-    std::string gameName;
-    const std::string saveDir;
+    std::string GameName;
+    const std::string SaveDir;
 
-    CPU* cpu;
+    CPU* Cpu;
 };

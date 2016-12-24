@@ -19,11 +19,11 @@ public:
     void ChrWrite(uint8_t M, uint16_t address) override;
 
 private:
-    unsigned long long lastWriteCycle;
-    uint8_t counter;
-    uint8_t tempRegister;
-    uint8_t controlRegister;
-    uint8_t chrRegister1;
-    uint8_t chrRegister2;
-    uint8_t prgRegister;
+    unsigned long long LastWriteCycle;
+    uint8_t Counter;
+    uint8_t TempRegister;
+    uint8_t ControlRegister;
+    uint8_t ChrRegister1;
+    uint8_t ChrRegister2;
+    uint8_t PrgRegister;
 };

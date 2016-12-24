@@ -64,102 +64,102 @@ public:
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
 
 private:
-    CPU* cpu;
-    Cart* cart;
+    CPU* Cpu;
+    Cart* Cartridge;
 
-    uint8_t frameBuffer[256 * 240 * 3];
+    uint8_t FrameBuffer[256 * 240 * 3];
 
     enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
 
-    static const uint32_t rgbLookupTable[64];
-    static constexpr uint32_t resetDelay = 88974;
+    static const uint32_t RgbLookupTable[64];
+    static constexpr uint32_t ResetDelay = 88974;
 
-    std::chrono::high_resolution_clock::time_point intervalStart;
-    std::atomic<bool> limitTo60FPS;
+    std::chrono::high_resolution_clock::time_point IntervalStart;
+    std::atomic<bool> FrameLimitEnabled;
 
-    uint64_t clock;
-    uint16_t dot;
-    uint16_t line;
-    bool even;
-    bool suppressNMI;
-    bool interruptActive;
-    uint64_t nmiOccuredCycle;
+    uint64_t Clock;
+    uint16_t Dot;
+    uint16_t Line;
+    bool Even;
+    bool SuppressNmi;
+    bool InterruptActive;
+    uint64_t NmiOccuredCycle;
 
     // Main Registers
 
     // Controller Register Fields
-    bool ppuAddressIncrement;
-    uint16_t baseSpriteTableAddress;
-    uint16_t baseBackgroundTableAddress;
-    bool spriteSize;
-    bool nmiEnabled;
+    bool PpuAddressIncrement;
+    uint16_t BaseSpriteTableAddress;
+    uint16_t BaseBackgroundTableAddress;
+    bool SpriteSizeSwitch;
+    bool NmiEnabled;
 
     // Mask Register Fields
-    bool grayscale;
-    bool showBackgroundLeft;
-    bool showSpritesLeft;
-    bool showBackground;
-    bool showSprites;
-    bool intenseRed;
-    bool intenseGreen;
-    bool intenseBlue;
+    bool GrayScaleEnabled;
+    bool ShowBackgroundLeft;
+    bool ShowSpritesLeft;
+    bool ShowBackground;
+    bool ShowSprites;
+    bool IntenseRed;
+    bool IntenseGreen;
+    bool IntenseBlue;
 
     // Status Register Fields
-    uint8_t lowerBits;
-    bool spriteOverflow;
-    bool sprite0Hit;
-    bool inVBLANK;
-    bool nmiOccured;
-    bool sprite0SecondaryOAM;
+    uint8_t LowerBits;
+    bool SpriteOverflowFlag;
+    bool SpriteZeroHitFlag;
+    bool VblankFlag;
+    bool NmiOccuredFlag;
+    bool SpriteZeroSecondaryOamFlag;
 
-    uint8_t oamAddress;
-    uint16_t ppuAddress;
-    uint16_t ppuTempAddress;
-    uint8_t fineXScroll;
+    uint8_t OamAddress;
+    uint16_t PpuAddress;
+    uint16_t PpuTempAddress;
+    uint8_t FineXScroll;
 
-    bool addressLatch;
+    bool AddressLatch;
 
     // Register Buffer
-    std::queue<std::tuple<uint64_t, uint8_t, Register>> registerBuffer;
+    std::queue<std::tuple<uint64_t, uint8_t, Register>> RegisterBuffer;
 
     // PPU Data Read Buffer
-    uint8_t dataBuffer;
+    uint8_t DataBuffer;
 
     // Primary Object Attribute Memory (OAM)
-    uint8_t primaryOAM[0x100];
+    uint8_t PrimaryOam[0x100];
 
     // Secondary Object Attribute Memory (OAM)
-    uint8_t secondaryOAM[0x20];
+    uint8_t SecondaryOam[0x20];
 
     // Name Table RAM
-    uint8_t nameTable0[0x400];
-    uint8_t nameTable1[0x400];
+    uint8_t NameTable0[0x400];
+    uint8_t NameTable1[0x400];
 
     // Palette RAM
-    uint8_t palettes[0x20];
+    uint8_t PaletteTable[0x20];
 
     // Temporary Values
-    uint8_t nameTableByte;
-    uint8_t attributeByte;
-    uint8_t tileBitmapLow;
-    uint8_t tileBitmapHigh;
+    uint8_t NameTableByte;
+    uint8_t AttributeByte;
+    uint8_t TileBitmapLow;
+    uint8_t TileBitmapHigh;
 
     // Shift Registers, Latches and Counters
-    uint16_t backgroundShift0;
-    uint16_t backgroundShift1;
-    uint8_t backgroundAttributeShift0;
-    uint8_t backgroundAttributeShift1;
-    uint8_t backgroundAttribute;
+    uint16_t BackgroundShift0;
+    uint16_t BackgroundShift1;
+    uint8_t BackgroundAttributeShift0;
+    uint8_t BackgroundAttributeShift1;
+    uint8_t BackgroundAttribute;
 
-    uint8_t spriteCount;
-    uint8_t spriteShift0[8];
-    uint8_t spriteShift1[8];
-    uint8_t spriteAttribute[8];
-    uint8_t spriteCounter[8];
+    uint8_t SpriteCount;
+    uint8_t SpriteShift0[8];
+    uint8_t SpriteShift1[8];
+    uint8_t SpriteAttribute[8];
+    uint8_t SpriteCounter[8];
 
-    bool ntscMode;
-    std::atomic<bool> requestNtscMode;
-    float signalLevels[256 * 8];
+    bool NtscMode;
+    std::atomic<bool> RequestNtscMode;
+    float SignalLevels[256 * 8];
 
     void RenderNtscPixel(int pixel);
     void RenderNtscLine();

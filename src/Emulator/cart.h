@@ -38,5 +38,5 @@ public:
     void ChrWrite(uint8_t M, uint16_t address);
 
 private:
-    MapperBase* mapper;
+    MapperBase* Mapper;
 };

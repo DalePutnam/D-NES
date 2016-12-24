@@ -9,7 +9,7 @@
 
 Cart::MirrorMode NROM::GetMirrorMode()
 {
-    return mirroring;
+    return Mirroring;
 }
 
 uint8_t NROM::PrgRead(uint16_t address)
@@ -21,13 +21,13 @@ uint8_t NROM::PrgRead(uint16_t address)
     }
     else
     {
-        if (prgSize == 0x4000)
+        if (PrgSize == 0x4000)
         {
-            return prg[(address - 0x2000) % 0x4000];
+            return Prg[(address - 0x2000) % 0x4000];
         }
         else
         {
-            return prg[address - 0x2000];
+            return Prg[address - 0x2000];
         }
     }
 }
@@ -39,21 +39,21 @@ void NROM::PrgWrite(uint8_t M, uint16_t address)
 
 uint8_t NROM::ChrRead(uint16_t address)
 {
-    if (chrSize != 0)
+    if (ChrSize != 0)
     {
-        return chr[address];
+        return Chr[address];
     }
     else
     {
-        return chrRam[address];
+        return ChrRam[address];
     }
 }
 
 void NROM::ChrWrite(uint8_t M, uint16_t address)
 {
-    if (chrSize == 0)
+    if (ChrSize == 0)
     {
-        chrRam[address] = M;
+        ChrRam[address] = M;
     }
 }
 

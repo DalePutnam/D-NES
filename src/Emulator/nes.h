@@ -53,13 +53,13 @@ public:
 
     void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
     {
-        ppu->BindFrameCompleteCallback(Fn);
+        Ppu->BindFrameCompleteCallback(Fn);
     }
 
     template<class T>
     void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
     {
-        ppu->BindFrameCompleteCallback(Fn, Obj);
+        Ppu->BindFrameCompleteCallback(Fn, Obj);
     }
 
     void BindErrorCallback(void(*Fn)(std::string))
@@ -108,12 +108,12 @@ private:
     // Main run function, launched in a new thread by NES::Start
     void Run();
 
-    std::thread nesThread;
+    std::thread NesThread;
 
-    APU* apu;
-    CPU* cpu;
-    PPU* ppu;
-    Cart* cart;
+    APU* Apu;
+    CPU* Cpu;
+    PPU* Ppu;
+    Cart* Cartridge;
 
     std::function<void(std::string)> OnError;
 };

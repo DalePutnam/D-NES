@@ -7,34 +7,34 @@
 using namespace std;
 
 MapperBase::MapperBase(const string& fileName, const string& saveDir)
-    : prg(nullptr)
-    , chr(nullptr)
-    , chrRam(nullptr)
-    , wram(nullptr)
-    , hasSaveMem(false)
-    , cpu(nullptr)
-    , saveDir(saveDir)
+    : Prg(nullptr)
+    , Chr(nullptr)
+    , ChrRam(nullptr)
+    , Wram(nullptr)
+    , HasSaveMem(false)
+    , Cpu(nullptr)
+    , SaveDir(saveDir)
 {
     size_t indexForwardSlash = fileName.rfind('/');
     size_t indexBackSlash = fileName.rfind('\\');
 
     if (indexForwardSlash != string::npos && indexForwardSlash > indexBackSlash)
     {
-        gameName = fileName.substr(indexForwardSlash + 1);
+        GameName = fileName.substr(indexForwardSlash + 1);
     }
     else if (indexBackSlash != string::npos && indexBackSlash > indexForwardSlash)
     {
-        gameName = fileName.substr(indexBackSlash + 1);
+        GameName = fileName.substr(indexBackSlash + 1);
     }
     else
     {
-        gameName = fileName;
+        GameName = fileName;
     }
 
-    size_t indexExtension = gameName.find(".nes");
+    size_t indexExtension = GameName.find(".nes");
     if (indexExtension != string::npos)
     {
-        gameName = gameName.substr(0, indexExtension);
+        GameName = GameName.substr(0, indexExtension);
     }
 
     ifstream romStream(fileName.c_str(), ifstream::in | ifstream::binary);
@@ -44,46 +44,46 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
         char header[16];
         romStream.read(header, 16);
 
-        prgSize = header[4] * 0x4000;
-        chrSize = header[5] * 0x2000;
-        wramSize = header[8] ? header[8] * 0x2000 : 0x2000;
+        PrgSize = header[4] * 0x4000;
+        ChrSize = header[5] * 0x2000;
+        WramSize = header[8] ? header[8] * 0x2000 : 0x2000;
 
         if (header[6] & 0x1)
         {
-            mirroring = Cart::VERTICAL;
+            Mirroring = Cart::VERTICAL;
         }
         else
         {
-            mirroring = Cart::HORIZONTAL;
+            Mirroring = Cart::HORIZONTAL;
         }
 
-        if (prgSize == 0)
+        if (PrgSize == 0)
         {
             throw runtime_error("MapperBase: Failed to load ROM, invalid PRG size");
         }
 
         if (header[6] & 0x2)
         {
-            hasSaveMem = true;
-            string saveFile = saveDir + "/" + gameName + ".sav";
+            HasSaveMem = true;
+            string saveFile = saveDir + "/" + GameName + ".sav";
             ifstream saveStream(saveFile.c_str(), ifstream::in | ifstream::binary);
 
             if (saveStream.good())
             {
-                char* buf = new char[wramSize];
-                saveStream.read(buf, wramSize);
-                wram = reinterpret_cast<uint8_t*>(buf);
+                char* buf = new char[WramSize];
+                saveStream.read(buf, WramSize);
+                Wram = reinterpret_cast<uint8_t*>(buf);
             }
             else
             {
-                wram = new uint8_t[wramSize];
-                memset(wram, 0, sizeof(uint8_t) * wramSize);
+                Wram = new uint8_t[WramSize];
+                memset(Wram, 0, sizeof(uint8_t) * WramSize);
             }
         }
         else
         {
-            wram = new uint8_t[wramSize];
-            memset(wram, 0, sizeof(uint8_t) * wramSize);
+            Wram = new uint8_t[WramSize];
+            memset(Wram, 0, sizeof(uint8_t) * WramSize);
         }
 
         if (header[6] & 0x4)
@@ -92,20 +92,20 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
             romStream.seekg(0x200, romStream.cur);
         }
 
-        char* buf = new char[prgSize];
-        romStream.read(buf, prgSize);
-        prg = reinterpret_cast<uint8_t*>(buf);
+        char* buf = new char[PrgSize];
+        romStream.read(buf, PrgSize);
+        Prg = reinterpret_cast<uint8_t*>(buf);
 
-        if (chrSize != 0)
+        if (ChrSize != 0)
         {
-            buf = new char[chrSize];
-            romStream.read(buf, chrSize);
-            chr = reinterpret_cast<uint8_t*>(buf);
+            buf = new char[ChrSize];
+            romStream.read(buf, ChrSize);
+            Chr = reinterpret_cast<uint8_t*>(buf);
         }
         else
         {
-            chrRam = new uint8_t[0x2000];
-            memset(chrRam, 0, sizeof(uint8_t) * 0x2000);
+            ChrRam = new uint8_t[0x2000];
+            memset(ChrRam, 0, sizeof(uint8_t) * 0x2000);
         }
     }
     else
@@ -116,25 +116,37 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
 
 MapperBase::~MapperBase()
 {
-    if (hasSaveMem)
+    if (HasSaveMem)
     {
-        string saveFile = saveDir + "/" + gameName + ".sav";
+        string saveFile = SaveDir + "/" + GameName + ".sav";
         ofstream saveStream(saveFile.c_str(), ifstream::out | ifstream::binary);
 
         if (saveStream.good())
         {
-            char* buf = reinterpret_cast<char*>(wram);
-            saveStream.write(buf, wramSize);
+            char* buf = reinterpret_cast<char*>(Wram);
+            saveStream.write(buf, WramSize);
         }
+    }
+
+    delete[] Wram;
+    delete[] Prg;
+
+    if (ChrSize != 0)
+    {
+        delete[] Chr;
+    }
+    else
+    {
+        delete[] ChrRam;
     }
 }
 
 const string& MapperBase::GetGameName()
 {
-    return gameName;
+    return GameName;
 }
 
 void MapperBase::AttachCPU(CPU* cpu)
 {
-    this->cpu = cpu;
+    Cpu = cpu;
 }
