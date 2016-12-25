@@ -5,6 +5,7 @@
 #include <wx/filedlg.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
+#include <wx/dir.h>
 
 #include "nes.h"
 #include "main_window.h"
@@ -92,11 +93,17 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         NesParams params;
         params.RomPath = filename;
-        appSettings->Read("/Paths/RomSavePath", &params.SavePath);
         params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
         params.FrameLimitEnabled = EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
         params.SoundMuted = EmulatorMenu->FindItem(ID_EMULATOR_MUTE)->IsChecked();
         params.FiltersEnabled = EmulatorMenu->FindItem(ID_EMULATOR_FILTER)->IsChecked();
+
+        appSettings->Read("/Paths/RomSavePath", &params.SavePath);
+
+        if (!wxDir::Exists(params.SavePath))
+        {
+            wxDir::Make(params.SavePath);
+        }
 
         try
         {

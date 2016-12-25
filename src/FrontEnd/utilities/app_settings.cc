@@ -15,17 +15,17 @@ AppSettings* AppSettings::instance = nullptr; // Initialize static instance fiel
 
 AppSettings::AppSettings()
 {
-    wxFileInputStream configStream(wxGetCwd() + "/config.txt");
+    wxFileName configFile(wxGetCwd(), "config.txt");
 
-    if (configStream.IsOk())
+    if (configFile.FileExists())
     {
+        wxFileInputStream configStream(configFile.GetFullPath());
         Settings = new wxFileConfig(configStream);
     }
     else
     {
         Settings = new wxFileConfig();
     }
-
 
     if (!Settings->HasEntry("/Paths/RomPath"))
     {
