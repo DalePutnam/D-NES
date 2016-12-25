@@ -10,20 +10,20 @@
 
 void PPUDebugWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
-    mainWindow->PPUDebugClose();
+    ParentWindow->PPUDebugClose();
 }
 
 void PPUDebugWindow::OnPatternTableClicked(wxMouseEvent& WXUNUSED(event))
 {
-    paletteIndex = (paletteIndex + 1) % 8;
+    PaletteIndex = (PaletteIndex + 1) % 8;
 }
 
 PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
-    : wxFrame(mainWindow, wxID_ANY, "PPU Debug", wxDefaultPosition, wxDefaultSize, (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX)
-    , mainWindow(mainWindow)
-    , paletteIndex(0)
+    : wxFrame(mainWindow, wxID_ANY, "PPU Debug", wxDefaultPosition, wxDefaultSize, (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX)
+    , ParentWindow(mainWindow)
+    , PaletteIndex(0)
 {
-    patternTableDisplay = new PatternTableDisplay(this);
+    PatternDisplay = new PatternTableDisplay(this);
 
     wxBoxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* hbox0 = new wxBoxSizer(wxHORIZONTAL);
@@ -39,20 +39,20 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
 
     for (int i = 0; i < 4; ++i)
     {
-        nameTable[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(256, 240));
-        nameTable[i]->SetBackgroundColour(*wxBLACK);
+        NameTable[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(256, 240));
+        NameTable[i]->SetBackgroundColour(*wxBLACK);
     }
 
     for (int i = 0; i < 8; ++i)
     {
-        palette[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(64, 16));
-        palette[i]->SetBackgroundColour(*wxBLACK);
+        Palette[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(64, 16));
+        Palette[i]->SetBackgroundColour(*wxBLACK);
     }
 
     for (int i = 0; i < 64; ++i)
     {
-        primarySprite[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(8, 8));
-        primarySprite[i]->SetBackgroundColour(*wxBLACK);
+        PrimarySprite[i] = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(8, 8));
+        PrimarySprite[i]->SetBackgroundColour(*wxBLACK);
     }
 
     topsizer->Add(hbox0, 0, wxALL, 5);
@@ -65,18 +65,18 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
 
     for (int i = 0; i < 4; ++i)
     {
-        grid0->Add(nameTable[i]);
+        grid0->Add(NameTable[i]);
     }
 
     vbox0->Add(sbox1);
-    sbox1->Add(patternTableDisplay);
+    sbox1->Add(PatternDisplay);
 
     vbox0->Add(sbox2);
     sbox2->Add(grid1);
 
     for (int i = 0; i < 8; ++i)
     {
-        grid1->Add(palette[i]);
+        grid1->Add(Palette[i]);
     }
 
     vbox0->Add(sbox3);
@@ -85,7 +85,7 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow)
 
     for (int i = 0; i < 64; ++i)
     {
-        grid2->Add(primarySprite[i]);
+        grid2->Add(PrimarySprite[i]);
     }
 
     SetBackgroundColour(*wxWHITE);
@@ -100,7 +100,7 @@ void PPUDebugWindow::UpdateNameTable(int tableID, unsigned char* data)
     wxImage image(256, 240, data, true);
     wxBitmap bitmap(image, 24);
 
-    wxClientDC dc(nameTable[tableID]);
+    wxClientDC dc(NameTable[tableID]);
     dc.DrawBitmap(bitmap, 0, 0);
 }
 
@@ -108,11 +108,11 @@ void PPUDebugWindow::UpdatePatternTable(int tableID, unsigned char* data)
 {
     if (tableID == 0)
     {
-        patternTableDisplay->UpdateTable1(data);
+        PatternDisplay->UpdateTable1(data);
     }
     else if (tableID == 1)
     {
-        patternTableDisplay->UpdateTable2(data);
+        PatternDisplay->UpdateTable2(data);
     }
 }
 
@@ -121,7 +121,7 @@ void PPUDebugWindow::UpdatePalette(int tableID, unsigned char* data)
     wxImage image(64, 16, data, true);
     wxBitmap bitmap(image, 24);
 
-    wxClientDC dc(palette[tableID]);
+    wxClientDC dc(Palette[tableID]);
     dc.DrawBitmap(bitmap, 0, 0);
 }
 
@@ -130,7 +130,7 @@ void PPUDebugWindow::UpdatePrimarySprite(int sprite, unsigned char* data)
     wxImage image(8, 8, data, true);
     wxBitmap bitmap(image, 24);
 
-    wxClientDC dc(primarySprite[sprite]);
+    wxClientDC dc(PrimarySprite[sprite]);
     dc.DrawBitmap(bitmap, 0, 0);
 }
 
@@ -141,18 +141,18 @@ void PPUDebugWindow::ClearAll()
         wxImage image(256, 240);
         wxBitmap bitmap(image, 24);
 
-        wxClientDC dc(nameTable[i]);
+        wxClientDC dc(NameTable[i]);
         dc.DrawBitmap(bitmap, 0, 0);
     }
 
-    patternTableDisplay->Clear();
+    PatternDisplay->Clear();
 
     for (int i = 0; i < 8; ++i)
     {
         wxImage image(64, 16);
         wxBitmap bitmap(image, 24);
 
-        wxClientDC dc(palette[i]);
+        wxClientDC dc(Palette[i]);
         dc.DrawBitmap(bitmap, 0, 0);
     }
 
@@ -161,12 +161,12 @@ void PPUDebugWindow::ClearAll()
         wxImage image(8, 8);
         wxBitmap bitmap(image, 24);
 
-        wxClientDC dc(primarySprite[i]);
+        wxClientDC dc(PrimarySprite[i]);
         dc.DrawBitmap(bitmap, 0, 0);
     }
 }
 
 int PPUDebugWindow::GetCurrentPalette()
 {
-    return patternTableDisplay->GetCurrentPalette();
+    return PatternDisplay->GetCurrentPalette();
 }

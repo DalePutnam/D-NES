@@ -21,16 +21,16 @@ public:
     int GetCurrentPalette();
 
 private:
-    MainWindow* mainWindow;
+    MainWindow* ParentWindow;
 
-    int paletteIndex;
+    int PaletteIndex;
 
-    PatternTableDisplay *patternTableDisplay;
+    PatternTableDisplay *PatternDisplay;
 
-    wxPanel* nameTable[4];
-    wxPanel* patternTable[2];
-    wxPanel* palette[8];
-    wxPanel* primarySprite[64];
+    wxPanel* NameTable[4];
+    wxPanel* PatternTable[2];
+    wxPanel* Palette[8];
+    wxPanel* PrimarySprite[64];
 
     void OnQuit(wxCommandEvent& event);
     void OnPatternTableClicked(wxMouseEvent& event);

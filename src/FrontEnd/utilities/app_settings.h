@@ -17,18 +17,18 @@ public:
 
     void Save(); // Write out to file
 
-                 // Get a setting
+    // Get a setting
     template<typename T>
     bool Read(const wxString& name, T* value)
     {
-        return settings->Read(name, value);
+        return Settings->Read(name, value);
     }
 
     template<>
     bool Read<std::string>(const wxString& name, std::string* value)
     {
         wxString str(*value);
-        bool result = settings->Read(name, &str);
+        bool result = Settings->Read(name, &str);
 
         *value = str.ToStdString();
         return result;
@@ -38,7 +38,7 @@ public:
     template<typename T>
     bool Write(const wxString& name, const T& value)
     {
-        return settings->Write(name, value);
+        return Settings->Write(name, value);
     }
 
 private:
@@ -52,6 +52,6 @@ private:
     ~AppSettings(); // Prevent unwanted destruction
 
     // Application Settings
-    wxFileConfig* settings;
+    wxFileConfig* Settings;
 
 };

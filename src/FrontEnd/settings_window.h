@@ -14,11 +14,11 @@ public:
     void SaveSettings();
 
 private:
-    wxNotebook* notebook;
-    wxTextCtrl* romDirectory;
-    wxButton* directorySelect;
-    wxButton* ok;
-    wxButton* cancel;
+    wxNotebook* Notebook;
+    wxTextCtrl* RomDirectory;
+    wxButton* DirectorySelect;
+    wxButton* OkButton;
+    wxButton* CancelButton;
 
     void PopulateFields();
     void OnDirectorySelect(wxCommandEvent& event);;

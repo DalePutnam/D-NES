@@ -21,56 +21,56 @@ void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
     wxClientDC cdc(this);
     cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
 
-    if (ppuDebugWindow != nullptr)
+    if (PpuDebugWindow != nullptr)
     {
         std::lock_guard<std::mutex> lock(PpuDebugMutex);
 
-        if (ppuDebugWindow != nullptr)
+        if (PpuDebugWindow != nullptr)
         {
             for (int i = 0; i < 64; ++i)
             {
                 if (i < 2)
                 {
                     uint8_t patternTable[256 * 128 * 3];
-                    nes->GetPatternTable(i, ppuDebugWindow->GetCurrentPalette(), patternTable);
-                    ppuDebugWindow->UpdatePatternTable(i, patternTable);
+                    Nes->GetPatternTable(i, PpuDebugWindow->GetCurrentPalette(), patternTable);
+                    PpuDebugWindow->UpdatePatternTable(i, patternTable);
                 }
 
                 if (i < 4)
                 {
                     uint8_t nameTable[256 * 240 * 3];
-                    nes->GetNameTable(i, nameTable);
-                    ppuDebugWindow->UpdateNameTable(i, nameTable);
+                    Nes->GetNameTable(i, nameTable);
+                    PpuDebugWindow->UpdateNameTable(i, nameTable);
                 }
 
                 if (i < 8)
                 {
                     uint8_t palette[64 * 16 * 3];
-                    nes->GetPalette(i, palette);
-                    ppuDebugWindow->UpdatePalette(i, palette);
+                    Nes->GetPalette(i, palette);
+                    PpuDebugWindow->UpdatePalette(i, palette);
                 }
 
                 uint8_t sprite[8 * 8 * 3];
-                nes->GetPrimarySprite(i, sprite);
-                ppuDebugWindow->UpdatePrimarySprite(i, sprite);
+                Nes->GetPrimarySprite(i, sprite);
+                PpuDebugWindow->UpdatePrimarySprite(i, sprite);
             }
         }
     }
 
-    fpsCounter++;
+    FpsCounter++;
 
     using namespace std::chrono;
 
     steady_clock::time_point now = steady_clock::now();
-    microseconds time_span = duration_cast<microseconds>(now - intervalStart);
+    microseconds time_span = duration_cast<microseconds>(now - IntervalStart);
     if (time_span.count() >= 1000000)
     {
-        currentFPS = fpsCounter;
-        fpsCounter = 0;
-        intervalStart = steady_clock::now();
+        CurrentFps = FpsCounter;
+        FpsCounter = 0;
+        IntervalStart = steady_clock::now();
 
         std::ostringstream oss;
-        oss << currentFPS << " FPS - " << nes->GetGameName();
+        oss << CurrentFps << " FPS - " << Nes->GetGameName();
         SetTitle(oss.str());
     }
 }
@@ -86,45 +86,44 @@ void MainWindow::OnEmulatorError(std::string err)
 
 void MainWindow::StartEmulator(const std::string& filename)
 {
-    if (nes == nullptr)
+    if (Nes == nullptr)
     {
         AppSettings* appSettings = AppSettings::GetInstance();
 
         NesParams params;
         params.RomPath = filename;
         appSettings->Read("/Paths/RomSavePath", &params.SavePath);
-        params.CpuLogEnabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
-        params.FrameLimitEnabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
-        params.SoundMuted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
-        params.FiltersEnabled = emulator->FindItem(ID_EMULATOR_FILTER)->IsChecked();
+        params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
+        params.FrameLimitEnabled = EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
+        params.SoundMuted = EmulatorMenu->FindItem(ID_EMULATOR_MUTE)->IsChecked();
+        params.FiltersEnabled = EmulatorMenu->FindItem(ID_EMULATOR_FILTER)->IsChecked();
 
         try
         {
-            nes = new NES(params);
-            nes->BindFrameCompleteCallback(&MainWindow::OnEmulatorFrameComplete, this);
-            nes->BindErrorCallback(&MainWindow::OnEmulatorError, this);
+            Nes = new NES(params);
+            Nes->BindFrameCompleteCallback(&MainWindow::OnEmulatorFrameComplete, this);
+            Nes->BindErrorCallback(&MainWindow::OnEmulatorError, this);
         }
         catch (std::exception &e)
         {
             wxMessageDialog message(nullptr, e.what(), "ERROR", wxOK | wxICON_ERROR);
             message.ShowModal();
 
-            delete nes;
-            nes = nullptr;
+            delete Nes;
+            Nes = nullptr;
             return;
         }
 
-        fpsCounter = 0;
-        intervalStart = std::chrono::steady_clock::now();
-        nes->Start();
+        FpsCounter = 0;
+        IntervalStart = std::chrono::steady_clock::now();
+        Nes->Start();
 
-        romList = 0;
-        vbox->Clear(true);
-        SetTitle(nes->GetGameName());
-        SetClientSize(gameSize);
+        VerticalBox->Hide(RomList);
+        SetTitle(Nes->GetGameName());
+        SetClientSize(GameWindowSize);
 
 #ifndef _WINDOWS
-        panel->SetFocus();
+        Panel->SetFocus();
 #endif
     }
     else
@@ -136,81 +135,80 @@ void MainWindow::StartEmulator(const std::string& filename)
 
 void MainWindow::StopEmulator(bool showRomList)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        nes->Stop();
-        delete nes;
-        nes = nullptr;
+        Nes->Stop();
+        delete Nes;
+        Nes = nullptr;
 
         if (showRomList)
         {
-            romList = new GameList(this);
-            vbox->Add(romList, 1, wxEXPAND | wxALL);
-            romList->PopulateList();
+            VerticalBox->Show(RomList);
+            RomList->PopulateList();
             SetSize(wxSize(600, 460));
             SetTitle("D-NES");
         }
 
-        if (ppuDebugWindow != nullptr)
+        if (PpuDebugWindow != nullptr)
         {
-            ppuDebugWindow->ClearAll();
+            PpuDebugWindow->ClearAll();
         }
     }
 }
 
 void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        bool enabled = settings->FindItem(ID_CPU_LOG)->IsChecked();
-        nes->CpuSetLogEnabled(enabled);
+        bool enabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
+        Nes->CpuSetLogEnabled(enabled);
 
-        bool muted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
+        bool muted = EmulatorMenu->FindItem(ID_EMULATOR_MUTE)->IsChecked();
 
         if (!muted && enabled)
         {
-            nes->ApuSetMuted(true);
+            Nes->ApuSetMuted(true);
         }
         else if (!muted && !enabled)
         {
-            nes->ApuSetMuted(false);
+            Nes->ApuSetMuted(false);
         }
     }
 }
 
 void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        bool enabled = emulator->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
-        nes->PpuSetFrameLimitEnabled(enabled);
+        bool enabled = EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
+        Nes->PpuSetFrameLimitEnabled(enabled);
     }
 }
 
 void MainWindow::ToggleMute(wxCommandEvent& event)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        bool muted = emulator->FindItem(ID_EMULATOR_MUTE)->IsChecked();
-        nes->ApuSetMuted(muted);
+        bool muted = EmulatorMenu->FindItem(ID_EMULATOR_MUTE)->IsChecked();
+        Nes->ApuSetMuted(muted);
     }
 }
 
 void MainWindow::ToggleFilters(wxCommandEvent& event)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        bool enabled = emulator->FindItem(ID_EMULATOR_FILTER)->IsChecked();
-        nes->ApuSetFiltersEnabled(enabled);
+        bool enabled = EmulatorMenu->FindItem(ID_EMULATOR_FILTER)->IsChecked();
+        Nes->ApuSetFiltersEnabled(enabled);
     }
 }
 
 void MainWindow::ToggleNtscDecoding(wxCommandEvent& event)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        bool enabled = emulator->FindItem(ID_EMULATOR_NTSC_DECODE)->IsChecked();
-        nes->PpuSetNtscDecoderEnabled(enabled);
+        bool enabled = EmulatorMenu->FindItem(ID_EMULATOR_NTSC_DECODE)->IsChecked();
+        Nes->PpuSetNtscDecoderEnabled(enabled);
     }
 }
 
@@ -222,16 +220,16 @@ void MainWindow::OnSettings(wxCommandEvent& WXUNUSED(event))
         settings.SaveSettings();
     }
 
-    if (romList)
+    if (RomList)
     {
-        romList->PopulateList();
+        RomList->PopulateList();
     }
 }
 
 void MainWindow::OnROMDoubleClick(wxListEvent& event)
 {
     AppSettings* settings = AppSettings::GetInstance();
-    wxString filename = romList->GetItemText(event.GetIndex(), 0);
+    wxString filename = RomList->GetItemText(event.GetIndex(), 0);
 
     wxString romName;
     settings->Read("/Paths/RomPath", &romName);
@@ -256,9 +254,9 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnEmulatorResume(wxCommandEvent& WXUNUSED(event))
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        nes->Resume();
+        Nes->Resume();
     }
 }
 
@@ -269,55 +267,55 @@ void MainWindow::OnEmulatorStop(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnEmulatorPause(wxCommandEvent& WXUNUSED(event))
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        nes->Pause();
+        Nes->Pause();
     }
 }
 
 void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 {
-    if (size->IsChecked(ID_EMULATOR_SCALE_1X))
+    if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_1X))
     {
-        gameSize = wxSize(256, 240);
+        GameWindowSize = wxSize(256, 240);
     }
-    else if (size->IsChecked(ID_EMULATOR_SCALE_2X))
+    else if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_2X))
     {
-        gameSize = wxSize(512, 480);
+        GameWindowSize = wxSize(512, 480);
     }
-    else if (size->IsChecked(ID_EMULATOR_SCALE_3X))
+    else if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_3X))
     {
-        gameSize = wxSize(768, 720);
+        GameWindowSize = wxSize(768, 720);
     }
-    else if (size->IsChecked(ID_EMULATOR_SCALE_4X))
+    else if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_4X))
     {
-        gameSize = wxSize(1024, 960);
+        GameWindowSize = wxSize(1024, 960);
     }
 
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        SetClientSize(gameSize);
+        SetClientSize(GameWindowSize);
     }
 }
 
 
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
-    if (ppuDebugWindow == nullptr)
+    if (PpuDebugWindow == nullptr)
     {
-        ppuDebugWindow = new PPUDebugWindow(this);
-        ppuDebugWindow->Show();
+        PpuDebugWindow = new PPUDebugWindow(this);
+        PpuDebugWindow->Show();
     }
 }
 
 void MainWindow::PPUDebugClose()
 {
-    if (ppuDebugWindow != nullptr)
+    if (PpuDebugWindow != nullptr)
     {
         std::lock_guard<std::mutex> lock(PpuDebugMutex);
 
-        ppuDebugWindow->Destroy();
-        ppuDebugWindow = nullptr;
+        PpuDebugWindow->Destroy();
+        PpuDebugWindow = nullptr;
     }
 }
 
@@ -336,7 +334,7 @@ void MainWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnSize(wxSizeEvent& event)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
         //event.Skip();
     }
@@ -344,35 +342,35 @@ void MainWindow::OnSize(wxSizeEvent& event)
 
 void MainWindow::OnKeyDown(wxKeyEvent& event)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        unsigned char currentState = nes->GetControllerOneState();
+        unsigned char currentState = Nes->GetControllerOneState();
 
         switch (event.GetKeyCode())
         {
         case 'Z':
-            nes->SetControllerOneState(currentState | 0x1);
+            Nes->SetControllerOneState(currentState | 0x1);
             break;
         case 'X':
-            nes->SetControllerOneState(currentState | 0x2);
+            Nes->SetControllerOneState(currentState | 0x2);
             break;
         case WXK_CONTROL:
-            nes->SetControllerOneState(currentState | 0x4);
+            Nes->SetControllerOneState(currentState | 0x4);
             break;
         case WXK_RETURN:
-            nes->SetControllerOneState(currentState | 0x8);
+            Nes->SetControllerOneState(currentState | 0x8);
             break;
         case WXK_UP:
-            nes->SetControllerOneState(currentState | 0x10);
+            Nes->SetControllerOneState(currentState | 0x10);
             break;
         case WXK_DOWN:
-            nes->SetControllerOneState(currentState | 0x20);
+            Nes->SetControllerOneState(currentState | 0x20);
             break;
         case WXK_LEFT:
-            nes->SetControllerOneState(currentState | 0x40);
+            Nes->SetControllerOneState(currentState | 0x40);
             break;
         case WXK_RIGHT:
-            nes->SetControllerOneState(currentState | 0x80);
+            Nes->SetControllerOneState(currentState | 0x80);
             break;
         default:
             break;
@@ -382,35 +380,35 @@ void MainWindow::OnKeyDown(wxKeyEvent& event)
 
 void MainWindow::OnKeyUp(wxKeyEvent& event)
 {
-    if (nes != nullptr)
+    if (Nes != nullptr)
     {
-        unsigned char currentState = nes->GetControllerOneState();
+        unsigned char currentState = Nes->GetControllerOneState();
 
         switch (event.GetKeyCode())
         {
         case 'Z':
-            nes->SetControllerOneState(currentState & ~0x1);
+            Nes->SetControllerOneState(currentState & ~0x1);
             break;
         case 'X':
-            nes->SetControllerOneState(currentState & ~0x2);
+            Nes->SetControllerOneState(currentState & ~0x2);
             break;
         case WXK_CONTROL:
-            nes->SetControllerOneState(currentState & ~0x4);
+            Nes->SetControllerOneState(currentState & ~0x4);
             break;
         case WXK_RETURN:
-            nes->SetControllerOneState(currentState & ~0x8);
+            Nes->SetControllerOneState(currentState & ~0x8);
             break;
         case WXK_UP:
-            nes->SetControllerOneState(currentState & ~0x10);
+            Nes->SetControllerOneState(currentState & ~0x10);
             break;
         case WXK_DOWN:
-            nes->SetControllerOneState(currentState & ~0x20);
+            Nes->SetControllerOneState(currentState & ~0x20);
             break;
         case WXK_LEFT:
-            nes->SetControllerOneState(currentState & ~0x40);
+            Nes->SetControllerOneState(currentState & ~0x40);
             break;
         case WXK_RIGHT:
-            nes->SetControllerOneState(currentState & ~0x80);
+            Nes->SetControllerOneState(currentState & ~0x80);
             break;
         default:
             break;
@@ -420,53 +418,53 @@ void MainWindow::OnKeyUp(wxKeyEvent& event)
 
 MainWindow::MainWindow()
     : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460))
-    , nes(nullptr)
-    , fpsCounter(0)
-    , currentFPS(0)
-    , intervalStart(std::chrono::steady_clock::now())
-    , ppuDebugWindow(nullptr)
-    , gameSize(wxSize(256, 240))
+    , Nes(nullptr)
+    , FpsCounter(0)
+    , CurrentFps(0)
+    , IntervalStart(std::chrono::steady_clock::now())
+    , PpuDebugWindow(nullptr)
+    , GameWindowSize(wxSize(256, 240))
 {
-    file = new wxMenu;
-    file->Append(ID_OPEN_ROM, wxT("&Open ROM"));
-    file->AppendSeparator();
-    file->Append(wxID_EXIT, wxT("&Quit"));
+    FileMenu = new wxMenu;
+    FileMenu->Append(ID_OPEN_ROM, wxT("&Open ROM"));
+    FileMenu->AppendSeparator();
+    FileMenu->Append(wxID_EXIT, wxT("&Quit"));
 
-    size = new wxMenu;
-    size->AppendRadioItem(ID_EMULATOR_SCALE_1X, wxT("1X"));
-    size->AppendRadioItem(ID_EMULATOR_SCALE_2X, wxT("2X"));
-    size->AppendRadioItem(ID_EMULATOR_SCALE_3X, wxT("3X"));
-    size->AppendRadioItem(ID_EMULATOR_SCALE_4X, wxT("4X"));
+    SizeSubMenu = new wxMenu;
+    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_1X, wxT("1X"));
+    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_2X, wxT("2X"));
+    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_3X, wxT("3X"));
+    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_4X, wxT("4X"));
 
-    emulator = new wxMenu;
-    emulator->Append(ID_EMULATOR_PAUSE, wxT("&Pause"));
-    emulator->Append(ID_EMULATOR_RESUME, wxT("&Resume"));
-    emulator->Append(ID_EMULATOR_STOP, wxT("&Stop"));
-    emulator->AppendSeparator();
-    emulator->AppendSubMenu(size, wxT("&Size"));
-    emulator->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
-    emulator->FindItem(ID_EMULATOR_LIMIT)->Check();
-    emulator->AppendCheckItem(ID_EMULATOR_NTSC_DECODE, wxT("&Enable NTSC Decoding"));
-    emulator->AppendCheckItem(ID_EMULATOR_MUTE, wxT("&Mute"));
-    emulator->AppendCheckItem(ID_EMULATOR_FILTER, wxT("&Filters Enabled"));
-    emulator->AppendSeparator();
-    emulator->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
+    EmulatorMenu = new wxMenu;
+    EmulatorMenu->Append(ID_EMULATOR_PAUSE, wxT("&Pause"));
+    EmulatorMenu->Append(ID_EMULATOR_RESUME, wxT("&Resume"));
+    EmulatorMenu->Append(ID_EMULATOR_STOP, wxT("&Stop"));
+    EmulatorMenu->AppendSeparator();
+    EmulatorMenu->AppendSubMenu(SizeSubMenu, wxT("&Size"));
+    EmulatorMenu->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
+    EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->Check();
+    EmulatorMenu->AppendCheckItem(ID_EMULATOR_NTSC_DECODE, wxT("&Enable NTSC Decoding"));
+    EmulatorMenu->AppendCheckItem(ID_EMULATOR_MUTE, wxT("&Mute"));
+    EmulatorMenu->AppendCheckItem(ID_EMULATOR_FILTER, wxT("&Filters Enabled"));
+    EmulatorMenu->AppendSeparator();
+    EmulatorMenu->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
-    settings = new wxMenu;
-    settings->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
-    settings->AppendSeparator();
-    settings->Append(ID_SETTINGS, wxT("&All Settings"));
+    SettingsMenu = new wxMenu;
+    SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
+    SettingsMenu->AppendSeparator();
+    SettingsMenu->Append(ID_SETTINGS, wxT("&All Settings"));
 
-    about = new wxMenu;
-    about->Append(wxID_ANY, wxT("&About"));
+    AboutMenu = new wxMenu;
+    AboutMenu->Append(wxID_ANY, wxT("&About"));
 
-    menuBar = new wxMenuBar;
-    menuBar->Append(file, wxT("&File"));
-    menuBar->Append(emulator, wxT("&Emulator"));
-    menuBar->Append(settings, wxT("&Settings"));
-    menuBar->Append(about, wxT("&About"));
+    MenuBar = new wxMenuBar;
+    MenuBar->Append(FileMenu, wxT("&File"));
+    MenuBar->Append(EmulatorMenu, wxT("&Emulator"));
+    MenuBar->Append(SettingsMenu, wxT("&Settings"));
+    MenuBar->Append(AboutMenu, wxT("&About"));
 
-    SetMenuBar(menuBar);
+    SetMenuBar(MenuBar);
 
     Bind(wxEVT_LIST_ITEM_ACTIVATED, wxListEventHandler(MainWindow::OnROMDoubleClick), this, wxID_ANY);
 
@@ -495,17 +493,17 @@ MainWindow::MainWindow()
     Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
 #else
-    panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
-    panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
-    panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+    Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
+    Panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
+    Panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
 #endif
 
-    romList = new GameList(this);
-    romList->PopulateList();
+    RomList = new GameList(this);
+    RomList->PopulateList();
 
-    vbox = new wxBoxSizer(wxVERTICAL);
-    vbox->Add(romList, 1, wxEXPAND | wxALL);
-    SetSizer(vbox);
+    VerticalBox = new wxBoxSizer(wxVERTICAL);
+    VerticalBox->Add(RomList, 1, wxEXPAND | wxALL);
+    SetSizer(VerticalBox);
 
     SetMinClientSize(wxSize(256, 240));
     Centre();

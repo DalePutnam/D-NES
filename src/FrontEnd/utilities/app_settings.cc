@@ -19,30 +19,30 @@ AppSettings::AppSettings()
 
     if (configStream.IsOk())
     {
-        settings = new wxFileConfig(configStream);
+        Settings = new wxFileConfig(configStream);
     }
     else
     {
-        settings = new wxFileConfig();
+        Settings = new wxFileConfig();
     }
 
 
-    if (!settings->HasEntry("/Paths/RomPath"))
+    if (!Settings->HasEntry("/Paths/RomPath"))
     {
-        settings->Write("/Paths/RomPath", wxGetCwd());
+        Settings->Write("/Paths/RomPath", wxGetCwd());
     }
 
-    if (!settings->HasEntry("/Paths/RomSavePath"))
+    if (!Settings->HasEntry("/Paths/RomSavePath"))
     {
         wxFileName file(wxGetCwd(), "saves");
-        settings->Write("/Paths/RomSavePath", file.GetFullPath());
+        Settings->Write("/Paths/RomSavePath", file.GetFullPath());
     }    
 }
 
 AppSettings::~AppSettings()
 {
     Save();
-    delete settings;
+    delete Settings;
 }
 
 void AppSettings::Save()
@@ -51,7 +51,7 @@ void AppSettings::Save()
 
     if (configStream.IsOk())
     {
-        settings->Save(configStream);
+        Settings->Save(configStream);
     }
 }
 

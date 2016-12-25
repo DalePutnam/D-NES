@@ -11,46 +11,46 @@ void SettingsWindow::PopulateFields()
     wxString romPath;
     settings->Read("/Paths/RomPath", &romPath);
 
-    *romDirectory << romPath;
+    *RomDirectory << romPath;
 }
 
 void SettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))
 {
-    wxDirDialog dialog(NULL, "Choose ROM Path", romDirectory->GetLineText(0));
+    wxDirDialog dialog(NULL, "Choose ROM Path", RomDirectory->GetLineText(0));
 
     if (dialog.ShowModal() == wxID_OK)
     {
-        romDirectory->Clear();
-        *romDirectory << dialog.GetPath();
+        RomDirectory->Clear();
+        *RomDirectory << dialog.GetPath();
     }
 }
 
 SettingsWindow::SettingsWindow()
     : wxDialog(NULL, wxID_ANY, "Settings", wxDefaultPosition, wxDefaultSize)
 {
-    notebook = new wxNotebook(this, wxID_ANY, wxPoint(-1, -1), wxSize(-1, -1), wxNB_TOP);
-    wxWindow* page1 = new wxWindow(notebook, wxID_ANY);
+    Notebook = new wxNotebook(this, wxID_ANY, wxPoint(-1, -1), wxSize(-1, -1), wxNB_TOP);
+    wxWindow* page1 = new wxWindow(Notebook, wxID_ANY);
     page1->SetBackgroundColour(*wxWHITE);
     wxBoxSizer* hbox0 = new wxBoxSizer(wxHORIZONTAL);
     page1->SetSizer(hbox0);
-    notebook->AddPage(page1, "Basic Settings");
+    Notebook->AddPage(page1, "Basic Settings");
 
     wxStaticText* label0 = new wxStaticText(page1, wxID_ANY, "ROM Path:");
-    romDirectory = new wxTextCtrl(page1, wxID_ANY, "", wxDefaultPosition, wxSize(150, 24));
-    directorySelect = new wxButton(page1, ID_DIR_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    RomDirectory = new wxTextCtrl(page1, wxID_ANY, "", wxDefaultPosition, wxSize(150, 24));
+    DirectorySelect = new wxButton(page1, ID_DIR_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     hbox0->Add(label0, 0, wxALIGN_CENTER_VERTICAL);
-    hbox0->Add(romDirectory, 1, wxALIGN_CENTER_VERTICAL);
-    hbox0->Add(directorySelect, 0, wxALIGN_CENTER_VERTICAL);
+    hbox0->Add(RomDirectory, 1, wxALIGN_CENTER_VERTICAL);
+    hbox0->Add(DirectorySelect, 0, wxALIGN_CENTER_VERTICAL);
 
-    ok = new wxButton(this, wxID_OK, "OK");
-    cancel = new wxButton(this, wxID_CANCEL, "Cancel");
+    OkButton = new wxButton(this, wxID_OK, "OK");
+    CancelButton = new wxButton(this, wxID_CANCEL, "Cancel");
 
     wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
-    hbox1->Add(ok, 0, wxALIGN_CENTER_VERTICAL);
-    hbox1->Add(cancel, 0, wxALIGN_CENTER_VERTICAL);
+    hbox1->Add(OkButton, 0, wxALIGN_CENTER_VERTICAL);
+    hbox1->Add(CancelButton, 0, wxALIGN_CENTER_VERTICAL);
 
     wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
-    vbox->Add(notebook, 1, wxEXPAND | wxALL);
+    vbox->Add(Notebook, 1, wxEXPAND | wxALL);
     vbox->Add(hbox1, 0, wxALIGN_RIGHT);
 
     SetSizer(vbox);
@@ -64,6 +64,6 @@ SettingsWindow::SettingsWindow()
 void SettingsWindow::SaveSettings()
 {
     AppSettings* settings = AppSettings::GetInstance();
-    settings->Write("/Paths/RomPath", romDirectory->GetLineText(0));
+    settings->Write("/Paths/RomPath", RomDirectory->GetLineText(0));
     settings->Save();
 }

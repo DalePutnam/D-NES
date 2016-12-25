@@ -17,7 +17,7 @@ public:
 private:
     void OnClicked(wxMouseEvent& event);
 
-    int currentPalette;
-    wxPanel* table1;
-    wxPanel* table2;
+    int CurrentPalette;
+    wxPanel* Table1;
+    wxPanel* Table2;
 };

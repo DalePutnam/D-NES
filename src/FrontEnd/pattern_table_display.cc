@@ -6,12 +6,12 @@
 
 void PatternTableDisplay::OnClicked(wxMouseEvent& WXUNUSED(event))
 {
-    currentPalette = (currentPalette + 1) % 8;
+    CurrentPalette = (CurrentPalette + 1) % 8;
 }
 
 PatternTableDisplay::PatternTableDisplay(wxWindow* parent)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(256, 128))
-    , currentPalette(0)
+    , CurrentPalette(0)
 {
     SetBackgroundColour(*wxBLACK);
     Bind(wxEVT_LEFT_DOWN, wxMouseEventHandler(PatternTableDisplay::OnClicked), this, wxID_ANY);
@@ -46,5 +46,5 @@ void PatternTableDisplay::Clear()
 
 int PatternTableDisplay::GetCurrentPalette()
 {
-    return currentPalette;
+    return CurrentPalette;
 }

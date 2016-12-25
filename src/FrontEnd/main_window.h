@@ -34,26 +34,26 @@ public:
     void PPUDebugClose();
 
 private:
-    NES* nes;
+    NES* Nes;
     std::mutex PpuDebugMutex;
 
-    PPUDebugWindow* ppuDebugWindow;
+    PPUDebugWindow* PpuDebugWindow;
 
-    wxPanel* panel;
-    wxMenuBar* menuBar;
-    wxMenu* file;
-    wxMenu* size;
-    wxMenu* emulator;
-    wxMenu* settings;
-    wxMenu* about;
+    wxPanel* Panel;
+    wxMenuBar* MenuBar;
+    wxMenu* FileMenu;
+    wxMenu* SizeSubMenu;
+    wxMenu* EmulatorMenu;
+    wxMenu* SettingsMenu;
+    wxMenu* AboutMenu;
 
-    wxBoxSizer* vbox;
-    GameList* romList;
+    wxBoxSizer* VerticalBox;
+    GameList* RomList;
 
-    int fpsCounter;
-    std::atomic<int> currentFPS;
-    std::chrono::steady_clock::time_point intervalStart;
-    std::atomic<wxSize> gameSize;
+    int FpsCounter;
+    std::atomic<int> CurrentFps;
+    std::chrono::steady_clock::time_point IntervalStart;
+    std::atomic<wxSize> GameWindowSize;
 
     void StartEmulator(const std::string& filename);
 
