@@ -746,7 +746,7 @@ void APU::DmcUnit::ClockTimer()
     {
         if (--MemoryStallCountdown == 0)
         {
-            SampleBuffer = Apu.cart->PrgRead(CurrentAddress - 0x6000);
+            SampleBuffer = Apu.Cartridge->PrgRead(CurrentAddress - 0x6000);
             SampleBufferEmptyFlag = false;
 
             if (--SampleBytesRemaining == 0)
@@ -843,7 +843,7 @@ uint8_t APU::DmcUnit::operator()()
 
 APU::APU()
     : Cpu(nullptr)
-    , cart(nullptr)
+    , Cartridge(nullptr)
     , PulseOne(true)
     , PulseTwo(false)
     , Dmc(*this)
@@ -860,16 +860,12 @@ APU::APU()
     , HighPass90Hz(90.0f, 1.0f, false)
     , HighPass440Hz(440.0f, 1.0f, false)
     , LowPass14KHz(14000.0f, 1.0f, true)
+    , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
-    , PulseOneEnabled(true)
     , PulseTwoVolume(1.0f)
-    , PulseTwoEnabled(true)
     , TriangleVolume(1.0f)
-    , TriangleEnabled(true)
     , NoiseVolume(1.0f)
-    , NoiseEnabled(true)
     , DmcVolume(1.0f)
-    , DmcEnabled(true)
 {
 }
 
@@ -884,7 +880,7 @@ void APU::AttachCPU(CPU* cpu)
 
 void APU::AttachCart(Cart* cart)
 {
-    this->cart = cart;
+    this->Cartridge = cart;
 }
 
 void APU::Step()
@@ -975,11 +971,11 @@ void APU::Step()
         if (!IsMuted)
         {
             // Decided to use the exact calculation rather than the lookup tables for this
-            float pulse1 = PulseOneEnabled ? PulseOne() * PulseOneVolume : 0.0f;
-            float pulse2 = PulseTwoEnabled ? PulseTwo() * PulseTwoVolume : 0.0f;
-            float triangle = TriangleEnabled ? Triangle() * TriangleVolume : 0.0f;
-            float noise = NoiseEnabled ? Noise() * NoiseVolume : 0.0f;
-            float dmc = DmcEnabled ? Dmc() * DmcVolume : 0.0f;
+            float pulse1 = PulseOne() * PulseOneVolume;
+            float pulse2 = PulseTwo() * PulseTwoVolume;
+            float triangle = Triangle() * TriangleVolume;
+            float noise = Noise() * NoiseVolume;
+            float dmc = Dmc() * DmcVolume;
 
             float PulseOut = 0.0f;
             float TndOut = 0.0f;
@@ -1008,7 +1004,7 @@ void APU::Step()
                 FinalOutput = RawOutput;
             }
 
-            Backend << FinalOutput;
+            Backend << (FinalOutput * MasterVolume);
         }
     }
 
@@ -1124,6 +1120,16 @@ void APU::SetMuted(bool mute)
     }
 }
 
+void APU::SetMasterVolume(float volume)
+{
+    MasterVolume = clamp(volume, 0.0f, 1.0f);
+}
+
+float APU::GetMasterVolume()
+{
+    return MasterVolume;
+}
+
 void APU::SetFiltersEnabled(bool enabled)
 {
     if (enabled && !FilteringEnabled)
@@ -1144,11 +1150,6 @@ void APU::SetFiltersEnabled(bool enabled)
     }
 }
 
-void APU::SetPulseOneEnabled(bool enabled)
-{
-    PulseOneEnabled = enabled;
-}
-
 void APU::SetPulseOneVolume(float volume)
 {
     PulseOneVolume = clamp(volume, 0.0f, 1.0f);
@@ -1157,11 +1158,6 @@ void APU::SetPulseOneVolume(float volume)
 float APU::GetPulseOneVolume()
 {
     return PulseOneVolume;
-}
-
-void APU::SetPulseTwoEnabled(bool enabled)
-{
-    PulseTwoEnabled = enabled;
 }
 
 void APU::SetPulseTwoVolume(float volume)
@@ -1174,11 +1170,6 @@ float APU::GetPulseTwoVolume()
     return PulseTwoVolume;
 }
 
-void APU::SetTriangleEnabled(bool enabled)
-{
-    TriangleEnabled = enabled;
-}
-
 void APU::SetTriangleVolume(float volume)
 {
     TriangleVolume = clamp(volume, 0.0f, 1.0f);
@@ -1189,11 +1180,6 @@ float APU::GetTriangleVolume()
     return TriangleVolume;
 }
 
-void APU::SetNoiseEnabled(bool enabled)
-{
-    NoiseEnabled = enabled;
-}
-
 void APU::SetNoiseVolume(float volume)
 {
     NoiseVolume = clamp(volume, 0.0f, 1.0f);
@@ -1202,11 +1188,6 @@ void APU::SetNoiseVolume(float volume)
 float APU::GetNoiseVolume()
 {
     return NoiseVolume;
-}
-
-void APU::SetDmcEnabled(bool enabled)
-{
-    DmcEnabled = enabled;
 }
 
 void APU::SetDmcVolume(float volume)

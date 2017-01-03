@@ -37,20 +37,19 @@ public:
     void WriteAPUFrameCounter(uint8_t value);
 
     void SetMuted(bool mute);
+    void SetMasterVolume(float volume);
+    float GetMasterVolume();
+
     void SetFiltersEnabled(bool enabled);
-    void SetPulseOneEnabled(bool enabled);
+
     void SetPulseOneVolume(float volume);
     float GetPulseOneVolume();
-    void SetPulseTwoEnabled(bool enabled);
     void SetPulseTwoVolume(float volume);
     float GetPulseTwoVolume();
-    void SetTriangleEnabled(bool enabled);
     void SetTriangleVolume(float volume);
     float GetTriangleVolume();
-    void SetNoiseEnabled(bool enabled);
     void SetNoiseVolume(float volume);
     float GetNoiseVolume();
-    void SetDmcEnabled(bool enabled);
     void SetDmcVolume(float volume);
     float GetDmcVolume();
 
@@ -246,7 +245,7 @@ private:
     static constexpr uint32_t CYCLES_PER_SAMPLE = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
 
     CPU* Cpu;
-    Cart* cart;
+    Cart* Cartridge;
 
     PulseUnit PulseOne;
     PulseUnit PulseTwo;
@@ -276,14 +275,10 @@ private:
 
     AudioBackend Backend;
 
+    std::atomic<float> MasterVolume;
     std::atomic<float> PulseOneVolume;
-    std::atomic<bool> PulseOneEnabled;
     std::atomic<float> PulseTwoVolume;
-    std::atomic<bool> PulseTwoEnabled;
     std::atomic<float> TriangleVolume;
-    std::atomic<bool> TriangleEnabled;
     std::atomic<float> NoiseVolume;
-    std::atomic<bool> NoiseEnabled;
     std::atomic<float> DmcVolume;
-    std::atomic<bool> DmcEnabled;
 };

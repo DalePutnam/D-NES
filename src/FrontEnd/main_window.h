@@ -19,10 +19,11 @@
 
 #include "game_list.h"
 #include "ppu_debug_window.h"
+#include "audio_settings_window.h"
 
 class NES;
 
-wxDECLARE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
+wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 class MainWindow : public wxFrame
 {
@@ -38,6 +39,7 @@ private:
     std::mutex PpuDebugMutex;
 
     PPUDebugWindow* PpuDebugWindow;
+    AudioSettingsWindow* AudioWindow;
 
     wxPanel* Panel;
     wxMenuBar* MenuBar;
@@ -59,8 +61,6 @@ private:
 
     void ToggleCPULog(wxCommandEvent& event);
     void ToggleFrameLimit(wxCommandEvent& event);
-    void ToggleMute(wxCommandEvent& event);
-    void ToggleFilters(wxCommandEvent& event);
     void ToggleNtscDecoding(wxCommandEvent& event);
     void OnSettings(wxCommandEvent& event);
     void OnROMDoubleClick(wxListEvent& event);
@@ -70,6 +70,7 @@ private:
     void OnEmulatorPause(wxCommandEvent& event);
     void OnEmulatorScale(wxCommandEvent& event);
     void OnPPUDebug(wxCommandEvent& event);
+    void OpenAudioSettings(wxCommandEvent& event);
     void OnUnexpectedShutdown(wxThreadEvent& event);
     void OnQuit(wxCommandEvent& event);
     void OnSize(wxSizeEvent& event);
@@ -79,6 +80,8 @@ private:
 
     void OnEmulatorError(std::string err);
     void OnEmulatorFrameComplete(uint8_t* frameBuffer);
+
+    void OnAudioSettingsClosed(wxCommandEvent& event);
 };
 
 const int ID_OPEN_ROM = 100;
@@ -93,6 +96,5 @@ const int ID_EMULATOR_SCALE_2X = 108;
 const int ID_EMULATOR_SCALE_3X = 109;
 const int ID_EMULATOR_SCALE_4X = 110;
 const int ID_EMULATOR_LIMIT = 111;
-const int ID_EMULATOR_MUTE = 112;
-const int ID_EMULATOR_FILTER = 113;
 const int ID_EMULATOR_NTSC_DECODE = 114;
+const int ID_SETTINGS_AUDIO = 115;

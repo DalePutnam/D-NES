@@ -12,7 +12,7 @@
 #include "settings_window.h"
 #include "utilities/app_settings.h"
 
-wxDEFINE_EVENT(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
+wxDEFINE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
 {
@@ -58,8 +58,6 @@ void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
         }
     }
 
-    FpsCounter++;
-
     using namespace std::chrono;
 
     steady_clock::time_point now = steady_clock::now();
@@ -74,11 +72,24 @@ void MainWindow::OnEmulatorFrameComplete(uint8_t* frameBuffer)
         oss << CurrentFps << " FPS - " << Nes->GetGameName();
         SetTitle(oss.str());
     }
+    else
+    {
+        FpsCounter++;
+    }
+}
+
+void MainWindow::OnAudioSettingsClosed(wxCommandEvent& event)
+{
+    if (AudioWindow != nullptr)
+    {
+        AudioWindow->Destroy();
+        AudioWindow = nullptr;
+    }
 }
 
 void MainWindow::OnEmulatorError(std::string err)
 {
-    wxThreadEvent evt(wxEVT_NES_UNEXPECTED_SHUTDOWN);
+    wxThreadEvent evt(EVT_NES_UNEXPECTED_SHUTDOWN);
     evt.SetString(err);
 
     wxQueueEvent(this, evt.Clone());
@@ -95,8 +106,28 @@ void MainWindow::StartEmulator(const std::string& filename)
         params.RomPath = filename;
         params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
         params.FrameLimitEnabled = EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
-        params.SoundMuted = EmulatorMenu->FindItem(ID_EMULATOR_MUTE)->IsChecked();
-        params.FiltersEnabled = EmulatorMenu->FindItem(ID_EMULATOR_FILTER)->IsChecked();
+
+        bool audioEnabled, filtersEnabled;
+        appSettings->Read("/Audio/Enabled", &audioEnabled);
+        appSettings->Read("/Audio/FiltersEnabled", &filtersEnabled);
+
+        params.SoundMuted = !audioEnabled;
+        params.FiltersEnabled = filtersEnabled;
+
+        int master, pulseOne, pulseTwo, triangle, noise, dmc;
+        appSettings->Read("/Audio/MasterVolume", &master);
+        appSettings->Read("/Audio/PulseOneVolume", &pulseOne);
+        appSettings->Read("/Audio/PulseTwoVolume", &pulseTwo);
+        appSettings->Read("/Audio/TriangleVolume", &triangle);
+        appSettings->Read("/Audio/NoiseVolume", &noise);
+        appSettings->Read("/Audio/DmcVolume", &dmc);
+
+        params.MasterVolume = master / 100.0f;
+        params.PulseOneVolume = pulseOne / 100.0f;
+        params.PulseTwoVolume = pulseTwo / 100.0f;
+        params.TriangleVolume = triangle / 100.0f;
+        params.NoiseVolume = noise / 100.0f;
+        params.DmcVolume = dmc / 100.0f;
 
         appSettings->Read("/Paths/RomSavePath", &params.SavePath);
 
@@ -110,6 +141,11 @@ void MainWindow::StartEmulator(const std::string& filename)
             Nes = new NES(params);
             Nes->BindFrameCompleteCallback(&MainWindow::OnEmulatorFrameComplete, this);
             Nes->BindErrorCallback(&MainWindow::OnEmulatorError, this);
+
+            if (AudioWindow != nullptr)
+            {
+                AudioWindow->SetNes(Nes);
+            }
         }
         catch (std::exception &e)
         {
@@ -160,6 +196,11 @@ void MainWindow::StopEmulator(bool showRomList)
         {
             PpuDebugWindow->ClearAll();
         }
+
+        if (AudioWindow != nullptr)
+        {
+            AudioWindow->SetNes(nullptr);
+        }
     }
 }
 
@@ -167,19 +208,8 @@ void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
 {
     if (Nes != nullptr)
     {
-        bool enabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
-        Nes->CpuSetLogEnabled(enabled);
-
-        bool muted = EmulatorMenu->FindItem(ID_EMULATOR_MUTE)->IsChecked();
-
-        if (!muted && enabled)
-        {
-            Nes->ApuSetMuted(true);
-        }
-        else if (!muted && !enabled)
-        {
-            Nes->ApuSetMuted(false);
-        }
+        bool logEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
+        Nes->CpuSetLogEnabled(logEnabled);
     }
 }
 
@@ -189,24 +219,6 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
     {
         bool enabled = EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
         Nes->PpuSetFrameLimitEnabled(enabled);
-    }
-}
-
-void MainWindow::ToggleMute(wxCommandEvent& event)
-{
-    if (Nes != nullptr)
-    {
-        bool muted = EmulatorMenu->FindItem(ID_EMULATOR_MUTE)->IsChecked();
-        Nes->ApuSetMuted(muted);
-    }
-}
-
-void MainWindow::ToggleFilters(wxCommandEvent& event)
-{
-    if (Nes != nullptr)
-    {
-        bool enabled = EmulatorMenu->FindItem(ID_EMULATOR_FILTER)->IsChecked();
-        Nes->ApuSetFiltersEnabled(enabled);
     }
 }
 
@@ -313,6 +325,17 @@ void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
         PpuDebugWindow = new PPUDebugWindow(this);
         PpuDebugWindow->Show();
     }
+}
+
+void MainWindow::OpenAudioSettings(wxCommandEvent& event)
+{
+    if (AudioWindow == nullptr)
+    {
+        AudioWindow = new AudioSettingsWindow(this);
+    }
+
+    AudioWindow->SetNes(Nes);
+    AudioWindow->Show();
 }
 
 void MainWindow::PPUDebugClose()
@@ -452,13 +475,12 @@ MainWindow::MainWindow()
     EmulatorMenu->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
     EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->Check();
     EmulatorMenu->AppendCheckItem(ID_EMULATOR_NTSC_DECODE, wxT("&Enable NTSC Decoding"));
-    EmulatorMenu->AppendCheckItem(ID_EMULATOR_MUTE, wxT("&Mute"));
-    EmulatorMenu->AppendCheckItem(ID_EMULATOR_FILTER, wxT("&Filters Enabled"));
     EmulatorMenu->AppendSeparator();
     EmulatorMenu->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
     SettingsMenu = new wxMenu;
     SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
+    SettingsMenu->Append(ID_SETTINGS_AUDIO, wxT("&Audio Settings"));
     SettingsMenu->AppendSeparator();
     SettingsMenu->Append(ID_SETTINGS, wxT("&All Settings"));
 
@@ -478,6 +500,7 @@ MainWindow::MainWindow()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit), this, wxID_EXIT);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleCPULog), this, ID_CPU_LOG);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSettings), this, ID_SETTINGS);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenAudioSettings), this, ID_SETTINGS_AUDIO);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnOpenROM), this, ID_OPEN_ROM);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume), this, ID_EMULATOR_RESUME);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop), this, ID_EMULATOR_STOP);
@@ -488,13 +511,13 @@ MainWindow::MainWindow()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_4X);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleMute), this, ID_EMULATOR_MUTE);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFilters), this, ID_EMULATOR_FILTER);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleNtscDecoding), this, ID_EMULATOR_NTSC_DECODE);
 
-    Bind(wxEVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
+    Bind(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
 
     Bind(wxEVT_SIZING, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
+
+    Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
 
 #ifdef _WINDOWS
     Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);

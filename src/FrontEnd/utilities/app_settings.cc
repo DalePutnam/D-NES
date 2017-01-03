@@ -36,7 +36,47 @@ AppSettings::AppSettings()
     {
         wxFileName file(wxGetCwd(), "saves");
         Settings->Write("/Paths/RomSavePath", file.GetFullPath());
-    }    
+    }
+
+    if (!Settings->HasEntry("/Audio/Enabled"))
+    {
+        Settings->Write("/Audio/Enabled", true);
+    }
+
+    if (!Settings->HasEntry("/Audio/FiltersEnabled"))
+    {
+        Settings->Write("/Audio/FiltersEnabled", false);
+    }
+
+    if (!Settings->HasEntry("/Audio/MasterVolume"))
+    {
+        Settings->Write("/Audio/MasterVolume", 100);
+    }
+
+    if (!Settings->HasEntry("/Audio/PulseOneVolume"))
+    {
+        Settings->Write("/Audio/PulseOneVolume", 100);
+    }
+
+    if (!Settings->HasEntry("/Audio/PulseTwoVolume"))
+    {
+        Settings->Write("/Audio/PulseTwoVolume", 100);
+    }
+
+    if (!Settings->HasEntry("/Audio/TriangleVolume"))
+    {
+        Settings->Write("/Audio/TriangleVolume", 100);
+    }
+
+    if (!Settings->HasEntry("/Audio/NoiseVolume"))
+    {
+        Settings->Write("/Audio/NoiseVolume", 100);
+    }
+
+    if (!Settings->HasEntry("/Audio/DmcVolume"))
+    {
+        Settings->Write("/Audio/DmcVolume", 100);
+    }
 }
 
 AppSettings::~AppSettings()

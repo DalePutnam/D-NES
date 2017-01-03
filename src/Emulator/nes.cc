@@ -52,6 +52,12 @@ NES::NES(const NesParams& params)
 
     Apu->SetMuted(params.SoundMuted);
     Apu->SetFiltersEnabled(params.FiltersEnabled);
+    Apu->SetMasterVolume(params.MasterVolume);
+    Apu->SetPulseOneVolume(params.PulseOneVolume);
+    Apu->SetPulseTwoVolume(params.PulseTwoVolume);
+    Apu->SetTriangleVolume(params.TriangleVolume);
+    Apu->SetNoiseVolume(params.NoiseVolume);
+    Apu->SetDmcVolume(params.DmcVolume);
 }
 
 const std::string& NES::GetGameName()
@@ -112,6 +118,61 @@ void NES::ApuSetMuted(bool muted)
 void NES::ApuSetFiltersEnabled(bool enabled)
 {
     Apu->SetFiltersEnabled(enabled);
+}
+
+void NES::ApuSetMasterVolume(float volume)
+{
+    Apu->SetMasterVolume(volume);
+}
+
+void NES::ApuSetPulseOneVolume(float volume)
+{
+    Apu->SetPulseOneVolume(volume);
+}
+
+float NES::ApuGetPulseOneVolume()
+{
+    return Apu->GetPulseOneVolume();
+}
+
+void NES::ApuSetPulseTwoVolume(float volume)
+{
+    Apu->SetPulseTwoVolume(volume);
+}
+
+float NES::ApuGetPulseTwoVolume()
+{
+    return Apu->GetPulseTwoVolume();
+}
+
+void NES::ApuSetTriangleVolume(float volume)
+{
+    Apu->SetTriangleVolume(volume);
+}
+
+float NES::ApuGetTriangleVolume()
+{
+    return Apu->GetTriangleVolume();
+}
+
+void NES::ApuSetNoiseVolume(float volume)
+{
+    Apu->SetNoiseVolume(volume);
+}
+
+float NES::ApuGetNoiseVolume()
+{
+    return Apu->GetNoiseVolume();
+}
+
+void NES::ApuSetDmcVolume(float volume)
+{
+    Apu->SetDmcVolume(volume);
+}
+
+float NES::ApuGetDmcVolume()
+{
+    return Apu->GetDmcVolume();
 }
 
 bool NES::IsStopped()

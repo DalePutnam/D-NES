@@ -31,15 +31,27 @@ struct NesParams
     // APU Settings
     bool SoundMuted;
     bool FiltersEnabled;
+    float MasterVolume;
+    float PulseOneVolume;
+    float PulseTwoVolume;
+    float TriangleVolume;
+    float NoiseVolume;
+    float DmcVolume;
 
-    NesParams() :
-        RomPath(""),
-        SavePath(""),
-        CpuLogEnabled(false),
-        FrameLimitEnabled(true),
-        NtscDecoderEnabled(false),
-        SoundMuted(false),
-        FiltersEnabled(false)
+    NesParams()
+        : RomPath("")
+        , SavePath("")
+        , CpuLogEnabled(false)
+        , FrameLimitEnabled(true)
+        , NtscDecoderEnabled(false)
+        , SoundMuted(false)
+        , FiltersEnabled(false)
+        , MasterVolume(1.0f)
+        , PulseOneVolume(1.0f)
+        , PulseTwoVolume(1.0f)
+        , TriangleVolume(1.0f)
+        , NoiseVolume(1.0f)
+        , DmcVolume(1.0f)
     {}
 };
 
@@ -91,6 +103,17 @@ public:
 
     void ApuSetMuted(bool muted);
     void ApuSetFiltersEnabled(bool enabled);
+    void ApuSetMasterVolume(float volume);
+    void ApuSetPulseOneVolume(float volume);
+    float ApuGetPulseOneVolume();
+    void ApuSetPulseTwoVolume(float volume);
+    float ApuGetPulseTwoVolume();
+    void ApuSetTriangleVolume(float volume);
+    float ApuGetTriangleVolume();
+    void ApuSetNoiseVolume(float volume);
+    float ApuGetNoiseVolume();
+    void ApuSetDmcVolume(float volume);
+    float ApuGetDmcVolume();
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
