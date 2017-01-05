@@ -2,15 +2,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Emulator", "src\Emulator\Emulator.vcxproj", "{2F61AB97-7292-4A8C-B249-2773318D46A8}"
-	ProjectSection(ProjectDependencies) = postProject
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722} = {283A515E-96DA-41E6-AB1C-B92FEF09D722}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FrontEnd", "src\FrontEnd\FrontEnd.vcxproj", "{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}"
 	ProjectSection(ProjectDependencies) = postProject
 		{283A515E-96DA-41E6-AB1C-B92FEF09D722} = {283A515E-96DA-41E6-AB1C-B92FEF09D722}
 		{2F61AB97-7292-4A8C-B249-2773318D46A8} = {2F61AB97-7292-4A8C-B249-2773318D46A8}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Emulator", "src\Emulator\Emulator.vcxproj", "{2F61AB97-7292-4A8C-B249-2773318D46A8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{283A515E-96DA-41E6-AB1C-B92FEF09D722} = {283A515E-96DA-41E6-AB1C-B92FEF09D722}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "_externals", "ext\_externals.vcxproj", "{283A515E-96DA-41E6-AB1C-B92FEF09D722}"
