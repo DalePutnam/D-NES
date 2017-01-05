@@ -100,6 +100,17 @@ void APU::AudioBackend::SetMuted(bool mute)
     }
 }
 
+void APU::AudioBackend::UpdatePlaybackRate(const std::chrono::microseconds& frameLength)
+{
+    float length = static_cast<float>(frameLength.count());
+    float ratio = 16666.f / length;
+
+#ifdef _WINDOWS
+    XAudio2SourceVoice->SetFrequencyRatio(ratio);
+#elif 0
+#endif
+}
+
 void APU::AudioBackend::operator<<(float sample)
 {
     float* Buffer = OutputBuffers[CurrentBuffer];
@@ -881,6 +892,11 @@ void APU::AttachCPU(CPU* cpu)
 void APU::AttachCart(Cart* cart)
 {
     this->Cartridge = cart;
+}
+
+void APU::UpdatePlaybackRate(const std::chrono::microseconds& frameLength)
+{
+    Backend.UpdatePlaybackRate(frameLength);
 }
 
 void APU::Step()

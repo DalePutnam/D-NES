@@ -21,6 +21,7 @@ public:
 
     void AttachCPU(CPU* cpu);
     void AttachCart(Cart* cart);
+    void UpdatePlaybackRate(const std::chrono::microseconds& frameLength);
 
     void Step();
 
@@ -59,6 +60,7 @@ private:
         AudioBackend();
         ~AudioBackend();
         void SetMuted(bool mute);
+        void UpdatePlaybackRate(const std::chrono::microseconds& frameLength);
         void operator<<(float sample);
 
     private:

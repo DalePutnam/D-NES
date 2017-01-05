@@ -16,6 +16,7 @@
 #include "cart.h"
 
 class CPU;
+class APU;
 
 class PPU
 {
@@ -24,6 +25,7 @@ public:
     ~PPU();
 
     void AttachCPU(CPU* cpu);
+    void AttachAPU(APU* apu);
     void AttachCart(Cart* cart);
 
     void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
@@ -65,6 +67,7 @@ public:
 
 private:
     CPU* Cpu;
+    APU* Apu;
     Cart* Cartridge;
 
     uint8_t FrameBuffer[256 * 240 * 3];

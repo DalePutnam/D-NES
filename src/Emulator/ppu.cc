@@ -10,7 +10,7 @@
 #include <cmath>
 #include "ppu.h"
 #include "cpu.h"
-
+#include "apu.h"
 
 const uint32_t PPU::RgbLookupTable[64] =
 {
@@ -881,6 +881,11 @@ void PPU::AttachCPU(CPU* cpu)
     Cpu = cpu;
 }
 
+void PPU::AttachAPU(APU* apu)
+{
+    Apu = apu;
+}
+
 void PPU::AttachCart(Cart* cart)
 {
     Cartridge = cart;
@@ -1223,20 +1228,32 @@ void PPU::Run()
                     }
                 }
 
-                if (Line == 239 && Dot == 256 && FrameLimitEnabled)
+                if (Line == 239 && Dot == 256)
                 {
                     using namespace std::chrono;
 
-                    high_resolution_clock::time_point now = high_resolution_clock::now();
-                    microseconds span = duration_cast<microseconds>(now - IntervalStart);
-
-                    while (span.count() < 16666)
+                    if (FrameLimitEnabled)
                     {
-                        now = high_resolution_clock::now();
-                        span = duration_cast<microseconds>(now - IntervalStart);
-                    }
+                        high_resolution_clock::time_point now = high_resolution_clock::now();
+                        microseconds span = duration_cast<microseconds>(now - IntervalStart);
 
-                    IntervalStart = high_resolution_clock::now();
+                        while (span.count() < 16666)
+                        {
+                            now = high_resolution_clock::now();
+                            span = duration_cast<microseconds>(now - IntervalStart);
+                        }
+
+                        Apu->UpdatePlaybackRate(span);
+                        IntervalStart = high_resolution_clock::now();
+                    }
+                    else
+                    {
+                        high_resolution_clock::time_point now = high_resolution_clock::now();
+                        microseconds span = duration_cast<microseconds>(now - IntervalStart);
+
+                        Apu->UpdatePlaybackRate(span);
+                        IntervalStart = high_resolution_clock::now();
+                    }                    
                 }
 
                 IncrementClock();

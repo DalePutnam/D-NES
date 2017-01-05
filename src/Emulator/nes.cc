@@ -41,6 +41,7 @@ NES::NES(const NesParams& params)
     Cpu->AttachCart(Cartridge);
 
     Ppu->AttachCPU(Cpu);
+    Ppu->AttachAPU(Apu);
     Ppu->AttachCart(Cartridge);
 
     Cartridge->AttachCPU(Cpu);
