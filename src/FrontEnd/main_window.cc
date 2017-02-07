@@ -165,10 +165,6 @@ void MainWindow::StartEmulator(const std::string& filename)
         VerticalBox->Hide(RomList);
         SetTitle(Nes->GetGameName());
         SetClientSize(GameWindowSize);
-
-//#ifndef _WINDOWS
-//        Panel->SetFocus();
-//#endif
     }
     else
     {
@@ -520,15 +516,8 @@ MainWindow::MainWindow()
 
     Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
 
-//#ifdef _WINDOWS
-#if 1
     Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
-#elif 0
-    Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
-    Panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
-    Panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
-#endif
 
     RomList = new GameList(this);
     RomList->PopulateList();
