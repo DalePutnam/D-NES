@@ -1,37 +1,13 @@
-SOURCES += \
-src/FrontEnd/app.cc \
-src/FrontEnd/main_window.cc \
-src/FrontEnd/game_window.cc \
-src/FrontEnd/settings_window.cc \
-src/FrontEnd/ppu_debug_window.cc \
-src/FrontEnd/nes_thread.cc \
-src/FrontEnd/game_list.cc \
-src/FrontEnd/pattern_table_display.cc
+FE_DIR = $(SOURCE_DIR)/FrontEnd
+FE_SOURCES = $(shell find $(FE_DIR) -type f -name '*.cc')
+FE_OBJECTS = $(subst src,$(BUILD_DIR),$(FE_SOURCES:.cc=.o))
+OBJECTS += $(FE_OBJECTS)
 
-OBJECTS += \
-bld/FrontEnd/app.o \
-bld/FrontEnd/main_window.o \
-bld/FrontEnd/game_window.o \
-bld/FrontEnd/settings_window.o \
-bld/FrontEnd/ppu_debug_window.o \
-bld/FrontEnd/nes_thread.o \
-bld/FrontEnd/game_list.o \
-bld/FrontEnd/pattern_table_display.o
+FE_INCLUDE_DIRS =  $(addprefix -I,$(shell find $(FE_DIR) -type d))
+FE_INCLUDE_DIRS += $(addprefix -I,$(shell find src/Emulator -type d))
 
-DEPENDS += \
-bld/FrontEnd/app.d \
-bld/FrontEnd/main_window.d \
-bld/FrontEnd/game_window.d \
-bld/FrontEnd/settings_window.d \
-bld/FrontEnd/ppu_debug_window.d \
-bld/FrontEnd/nes_thread.d \
-bld/FrontEnd/game_list.d \
-bld/FrontEnd/pattern_table_display.d
-
-INCLUDES=-Isrc/Emulator
-
-bld/FrontEnd/%.o: src/FrontEnd/%.cc
+$(BUILD_DIR)/FrontEnd/%.o: src/FrontEnd/%.cc
+	@mkdir -p $(dir $@)
 	@echo 'Building file: $<'
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $< `wx-config --cxxflags`
+	$(CXX) $(CXXFLAGS) $(FE_INCLUDE_DIRS) -c -o $@ $< `wx-config --cxxflags`
 	@echo ''
-

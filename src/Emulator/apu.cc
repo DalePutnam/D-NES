@@ -40,7 +40,7 @@ APU::AudioBackend::AudioBackend()
     hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
     if (FAILED(hr)) goto FailedExit;
 
-    for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
+    for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
     {
         OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
     }
@@ -55,7 +55,11 @@ FailedExit:
     if (XAudio2Instance) XAudio2Instance->Release();
 
     throw std::runtime_error("APU: Failed to initialize XAudio2");
-#elif 0
+#elif _LINUX
+    for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
+    {
+        OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
+    }
 #endif
 }
 
@@ -68,10 +72,10 @@ APU::AudioBackend::~AudioBackend()
     XAudio2SourceVoice->DestroyVoice();
     XAudio2MasteringVoice->DestroyVoice();
     XAudio2Instance->Release();
-#elif 0
+#elif _LINUX
 #endif
 
-    for (int i = 0; i < NUM_AUDIO_BUFFERS; ++i)
+    for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
     {
         delete[] OutputBuffers[i];
     }
@@ -84,7 +88,7 @@ void APU::AudioBackend::SetMuted(bool mute)
 #ifdef _WINDOWS
         XAudio2SourceVoice->Stop(0);
         XAudio2SourceVoice->FlushSourceBuffers();
-#elif 0
+#elif _LINUX
 #endif
         IsMuted = true;
     }
@@ -92,7 +96,7 @@ void APU::AudioBackend::SetMuted(bool mute)
     {
 #ifdef _WINDOWS
         XAudio2SourceVoice->Start(0);
-#elif 0
+#elif _LINUX
 #endif
         CurrentBuffer = 0;
         BufferIndex = 0;
@@ -107,7 +111,8 @@ void APU::AudioBackend::UpdatePlaybackRate(const std::chrono::microseconds& fram
 
 #ifdef _WINDOWS
     XAudio2SourceVoice->SetFrequencyRatio(ratio);
-#elif 0
+#elif _LINUX
+    (void) ratio;
 #endif
 }
 
@@ -127,7 +132,7 @@ void APU::AudioBackend::operator<<(float sample)
         XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
 
         XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
-#elif 0
+#elif _LINUX
 #endif
     }
 }

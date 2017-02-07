@@ -1342,17 +1342,17 @@ uint8_t CPU::GetControllerOneShift()
 }
 
 CPU::CPU()
-    : StartupFlag(true)
+    : Ppu(nullptr)
+    , Apu(nullptr)
+    , Cartridge(nullptr)
+    , Clock(0)
+    , StartupFlag(true)
     , StopFlag(false)
     , PauseFlag(false)
     , Paused(false)
     , LogEnabled(false)
     , EnableLogFlag(false)
     , LogFile(nullptr)
-    , Ppu(nullptr)
-    , Apu(nullptr)
-    , Cartridge(nullptr)
-    , Clock(0)
     , ControllerStrobe(0)
     , ControllerOneShift(0)
     , ControllerOneState(0)
@@ -1370,11 +1370,11 @@ CPU::CPU()
 {
     memset(Memory, 0, sizeof(uint8_t) * 0x800);
 
-    sprintf(Addressing, "");
-    sprintf(Instruction, "");
-    sprintf(ProgramCounter, "");
-    sprintf(AddressingArg1, "");
-    sprintf(AddressingArg2, "");
+    sprintf(Addressing, "%s", "");
+    sprintf(Instruction, "%s", "");
+    sprintf(ProgramCounter, "%s", "");
+    sprintf(AddressingArg1, "%s", "");
+    sprintf(AddressingArg2, "%s", "");
 }
 
 uint64_t CPU::GetClock()
@@ -2305,10 +2305,10 @@ void CPU::PrintLog()
         fprintf(LogFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", ProgramCounter, OpCode, AddressingArg1, AddressingArg2, Instruction, Addressing, Registers);
     }
 
-    sprintf(Registers, "");
-    sprintf(Addressing, "");
-    sprintf(Instruction, "");
-    sprintf(ProgramCounter, "");
-    sprintf(AddressingArg1, "");
-    sprintf(AddressingArg1, "");
+    sprintf(Registers, "%s", "");
+    sprintf(Addressing, "%s", "");
+    sprintf(Instruction, "%s", "");
+    sprintf(ProgramCounter, "%s", "");
+    sprintf(AddressingArg1, "%s", "");
+    sprintf(AddressingArg1, "%s", "");
 }

@@ -1,5 +1,6 @@
 #include <fstream>
 #include <exception>
+#include <cstring>
 
 #include "../cpu.h"
 #include "mapper_base.h"
@@ -12,8 +13,8 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
     , ChrRam(nullptr)
     , Wram(nullptr)
     , HasSaveMem(false)
-    , Cpu(nullptr)
     , SaveDir(saveDir)
+    , Cpu(nullptr)
 {
     size_t indexForwardSlash = fileName.rfind('/');
     size_t indexBackSlash = fileName.rfind('\\');

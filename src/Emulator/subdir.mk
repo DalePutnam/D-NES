@@ -1,23 +1,12 @@
-SOURCES += \
-src/Emulator/cpu.cc \
-src/Emulator/ppu.cc \
-src/Emulator/nes.cc \
-src/Emulator/clock.cc
+EMU_DIR = $(SOURCE_DIR)/Emulator
+EMU_SOURCES = $(shell find $(EMU_DIR) -type f -name '*.cc')
+EMU_OBJECTS = $(subst src,$(BUILD_DIR),$(EMU_SOURCES:.cc=.o))
+OBJECTS += $(EMU_OBJECTS)
 
-OBJECTS += \
-bld/Emulator/cpu.o \
-bld/Emulator/ppu.o \
-bld/Emulator/nes.o \
-bld/Emulator/clock.o
+EMU_INCLUDE_DIRS = $(addprefix -I,$(shell find $(EMU_DIR) -type d))
 
-DEPENDS += \
-bld/Emulator/cpu.d \
-bld/Emulator/ppu.d \
-bld/Emulator/nes.d \
-bld/Emulator/clock.d
-
-bld/Emulator/%.o: src/Emulator/%.cc
+$(BUILD_DIR)/Emulator/%.o: src/Emulator/%.cc
+	@mkdir -p $(dir $@)
 	@echo 'Building file: $<'
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(EMU_INCLUDE_DIRS) -c -o $@ $<
 	@echo ''
-

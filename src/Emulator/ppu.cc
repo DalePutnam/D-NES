@@ -1099,7 +1099,6 @@ void PPU::WritePPUDATA(uint8_t M)
     }
     else
     {
-        uint64_t clock = Cpu->GetClock();
         RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUDATA));
     }
 

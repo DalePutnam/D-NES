@@ -1,39 +1,31 @@
-CXX=g++
-CXXFLAGS=-std=c++0x -Wall -MMD
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall -MMD -D_LINUX
 
-SOURCES=
-OBJECTS=
-DEPENDS=
-BUILDDIRS=
+SOURCE_DIR = src
+BUILD_DIR = bld
+EXEC = D-NES
 
-EXEC=bld/D-NES
+OBJECTS =
 
-DIRS=bld bld/Emulator bld/Emulator/log bld/Emulator/mappers bld/FrontEnd bld/FrontEnd/utilities
-
-include src/Emulator/subdir.mk
-include src/Emulator/mappers/subdir.mk
-include src/FrontEnd/subdir.mk
-include src/FrontEnd/utilities/subdir.mk
-
-all: CXXFLAGS+=-O2
+all: CXXFLAGS += -O2
 all: $(EXEC)
 
-debug: CXXFLAGS+=-g
+debug: CXXFLAGS += -g
 debug: $(EXEC)
+
+include src/Emulator/subdir.mk
+include src/FrontEnd/subdir.mk
+
+DEPENDS = $(OBJECTS:.o=.d)
 
 $(EXEC): $(OBJECTS)
 	@echo 'Building Target: $@'
-	$(CXX) $(CXXFLAGS) -o bld/D-NES $(OBJECTS) -lboost_iostreams -lboost_system -lboost_filesystem -lboost_chrono `wx-config --cxxflags` `wx-config --libs`
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) `wx-config --cxxflags --libs`
 	@echo ''
-
-$(OBJECTS): | $(DIRS)
-
-$(DIRS):
-	mkdir -p $(DIRS)
 
 .PHONY: clean
 
 clean:
-	rm -rf $(OBJECTS) $(DEPENDS) bld/D-NES
+	rm -rf bld D-NES
 
 -include $(DEPENDS)

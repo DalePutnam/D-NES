@@ -24,8 +24,7 @@ public:
         return Settings->Read(name, value);
     }
 
-    template<>
-    bool Read<std::string>(const wxString& name, std::string* value)
+    bool Read(const wxString& name, std::string* value)
     {
         wxString str(*value);
         bool result = Settings->Read(name, &str);
@@ -39,7 +38,7 @@ public:
     bool Write(const wxString& name, const T& value)
     {
         return Settings->Write(name, value);
-    }
+    }    
 
 private:
     // Singleton
@@ -55,3 +54,4 @@ private:
     wxFileConfig* Settings;
 
 };
+
