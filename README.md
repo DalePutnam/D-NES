@@ -17,10 +17,10 @@ Requirements: Visual Studio 2015
 3. Open D-NES.sln and build either the x64 or Win32 configurations. The first compile will take ~5 minutes since wxWidgets needs to be built.
 4. Done. You can now begin working on the emulator.
 
-### Linux (Broken currently)
+### Linux
 
-1. Download the repository to the location of your choice.
-2. Use your preferred package manager to install boost and wxWidgets-3.0
+1. Install wxWidgets 3.1 if you haven't already
+2. Download the repository to the location of your choice.
 3. Navigate to the repository root.
 4. Run `make debug` to build with debugging symbols or simply `make` for an optimized build.
 
