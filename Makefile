@@ -61,10 +61,13 @@ $(EXEC): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) `wx-config --cxxflags --libs`
 	@echo ''
 
-.PHONY: clean
+.PHONY: clean deep-clean
 
 clean:
 	rm -rf $(BUILD_DIR) $(EXEC)
+
+deep-clean:
+	rm -rf $(BUILD_DIR) $(EXEC) config.txt saves
 
 ####################################################################
 # Header Dependencies
