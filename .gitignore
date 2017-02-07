@@ -1,3 +1,4 @@
+# Windows
 .vs
 Release
 Debug
@@ -7,3 +8,11 @@ ext/wxWidgets
 ref_emulators
 src/Emulator/Emulator.vcxproj.user
 src/FrontEnd/FrontEnd.vcxproj.user
+
+# Linux
+D-NES
+bld
+config.txt
+ROMs
+saves
+ext
