@@ -16,7 +16,7 @@ void SettingsWindow::PopulateFields()
 
 void SettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))
 {
-    wxDirDialog dialog(NULL, "Choose ROM Path", RomDirectory->GetLineText(0));
+    wxDirDialog dialog(this, "Choose ROM Path", RomDirectory->GetLineText(0));
 
     if (dialog.ShowModal() == wxID_OK)
     {
