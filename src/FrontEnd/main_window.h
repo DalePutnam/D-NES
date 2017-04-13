@@ -37,6 +37,9 @@ public:
 private:
     NES* Nes;
 
+#ifdef _WIN32
+    std::mutex PpuDebugMutex;
+#endif
     PPUDebugWindow* PpuDebugWindow;
     AudioSettingsWindow* AudioWindow;
 
@@ -60,9 +63,11 @@ private:
 
     std::atomic<wxSize> GameWindowSize;
 
+#ifdef __linux
     std::mutex FrameMutex;
     std::condition_variable FrameCv;
     uint8_t* FrameBuffer;
+#endif
 
     void StartEmulator(const std::string& filename);
 
@@ -78,7 +83,7 @@ private:
     void OnEmulatorScale(wxCommandEvent& event);
     void OnPPUDebug(wxCommandEvent& event);
     void OpenAudioSettings(wxCommandEvent& event);
-
+    
     void OnQuit(wxCommandEvent& event);
     void OnSize(wxSizeEvent& event);
 
@@ -88,10 +93,15 @@ private:
     void EmulatorErrorCallback(std::string err);
     void EmulatorFrameCallback(uint8_t* frameBuffer);
 
+#ifdef __linux
     void OnUpdateFrame(wxThreadEvent& event);
+#endif
     void OnUnexpectedShutdown(wxThreadEvent& event);
 
     void OnAudioSettingsClosed(wxCommandEvent& event);
+
+    void UpdateFrame(uint8_t* frameBuffer);
+    void UpdateFps();
 };
 
 wxDECLARE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);

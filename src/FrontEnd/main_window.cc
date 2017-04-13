@@ -18,6 +18,13 @@ wxDEFINE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
 {
+    // Windows works just fine if the window is updated from the emulator
+    // thread, but Linux, or at least X has trouble with it so we need
+    // to queue a thread event on Linux builds to update the frame
+#ifdef _WIN32
+    UpdateFrame(frameBuffer);
+    UpdateFps();
+#else __linux
     std::unique_lock<std::mutex> lock(FrameMutex);
     FrameBuffer = frameBuffer;
 
@@ -25,6 +32,7 @@ void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
     wxQueueEvent(this, evt.Clone());
 
     FrameCv.wait(lock);
+#endif
 }
 
 void MainWindow::OnAudioSettingsClosed(wxCommandEvent& event)
@@ -33,6 +41,54 @@ void MainWindow::OnAudioSettingsClosed(wxCommandEvent& event)
     {
         AudioWindow->Destroy();
         AudioWindow = nullptr;
+    }
+}
+
+void MainWindow::UpdateFrame(uint8_t* frameBuffer)
+{
+    wxImage image(256, 240, frameBuffer, true);
+    wxBitmap bitmap(image, 24);
+
+    wxMemoryDC mdc(bitmap);
+    wxClientDC cdc(this);
+    cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
+
+#ifdef _WIN32
+    if (PpuDebugWindow != nullptr)
+    {
+        std::lock_guard<std::mutex> lock(PpuDebugMutex);
+        if (PpuDebugWindow != nullptr)
+        {
+            PpuDebugWindow->Update();
+        }
+    }
+#else __linux
+    if (PpuDebugWindow != nullptr)
+    {
+        PpuDebugWindow->Update();
+    }
+#endif
+}
+
+void MainWindow::UpdateFps()
+{
+    using namespace std::chrono;
+
+    steady_clock::time_point now = steady_clock::now();
+    microseconds time_span = duration_cast<microseconds>(now - IntervalStart);
+    if (time_span.count() >= 1000000)
+    {
+        CurrentFps = FpsCounter;
+        FpsCounter = 0;
+        IntervalStart = steady_clock::now();
+
+        std::ostringstream oss;
+        oss << CurrentFps << " FPS - " << Nes->GetGameName();
+        SetTitle(oss.str());
+    }
+    else
+    {
+        FpsCounter++;
     }
 }
 
@@ -289,6 +345,10 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
+#ifdef _WIN32
+    std::lock_guard<std::mutex> lock(PpuDebugMutex);
+#endif
+
     if (PpuDebugWindow == nullptr)
     {
         PpuDebugWindow = new PPUDebugWindow(this, Nes);
@@ -309,6 +369,10 @@ void MainWindow::OpenAudioSettings(wxCommandEvent& event)
 
 void MainWindow::PPUDebugClose()
 {
+#ifdef _WIN32
+    std::lock_guard<std::mutex> lock(PpuDebugMutex);
+#endif
+
     if (PpuDebugWindow != nullptr)
     {
         PpuDebugWindow->Destroy();
@@ -316,43 +380,17 @@ void MainWindow::PPUDebugClose()
     }
 }
 
+#ifdef __linux
 void MainWindow::OnUpdateFrame(wxThreadEvent& event)
 {
     std::unique_lock<std::mutex> lock(FrameMutex);
 
-    wxImage image(256, 240, FrameBuffer, true);
-    wxBitmap bitmap(image, 24);
-
-    wxMemoryDC mdc(bitmap);
-    wxClientDC cdc(this);
-    cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
-
-    using namespace std::chrono;
-
-    if (PpuDebugWindow != nullptr)
-    {
-        PpuDebugWindow->Update();
-    }
-
-    steady_clock::time_point now = steady_clock::now();
-    microseconds time_span = duration_cast<microseconds>(now - IntervalStart);
-    if (time_span.count() >= 1000000)
-    {
-        CurrentFps = FpsCounter;
-        FpsCounter = 0;
-        IntervalStart = steady_clock::now();
-
-        std::ostringstream oss;
-        oss << CurrentFps << " FPS - " << Nes->GetGameName();
-        SetTitle(oss.str());
-    }
-    else
-    {
-        FpsCounter++;
-    }
+    UpdateFrame(FrameBuffer);
+    UpdateFps();
 
     FrameCv.notify_all();
 }
+#endif
 
 void MainWindow::OnUnexpectedShutdown(wxThreadEvent& event)
 {
@@ -519,12 +557,15 @@ MainWindow::MainWindow()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleNtscDecoding), this, ID_EMULATOR_NTSC_DECODE);
 
     Bind(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
+#ifdef __linux
     Bind(EVT_NES_UPDATE_FRAME, wxThreadEventHandler(MainWindow::OnUpdateFrame), this, wxID_ANY);
+#endif
 
     Bind(wxEVT_SIZING, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
 
     Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
 
+    // On Linux we need a panel to intercept keyboard events for some reason
 #ifdef __linux
     Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
     Panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
