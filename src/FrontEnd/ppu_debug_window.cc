@@ -5,9 +5,9 @@
 #include <wx/bitmap.h>
 #include <wx/dcclient.h>
 
-#include "nes.h"
 #include "ppu_debug_window.h"
 #include "main_window.h"
+#include "nes.h"
 
 void PPUDebugWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {

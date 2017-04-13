@@ -2,8 +2,8 @@
 #include <wx/bitmap.h>
 #include <wx/dcclient.h>
 
-#include "nes.h"
 #include "pattern_table_display.h"
+#include "nes.h"
 
 void PatternTableDisplay::OnClicked(wxMouseEvent& WXUNUSED(event))
 {
