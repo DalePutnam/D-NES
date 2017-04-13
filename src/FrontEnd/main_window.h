@@ -6,6 +6,7 @@
 #include <atomic>
 #include <thread>
 #include <chrono>
+#include <condition_variable>
 
 #include <wx/menu.h>
 #include <wx/event.h>
@@ -16,14 +17,13 @@
 #include <wx/statusbr.h>
 #include <wx/treelist.h>
 #include <wx/listctrl.h>
+#include <wx/bitmap.h>
 
 #include "game_list.h"
 #include "ppu_debug_window.h"
 #include "audio_settings_window.h"
 
 class NES;
-
-wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 class MainWindow : public wxFrame
 {
@@ -36,7 +36,6 @@ public:
 
 private:
     NES* Nes;
-    std::mutex PpuDebugMutex;
 
     PPUDebugWindow* PpuDebugWindow;
     AudioSettingsWindow* AudioWindow;
@@ -55,7 +54,12 @@ private:
     int FpsCounter;
     std::atomic<int> CurrentFps;
     std::chrono::steady_clock::time_point IntervalStart;
+
     std::atomic<wxSize> GameWindowSize;
+
+    std::mutex FrameMutex;
+    std::condition_variable FrameCv;
+    uint8_t* FrameBuffer;
 
     void StartEmulator(const std::string& filename);
 
@@ -71,18 +75,24 @@ private:
     void OnEmulatorScale(wxCommandEvent& event);
     void OnPPUDebug(wxCommandEvent& event);
     void OpenAudioSettings(wxCommandEvent& event);
-    void OnUnexpectedShutdown(wxThreadEvent& event);
+
     void OnQuit(wxCommandEvent& event);
     void OnSize(wxSizeEvent& event);
 
     void OnKeyDown(wxKeyEvent& event);
     void OnKeyUp(wxKeyEvent& event);
 
-    void OnEmulatorError(std::string err);
-    void OnEmulatorFrameComplete(uint8_t* frameBuffer);
+    void EmulatorErrorCallback(std::string err);
+    void EmulatorFrameCallback(uint8_t* frameBuffer);
+
+    void OnUpdateFrame(wxThreadEvent& event);
+    void OnUnexpectedShutdown(wxThreadEvent& event);
 
     void OnAudioSettingsClosed(wxCommandEvent& event);
 };
+
+wxDECLARE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);
+wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 const int ID_OPEN_ROM = 100;
 const int ID_EMULATOR_RESUME = 101;
