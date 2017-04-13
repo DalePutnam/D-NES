@@ -242,7 +242,7 @@ private:
     };
 
     static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
-    static constexpr uint32_t AUDIO_BUFFER_SIZE = AUDIO_SAMPLE_RATE / 240;
+    static constexpr uint32_t AUDIO_BUFFER_SIZE = AUDIO_SAMPLE_RATE / 120;
     static constexpr uint32_t CPU_FREQUENCY = 1789773;
     static constexpr uint32_t CYCLES_PER_SAMPLE = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
 

@@ -110,7 +110,14 @@ void APU::AudioBackend::UpdatePlaybackRate(const std::chrono::microseconds& fram
     float ratio = 16666.f / length;
 
 #ifdef _WIN32
-    XAudio2SourceVoice->SetFrequencyRatio(ratio);
+    if (ratio > 0.9f && ratio < 1.1f)
+    {
+        XAudio2SourceVoice->SetFrequencyRatio(1.0f);
+    }
+    else
+    {
+        XAudio2SourceVoice->SetFrequencyRatio(ratio);
+    }
 #elif __linux
     (void) ratio;
 #endif
@@ -983,10 +990,22 @@ void APU::Step()
         }
     }
 
+    static const float cyclesPerSample = static_cast<float>(CPU_FREQUENCY) / AUDIO_SAMPLE_RATE;
+    static const float fraction = std::fmod(cyclesPerSample, 1.0f);
+    static float extraCount = 0.0f;
+
     if (CyclesToNextSample == 0)
     {
-        CyclesToNextSample = CYCLES_PER_SAMPLE;
-
+        if (extraCount >= 1.0f)
+        {
+            CyclesToNextSample = CYCLES_PER_SAMPLE + 1;
+            extraCount = 0.0f;
+        }
+        else
+        {
+            CyclesToNextSample = CYCLES_PER_SAMPLE;
+        }
+        
         std::lock_guard<std::mutex> Lock(ControlMutex);
 
         if (!IsMuted)
@@ -1011,7 +1030,7 @@ void APU::Step()
                 TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
             }
 
-            float RawOutput = ((PulseOut + TndOut) * 2.0f) - 1.0f;
+            float RawOutput = PulseOut + TndOut;
 
             float FinalOutput;
             if (FilteringEnabled)
@@ -1027,6 +1046,8 @@ void APU::Step()
 
             Backend << (FinalOutput * MasterVolume);
         }
+
+        extraCount += fraction;
     }
 
     --CyclesToNextSample;
