@@ -40,7 +40,10 @@ private:
     PPUDebugWindow* PpuDebugWindow;
     AudioSettingsWindow* AudioWindow;
 
+#ifdef __linux
     wxPanel* Panel;
+#endif
+
     wxMenuBar* MenuBar;
     wxMenu* FileMenu;
     wxMenu* SizeSubMenu;

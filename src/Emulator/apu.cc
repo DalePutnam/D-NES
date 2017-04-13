@@ -21,7 +21,7 @@ APU::AudioBackend::AudioBackend()
     : BufferIndex(0)
     , CurrentBuffer(0)
 {
-#ifdef _WINDOWS
+#ifdef _WIN32
     WAVEFORMATEX WaveFormat = { 0 };
     WaveFormat.nChannels = 1;
     WaveFormat.nSamplesPerSec = AUDIO_SAMPLE_RATE;
@@ -55,7 +55,7 @@ FailedExit:
     if (XAudio2Instance) XAudio2Instance->Release();
 
     throw std::runtime_error("APU: Failed to initialize XAudio2");
-#elif _LINUX
+#elif __linux
     for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
     {
         OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
@@ -65,14 +65,14 @@ FailedExit:
 
 APU::AudioBackend::~AudioBackend()
 {
-#ifdef _WINDOWS
+#ifdef _WIN32
     XAudio2SourceVoice->Stop();
     XAudio2SourceVoice->FlushSourceBuffers();
 
     XAudio2SourceVoice->DestroyVoice();
     XAudio2MasteringVoice->DestroyVoice();
     XAudio2Instance->Release();
-#elif _LINUX
+#elif __linux
 #endif
 
     for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
@@ -85,18 +85,18 @@ void APU::AudioBackend::SetMuted(bool mute)
 {
     if (mute && !IsMuted)
     {
-#ifdef _WINDOWS
+#ifdef _WIN32
         XAudio2SourceVoice->Stop(0);
         XAudio2SourceVoice->FlushSourceBuffers();
-#elif _LINUX
+#elif __linux
 #endif
         IsMuted = true;
     }
     else if (!mute && IsMuted)
     {
-#ifdef _WINDOWS
+#ifdef _WIN32
         XAudio2SourceVoice->Start(0);
-#elif _LINUX
+#elif __linux
 #endif
         CurrentBuffer = 0;
         BufferIndex = 0;
@@ -109,9 +109,9 @@ void APU::AudioBackend::UpdatePlaybackRate(const std::chrono::microseconds& fram
     float length = static_cast<float>(frameLength.count());
     float ratio = 16666.f / length;
 
-#ifdef _WINDOWS
+#ifdef _WIN32
     XAudio2SourceVoice->SetFrequencyRatio(ratio);
-#elif _LINUX
+#elif __linux
     (void) ratio;
 #endif
 }
@@ -126,13 +126,13 @@ void APU::AudioBackend::operator<<(float sample)
         CurrentBuffer = (CurrentBuffer + 1) % NUM_AUDIO_BUFFERS;
         BufferIndex = 0;
 
-#ifdef _WINDOWS
+#ifdef _WIN32
         XAUDIO2_BUFFER XAudio2Buffer = { 0 };
         XAudio2Buffer.AudioBytes = AUDIO_BUFFER_SIZE * sizeof(float);
         XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
 
         XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
-#elif _LINUX
+#elif __linux
 #endif
     }
 }
@@ -1220,4 +1220,3 @@ float APU::GetDmcVolume()
 {
     return DmcVolume;
 }
-

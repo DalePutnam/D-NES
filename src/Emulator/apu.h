@@ -5,9 +5,9 @@
 #include <chrono>
 #include <cstdint>
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <xaudio2.h>
-#elif 0
+#elif __linux
 #endif
 
 class CPU;
@@ -71,11 +71,11 @@ private:
         uint32_t CurrentBuffer;
         float* OutputBuffers[NUM_AUDIO_BUFFERS];
 
-#ifdef _WINDOWS
+#ifdef _WIN32
         IXAudio2* XAudio2Instance;
         IXAudio2MasteringVoice* XAudio2MasteringVoice;
         IXAudio2SourceVoice* XAudio2SourceVoice;
-#elif 0
+#elif __linux
 #endif
     };
 

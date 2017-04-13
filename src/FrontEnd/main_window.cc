@@ -121,6 +121,10 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         SetMinClientSize(GameWindowSize);
         SetMaxClientSize(GameWindowSize);
+
+#ifdef __linux
+        Panel->SetFocus();
+#endif
     }
     else
     {
@@ -521,8 +525,14 @@ MainWindow::MainWindow()
 
     Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
 
+#ifdef __linux
+    Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
+    Panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
+    Panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+#elif _WIN32
     Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+#endif
 
     RomList = new GameList(this);
     RomList->PopulateList();

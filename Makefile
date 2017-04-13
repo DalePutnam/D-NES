@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -Wall -MMD -D_LINUX
+CXXFLAGS = -std=c++11 -Wall -MMD
 
 SOURCE_DIR = src
 BUILD_DIR = bld
