@@ -118,6 +118,9 @@ void MainWindow::StartEmulator(const std::string& filename)
         VerticalBox->Hide(RomList);
         SetTitle(Nes->GetGameName());
         SetClientSize(GameWindowSize);
+
+        SetMinClientSize(GameWindowSize);
+        SetMaxClientSize(GameWindowSize);
     }
     else
     {
@@ -136,6 +139,9 @@ void MainWindow::StopEmulator(bool showRomList)
 
         if (showRomList)
         {
+            SetMinClientSize(wxSize(-1, -1));
+            SetMaxClientSize(wxSize(-1, -1));
+
             VerticalBox->Show(RomList);
             RomList->PopulateList();
             SetSize(wxSize(600, 460));
@@ -264,6 +270,14 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
 
     if (Nes != nullptr)
     {
+        // To avoid setting the min size to larger than the max size
+        // or vice versa, first set the min and max to allow any size
+        SetMaxClientSize(wxSize(-1, -1));
+        SetMinClientSize(wxSize(-1, -1));
+
+        SetMaxClientSize(GameWindowSize);
+        SetMinClientSize(GameWindowSize);
+
         SetClientSize(GameWindowSize);
     }
 }
