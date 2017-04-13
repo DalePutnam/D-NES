@@ -4,7 +4,7 @@ A Nintendo Entertainment System emulator I've been working on in my spare time.
 
 CPU: Working, but no support for unofficial opcodes.  
 PPU (Video): Working, but I'm still working out some of the more obscure behaviour.  
-APU (Audio): Working. Still some issues with popping, but otherwise it's functional.  
+APU (Audio): Working on Windows. Still some issues with popping, but otherwise it's functional.  
 Input: Very simple implementation. No ability to remap inputs. One controller only.  
 
 ## Build Instructions
@@ -19,7 +19,7 @@ Requirements: Visual Studio 2015
 
 ### Linux
 
-1. Install wxWidgets 3.1 if you haven't already
+1. Install wxWidgets 3.1.0 if you haven't already
 2. Download the repository to the location of your choice.
 3. Navigate to the repository root.
 4. Run `make debug` to build with debugging symbols or simply `make` for an optimized build.
