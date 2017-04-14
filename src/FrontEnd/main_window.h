@@ -64,7 +64,7 @@ private:
     std::atomic<wxSize> GameWindowSize;
 
 #ifdef __linux
-    std::atomic<bool> StopFlag;
+    volatile bool StopFlag;
     std::mutex FrameMutex;
     std::condition_variable FrameCv;
     uint8_t* FrameBuffer;

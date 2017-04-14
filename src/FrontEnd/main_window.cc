@@ -25,12 +25,12 @@ void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
     UpdateFrame(frameBuffer);
     UpdateFps();
 #elif __linux
+    std::unique_lock<std::mutex> lock(FrameMutex);
     if (StopFlag)
     {
         return;
     }
 
-    std::unique_lock<std::mutex> lock(FrameMutex);
     FrameBuffer = frameBuffer;
 
     wxThreadEvent evt(EVT_NES_UPDATE_FRAME);
@@ -204,8 +204,8 @@ void MainWindow::StopEmulator(bool showRomList)
     if (Nes != nullptr)
     {
 #ifdef __linux
-        StopFlag = true;
         FrameMutex.lock();
+        StopFlag = true;
         FrameCv.notify_all();
         FrameMutex.unlock();
 #endif
