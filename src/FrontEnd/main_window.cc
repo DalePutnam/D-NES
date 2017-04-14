@@ -24,7 +24,12 @@ void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
 #ifdef _WIN32
     UpdateFrame(frameBuffer);
     UpdateFps();
-#else __linux
+#elif __linux
+    if (StopFlag)
+    {
+        return;
+    }
+
     std::unique_lock<std::mutex> lock(FrameMutex);
     FrameBuffer = frameBuffer;
 
@@ -62,7 +67,7 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
             PpuDebugWindow->Update();
         }
     }
-#else __linux
+#elif __linux
     if (PpuDebugWindow != nullptr)
     {
         PpuDebugWindow->Update();
@@ -164,6 +169,11 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         FpsCounter = 0;
         IntervalStart = std::chrono::steady_clock::now();
+
+#ifdef __linux
+        StopFlag = false;
+#endif
+
         Nes->Start();
 
         if (PpuDebugWindow != nullptr)
@@ -193,6 +203,13 @@ void MainWindow::StopEmulator(bool showRomList)
 {
     if (Nes != nullptr)
     {
+#ifdef __linux
+        StopFlag = true;
+        FrameMutex.lock();
+        FrameCv.notify_all();
+        FrameMutex.unlock();
+#endif
+
         Nes->Stop();
         delete Nes;
         Nes = nullptr;
@@ -385,6 +402,12 @@ void MainWindow::OnUpdateFrame(wxThreadEvent& event)
 {
     std::unique_lock<std::mutex> lock(FrameMutex);
 
+    if (Nes == nullptr)
+    {
+        FrameCv.notify_all();
+        return;
+    }
+
     UpdateFrame(FrameBuffer);
     UpdateFps();
 
@@ -497,6 +520,7 @@ MainWindow::MainWindow()
     , CurrentFps(0)
     , IntervalStart(std::chrono::steady_clock::now())
     , GameWindowSize(wxSize(256, 240))
+    , StopFlag(false)
 {
     FileMenu = new wxMenu;
     FileMenu->Append(ID_OPEN_ROM, wxT("&Open ROM"));

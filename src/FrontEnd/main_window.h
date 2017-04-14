@@ -64,6 +64,7 @@ private:
     std::atomic<wxSize> GameWindowSize;
 
 #ifdef __linux
+    std::atomic<bool> StopFlag;
     std::mutex FrameMutex;
     std::condition_variable FrameCv;
     uint8_t* FrameBuffer;
@@ -83,7 +84,7 @@ private:
     void OnEmulatorScale(wxCommandEvent& event);
     void OnPPUDebug(wxCommandEvent& event);
     void OpenAudioSettings(wxCommandEvent& event);
-    
+
     void OnQuit(wxCommandEvent& event);
     void OnSize(wxSizeEvent& event);
 
