@@ -19,17 +19,21 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
     size_t indexForwardSlash = fileName.rfind('/');
     size_t indexBackSlash = fileName.rfind('\\');
 
-    if (indexForwardSlash != string::npos && indexForwardSlash > indexBackSlash)
+    if (indexForwardSlash == string::npos && indexBackSlash == string::npos)
+    {
+        GameName = fileName;
+    }
+    else if (indexForwardSlash != string::npos)
     {
         GameName = fileName.substr(indexForwardSlash + 1);
     }
-    else if (indexBackSlash != string::npos && indexBackSlash > indexForwardSlash)
+    else if (indexBackSlash != string::npos)
     {
         GameName = fileName.substr(indexBackSlash + 1);
     }
     else
     {
-        GameName = fileName;
+        GameName = fileName.substr(((indexForwardSlash > indexBackSlash) ? indexForwardSlash : indexBackSlash) + 1);
     }
 
     size_t indexExtension = GameName.find(".nes");
