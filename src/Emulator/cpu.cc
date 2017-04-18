@@ -702,6 +702,8 @@ void CPU::CLD()
 // Clear Interrupt Disable
 void CPU::CLI()
 {
+    if (IsLogEnabled()) LogInstructionName("CLI");
+
     P = P & 0xFB;
 }
 
@@ -1506,7 +1508,7 @@ void CPU::Run()
                 fclose(LogFile);
                 LogFile = nullptr;
             }
-            
+
         }
 
         Step();
@@ -1526,7 +1528,7 @@ void CPU::Run()
 void CPU::Stop()
 {
     StopFlag = true;
-    
+
     // If pause, resume so that run exits
     if (Paused)
     {
