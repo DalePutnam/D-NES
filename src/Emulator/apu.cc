@@ -878,6 +878,7 @@ APU::APU()
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
     , CyclesToNextSample(0)
+    , ExtraCount(0)
     , IsMuted(false)
     , FilteringEnabled(false)
     , HighPass90Hz(90.0f, 1.0f, false)
@@ -990,20 +991,18 @@ void APU::Step()
         }
     }
 
-    static const float cyclesPerSample = static_cast<float>(CPU_FREQUENCY) / AUDIO_SAMPLE_RATE;
-    static const float fraction = std::fmod(cyclesPerSample, 1.0f);
-    static float extraCount = 0.0f;
-
     if (CyclesToNextSample == 0)
     {
-        if (extraCount >= 1.0f)
+        // Since the audio sample rate doesn't divide
+        // the CPU frequency evenly, we need to add 2 extra
+        // cycles for every 7 samples
+        if (ExtraCount == 3 || ExtraCount == 7)
         {
-            CyclesToNextSample = CYCLES_PER_SAMPLE + 1;
-            extraCount = 0.0f;
+            CyclesToNextSample = (CPU_FREQUENCY / AUDIO_SAMPLE_RATE) + 1;
         }
         else
         {
-            CyclesToNextSample = CYCLES_PER_SAMPLE;
+            CyclesToNextSample = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
         }
         
         std::lock_guard<std::mutex> Lock(ControlMutex);
@@ -1047,7 +1046,7 @@ void APU::Step()
             Backend << (FinalOutput * MasterVolume);
         }
 
-        extraCount += fraction;
+        ExtraCount = (ExtraCount + 1) % 7;
     }
 
     --CyclesToNextSample;

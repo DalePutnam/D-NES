@@ -55,6 +55,9 @@ public:
     float GetDmcVolume();
 
 private:
+    static constexpr uint32_t CPU_FREQUENCY = 1789773;
+    static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
+
     class AudioBackend {
     public:
         AudioBackend();
@@ -65,6 +68,7 @@ private:
 
     private:
         static constexpr uint32_t NUM_AUDIO_BUFFERS = 500;
+        static constexpr uint32_t AUDIO_BUFFER_SIZE = AUDIO_SAMPLE_RATE / 200;
 
         bool IsMuted;
         uint32_t BufferIndex;
@@ -241,11 +245,6 @@ private:
         bool SilenceFlag;
     };
 
-    static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
-    static constexpr uint32_t AUDIO_BUFFER_SIZE = AUDIO_SAMPLE_RATE / 120;
-    static constexpr uint32_t CPU_FREQUENCY = 1789773;
-    static constexpr uint32_t CYCLES_PER_SAMPLE = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
-
     CPU* Cpu;
     Cart* Cartridge;
 
@@ -267,6 +266,7 @@ private:
     uint8_t FrameResetCountdown;
 
     uint32_t CyclesToNextSample;
+    uint32_t ExtraCount;
 
     bool IsMuted;
     bool FilteringEnabled;
