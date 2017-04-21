@@ -4,7 +4,7 @@ A Nintendo Entertainment System emulator I've been working on in my spare time.
 
 CPU: Working, but no support for unofficial opcodes.  
 PPU (Video): Working, but I'm still working out some of the more obscure behaviour.  
-APU (Audio): Working on Windows. Still some issues with popping, but otherwise it's functional.  
+APU (Audio): Working on Windows.  
 Input: Very simple implementation. No ability to remap inputs. One controller only.  
 
 ## Build Instructions
@@ -27,4 +27,3 @@ Requirements: Visual Studio 2015
 ### OSX
 
 No support for OSX at this time and possibly any time in the future as I do not own a Mac.
-
