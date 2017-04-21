@@ -520,7 +520,9 @@ MainWindow::MainWindow()
     , CurrentFps(0)
     , IntervalStart(std::chrono::steady_clock::now())
     , GameWindowSize(wxSize(256, 240))
+#ifdef __linux
     , StopFlag(false)
+#endif
 {
     FileMenu = new wxMenu;
     FileMenu->Append(ID_OPEN_ROM, wxT("&Open ROM"));
