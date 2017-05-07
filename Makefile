@@ -58,7 +58,7 @@ $(FE_BUILD_DIR)/%.o: $(FE_SOURCE_DIR)/%.cc
 
 $(EXEC): $(OBJECTS)
 	@echo 'Building Target: $@'
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) `wx-config --cxxflags --libs`
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) `wx-config --cxxflags --libs` -lasound
 	@echo ''
 
 .PHONY: clean deep-clean

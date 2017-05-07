@@ -20,6 +20,13 @@ namespace {
 APU::AudioBackend::AudioBackend()
     : BufferIndex(0)
     , CurrentBuffer(0)
+#ifdef _WIN32
+    , XAudio2Instance(nullptr)
+    , XAudio2MasteringVoice(nullptr)
+    , XAudio2SourceVoice(nullptr)
+#elif __linux
+    , AlsaHandle(nullptr)
+#endif
 {
 #ifdef _WIN32
     WAVEFORMATEX WaveFormat = { 0 };
@@ -40,26 +47,62 @@ APU::AudioBackend::AudioBackend()
     hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
     if (FAILED(hr)) goto FailedExit;
 
+    XAudio2SourceVoice->Start(0);
+
+#elif __linux
+    int rc;
+    snd_pcm_hw_params_t* AlsaHwParams = nullptr;
+
+    rc = snd_pcm_open(&AlsaHandle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_malloc(&AlsaHwParams);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_any(AlsaHandle, AlsaHwParams);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_access(AlsaHandle, AlsaHwParams, SND_PCM_ACCESS_RW_INTERLEAVED);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_format(AlsaHandle, AlsaHwParams, SND_PCM_FORMAT_FLOAT_LE);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_channels(AlsaHandle, AlsaHwParams, 1);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_rate(AlsaHandle, AlsaHwParams, AUDIO_SAMPLE_RATE, 0);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_period_size(AlsaHandle, AlsaHwParams, 32, 0);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params(AlsaHandle, AlsaHwParams);
+    if (rc < 0) goto FailedExit;
+
+    snd_pcm_hw_params_free(AlsaHwParams);
+
+#endif
+
     for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
     {
         OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
     }
 
-    XAudio2SourceVoice->Start(0);
-
     return;
 
 FailedExit:
+#ifdef _WIN32
     if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
     if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
     if (XAudio2Instance) XAudio2Instance->Release();
 
     throw std::runtime_error("APU: Failed to initialize XAudio2");
 #elif __linux
-    for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
-    {
-        OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
-    }
+    if (AlsaHandle) snd_pcm_close(AlsaHandle);
+    if (AlsaHwParams) snd_pcm_hw_params_free(AlsaHwParams);
+
+    throw std::runtime_error("APU: Failed to initialize ALSA");
 #endif
 }
 
@@ -73,6 +116,8 @@ APU::AudioBackend::~AudioBackend()
     XAudio2MasteringVoice->DestroyVoice();
     XAudio2Instance->Release();
 #elif __linux
+    snd_pcm_drop(AlsaHandle);
+    snd_pcm_close(AlsaHandle);
 #endif
 
     for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
@@ -89,6 +134,8 @@ void APU::AudioBackend::SetMuted(bool mute)
         XAudio2SourceVoice->Stop(0);
         XAudio2SourceVoice->FlushSourceBuffers();
 #elif __linux
+        snd_pcm_pause(AlsaHandle, 1);
+        snd_pcm_reset(AlsaHandle);
 #endif
         IsMuted = true;
     }
@@ -97,6 +144,7 @@ void APU::AudioBackend::SetMuted(bool mute)
 #ifdef _WIN32
         XAudio2SourceVoice->Start(0);
 #elif __linux
+        snd_pcm_pause(AlsaHandle, 0);
 #endif
         CurrentBuffer = 0;
         BufferIndex = 0;
@@ -140,6 +188,12 @@ void APU::AudioBackend::operator<<(float sample)
 
         XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
 #elif __linux
+        int rc = snd_pcm_writei(AlsaHandle, reinterpret_cast<void*>(Buffer), AUDIO_BUFFER_SIZE);
+
+        if (rc == -EPIPE)
+        {
+            snd_pcm_prepare(AlsaHandle);
+        }
 #endif
     }
 }
@@ -1004,7 +1058,7 @@ void APU::Step()
         {
             CyclesToNextSample = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
         }
-        
+
         std::lock_guard<std::mutex> Lock(ControlMutex);
 
         if (!IsMuted)

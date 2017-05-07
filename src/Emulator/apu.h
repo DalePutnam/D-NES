@@ -8,6 +8,8 @@
 #ifdef _WIN32
 #include <xaudio2.h>
 #elif __linux
+#define ALSA_PCM_NEW_HW_PARAMS_API
+#include <alsa/asoundlib.h>
 #endif
 
 class CPU;
@@ -80,6 +82,7 @@ private:
         IXAudio2MasteringVoice* XAudio2MasteringVoice;
         IXAudio2SourceVoice* XAudio2SourceVoice;
 #elif __linux
+        snd_pcm_t* AlsaHandle;
 #endif
     };
 
