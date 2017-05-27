@@ -77,6 +77,21 @@ AppSettings::AppSettings()
     {
         Settings->Write("/Audio/DmcVolume", 100);
     }
+
+    if (!Settings->HasEntry("/Video/Resolution"))
+    {
+        Settings->Write("/Video/Resolution", 0);
+    }
+
+    if (!Settings->HasEntry("/Video/NtscDecoding"))
+    {
+        Settings->Write("/Video/NtscDecoding", false);
+    }
+
+    if (!Settings->HasEntry("/Video/NtscDecoding"))
+    {
+        Settings->Write("/Video/Overscan", false);
+    }
 }
 
 AppSettings::~AppSettings()
@@ -115,6 +130,3 @@ void AppSettings::CleanUp()
 {
     delete instance;
 }
-
-
-

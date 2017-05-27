@@ -16,6 +16,14 @@
 wxDEFINE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);
 wxDEFINE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
+std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
+{
+    { wxSize(256, 240), wxSize(256, 224) },
+    { wxSize(512, 480), wxSize(512, 448) },
+    { wxSize(768, 720), wxSize(768, 672) },
+    { wxSize(1024, 960), wxSize(1024, 896) },
+};
+
 void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
 {
     // Windows works just fine if the window is updated from the emulator
@@ -56,7 +64,16 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
 
     wxMemoryDC mdc(bitmap);
     wxClientDC cdc(this);
-    cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
+
+    if (!OverscanEnabled)
+    {
+        cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
+    }
+    else
+    {
+        cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 8, 256, 224);
+    }
+
 
 #ifdef _WIN32
     if (PpuDebugWindow != nullptr)
@@ -256,29 +273,6 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
     }
 }
 
-void MainWindow::ToggleNtscDecoding(wxCommandEvent& event)
-{
-    if (Nes != nullptr)
-    {
-        bool enabled = EmulatorMenu->FindItem(ID_EMULATOR_NTSC_DECODE)->IsChecked();
-        Nes->PpuSetNtscDecoderEnabled(enabled);
-    }
-}
-
-void MainWindow::OnSettings(wxCommandEvent& WXUNUSED(event))
-{
-    SettingsWindow settings;
-    if (settings.ShowModal() == wxID_OK)
-    {
-        settings.SaveSettings();
-    }
-
-    if (RomList)
-    {
-        RomList->PopulateList();
-    }
-}
-
 void MainWindow::OnROMDoubleClick(wxListEvent& event)
 {
     AppSettings* settings = AppSettings::GetInstance();
@@ -326,23 +320,17 @@ void MainWindow::OnEmulatorPause(wxCommandEvent& WXUNUSED(event))
     }
 }
 
-void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
+void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
 {
-    if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_1X))
+    OverscanEnabled = overscan;
+
+    if (!OverscanEnabled)
     {
-        GameWindowSize = wxSize(256, 240);
+        GameWindowSize = ResolutionsList[resolution].first;
     }
-    else if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_2X))
+    else
     {
-        GameWindowSize = wxSize(512, 480);
-    }
-    else if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_3X))
-    {
-        GameWindowSize = wxSize(768, 720);
-    }
-    else if (SizeSubMenu->IsChecked(ID_EMULATOR_SCALE_4X))
-    {
-        GameWindowSize = wxSize(1024, 960);
+        GameWindowSize = ResolutionsList[resolution].second;
     }
 
     if (Nes != nullptr)
@@ -359,7 +347,6 @@ void MainWindow::OnEmulatorScale(wxCommandEvent& WXUNUSED(event))
     }
 }
 
-
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
 #ifdef _WIN32
@@ -373,6 +360,20 @@ void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
     }
 }
 
+void MainWindow::OpenPathSettings(wxCommandEvent& WXUNUSED(event))
+{
+    SettingsWindow settings;
+    if (settings.ShowModal() == wxID_OK)
+    {
+        settings.SaveSettings();
+    }
+
+    if (RomList)
+    {
+        RomList->PopulateList();
+    }
+}
+
 void MainWindow::OpenAudioSettings(wxCommandEvent& event)
 {
     if (AudioWindow == nullptr)
@@ -383,6 +384,18 @@ void MainWindow::OpenAudioSettings(wxCommandEvent& event)
     AudioWindow->SetNes(Nes);
     AudioWindow->Show();
 }
+
+void MainWindow::OpenVideoSettings(wxCommandEvent& event)
+{
+    if (VideoWindow == nullptr)
+    {
+        VideoWindow = new VideoSettingsWindow(this);
+    }
+
+    VideoWindow->SetNes(Nes);
+    VideoWindow->Show();
+}
+
 
 void MainWindow::PPUDebugClose()
 {
@@ -426,14 +439,6 @@ void MainWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
     StopEmulator(false);
     Close(true);
-}
-
-void MainWindow::OnSize(wxSizeEvent& event)
-{
-    if (Nes != nullptr)
-    {
-        //event.Skip();
-    }
 }
 
 void MainWindow::OnKeyDown(wxKeyEvent& event)
@@ -512,95 +517,43 @@ void MainWindow::OnKeyUp(wxKeyEvent& event)
     }
 }
 
-MainWindow::MainWindow()
-    : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460))
-    , Nes(nullptr)
-    , PpuDebugWindow(nullptr)
-    , FpsCounter(0)
-    , CurrentFps(0)
-    , IntervalStart(std::chrono::steady_clock::now())
-    , GameWindowSize(wxSize(256, 240))
-#ifdef __linux
-    , StopFlag(false)
-#endif
+void MainWindow::InitializeMenus()
 {
     FileMenu = new wxMenu;
     FileMenu->Append(ID_OPEN_ROM, wxT("&Open ROM"));
     FileMenu->AppendSeparator();
     FileMenu->Append(wxID_EXIT, wxT("&Quit"));
 
-    SizeSubMenu = new wxMenu;
-    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_1X, wxT("1X"));
-    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_2X, wxT("2X"));
-    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_3X, wxT("3X"));
-    SizeSubMenu->AppendRadioItem(ID_EMULATOR_SCALE_4X, wxT("4X"));
-
     EmulatorMenu = new wxMenu;
     EmulatorMenu->Append(ID_EMULATOR_PAUSE, wxT("&Pause"));
     EmulatorMenu->Append(ID_EMULATOR_RESUME, wxT("&Resume"));
     EmulatorMenu->Append(ID_EMULATOR_STOP, wxT("&Stop"));
     EmulatorMenu->AppendSeparator();
-    EmulatorMenu->AppendSubMenu(SizeSubMenu, wxT("&Size"));
     EmulatorMenu->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
     EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->Check();
-    EmulatorMenu->AppendCheckItem(ID_EMULATOR_NTSC_DECODE, wxT("&Enable NTSC Decoding"));
     EmulatorMenu->AppendSeparator();
     EmulatorMenu->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
 
     SettingsMenu = new wxMenu;
     SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
     SettingsMenu->Append(ID_SETTINGS_AUDIO, wxT("&Audio Settings"));
-    SettingsMenu->AppendSeparator();
-    SettingsMenu->Append(ID_SETTINGS, wxT("&All Settings"));
+    SettingsMenu->Append(ID_SETTINGS_VIDEO, wxT("&Video Settings"));
+    SettingsMenu->Append(ID_SETTINGS_PATHS, wxT("&Path Settings"));
 
     AboutMenu = new wxMenu;
     AboutMenu->Append(wxID_ANY, wxT("&About"));
 
-    MenuBar = new wxMenuBar;
+    wxMenuBar* MenuBar = new wxMenuBar;
     MenuBar->Append(FileMenu, wxT("&File"));
     MenuBar->Append(EmulatorMenu, wxT("&Emulator"));
     MenuBar->Append(SettingsMenu, wxT("&Settings"));
     MenuBar->Append(AboutMenu, wxT("&About"));
 
     SetMenuBar(MenuBar);
+}
 
-    Bind(wxEVT_LIST_ITEM_ACTIVATED, wxListEventHandler(MainWindow::OnROMDoubleClick), this, wxID_ANY);
-
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit), this, wxID_EXIT);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleCPULog), this, ID_CPU_LOG);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSettings), this, ID_SETTINGS);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenAudioSettings), this, ID_SETTINGS_AUDIO);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnOpenROM), this, ID_OPEN_ROM);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume), this, ID_EMULATOR_RESUME);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop), this, ID_EMULATOR_STOP);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause), this, ID_EMULATOR_PAUSE);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_1X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_2X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_3X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorScale), this, ID_EMULATOR_SCALE_4X);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleNtscDecoding), this, ID_EMULATOR_NTSC_DECODE);
-
-    Bind(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
-#ifdef __linux
-    Bind(EVT_NES_UPDATE_FRAME, wxThreadEventHandler(MainWindow::OnUpdateFrame), this, wxID_ANY);
-#endif
-
-    Bind(wxEVT_SIZING, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
-
-    Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
-
-    // On Linux we need a panel to intercept keyboard events for some reason
-#ifdef __linux
-    Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
-    Panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
-    Panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
-#elif _WIN32
-    Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
-    Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
-#endif
-
+void MainWindow::InitializeLayout()
+{
     RomList = new GameList(this);
     RomList->PopulateList();
 
@@ -608,8 +561,73 @@ MainWindow::MainWindow()
     VerticalBox->Add(RomList, 1, wxEXPAND | wxALL);
     SetSizer(VerticalBox);
 
-    SetMinClientSize(wxSize(256, 240));
+    AppSettings* settings = AppSettings::GetInstance();
+
+    int gameResolutionIndex;
+    settings->Read("/Video/Resolution", &gameResolutionIndex);
+
+    bool overscan;
+    settings->Read("/Video/Overscan", &overscan);
+
+    SetGameResolution(static_cast<GameResolutions>(gameResolutionIndex), overscan);
+
     Centre();
+}
+
+void MainWindow::BindEvents()
+{
+    // Game Selected Event
+    Bind(wxEVT_LIST_ITEM_ACTIVATED, wxListEventHandler(MainWindow::OnROMDoubleClick), this, wxID_ANY);
+
+    // Menu Events
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnQuit), this, wxID_EXIT);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleCPULog), this, ID_CPU_LOG);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenPathSettings), this, ID_SETTINGS_PATHS);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenAudioSettings), this, ID_SETTINGS_AUDIO);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenVideoSettings), this, ID_SETTINGS_VIDEO);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnOpenROM), this, ID_OPEN_ROM);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume), this, ID_EMULATOR_RESUME);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop), this, ID_EMULATOR_STOP);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause), this, ID_EMULATOR_PAUSE);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
+
+    // Emulator Error Event
+    Bind(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
+
+    // Settings Windows Close Events
+    Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
+
+#ifdef __linux
+    // On Linux we need a panel to intercept keyboard events for some reason
+    // Only used for this, so I'm leaving it here rather than putting it in InitializeLayout
+    Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
+    Panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
+    Panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+
+    Bind(EVT_NES_UPDATE_FRAME, wxThreadEventHandler(MainWindow::OnUpdateFrame), this, wxID_ANY);
+#elif _WIN32
+    Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
+    Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+#endif
+}
+
+MainWindow::MainWindow()
+    : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460))
+    , Nes(nullptr)
+    , PpuDebugWindow(nullptr)
+    , AudioWindow(nullptr)
+    , VideoWindow(nullptr)
+    , FpsCounter(0)
+    , CurrentFps(0)
+    , IntervalStart(std::chrono::steady_clock::now())
+#ifdef __linux
+    , StopFlag(false)
+#endif
+{
+    InitializeMenus();
+    InitializeLayout();
+    BindEvents();
 }
 
 MainWindow::~MainWindow()
