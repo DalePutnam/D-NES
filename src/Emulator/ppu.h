@@ -60,6 +60,7 @@ public:
     void WritePPUADDR(uint8_t M);
     void WritePPUDATA(uint8_t M);
 
+    int GetFrameRate();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
@@ -77,7 +78,10 @@ private:
     static const uint32_t RgbLookupTable[64];
     static constexpr uint32_t ResetDelay = 88974;
 
-    std::chrono::high_resolution_clock::time_point IntervalStart;
+    int FpsCounter;
+    std::atomic<int> CurrentFps;
+    std::chrono::steady_clock::time_point FrameCountStart;
+    std::chrono::steady_clock::time_point SingleFrameStart;
     std::atomic<bool> FrameLimitEnabled;
 
     uint64_t Clock;
@@ -179,6 +183,8 @@ private:
     void Write(uint16_t address, uint8_t value);
     uint8_t ReadNameTable(uint16_t address);
     void WriteNameTable(uint16_t address, uint8_t value);
+
+    void UpdateFrameRate();
 
     std::function<void(uint8_t*)> OnFrameComplete;
 };

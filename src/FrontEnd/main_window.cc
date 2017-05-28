@@ -34,7 +34,6 @@ void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
     // to queue a thread event on Linux builds to update the frame
 #ifdef _WIN32
     UpdateFrame(frameBuffer);
-    UpdateFps();
 #elif __linux
     std::unique_lock<std::mutex> lock(FrameMutex);
     if (StopFlag)
@@ -91,7 +90,7 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
         cdc.SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
         cdc.SetTextForeground(*wxWHITE);
 
-        std::string fpsText = std::to_string(CurrentFps);
+        std::string fpsText = std::to_string(Nes->GetFrameRate());
         wxSize textSize = cdc.GetTextExtent(fpsText);
 
         cdc.SetPen(wxPen(*wxBLACK, 0));
@@ -115,24 +114,6 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
         PpuDebugWindow->Update();
     }
 #endif
-}
-
-void MainWindow::UpdateFps()
-{
-    using namespace std::chrono;
-
-    steady_clock::time_point now = steady_clock::now();
-    microseconds time_span = duration_cast<microseconds>(now - IntervalStart);
-    if (time_span.count() >= 1000000)
-    {
-        CurrentFps = FpsCounter;
-        FpsCounter = 0;
-        IntervalStart = steady_clock::now();
-    }
-    else
-    {
-        FpsCounter++;
-    }
 }
 
 void MainWindow::EmulatorErrorCallback(std::string err)
@@ -204,9 +185,6 @@ void MainWindow::StartEmulator(const std::string& filename)
             Nes = nullptr;
             return;
         }
-
-        FpsCounter = 0;
-        IntervalStart = std::chrono::steady_clock::now();
 
 #ifdef __linux
         StopFlag = false;
@@ -451,7 +429,6 @@ void MainWindow::OnUpdateFrame(wxThreadEvent& event)
     }
 
     UpdateFrame(FrameBuffer);
-    UpdateFps();
 
     FrameCv.notify_all();
 }
@@ -656,9 +633,6 @@ MainWindow::MainWindow()
     , PpuDebugWindow(nullptr)
     , AudioWindow(nullptr)
     , VideoWindow(nullptr)
-    , FpsCounter(0)
-    , CurrentFps(0)
-    , IntervalStart(std::chrono::steady_clock::now())
 #ifdef __linux
     , StopFlag(false)
 #endif

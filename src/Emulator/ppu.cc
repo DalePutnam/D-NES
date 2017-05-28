@@ -20,6 +20,11 @@ const uint32_t PPU::RgbLookupTable[64] =
     0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490, 0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
 };
 
+int PPU::GetFrameRate()
+{
+    return CurrentFps;
+}
+
 void PPU::GetNameTable(int table, uint8_t* pixels)
 {
     uint16_t tableIndex;
@@ -218,7 +223,7 @@ void PPU::RenderNtscPixel(int pixel)
         // Normal Levels
           -0.116f / 12.f, 0.000f / 12.f, 0.307f / 12.f, 0.714f / 12.f,
            0.399f / 12.f, 0.684f / 12.f, 1.000f / 12.f, 1.000f / 12.f,
-           // Attenuated Levels                                                     
+           // Attenuated Levels
           -0.087f / 12.f, 0.000f / 12.f, 0.229f / 12.f, 0.532f / 12.f,
            0.298f / 12.f, 0.510f / 12.f, 0.746f / 12.f, 0.746f / 12.f
     };
@@ -587,6 +592,8 @@ void PPU::Render()
 
     if (Dot == 256 && Line == 239)
     {
+        UpdateFrameRate();
+
         if (OnFrameComplete)
         {
             OnFrameComplete(FrameBuffer);
@@ -819,7 +826,10 @@ uint16_t PPU::GetCurrentScanline()
 PPU::PPU()
     : Cpu(nullptr)
     , Cartridge(nullptr)
-    , IntervalStart(std::chrono::high_resolution_clock::now())
+    , FpsCounter(0)
+    , CurrentFps(0)
+    , FrameCountStart(std::chrono::steady_clock::now())
+    , SingleFrameStart(std::chrono::steady_clock::now())
     , FrameLimitEnabled(true)
     , Clock(0)
     , Dot(0)
@@ -1133,6 +1143,24 @@ bool PPU::CheckNMI(uint64_t& occurredCycle)
     return InterruptActive;
 }
 
+void PPU::UpdateFrameRate()
+{
+    using namespace std::chrono;
+
+    steady_clock::time_point now = steady_clock::now();
+    microseconds time_span = duration_cast<microseconds>(now - FrameCountStart);
+    if (time_span.count() >= 1000000)
+    {
+        CurrentFps = FpsCounter;
+        FpsCounter = 0;
+        FrameCountStart = steady_clock::now();
+    }
+    else
+    {
+        FpsCounter++;
+    }
+}
+
 void PPU::Run()
 {
     while (Cpu->GetClock() >= Clock)
@@ -1233,26 +1261,26 @@ void PPU::Run()
 
                     if (FrameLimitEnabled)
                     {
-                        high_resolution_clock::time_point now = high_resolution_clock::now();
-                        microseconds span = duration_cast<microseconds>(now - IntervalStart);
+                        steady_clock::time_point now = steady_clock::now();
+                        microseconds span = duration_cast<microseconds>(now - SingleFrameStart);
 
                         while (span.count() < 16666)
                         {
-                            now = high_resolution_clock::now();
-                            span = duration_cast<microseconds>(now - IntervalStart);
+                            now = steady_clock::now();
+                            span = duration_cast<microseconds>(now - SingleFrameStart);
                         }
 
                         Apu->UpdatePlaybackRate(span);
-                        IntervalStart = high_resolution_clock::now();
+                        SingleFrameStart = steady_clock::now();
                     }
                     else
                     {
-                        high_resolution_clock::time_point now = high_resolution_clock::now();
-                        microseconds span = duration_cast<microseconds>(now - IntervalStart);
+                        steady_clock::time_point now = steady_clock::now();
+                        microseconds span = duration_cast<microseconds>(now - SingleFrameStart);
 
                         Apu->UpdatePlaybackRate(span);
-                        IntervalStart = high_resolution_clock::now();
-                    }                    
+                        SingleFrameStart = steady_clock::now();
+                    }
                 }
 
                 IncrementClock();

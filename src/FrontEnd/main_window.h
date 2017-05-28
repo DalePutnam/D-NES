@@ -5,7 +5,6 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
-#include <chrono>
 #include <vector>
 #include <condition_variable>
 
@@ -68,9 +67,6 @@ private:
     wxBoxSizer* VerticalBox;
     GameList* RomList;
 
-    int FpsCounter;
-    std::atomic<int> CurrentFps;
-    std::chrono::steady_clock::time_point IntervalStart;
     bool ShowFpsCounter;
 
 #ifdef __linux
@@ -119,7 +115,6 @@ private:
     void OnVideoSettingsClosed(wxCommandEvent& event);
 
     void UpdateFrame(uint8_t* frameBuffer);
-    void UpdateFps();
 };
 
 wxDECLARE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);

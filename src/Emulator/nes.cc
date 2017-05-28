@@ -23,7 +23,7 @@ NES::NES(const NesParams& params)
         Ppu = new PPU;
         Cartridge = new Cart(params.RomPath, params.SavePath);
     }
-    catch (std::runtime_error& e) 
+    catch (std::runtime_error& e)
     {
         delete Apu;
         delete Cpu;
@@ -79,6 +79,11 @@ uint8_t NES::GetControllerOneState()
 void NES::CpuSetLogEnabled(bool enabled)
 {
     Cpu->SetLogEnabled(enabled);
+}
+
+int NES::GetFrameRate()
+{
+    return Ppu->GetFrameRate();
 }
 
 void NES::GetNameTable(int table, uint8_t* pixels)
@@ -247,4 +252,3 @@ NES::~NES()
     delete Ppu;
     delete Cartridge;
 }
-

@@ -93,6 +93,7 @@ public:
 
     void CpuSetLogEnabled(bool enabled);
 
+    int GetFrameRate();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
