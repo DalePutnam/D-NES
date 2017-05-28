@@ -94,8 +94,9 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
         std::string fpsText = std::to_string(CurrentFps);
         wxSize textSize = cdc.GetTextExtent(fpsText);
 
+        cdc.SetPen(wxPen(*wxBLACK, 0));
         cdc.SetBrush(wxBrush(*wxBLACK));
-        cdc.DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 6, textSize.GetWidth() + 8, textSize.GetHeight(), 6.0);
+        cdc.DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
         cdc.DrawText(fpsText, GetVirtualSize().GetWidth() - textSize.GetWidth() - 8, 6);
     }
 
