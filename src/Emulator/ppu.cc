@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
+#include <thread>
 #include "ppu.h"
 #include "cpu.h"
 #include "apu.h"
@@ -214,6 +215,32 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
             pixels[index + 2] = blue;
         }
     }
+}
+
+void PPU::LimitFrameRate()
+{
+    using namespace std::chrono;
+
+    if (FrameLimitEnabled)
+    {
+        steady_clock::time_point then = SingleFrameStart + microseconds(16666);
+
+        // Wake up 1000 microseconds early then busy wait
+        // to ensure we don't miss the mark
+        std::this_thread::sleep_until(SingleFrameStart + microseconds(15666));
+
+        steady_clock::time_point now = steady_clock::now();
+        microseconds span = duration_cast<microseconds>(then - now);
+
+        while (span.count() > 0)
+        {
+            now = steady_clock::now();
+            span = duration_cast<microseconds>(then - now);
+        }
+    }
+
+    Apu->UpdatePlaybackRate(duration_cast<microseconds>(steady_clock::now() - SingleFrameStart));
+    SingleFrameStart = steady_clock::now();
 }
 
 void PPU::RenderNtscPixel(int pixel)
@@ -593,6 +620,7 @@ void PPU::Render()
     if (Dot == 256 && Line == 239)
     {
         UpdateFrameRate();
+        LimitFrameRate();
 
         if (OnFrameComplete)
         {
@@ -1252,34 +1280,6 @@ void PPU::Run()
                     if (Dot == 256)
                     {
                         IncrementYScroll();
-                    }
-                }
-
-                if (Line == 239 && Dot == 256)
-                {
-                    using namespace std::chrono;
-
-                    if (FrameLimitEnabled)
-                    {
-                        steady_clock::time_point now = steady_clock::now();
-                        microseconds span = duration_cast<microseconds>(now - SingleFrameStart);
-
-                        while (span.count() < 16666)
-                        {
-                            now = steady_clock::now();
-                            span = duration_cast<microseconds>(now - SingleFrameStart);
-                        }
-
-                        Apu->UpdatePlaybackRate(span);
-                        SingleFrameStart = steady_clock::now();
-                    }
-                    else
-                    {
-                        steady_clock::time_point now = steady_clock::now();
-                        microseconds span = duration_cast<microseconds>(now - SingleFrameStart);
-
-                        Apu->UpdatePlaybackRate(span);
-                        SingleFrameStart = steady_clock::now();
                     }
                 }
 

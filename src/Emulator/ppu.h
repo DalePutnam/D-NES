@@ -168,6 +168,8 @@ private:
     std::atomic<bool> RequestNtscMode;
     float SignalLevels[256 * 8];
 
+    void LimitFrameRate();
+
     void RenderNtscPixel(int pixel);
     void RenderNtscLine();
 
