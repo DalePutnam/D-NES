@@ -43,6 +43,7 @@ public:
     void StopEmulator(bool showRomList = true);
     void PPUDebugClose();
     void SetGameResolution(GameResolutions resolution, bool overscan);
+    void SetShowFpsCounter(bool enabled);
 
 private:
     static std::vector<std::pair<wxSize, wxSize> > ResolutionsList;
@@ -70,6 +71,7 @@ private:
     int FpsCounter;
     std::atomic<int> CurrentFps;
     std::chrono::steady_clock::time_point IntervalStart;
+    bool ShowFpsCounter;
 
 #ifdef __linux
     std::atomic<bool> StopFlag;
@@ -113,6 +115,7 @@ private:
 
     void OnUnexpectedShutdown(wxThreadEvent& event);
     void OnAudioSettingsClosed(wxCommandEvent& event);
+    void OnVideoSettingsClosed(wxCommandEvent& event);
 
     void UpdateFrame(uint8_t* frameBuffer);
     void UpdateFps();

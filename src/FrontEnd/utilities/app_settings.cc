@@ -88,9 +88,14 @@ AppSettings::AppSettings()
         Settings->Write("/Video/NtscDecoding", false);
     }
 
-    if (!Settings->HasEntry("/Video/NtscDecoding"))
+    if (!Settings->HasEntry("/Video/Overscan"))
     {
-        Settings->Write("/Video/Overscan", false);
+        Settings->Write("/Video/Overscan", true);
+    }
+
+    if (!Settings->HasEntry("/Video/ShowFps"))
+    {
+        Settings->Write("/Video/ShowFps", false);
     }
 }
 

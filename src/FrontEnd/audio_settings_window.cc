@@ -13,7 +13,7 @@
 
 #include "nes.h"
 
-static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX;
+static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX & ~wxCLOSE_BOX;
 
 wxDEFINE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 

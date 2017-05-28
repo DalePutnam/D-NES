@@ -16,6 +16,9 @@
 wxDEFINE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);
 wxDEFINE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
+// The first resolution in each pair is the full resolution of the
+// emulator, the second is the resolution at the same scale but with overscan
+// taken into account
 std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
 {
     { wxSize(256, 240), wxSize(256, 224) },
@@ -57,6 +60,15 @@ void MainWindow::OnAudioSettingsClosed(wxCommandEvent& event)
     }
 }
 
+void MainWindow::OnVideoSettingsClosed(wxCommandEvent& event)
+{
+    if (VideoWindow != nullptr)
+    {
+        VideoWindow->Destroy();
+        VideoWindow = nullptr;
+    }
+}
+
 void MainWindow::UpdateFrame(uint8_t* frameBuffer)
 {
     wxImage image(256, 240, frameBuffer, true);
@@ -74,6 +86,18 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
         cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 8, 256, 224);
     }
 
+    if (ShowFpsCounter)
+    {
+        cdc.SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
+        cdc.SetTextForeground(*wxWHITE);
+
+        std::string fpsText = std::to_string(CurrentFps);
+        wxSize textSize = cdc.GetTextExtent(fpsText);
+
+        cdc.SetBrush(wxBrush(*wxBLACK));
+        cdc.DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 6, textSize.GetWidth() + 8, textSize.GetHeight(), 6.0);
+        cdc.DrawText(fpsText, GetVirtualSize().GetWidth() - textSize.GetWidth() - 8, 6);
+    }
 
 #ifdef _WIN32
     if (PpuDebugWindow != nullptr)
@@ -103,10 +127,6 @@ void MainWindow::UpdateFps()
         CurrentFps = FpsCounter;
         FpsCounter = 0;
         IntervalStart = steady_clock::now();
-
-        std::ostringstream oss;
-        oss << CurrentFps << " FPS - " << Nes->GetGameName();
-        SetTitle(oss.str());
     }
     else
     {
@@ -347,6 +367,11 @@ void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
     }
 }
 
+void MainWindow::SetShowFpsCounter(bool enabled)
+{
+    ShowFpsCounter = enabled;
+}
+
 void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
 {
 #ifdef _WIN32
@@ -571,6 +596,8 @@ void MainWindow::InitializeLayout()
 
     SetGameResolution(static_cast<GameResolutions>(gameResolutionIndex), overscan);
 
+    settings->Read("/Video/ShowFps", &ShowFpsCounter);
+
     Centre();
 }
 
@@ -597,6 +624,7 @@ void MainWindow::BindEvents()
 
     // Settings Windows Close Events
     Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
+    Bind(EVT_VIDEO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnVideoSettingsClosed), this);
 
 #ifdef __linux
     // On Linux we need a panel to intercept keyboard events for some reason
