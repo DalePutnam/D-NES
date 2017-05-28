@@ -5,17 +5,21 @@
 #include <wx/bitmap.h>
 #include <wx/dcclient.h>
 
-#include "ppu_debug_window.h"
+#include "ppu_viewer_window.h"
 #include "main_window.h"
 #include "nes.h"
 
-void PPUDebugWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
+wxDEFINE_EVENT(EVT_PPU_VIEWER_CLOSED, wxCommandEvent);
+
+void PPUViewerWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
-    ParentWindow->PPUDebugClose();
+    wxCommandEvent* evt = new wxCommandEvent(EVT_PPU_VIEWER_CLOSED);
+    wxQueueEvent(GetParent(), evt);
+    Hide();
 }
 
-PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow, NES* nes)
-    : wxFrame(mainWindow, wxID_ANY, "PPU Debug", wxDefaultPosition, wxDefaultSize, (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX)
+PPUViewerWindow::PPUViewerWindow(MainWindow* mainWindow, NES* nes)
+    : wxFrame(mainWindow, wxID_ANY, "PPU Viewer", wxDefaultPosition, wxDefaultSize, (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX)
     , ParentWindow(mainWindow)
     , Nes(nes)
 {
@@ -88,10 +92,10 @@ PPUDebugWindow::PPUDebugWindow(MainWindow* mainWindow, NES* nes)
     SetSizer(topsizer);
     Fit();
 
-    Bind(wxEVT_CLOSE_WINDOW, wxCommandEventHandler(PPUDebugWindow::OnQuit), this, wxID_ANY);
+    Bind(wxEVT_CLOSE_WINDOW, wxCommandEventHandler(PPUViewerWindow::OnQuit), this, wxID_ANY);
 }
 
-void PPUDebugWindow::Update()
+void PPUViewerWindow::Update()
 {
     if (Nes == nullptr)
     {
@@ -134,7 +138,7 @@ void PPUDebugWindow::Update()
     }
 }
 
-void PPUDebugWindow::ClearAll()
+void PPUViewerWindow::ClearAll()
 {
     for (int i = 0; i < 4; ++i)
     {
@@ -166,13 +170,13 @@ void PPUDebugWindow::ClearAll()
     }
 }
 
-void PPUDebugWindow::SetNes(NES* nes)
+void PPUViewerWindow::SetNes(NES* nes)
 {
     Nes = nes;
     PatternDisplay->SetNes(nes);
 }
 
-int PPUDebugWindow::GetCurrentPalette()
+int PPUViewerWindow::GetCurrentPalette()
 {
     return PatternDisplay->GetCurrentPalette();
 }

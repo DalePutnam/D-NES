@@ -9,8 +9,12 @@
 #include <wx/wupdlock.h>
 
 #include "nes.h"
+#include "game_list.h"
 #include "main_window.h"
 #include "settings_window.h"
+#include "ppu_viewer_window.h"
+#include "audio_settings_window.h"
+#include "video_settings_window.h"
 #include "utilities/app_settings.h"
 
 wxDEFINE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);
@@ -48,6 +52,19 @@ void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
 
     FrameCv.wait(lock);
 #endif
+}
+
+void MainWindow::OnPpuViewerClosed(wxCommandEvent& WXUNUSED(event))
+{
+#ifdef _WIN32
+    std::lock_guard<std::mutex> lock(PpuViewerMutex);
+#endif
+
+    if (PpuWindow != nullptr)
+    {
+        PpuWindow->Destroy();
+        PpuWindow = nullptr;
+    }
 }
 
 void MainWindow::OnAudioSettingsClosed(wxCommandEvent& event)
@@ -100,18 +117,18 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
     }
 
 #ifdef _WIN32
-    if (PpuDebugWindow != nullptr)
+    if (PpuWindow != nullptr)
     {
-        std::lock_guard<std::mutex> lock(PpuDebugMutex);
-        if (PpuDebugWindow != nullptr)
+        std::lock_guard<std::mutex> lock(PpuMutex);
+        if (PpuWindow != nullptr)
         {
-            PpuDebugWindow->Update();
+            PpuWindow->Update();
         }
     }
 #elif __linux
-    if (PpuDebugWindow != nullptr)
+    if (PpuWindow != nullptr)
     {
-        PpuDebugWindow->Update();
+        PpuWindow->Update();
     }
 #endif
 }
@@ -192,9 +209,9 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         Nes->Start();
 
-        if (PpuDebugWindow != nullptr)
+        if (PpuWindow != nullptr)
         {
-            PpuDebugWindow->SetNes(Nes);
+            PpuWindow->SetNes(Nes);
         }
 
         GameMenuSize.SetWidth(GetSize().GetWidth());
@@ -244,10 +261,10 @@ void MainWindow::StopEmulator(bool showRomList)
             SetTitle("D-NES");
         }
 
-        if (PpuDebugWindow != nullptr)
+        if (PpuWindow != nullptr)
         {
-            PpuDebugWindow->ClearAll();
-            PpuDebugWindow->SetNes(nullptr);
+            PpuWindow->ClearAll();
+            PpuWindow->SetNes(nullptr);
         }
 
         if (AudioWindow != nullptr)
@@ -354,16 +371,16 @@ void MainWindow::SetShowFpsCounter(bool enabled)
     ShowFpsCounter = enabled;
 }
 
-void MainWindow::OnPPUDebug(wxCommandEvent& WXUNUSED(event))
+void MainWindow::OpenPpuViewer(wxCommandEvent& WXUNUSED(event))
 {
 #ifdef _WIN32
-    std::lock_guard<std::mutex> lock(PpuDebugMutex);
+    std::lock_guard<std::mutex> lock(PpuViewerMutex);
 #endif
 
-    if (PpuDebugWindow == nullptr)
+    if (PpuWindow == nullptr)
     {
-        PpuDebugWindow = new PPUDebugWindow(this, Nes);
-        PpuDebugWindow->Show();
+        PpuWindow = new PPUViewerWindow(this, Nes);
+        PpuWindow->Show();
     }
 }
 
@@ -403,19 +420,6 @@ void MainWindow::OpenVideoSettings(wxCommandEvent& event)
     VideoWindow->Show();
 }
 
-
-void MainWindow::PPUDebugClose()
-{
-#ifdef _WIN32
-    std::lock_guard<std::mutex> lock(PpuDebugMutex);
-#endif
-
-    if (PpuDebugWindow != nullptr)
-    {
-        PpuDebugWindow->Destroy();
-        PpuDebugWindow = nullptr;
-    }
-}
 
 #ifdef __linux
 void MainWindow::OnUpdateFrame(wxThreadEvent& event)
@@ -537,7 +541,7 @@ void MainWindow::InitializeMenus()
     EmulatorMenu->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
     EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->Check();
     EmulatorMenu->AppendSeparator();
-    EmulatorMenu->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Debugger"));
+    EmulatorMenu->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Viewer"));
 
     SettingsMenu = new wxMenu;
     SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
@@ -603,13 +607,14 @@ void MainWindow::BindEvents()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume), this, ID_EMULATOR_RESUME);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop), this, ID_EMULATOR_STOP);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause), this, ID_EMULATOR_PAUSE);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnPPUDebug), this, ID_EMULATOR_PPU_DEBUG);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenPpuViewer), this, ID_EMULATOR_PPU_DEBUG);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
 
     // Emulator Error Event
     Bind(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
 
     // Settings Windows Close Events
+    Bind(EVT_PPU_VIEWER_CLOSED, wxCommandEventHandler(MainWindow::OnPpuViewerClosed), this);
     Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
     Bind(EVT_VIDEO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnVideoSettingsClosed), this);
 
@@ -630,7 +635,7 @@ void MainWindow::BindEvents()
 MainWindow::MainWindow()
     : wxFrame(NULL, wxID_ANY, "D-NES")
     , Nes(nullptr)
-    , PpuDebugWindow(nullptr)
+    , PpuWindow(nullptr)
     , AudioWindow(nullptr)
     , VideoWindow(nullptr)
 #ifdef __linux
@@ -658,5 +663,4 @@ MainWindow::~MainWindow()
     }
 
     StopEmulator(false);
-    PPUDebugClose();
 }

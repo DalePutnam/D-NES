@@ -7,13 +7,15 @@
 
 #include "pattern_table_display.h"
 
+wxDECLARE_EVENT(EVT_PPU_VIEWER_CLOSED, wxCommandEvent);
+
 class NES;
 class MainWindow;
 
-class PPUDebugWindow : public wxFrame
+class PPUViewerWindow : public wxFrame
 {
 public:
-    explicit PPUDebugWindow(MainWindow* mainWindow, NES* nes = nullptr);
+    explicit PPUViewerWindow(MainWindow* mainWindow, NES* nes = nullptr);
 
     void Update();
     void ClearAll();

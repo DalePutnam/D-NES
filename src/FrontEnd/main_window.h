@@ -17,12 +17,11 @@
 #include <wx/listctrl.h>
 #include <wx/bitmap.h>
 
-#include "game_list.h"
-#include "ppu_debug_window.h"
-#include "audio_settings_window.h"
-#include "video_settings_window.h"
-
 class NES;
+class GameList;
+class PPUViewerWindow;
+class AudioSettingsWindow;
+class VideoSettingsWindow;
 
 enum GameResolutions
 {
@@ -40,7 +39,6 @@ public:
     ~MainWindow();
 
     void StopEmulator(bool showRomList = true);
-    void PPUDebugClose();
     void SetGameResolution(GameResolutions resolution, bool overscan);
     void SetShowFpsCounter(bool enabled);
 
@@ -49,12 +47,12 @@ private:
 
     NES* Nes;
 
-    PPUDebugWindow* PpuDebugWindow;
+    PPUViewerWindow* PpuWindow;
     AudioSettingsWindow* AudioWindow;
     VideoSettingsWindow* VideoWindow;
 
 #ifdef _WIN32
-    std::mutex PpuDebugMutex;
+    std::mutex PpuViewerMutex;
 #elif __linux
     wxPanel* Panel;
 #endif
@@ -93,7 +91,7 @@ private:
     void OnEmulatorResume(wxCommandEvent& event);
     void OnEmulatorStop(wxCommandEvent& event);
     void OnEmulatorPause(wxCommandEvent& event);
-    void OnPPUDebug(wxCommandEvent& event);
+    void OpenPpuViewer(wxCommandEvent& event);
     void OpenPathSettings(wxCommandEvent& event);
     void OpenAudioSettings(wxCommandEvent& event);
     void OpenVideoSettings(wxCommandEvent& event);
@@ -111,6 +109,7 @@ private:
 #endif
 
     void OnUnexpectedShutdown(wxThreadEvent& event);
+    void OnPpuViewerClosed(wxCommandEvent& event);
     void OnAudioSettingsClosed(wxCommandEvent& event);
     void OnVideoSettingsClosed(wxCommandEvent& event);
 
