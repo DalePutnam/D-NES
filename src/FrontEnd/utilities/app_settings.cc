@@ -97,6 +97,16 @@ AppSettings::AppSettings()
     {
         Settings->Write("/Video/ShowFps", false);
     }
+
+    if (!Settings->HasEntry("/Menu/Width"))
+    {
+        Settings->Write("/Menu/Width", 600);
+    }
+
+    if (!Settings->HasEntry("/Menu/Height"))
+    {
+        Settings->Write("/Menu/Height", 460);
+    }
 }
 
 AppSettings::~AppSettings()

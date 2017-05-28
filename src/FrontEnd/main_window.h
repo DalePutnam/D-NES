@@ -82,6 +82,7 @@ private:
 
     bool OverscanEnabled;
     wxSize GameWindowSize;
+    wxSize GameMenuSize;
 
     void InitializeMenus();
     void InitializeLayout();

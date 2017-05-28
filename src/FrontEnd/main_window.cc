@@ -218,6 +218,9 @@ void MainWindow::StartEmulator(const std::string& filename)
             PpuDebugWindow->SetNes(Nes);
         }
 
+        GameMenuSize.SetWidth(GetSize().GetWidth());
+        GameMenuSize.SetHeight(GetSize().GetHeight());
+
         VerticalBox->Hide(RomList);
         SetTitle(Nes->GetGameName());
         SetClientSize(GameWindowSize);
@@ -258,7 +261,7 @@ void MainWindow::StopEmulator(bool showRomList)
 
             VerticalBox->Show(RomList);
             RomList->PopulateList();
-            SetSize(wxSize(600, 460));
+            SetSize(GameMenuSize);
             SetTitle("D-NES");
         }
 
@@ -462,8 +465,7 @@ void MainWindow::OnUnexpectedShutdown(wxThreadEvent& event)
 
 void MainWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 {
-    StopEmulator(false);
-    Close(true);
+    Close();
 }
 
 void MainWindow::OnKeyDown(wxKeyEvent& event)
@@ -598,6 +600,13 @@ void MainWindow::InitializeLayout()
 
     settings->Read("/Video/ShowFps", &ShowFpsCounter);
 
+    int menuWidth, menuHeight;
+    settings->Read("/Menu/Width", &menuWidth);
+    settings->Read("/Menu/Height", &menuHeight);
+
+    GameMenuSize = wxSize(menuWidth, menuHeight);
+    SetSize(GameMenuSize);
+
     Centre();
 }
 
@@ -641,7 +650,7 @@ void MainWindow::BindEvents()
 }
 
 MainWindow::MainWindow()
-    : wxFrame(NULL, wxID_ANY, "D-NES", wxDefaultPosition, wxSize(600, 460))
+    : wxFrame(NULL, wxID_ANY, "D-NES")
     , Nes(nullptr)
     , PpuDebugWindow(nullptr)
     , AudioWindow(nullptr)
@@ -660,6 +669,19 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
+    AppSettings* settings = AppSettings::GetInstance();
+
+    if (Nes != nullptr)
+    {
+        settings->Write("/Menu/Width", GameMenuSize.GetWidth());
+        settings->Write("/Menu/Height", GameMenuSize.GetHeight());
+    }
+    else
+    {
+        settings->Write("/Menu/Width", GetSize().GetWidth());
+        settings->Write("/Menu/Height", GetSize().GetHeight());
+    }
+
     StopEmulator(false);
     PPUDebugClose();
 }
