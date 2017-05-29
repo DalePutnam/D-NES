@@ -5,6 +5,7 @@
 #include <wx/filedlg.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
+#include <wx/dcbuffer.h>
 #include <wx/dir.h>
 #include <wx/wupdlock.h>
 
@@ -89,37 +90,45 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
 {
     wxImage image(256, 240, frameBuffer, true);
     wxBitmap bitmap(image, 24);
+    static wxBitmap b(512, 480);
 
     wxMemoryDC mdc(bitmap);
+
+    // Need explicit double buffering on Windows to prevent the fps counter from flickering
+#ifdef _WIN32
     wxClientDC cdc(this);
+    wxBufferedDC dc(&cdc);
+#elif __linux
+    wxClientDC dc(this);
+#endif
 
     if (!OverscanEnabled)
     {
-        cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
+        dc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
     }
     else
     {
-        cdc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 8, 256, 224);
+        dc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 8, 256, 224);
     }
 
     if (ShowFpsCounter)
     {
-        cdc.SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
-        cdc.SetTextForeground(*wxWHITE);
+        dc.SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
+        dc.SetTextForeground(*wxWHITE);
 
         std::string fpsText = std::to_string(Nes->GetFrameRate());
-        wxSize textSize = cdc.GetTextExtent(fpsText);
+        wxSize textSize = dc.GetTextExtent(fpsText);
 
-        cdc.SetPen(wxPen(*wxBLACK, 0));
-        cdc.SetBrush(wxBrush(*wxBLACK));
-        cdc.DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
-        cdc.DrawText(fpsText, GetVirtualSize().GetWidth() - textSize.GetWidth() - 8, 6);
+        dc.SetPen(wxPen(*wxBLACK, 0));
+        dc.SetBrush(wxBrush(*wxBLACK));
+        dc.DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
+        dc.DrawText(fpsText, GetVirtualSize().GetWidth() - textSize.GetWidth() - 8, 6);
     }
 
 #ifdef _WIN32
     if (PpuWindow != nullptr)
     {
-        std::lock_guard<std::mutex> lock(PpuMutex);
+        std::lock_guard<std::mutex> lock(PpuViewerMutex);
         if (PpuWindow != nullptr)
         {
             PpuWindow->Update();

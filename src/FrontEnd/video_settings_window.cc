@@ -5,10 +5,11 @@
 #include <wx/sizer.h>
 #include <vector>
 
-#include "nes.h"
 #include "main_window.h"
 #include "video_settings_window.h"
 #include "utilities/app_settings.h"
+
+#include "nes.h"
 
 static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX & ~wxCLOSE_BOX;
 
@@ -29,7 +30,7 @@ VideoSettingsWindow::VideoSettingsWindow(MainWindow* parentWindow)
     choices[_768X720] = "768x720 (x3)";
     choices[_1024X960] = "1024x960 (x4)";
 
-    ResolutionComboBox = new wxComboBox(this, ID_RESOLUTION_CHANGED, "", wxDefaultPosition, wxDefaultSize, NUM_RESOLUTIONS, choices, wxCB_READONLY);
+    ResolutionComboBox = new wxComboBox(settingsPanel, ID_RESOLUTION_CHANGED, "", wxDefaultPosition, wxDefaultSize, NUM_RESOLUTIONS, choices, wxCB_READONLY);
 
     int currentChoice;
     settings->Read("/Video/Resolution", &currentChoice);

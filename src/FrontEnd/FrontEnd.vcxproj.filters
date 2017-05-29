@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -45,6 +45,9 @@
     <ClInclude Include="audio_settings_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="video_settings_window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="utilities\app_settings.cc">
@@ -69,6 +72,9 @@
       <Filter>Source Files\Utilities</Filter>
     </ClCompile>
     <ClCompile Include="audio_settings_window.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="video_settings_window.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
