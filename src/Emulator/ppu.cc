@@ -225,9 +225,9 @@ void PPU::LimitFrameRate()
     {
         steady_clock::time_point then = SingleFrameStart + microseconds(16666);
 
-        // Wake up 1000 microseconds early then busy wait
+        // Wake up 3000 microseconds early then busy wait
         // to ensure we don't miss the mark
-        std::this_thread::sleep_until(SingleFrameStart + microseconds(15666));
+        std::this_thread::sleep_until(SingleFrameStart + microseconds(13666));
 
         steady_clock::time_point now = steady_clock::now();
         microseconds span = duration_cast<microseconds>(then - now);
