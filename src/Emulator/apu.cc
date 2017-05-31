@@ -74,7 +74,7 @@ APU::AudioBackend::AudioBackend()
     rc = snd_pcm_hw_params_set_rate(AlsaHandle, AlsaHwParams, AUDIO_SAMPLE_RATE, 0);
     if (rc < 0) goto FailedExit;
 
-    rc = snd_pcm_hw_params_set_period_size(AlsaHandle, AlsaHwParams, 32, 0);
+    rc = snd_pcm_hw_params_set_period_size(AlsaHandle, AlsaHwParams, AUDIO_BUFFER_SIZE / 2, 0);
     if (rc < 0) goto FailedExit;
 
     rc = snd_pcm_hw_params(AlsaHandle, AlsaHwParams);
@@ -134,8 +134,10 @@ void APU::AudioBackend::SetMuted(bool mute)
         XAudio2SourceVoice->Stop(0);
         XAudio2SourceVoice->FlushSourceBuffers();
 #elif __linux
-        snd_pcm_pause(AlsaHandle, 1);
-        snd_pcm_reset(AlsaHandle);
+        //snd_pcm_pause(AlsaHandle, 1);
+
+        snd_pcm_drop(AlsaHandle);
+        //snd_pcm_reset(AlsaHandle);
 #endif
         IsMuted = true;
     }
@@ -144,7 +146,8 @@ void APU::AudioBackend::SetMuted(bool mute)
 #ifdef _WIN32
         XAudio2SourceVoice->Start(0);
 #elif __linux
-        snd_pcm_pause(AlsaHandle, 0);
+        snd_pcm_prepare(AlsaHandle);
+        //snd_pcm_pause(AlsaHandle, 0);
 #endif
         CurrentBuffer = 0;
         BufferIndex = 0;
