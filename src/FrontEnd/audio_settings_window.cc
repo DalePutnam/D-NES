@@ -5,8 +5,6 @@
 #include <wx/statbox.h>
 #include <wx/slider.h>
 
-#include <sstream>
-
 #include "main_window.h"
 #include "audio_settings_window.h"
 #include "utilities/app_settings.h"
@@ -55,30 +53,12 @@ void AudioSettingsWindow::InitializeLayout()
     NoiseVolume = new wxSlider(SettingsPanel, ID_NOISE_SLIDER, noise, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
     DmcVolume = new wxSlider(SettingsPanel, ID_DMC_SLIDER, dmc, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
 
-    std::ostringstream oss;
-
-    oss << master;
     CurrentMasterVolume = new wxStaticText(SettingsPanel, wxID_ANY, std::to_string(master));
-    oss.str("");
-
-    oss << pulseOne;
-    CurrentPulseOneVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
-    oss.str("");
-
-    oss << pulseTwo;
-    CurrentPulseTwoVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
-    oss.str("");
-
-    oss << triangle;
-    CurrentTriangleVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
-    oss.str("");
-
-    oss << noise;
-    CurrentNoiseVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
-    oss.str("");
-
-    oss << dmc;
-    CurrentDmcVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
+    CurrentPulseOneVolume = new wxStaticText(SettingsPanel, wxID_ANY, std::to_string(pulseOne));
+    CurrentPulseTwoVolume = new wxStaticText(SettingsPanel, wxID_ANY, std::to_string(pulseTwo));
+    CurrentTriangleVolume = new wxStaticText(SettingsPanel, wxID_ANY, std::to_string(triangle));
+    CurrentNoiseVolume = new wxStaticText(SettingsPanel, wxID_ANY, std::to_string(noise));
+    CurrentDmcVolume = new wxStaticText(SettingsPanel, wxID_ANY, std::to_string(dmc));
 
     wxSizerFlags sizerFlags;
     sizerFlags.Center();
@@ -231,9 +211,7 @@ void AudioSettingsWindow::MasterVolumeChanged(wxCommandEvent& event)
         Nes->ApuSetMasterVolume(MasterVolume->GetValue() / 100.0f);
     }
 
-    std::ostringstream oss;
-    oss << MasterVolume->GetValue();
-    CurrentMasterVolume->SetLabel(oss.str());
+    CurrentMasterVolume->SetLabel(std::to_string(MasterVolume->GetValue()));
 }
 
 void AudioSettingsWindow::PulseOneVolumeChanged(wxCommandEvent& event)
@@ -243,9 +221,7 @@ void AudioSettingsWindow::PulseOneVolumeChanged(wxCommandEvent& event)
         Nes->ApuSetPulseOneVolume(PulseOneVolume->GetValue() / 100.0f);
     }
 
-    std::ostringstream oss;
-    oss << PulseOneVolume->GetValue();
-    CurrentPulseOneVolume->SetLabel(oss.str());
+    CurrentPulseOneVolume->SetLabel(std::to_string(PulseOneVolume->GetValue()));
 }
 
 void AudioSettingsWindow::PulseTwoVolumeChanged(wxCommandEvent& event)
@@ -255,9 +231,7 @@ void AudioSettingsWindow::PulseTwoVolumeChanged(wxCommandEvent& event)
         Nes->ApuSetPulseTwoVolume(PulseTwoVolume->GetValue() / 100.0f);
     }
 
-    std::ostringstream oss;
-    oss << PulseTwoVolume->GetValue();
-    CurrentPulseTwoVolume->SetLabel(oss.str());
+    CurrentPulseTwoVolume->SetLabel(std::to_string(PulseTwoVolume->GetValue()));
 }
 
 void AudioSettingsWindow::TriangleVolumeChanged(wxCommandEvent& event)
@@ -267,9 +241,7 @@ void AudioSettingsWindow::TriangleVolumeChanged(wxCommandEvent& event)
         Nes->ApuSetTriangleVolume(TriangleVolume->GetValue() / 100.0f);
     }
 
-    std::ostringstream oss;
-    oss << TriangleVolume->GetValue();
-    CurrentTriangleVolume->SetLabel(oss.str());
+    CurrentTriangleVolume->SetLabel(std::to_string(TriangleVolume->GetValue()));
 }
 
 void AudioSettingsWindow::NoiseVolumeChanged(wxCommandEvent& event)
@@ -279,9 +251,7 @@ void AudioSettingsWindow::NoiseVolumeChanged(wxCommandEvent& event)
         Nes->ApuSetNoiseVolume(NoiseVolume->GetValue() / 100.0f);
     }
 
-    std::ostringstream oss;
-    oss << NoiseVolume->GetValue();
-    CurrentNoiseVolume->SetLabel(oss.str());
+    CurrentNoiseVolume->SetLabel(std::to_string(NoiseVolume->GetValue()));
 }
 
 void AudioSettingsWindow::DmcVolumeChanged(wxCommandEvent& event)
@@ -291,7 +261,5 @@ void AudioSettingsWindow::DmcVolumeChanged(wxCommandEvent& event)
         Nes->ApuSetDmcVolume(DmcVolume->GetValue() / 100.0f);
     }
 
-    std::ostringstream oss;
-    oss << DmcVolume->GetValue();
-    CurrentDmcVolume->SetLabel(oss.str());
+    CurrentDmcVolume->SetLabel(std::to_string(DmcVolume->GetValue()));
 }
