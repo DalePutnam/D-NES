@@ -11,18 +11,18 @@
 
 #include "nes.h"
 
-static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX & ~wxCLOSE_BOX;
-
 wxDEFINE_EVENT(EVT_VIDEO_WINDOW_CLOSED, wxCommandEvent);
 
-VideoSettingsWindow::VideoSettingsWindow(MainWindow* parentWindow)
-    : wxDialog(parentWindow, wxID_ANY, "Video Settings", wxDefaultPosition, wxDefaultSize, DIALOG_STYLE)
-    , Nes(nullptr)
+VideoSettingsWindow::VideoSettingsWindow(MainWindow* parent)
+    : SettingsWindowBase(parent, "Video Settings")
+{
+    InitializeLayout();
+    BindEvents();
+}
+
+void VideoSettingsWindow::InitializeLayout()
 {
     AppSettings* settings = AppSettings::GetInstance();
-
-    wxPanel* settingsPanel = new wxPanel(this);
-    settingsPanel->SetBackgroundColour(*wxWHITE);
 
     wxString choices[NUM_RESOLUTIONS];
     choices[_256X240] = "256x240 (x1)";
@@ -30,15 +30,15 @@ VideoSettingsWindow::VideoSettingsWindow(MainWindow* parentWindow)
     choices[_768X720] = "768x720 (x3)";
     choices[_1024X960] = "1024x960 (x4)";
 
-    ResolutionComboBox = new wxComboBox(settingsPanel, ID_RESOLUTION_CHANGED, "", wxDefaultPosition, wxDefaultSize, NUM_RESOLUTIONS, choices, wxCB_READONLY);
+    ResolutionComboBox = new wxComboBox(SettingsPanel, ID_RESOLUTION_CHANGED, "", wxDefaultPosition, wxDefaultSize, NUM_RESOLUTIONS, choices, wxCB_READONLY);
 
     int currentChoice;
     settings->Read("/Video/Resolution", &currentChoice);
     ResolutionComboBox->SetSelection(currentChoice);
 
-    EnableNtscDecoding = new wxCheckBox(settingsPanel, ID_NTSC_ENABLED, "Enable NTCS Decoding");
-    EnableOverscan = new wxCheckBox(settingsPanel, ID_OVERSCAN_ENABLED, "Enable Overscan");
-    ShowFpsCounter = new wxCheckBox(settingsPanel, ID_SHOW_FPS_COUNTER, "Show FPS");
+    EnableNtscDecoding = new wxCheckBox(SettingsPanel, ID_NTSC_ENABLED, "Enable NTCS Decoding");
+    EnableOverscan = new wxCheckBox(SettingsPanel, ID_OVERSCAN_ENABLED, "Enable Overscan");
+    ShowFpsCounter = new wxCheckBox(SettingsPanel, ID_SHOW_FPS_COUNTER, "Show FPS");
 
     bool ntscDecoding, overscan, showFps;
     settings->Read("/Video/NtscDecoding", &ntscDecoding);
@@ -49,10 +49,10 @@ VideoSettingsWindow::VideoSettingsWindow(MainWindow* parentWindow)
     EnableOverscan->SetValue(overscan);
     ShowFpsCounter->SetValue(showFps);
 
-    wxStaticBoxSizer* resSizer = new wxStaticBoxSizer(wxVERTICAL, settingsPanel, "Resolution");
+    wxStaticBoxSizer* resSizer = new wxStaticBoxSizer(wxVERTICAL, SettingsPanel, "Resolution");
     resSizer->Add(ResolutionComboBox, wxSizerFlags().Expand().Border(wxALL, 5));
 
-    wxStaticBoxSizer* otherSizer = new wxStaticBoxSizer(wxVERTICAL, settingsPanel, "Other");
+    wxStaticBoxSizer* otherSizer = new wxStaticBoxSizer(wxVERTICAL, SettingsPanel, "Other");
     otherSizer->Add(EnableNtscDecoding);
     otherSizer->Add(EnableOverscan);
     otherSizer->Add(ShowFpsCounter);
@@ -61,38 +61,27 @@ VideoSettingsWindow::VideoSettingsWindow(MainWindow* parentWindow)
     settingsSizer->Add(resSizer, wxSizerFlags().Expand().Border(wxALL, 5));
     settingsSizer->Add(otherSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
-    settingsPanel->SetSizer(settingsSizer);
+    SettingsPanel->SetSizer(settingsSizer);
 
-    wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
-    topSizer->Add(settingsPanel, wxSizerFlags().Expand());
-    topSizer->Add(CreateButtonSizer(wxOK | wxCANCEL), wxSizerFlags().Expand().Border(wxALL, 5));
-
-    SetSizer(topSizer);
     Fit();
+}
 
-    Bind(wxEVT_CLOSE_WINDOW, &VideoSettingsWindow::OnClose, this);
-    Bind(wxEVT_BUTTON, &VideoSettingsWindow::OnOk, this, wxID_OK);
-    Bind(wxEVT_BUTTON, &VideoSettingsWindow::OnCancel, this, wxID_CANCEL);
-
+void VideoSettingsWindow::BindEvents()
+{
     Bind(wxEVT_COMBOBOX, &VideoSettingsWindow::ResolutionChanged, this, ID_RESOLUTION_CHANGED);
     Bind(wxEVT_CHECKBOX, &VideoSettingsWindow::EnableNtscDecodingClicked, this, ID_NTSC_ENABLED);
     Bind(wxEVT_CHECKBOX, &VideoSettingsWindow::EnableOverscanClicked, this, ID_OVERSCAN_ENABLED);
     Bind(wxEVT_CHECKBOX, &VideoSettingsWindow::ShowFpsCounterClicked, this, ID_SHOW_FPS_COUNTER);
 }
 
-void VideoSettingsWindow::SetNes(NES* nes)
-{
-    Nes = nes;
-}
-
-void VideoSettingsWindow::OnClose(wxCloseEvent& event)
+void VideoSettingsWindow::DoClose()
 {
     wxCommandEvent* evt = new wxCommandEvent(EVT_VIDEO_WINDOW_CLOSED);
     wxQueueEvent(GetParent(), evt);
     Hide();
 }
 
-void VideoSettingsWindow::OnOk(wxCommandEvent& event)
+void VideoSettingsWindow::DoOk()
 {
     AppSettings* settings = AppSettings::GetInstance();
 
@@ -108,7 +97,7 @@ void VideoSettingsWindow::OnOk(wxCommandEvent& event)
     Close();
 }
 
-void VideoSettingsWindow::OnCancel(wxCommandEvent& event)
+void VideoSettingsWindow::DoCancel()
 {
     AppSettings* settings = AppSettings::GetInstance();
 
