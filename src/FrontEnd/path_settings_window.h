@@ -7,10 +7,10 @@
 #include <wx/button.h>
 #include <wx/notebook.h>
 
-class SettingsWindow : public wxDialog
+class PathSettingsWindow : public wxDialog
 {
 public:
-    SettingsWindow();
+    PathSettingsWindow();
     void SaveSettings();
 
 private:

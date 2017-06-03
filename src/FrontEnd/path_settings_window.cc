@@ -2,10 +2,10 @@
 #include <wx/dirdlg.h>
 #include <wx/stattext.h>
 
-#include "settings_window.h"
+#include "path_settings_window.h"
 #include "utilities/app_settings.h"
 
-void SettingsWindow::PopulateFields()
+void PathSettingsWindow::PopulateFields()
 {
     AppSettings* settings = AppSettings::GetInstance();
     wxString romPath;
@@ -14,7 +14,7 @@ void SettingsWindow::PopulateFields()
     *RomDirectory << romPath;
 }
 
-void SettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))
+void PathSettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))
 {
     wxDirDialog dialog(this, "Choose ROM Path", RomDirectory->GetLineText(0));
 
@@ -25,7 +25,7 @@ void SettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))
     }
 }
 
-SettingsWindow::SettingsWindow()
+PathSettingsWindow::PathSettingsWindow()
     : wxDialog(NULL, wxID_ANY, "Settings", wxDefaultPosition, wxDefaultSize)
 {
     Notebook = new wxNotebook(this, wxID_ANY, wxPoint(-1, -1), wxSize(-1, -1), wxNB_TOP);
@@ -58,10 +58,10 @@ SettingsWindow::SettingsWindow()
 
     PopulateFields();
 
-    Connect(ID_DIR_SELECT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(SettingsWindow::OnDirectorySelect));
+    Connect(ID_DIR_SELECT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PathSettingsWindow::OnDirectorySelect));
 }
 
-void SettingsWindow::SaveSettings()
+void PathSettingsWindow::SaveSettings()
 {
     AppSettings* settings = AppSettings::GetInstance();
     settings->Write("/Paths/RomPath", RomDirectory->GetLineText(0));

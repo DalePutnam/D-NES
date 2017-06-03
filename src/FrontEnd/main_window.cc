@@ -12,7 +12,7 @@
 #include "nes.h"
 #include "game_list.h"
 #include "main_window.h"
-#include "settings_window.h"
+#include "path_settings_window.h"
 #include "ppu_viewer_window.h"
 #include "audio_settings_window.h"
 #include "video_settings_window.h"
@@ -395,7 +395,7 @@ void MainWindow::OpenPpuViewer(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OpenPathSettings(wxCommandEvent& WXUNUSED(event))
 {
-    SettingsWindow settings;
+    PathSettingsWindow settings;
     if (settings.ShowModal() == wxID_OK)
     {
         settings.SaveSettings();

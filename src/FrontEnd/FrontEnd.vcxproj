@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -153,7 +153,7 @@
     <ClInclude Include="main_window.h" />
     <ClInclude Include="pattern_table_display.h" />
     <ClInclude Include="ppu_viewer_window.h" />
-    <ClInclude Include="settings_window.h" />
+    <ClInclude Include="path_settings_window.h" />
     <ClInclude Include="utilities\app_settings.h" />
     <ClInclude Include="video_settings_window.h" />
   </ItemGroup>
@@ -164,7 +164,7 @@
     <ClCompile Include="main_window.cc" />
     <ClCompile Include="pattern_table_display.cc" />
     <ClCompile Include="ppu_viewer_window.cc" />
-    <ClCompile Include="settings_window.cc" />
+    <ClCompile Include="path_settings_window.cc" />
     <ClCompile Include="utilities\app_settings.cc" />
     <ClCompile Include="video_settings_window.cc" />
   </ItemGroup>
