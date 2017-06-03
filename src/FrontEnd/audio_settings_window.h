@@ -1,6 +1,6 @@
 #pragma once
 
-#include <wx/dialog.h>
+#include "settings_window_base.h"
 
 class NES;
 class MainWindow;
@@ -10,16 +10,19 @@ class wxStaticText;
 
 wxDECLARE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 
-class AudioSettingsWindow : public wxDialog
+class AudioSettingsWindow : public SettingsWindowBase
 {
 public:
-    AudioSettingsWindow(MainWindow* parentWindow);
-    void SetNes(NES* nes);
+    AudioSettingsWindow(MainWindow* parent);
+
+protected:
+    virtual void DoOk() override;
+    virtual void DoCancel() override;
+    virtual void DoClose() override;
 
 private:
-    void OnClose(wxCloseEvent& event);
-    void OnOk(wxCommandEvent& event);
-    void OnCancel(wxCommandEvent& event);
+    void InitializeLayout();
+    void BindEvents();
 
     void EnableAudioClicked(wxCommandEvent& event);
     void EnableFiltersClicked(wxCommandEvent& event);
@@ -45,8 +48,6 @@ private:
 
     wxCheckBox* EnableAudioCheckBox;
     wxCheckBox* EnableFiltersCheckBox;
-
-    NES* Nes;
 };
 
 const int ID_AUDIO_ENABLED = 200;

@@ -13,8 +13,9 @@ public:
     void SetNes(NES* nes);
 
 protected:
-    virtual void Ok() = 0;
-    virtual void Cancel() = 0;
+    virtual void DoOk() = 0;
+    virtual void DoCancel() = 0;
+    virtual void DoClose() = 0;
 
     NES* Nes;
     wxPanel* SettingsPanel;
@@ -22,4 +23,5 @@ protected:
 private:
     void OnOk(wxCommandEvent& event);
     void OnCancel(wxCommandEvent& event);
+    void OnClose(wxCloseEvent& event);
 };

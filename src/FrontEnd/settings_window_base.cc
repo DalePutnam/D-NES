@@ -10,9 +10,8 @@ static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER &
 SettingsWindowBase::SettingsWindowBase(MainWindow* parent, const std::string& title)
     : wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, DIALOG_STYLE)
     , Nes(nullptr)
+    , SettingsPanel(new wxPanel(this))
 {
-    SettingsPanel = new wxPanel(this);
-
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
     mainSizer->Add(SettingsPanel, wxSizerFlags().Expand());
     mainSizer->Add(CreateButtonSizer(wxOK | wxCANCEL), wxSizerFlags().Expand().Border(wxALL, 5));
@@ -21,6 +20,7 @@ SettingsWindowBase::SettingsWindowBase(MainWindow* parent, const std::string& ti
 
     Bind(wxEVT_BUTTON, &SettingsWindowBase::OnOk, this, wxID_OK);
     Bind(wxEVT_BUTTON, &SettingsWindowBase::OnCancel, this, wxID_CANCEL);
+    Bind(wxEVT_CLOSE_WINDOW, &SettingsWindowBase::OnClose, this);
 }
 
 void SettingsWindowBase::SetNes(NES* nes)
@@ -30,10 +30,15 @@ void SettingsWindowBase::SetNes(NES* nes)
 
 void SettingsWindowBase::OnOk(wxCommandEvent& WXUNUSED(event))
 {
-    Ok();
+    DoOk();
 }
 
 void SettingsWindowBase::OnCancel(wxCommandEvent& WXUNUSED(event))
 {
-    Cancel();
+    DoCancel();
+}
+
+void SettingsWindowBase::OnClose(wxCloseEvent& WXUNUSED(event))
+{
+    DoClose();
 }

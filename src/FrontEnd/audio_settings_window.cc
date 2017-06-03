@@ -13,18 +13,18 @@
 
 #include "nes.h"
 
-static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX & ~wxCLOSE_BOX;
-
 wxDEFINE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 
-AudioSettingsWindow::AudioSettingsWindow(MainWindow* parentWindow)
-    : wxDialog(parentWindow, wxID_ANY, "Audio Settings", wxDefaultPosition, wxDefaultSize, DIALOG_STYLE)
-    , Nes(nullptr)
+AudioSettingsWindow::AudioSettingsWindow(MainWindow* parent)
+    : SettingsWindowBase(parent, "Audio Settings")
+{
+    InitializeLayout();
+    BindEvents();
+}
+
+void AudioSettingsWindow::InitializeLayout()
 {
     AppSettings* settings = AppSettings::GetInstance();
-
-    wxPanel* settingsPanel = new wxPanel(this);
-    settingsPanel->SetBackgroundColour(*wxWHITE);
 
     wxBoxSizer* volumeSizer = new wxBoxSizer(wxVERTICAL);
     wxGridSizer* volumeGrid = new wxGridSizer(1, 6, 0, 5);
@@ -48,62 +48,62 @@ AudioSettingsWindow::AudioSettingsWindow(MainWindow* parentWindow)
 
     wxSize sliderSize(-1, 100);
 
-    MasterVolume = new wxSlider(settingsPanel, ID_MASTER_SLIDER, master, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
-    PulseOneVolume = new wxSlider(settingsPanel, ID_PULSE_ONE_SLIDER, pulseOne, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
-    PulseTwoVolume = new wxSlider(settingsPanel, ID_PULSE_TWO_SLIDER, pulseTwo, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
-    TriangleVolume = new wxSlider(settingsPanel, ID_TRIANGLE_SLIDER, triangle, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
-    NoiseVolume = new wxSlider(settingsPanel, ID_NOISE_SLIDER, noise, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
-    DmcVolume = new wxSlider(settingsPanel, ID_DMC_SLIDER, dmc, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
+    MasterVolume = new wxSlider(SettingsPanel, ID_MASTER_SLIDER, master, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
+    PulseOneVolume = new wxSlider(SettingsPanel, ID_PULSE_ONE_SLIDER, pulseOne, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
+    PulseTwoVolume = new wxSlider(SettingsPanel, ID_PULSE_TWO_SLIDER, pulseTwo, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
+    TriangleVolume = new wxSlider(SettingsPanel, ID_TRIANGLE_SLIDER, triangle, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
+    NoiseVolume = new wxSlider(SettingsPanel, ID_NOISE_SLIDER, noise, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
+    DmcVolume = new wxSlider(SettingsPanel, ID_DMC_SLIDER, dmc, 0, 100, wxDefaultPosition, sliderSize, sliderStyle);
 
     std::ostringstream oss;
 
     oss << master;
-    CurrentMasterVolume = new wxStaticText(settingsPanel, wxID_ANY, oss.str());
+    CurrentMasterVolume = new wxStaticText(SettingsPanel, wxID_ANY, std::to_string(master));
     oss.str("");
 
     oss << pulseOne;
-    CurrentPulseOneVolume = new wxStaticText(settingsPanel, wxID_ANY, oss.str());
+    CurrentPulseOneVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
     oss.str("");
 
     oss << pulseTwo;
-    CurrentPulseTwoVolume = new wxStaticText(settingsPanel, wxID_ANY, oss.str());
+    CurrentPulseTwoVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
     oss.str("");
 
     oss << triangle;
-    CurrentTriangleVolume = new wxStaticText(settingsPanel, wxID_ANY, oss.str());
+    CurrentTriangleVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
     oss.str("");
 
     oss << noise;
-    CurrentNoiseVolume = new wxStaticText(settingsPanel, wxID_ANY, oss.str());
+    CurrentNoiseVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
     oss.str("");
 
     oss << dmc;
-    CurrentDmcVolume = new wxStaticText(settingsPanel, wxID_ANY, oss.str());
+    CurrentDmcVolume = new wxStaticText(SettingsPanel, wxID_ANY, oss.str());
 
     wxSizerFlags sizerFlags;
     sizerFlags.Center();
 
-    masterBox->Add(new wxStaticText(settingsPanel, wxID_ANY, "Master"), sizerFlags);;
+    masterBox->Add(new wxStaticText(SettingsPanel, wxID_ANY, "Master"), sizerFlags);;
     masterBox->Add(MasterVolume, sizerFlags);
     masterBox->Add(CurrentMasterVolume, sizerFlags);
 
-    pulseOneBox->Add(new wxStaticText(settingsPanel, wxID_ANY, "Pulse 1"), sizerFlags);
+    pulseOneBox->Add(new wxStaticText(SettingsPanel, wxID_ANY, "Pulse 1"), sizerFlags);
     pulseOneBox->Add(PulseOneVolume, sizerFlags);
     pulseOneBox->Add(CurrentPulseOneVolume, sizerFlags);
 
-    pulseTwoBox->Add(new wxStaticText(settingsPanel, wxID_ANY, "Pulse 2"), sizerFlags);
+    pulseTwoBox->Add(new wxStaticText(SettingsPanel, wxID_ANY, "Pulse 2"), sizerFlags);
     pulseTwoBox->Add(PulseTwoVolume, sizerFlags);
     pulseTwoBox->Add(CurrentPulseTwoVolume, sizerFlags);
 
-    triangleBox->Add(new wxStaticText(settingsPanel, wxID_ANY, "Triangle"), sizerFlags);
+    triangleBox->Add(new wxStaticText(SettingsPanel, wxID_ANY, "Triangle"), sizerFlags);
     triangleBox->Add(TriangleVolume, sizerFlags);
     triangleBox->Add(CurrentTriangleVolume, sizerFlags);
 
-    noiseBox->Add(new wxStaticText(settingsPanel, wxID_ANY, "Noise"), sizerFlags);
+    noiseBox->Add(new wxStaticText(SettingsPanel, wxID_ANY, "Noise"), sizerFlags);
     noiseBox->Add(NoiseVolume, sizerFlags);
     noiseBox->Add(CurrentNoiseVolume, sizerFlags);
 
-    dmcBox->Add(new wxStaticText(settingsPanel, wxID_ANY, "DMC"), sizerFlags);
+    dmcBox->Add(new wxStaticText(SettingsPanel, wxID_ANY, "DMC"), sizerFlags);
     dmcBox->Add(DmcVolume, sizerFlags);
     dmcBox->Add(CurrentDmcVolume, sizerFlags);
 
@@ -114,13 +114,13 @@ AudioSettingsWindow::AudioSettingsWindow(MainWindow* parentWindow)
     volumeGrid->Add(noiseBox, sizerFlags);
     volumeGrid->Add(dmcBox, sizerFlags);
 
-    wxStaticBoxSizer* channelBox = new wxStaticBoxSizer(wxHORIZONTAL, settingsPanel, "Volume Controls");
+    wxStaticBoxSizer* channelBox = new wxStaticBoxSizer(wxHORIZONTAL, SettingsPanel, "Volume Controls");
     channelBox->Add(volumeGrid, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT, 10));
 
     wxBoxSizer* otherSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    EnableAudioCheckBox = new wxCheckBox(settingsPanel, ID_AUDIO_ENABLED, "Enable Audio");
-    EnableFiltersCheckBox = new wxCheckBox(settingsPanel, ID_FILTERS_ENABLED, "Enable Filters");
+    EnableAudioCheckBox = new wxCheckBox(SettingsPanel, ID_AUDIO_ENABLED, "Enable Audio");
+    EnableFiltersCheckBox = new wxCheckBox(SettingsPanel, ID_FILTERS_ENABLED, "Enable Filters");
 
     bool audioEnabled, filtersEnabled;
     settings->Read("/Audio/Enabled", &audioEnabled);
@@ -134,19 +134,13 @@ AudioSettingsWindow::AudioSettingsWindow(MainWindow* parentWindow)
 
     volumeSizer->Add(channelBox, wxSizerFlags().Expand().Border(wxALL, 10));
     volumeSizer->Add(otherSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
-    settingsPanel->SetSizer(volumeSizer);
+    SettingsPanel->SetSizer(volumeSizer);
 
-    wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
-    topSizer->Add(settingsPanel, wxSizerFlags().Expand());
-    topSizer->Add(CreateButtonSizer(wxOK | wxCANCEL), wxSizerFlags().Expand().Border(wxALL, 5));
-
-    SetSizer(topSizer);
     Fit();
+}
 
-    Bind(wxEVT_CLOSE_WINDOW, &AudioSettingsWindow::OnClose, this);
-    Bind(wxEVT_BUTTON, &AudioSettingsWindow::OnOk, this, wxID_OK);
-    Bind(wxEVT_BUTTON, &AudioSettingsWindow::OnCancel, this, wxID_CANCEL);
-
+void AudioSettingsWindow::BindEvents()
+{
     Bind(wxEVT_CHECKBOX, &AudioSettingsWindow::EnableAudioClicked, this, ID_AUDIO_ENABLED);
     Bind(wxEVT_CHECKBOX, &AudioSettingsWindow::EnableFiltersClicked, this, ID_FILTERS_ENABLED);
     Bind(wxEVT_SLIDER, &AudioSettingsWindow::MasterVolumeChanged, this, ID_MASTER_SLIDER);
@@ -157,19 +151,14 @@ AudioSettingsWindow::AudioSettingsWindow(MainWindow* parentWindow)
     Bind(wxEVT_SLIDER, &AudioSettingsWindow::DmcVolumeChanged, this, ID_DMC_SLIDER);
 }
 
-void AudioSettingsWindow::SetNes(NES* nes)
-{
-    Nes = nes;
-}
-
-void AudioSettingsWindow::OnClose(wxCloseEvent& event)
+void AudioSettingsWindow::DoClose()
 {
     wxCommandEvent* evt = new wxCommandEvent(EVT_AUDIO_WINDOW_CLOSED);
     wxQueueEvent(GetParent(), evt);
     Hide();
 }
 
-void AudioSettingsWindow::OnOk(wxCommandEvent& event)
+void AudioSettingsWindow::DoOk()
 {
     AppSettings* settings = AppSettings::GetInstance();
 
@@ -186,7 +175,7 @@ void AudioSettingsWindow::OnOk(wxCommandEvent& event)
     Close();
 }
 
-void AudioSettingsWindow::OnCancel(wxCommandEvent& event)
+void AudioSettingsWindow::DoCancel()
 {
     // Reset settings on cancel
     if (Nes != nullptr)
