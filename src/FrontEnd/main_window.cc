@@ -210,11 +210,6 @@ void MainWindow::StartEmulator(const std::string& filename)
             Nes = new NES(params);
             Nes->BindFrameCompleteCallback(&MainWindow::EmulatorFrameCallback, this);
             Nes->BindErrorCallback(&MainWindow::EmulatorErrorCallback, this);
-
-            if (AudioWindow != nullptr)
-            {
-                AudioWindow->SetNes(Nes);
-            }
         }
         catch (std::exception &e)
         {
