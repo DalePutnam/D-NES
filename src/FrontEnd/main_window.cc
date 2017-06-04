@@ -68,6 +68,20 @@ void MainWindow::OnPpuViewerClosed(wxCommandEvent& WXUNUSED(event))
     }
 }
 
+void MainWindow::OnPathSettingsClosed(wxCommandEvent& event)
+{
+    if (PathWindow != nullptr)
+    {
+        PathWindow->Destroy();
+        PathWindow = nullptr;
+    }
+
+    if (RomList)
+    {
+        RomList->PopulateList();
+    }
+}
+
 void MainWindow::OnAudioSettingsClosed(wxCommandEvent& event)
 {
     if (AudioWindow != nullptr)
@@ -184,11 +198,11 @@ void MainWindow::StartEmulator(const std::string& filename)
         params.NoiseVolume = noise / 100.0f;
         params.DmcVolume = dmc / 100.0f;
 
-        appSettings->Read("/Paths/RomSavePath", &params.SavePath);
+        appSettings->Read("/Paths/NativeSavePath", &params.SavePath);
 
         if (!wxDir::Exists(params.SavePath))
         {
-            wxDir::Make(params.SavePath);
+            wxDir::Make(params.SavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         }
 
         try
@@ -221,6 +235,21 @@ void MainWindow::StartEmulator(const std::string& filename)
         if (PpuWindow != nullptr)
         {
             PpuWindow->SetNes(Nes);
+        }
+
+        if (AudioWindow != nullptr)
+        {
+            AudioWindow->SetNes(Nes);
+        }
+
+        if (VideoWindow != nullptr)
+        {
+            VideoWindow->SetNes(Nes);
+        }
+
+        if (PathWindow != nullptr)
+        {
+            PathWindow->SetNes(Nes);
         }
 
         GameMenuSize.SetWidth(GetSize().GetWidth());
@@ -279,6 +308,16 @@ void MainWindow::StopEmulator(bool showRomList)
         if (AudioWindow != nullptr)
         {
             AudioWindow->SetNes(nullptr);
+        }
+
+        if (VideoWindow != nullptr)
+        {
+            VideoWindow->SetNes(nullptr);
+        }
+
+        if (PathWindow != nullptr)
+        {
+            PathWindow->SetNes(nullptr);
         }
     }
 }
@@ -395,16 +434,13 @@ void MainWindow::OpenPpuViewer(wxCommandEvent& WXUNUSED(event))
 
 void MainWindow::OpenPathSettings(wxCommandEvent& WXUNUSED(event))
 {
-    PathSettingsWindow settings;
-    if (settings.ShowModal() == wxID_OK)
+    if (PathWindow == nullptr)
     {
-        settings.SaveSettings();
+        PathWindow = new PathSettingsWindow(this);
     }
 
-    if (RomList)
-    {
-        RomList->PopulateList();
-    }
+    PathWindow->SetNes(Nes);
+    PathWindow->Show();
 }
 
 void MainWindow::OpenAudioSettings(wxCommandEvent& event)
@@ -624,6 +660,7 @@ void MainWindow::BindEvents()
 
     // Settings Windows Close Events
     Bind(EVT_PPU_VIEWER_CLOSED, wxCommandEventHandler(MainWindow::OnPpuViewerClosed), this);
+    Bind(EVT_PATH_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnPathSettingsClosed), this);
     Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
     Bind(EVT_VIDEO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnVideoSettingsClosed), this);
 
@@ -645,6 +682,7 @@ MainWindow::MainWindow()
     : wxFrame(NULL, wxID_ANY, "D-NES")
     , Nes(nullptr)
     , PpuWindow(nullptr)
+    , PathWindow(nullptr)
     , AudioWindow(nullptr)
     , VideoWindow(nullptr)
 #ifdef __linux

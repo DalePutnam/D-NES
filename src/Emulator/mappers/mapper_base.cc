@@ -151,6 +151,13 @@ const string& MapperBase::GetGameName()
     return GameName;
 }
 
+void MapperBase::SetSaveDirectory(const std::string& saveDir)
+{
+    std::lock_guard<std::mutex> lock(MapperMutex);
+
+    SaveDir = saveDir;
+}
+
 void MapperBase::AttachCPU(CPU* cpu)
 {
     Cpu = cpu;

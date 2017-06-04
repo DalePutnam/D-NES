@@ -64,6 +64,11 @@ const string& Cart::GetGameName()
     return Mapper->GetGameName();
 }
 
+void Cart::SetSaveDirectory(const std::string& saveDir)
+{
+    Mapper->SetSaveDirectory(saveDir);
+}
+
 void Cart::AttachCPU(CPU* cpu)
 {
     Mapper->AttachCPU(cpu);
@@ -93,4 +98,3 @@ void Cart::ChrWrite(uint8_t M, uint16_t address)
 {
     Mapper->ChrWrite(M, address);
 }
-

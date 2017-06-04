@@ -1,27 +1,38 @@
-/* All Settings window */
-
 #pragma once
 
-#include <wx/dialog.h>
-#include <wx/textctrl.h>
-#include <wx/button.h>
-#include <wx/notebook.h>
+#include "settings_window_base.h"
 
-class PathSettingsWindow : public wxDialog
+class MainWindow;
+class wxTextCtrl;
+class wxButton;
+
+wxDECLARE_EVENT(EVT_PATH_WINDOW_CLOSED, wxCommandEvent);
+
+class PathSettingsWindow : public SettingsWindowBase
 {
 public:
-    PathSettingsWindow();
+    PathSettingsWindow(MainWindow* parent);
     void SaveSettings();
 
-private:
-    wxNotebook* Notebook;
-    wxTextCtrl* RomDirectory;
-    wxButton* DirectorySelect;
-    wxButton* OkButton;
-    wxButton* CancelButton;
+protected:
+    virtual void DoOk() override;
+    virtual void DoCancel() override;
+    virtual void DoClose() override;
 
-    void PopulateFields();
+private:
+    void InitializeLayout();
+    void BindEvents();
+
+    wxTextCtrl* RomPathText;
+    wxButton* RomPathButton;
+    wxTextCtrl* SavePathText;
+    wxButton* SavePathButton;
+    wxTextCtrl* StatePathText;
+    wxButton* StatePathButton;
+
     void OnDirectorySelect(wxCommandEvent& event);;
 };
 
-const int ID_DIR_SELECT = 200;
+const int ID_ROM_PATH_SELECT = 200;
+const int ID_SAVE_PATH_SELECT = 201;
+const int ID_STATE_PATH_SELECT = 202;

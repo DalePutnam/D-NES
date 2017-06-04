@@ -81,6 +81,11 @@ void NES::CpuSetLogEnabled(bool enabled)
     Cpu->SetLogEnabled(enabled);
 }
 
+void NES::SetNativeSaveDirectory(const std::string& saveDir)
+{
+    Cartridge->SetSaveDirectory(saveDir);
+}
+
 int NES::GetFrameRate()
 {
     return Ppu->GetFrameRate();

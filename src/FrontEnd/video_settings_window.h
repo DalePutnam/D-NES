@@ -2,7 +2,6 @@
 
 #include "settings_window_base.h"
 
-class NES;
 class MainWindow;
 class wxComboBox;
 class wxCheckBox;

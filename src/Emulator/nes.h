@@ -92,6 +92,7 @@ public:
     uint8_t GetControllerOneState();
 
     void CpuSetLogEnabled(bool enabled);
+    void SetNativeSaveDirectory(const std::string& saveDir);
 
     int GetFrameRate();
     void GetNameTable(int table, uint8_t* pixels);

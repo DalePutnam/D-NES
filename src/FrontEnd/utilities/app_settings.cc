@@ -32,10 +32,16 @@ AppSettings::AppSettings()
         Settings->Write("/Paths/RomPath", wxGetCwd());
     }
 
-    if (!Settings->HasEntry("/Paths/RomSavePath"))
+    if (!Settings->HasEntry("/Paths/NativeSavePath"))
     {
-        wxFileName file(wxGetCwd(), "saves");
-        Settings->Write("/Paths/RomSavePath", file.GetFullPath());
+        wxFileName file(wxGetCwd() + "/saves", "native");
+        Settings->Write("/Paths/NativeSavePath", file.GetFullPath());
+    }
+
+    if (!Settings->HasEntry("/Paths/StateSavePath"))
+    {
+        wxFileName file(wxGetCwd() + "/saves", "state");
+        Settings->Write("/Paths/StateSavePath", file.GetFullPath());
     }
 
     if (!Settings->HasEntry("/Audio/Enabled"))

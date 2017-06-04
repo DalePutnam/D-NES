@@ -1,69 +1,165 @@
+#include <wx/dir.h>
 #include <wx/sizer.h>
 #include <wx/dirdlg.h>
+#include <wx/bmpbuttn.h>
+#include <wx/bitmap.h>
+#include <wx/artprov.h>
+#include <wx/textctrl.h>
 #include <wx/stattext.h>
 
+#include "main_window.h"
 #include "path_settings_window.h"
 #include "utilities/app_settings.h"
 
-void PathSettingsWindow::PopulateFields()
-{
-    AppSettings* settings = AppSettings::GetInstance();
-    wxString romPath;
-    settings->Read("/Paths/RomPath", &romPath);
+#include "nes.h"
 
-    *RomDirectory << romPath;
-}
+wxDEFINE_EVENT(EVT_PATH_WINDOW_CLOSED, wxCommandEvent);
 
-void PathSettingsWindow::OnDirectorySelect(wxCommandEvent& WXUNUSED(event))
+void PathSettingsWindow::OnDirectorySelect(wxCommandEvent& event)
 {
-    wxDirDialog dialog(this, "Choose ROM Path", RomDirectory->GetLineText(0));
+    std::string dialogLabel, defaultPath;
+
+    switch (event.GetId())
+    {
+    case ID_ROM_PATH_SELECT:
+        dialogLabel = "Choose ROM Path";
+        defaultPath = RomPathText->GetValue();
+        break;
+    case ID_SAVE_PATH_SELECT:
+        dialogLabel = "Choose Native Save Path";
+        defaultPath = SavePathText->GetValue();
+        break;
+    case ID_STATE_PATH_SELECT:
+        dialogLabel = "Choose State Save Path";
+        defaultPath = StatePathText->GetValue();
+        break;
+    default:
+        return;
+    }
+
+    wxDirDialog dialog(this, dialogLabel, defaultPath);
 
     if (dialog.ShowModal() == wxID_OK)
     {
-        RomDirectory->Clear();
-        *RomDirectory << dialog.GetPath();
+        switch (event.GetId())
+        {
+        case ID_ROM_PATH_SELECT:
+            RomPathText->SetValue(dialog.GetPath());
+            break;
+        case ID_SAVE_PATH_SELECT:
+            SavePathText->SetValue(dialog.GetPath());
+            break;
+        case ID_STATE_PATH_SELECT:
+            StatePathText->SetValue(dialog.GetPath());
+            break;
+        default:
+            return;
+        }
     }
 }
 
-PathSettingsWindow::PathSettingsWindow()
-    : wxDialog(NULL, wxID_ANY, "Settings", wxDefaultPosition, wxDefaultSize)
+PathSettingsWindow::PathSettingsWindow(MainWindow* parent)
+    : SettingsWindowBase(parent, "Path Settings")
 {
-    Notebook = new wxNotebook(this, wxID_ANY, wxPoint(-1, -1), wxSize(-1, -1), wxNB_TOP);
-    wxWindow* page1 = new wxWindow(Notebook, wxID_ANY);
-    page1->SetBackgroundColour(*wxWHITE);
-    wxBoxSizer* hbox0 = new wxBoxSizer(wxHORIZONTAL);
-    page1->SetSizer(hbox0);
-    Notebook->AddPage(page1, "Basic Settings");
-
-    wxStaticText* label0 = new wxStaticText(page1, wxID_ANY, "ROM Path:");
-    RomDirectory = new wxTextCtrl(page1, wxID_ANY, "", wxDefaultPosition, wxSize(150, 24));
-    DirectorySelect = new wxButton(page1, ID_DIR_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-    hbox0->Add(label0, 0, wxALIGN_CENTER_VERTICAL);
-    hbox0->Add(RomDirectory, 1, wxALIGN_CENTER_VERTICAL);
-    hbox0->Add(DirectorySelect, 0, wxALIGN_CENTER_VERTICAL);
-
-    OkButton = new wxButton(this, wxID_OK, "OK");
-    CancelButton = new wxButton(this, wxID_CANCEL, "Cancel");
-
-    wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
-    hbox1->Add(OkButton, 0, wxALIGN_CENTER_VERTICAL);
-    hbox1->Add(CancelButton, 0, wxALIGN_CENTER_VERTICAL);
-
-    wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
-    vbox->Add(Notebook, 1, wxEXPAND | wxALL);
-    vbox->Add(hbox1, 0, wxALIGN_RIGHT);
-
-    SetSizer(vbox);
-    Fit();
-
-    PopulateFields();
-
-    Connect(ID_DIR_SELECT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PathSettingsWindow::OnDirectorySelect));
+    InitializeLayout();
+    BindEvents();
 }
 
-void PathSettingsWindow::SaveSettings()
+void PathSettingsWindow::InitializeLayout()
+{
+    wxBitmap folderBitmap = wxArtProvider::GetBitmap(wxART_FOLDER);
+
+    wxStaticText* romPathLabel = new wxStaticText(SettingsPanel, wxID_ANY, "ROM Path");
+    RomPathText = new wxTextCtrl(SettingsPanel, wxID_ANY, "", wxDefaultPosition, wxSize(200, 24));
+    RomPathButton = new wxBitmapButton(SettingsPanel, ID_ROM_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
+
+    wxBoxSizer* romSizer = new wxBoxSizer(wxHORIZONTAL);
+    romSizer->Add(RomPathText, wxSizerFlags().Border(wxRIGHT, 2).Expand());
+    romSizer->Add(RomPathButton, wxSizerFlags());
+
+    wxStaticText* savePathLabel = new wxStaticText(SettingsPanel, wxID_ANY, "Native Save Path");
+    SavePathText = new wxTextCtrl(SettingsPanel, wxID_ANY, "", wxDefaultPosition, wxSize(200, 24));
+    SavePathButton = new wxBitmapButton(SettingsPanel, ID_SAVE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
+
+    wxBoxSizer* saveSizer = new wxBoxSizer(wxHORIZONTAL);
+    saveSizer->Add(SavePathText, wxSizerFlags().Border(wxRIGHT, 2).Expand());
+    saveSizer->Add(SavePathButton, wxSizerFlags());
+
+    //wxStaticText* statePathLabel = new wxStaticText(SettingsPanel, wxID_ANY, "State Save Path");
+    //StatePathText = new wxTextCtrl(SettingsPanel, wxID_ANY, "", wxDefaultPosition, wxSize(200, 24));
+    //StatePathButton = new wxBitmapButton(SettingsPanel, ID_STATE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
+
+    //wxBoxSizer* stateSizer = new wxBoxSizer(wxHORIZONTAL);
+    //stateSizer->Add(StatePathText, wxSizerFlags().Border(wxRIGHT, 2).Expand());
+    //stateSizer->Add(StatePathButton, wxSizerFlags());
+
+    wxBoxSizer* settingsSizer = new wxBoxSizer(wxVERTICAL);
+    settingsSizer->Add(romPathLabel, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5));
+    settingsSizer->Add(romSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT, 5));
+    settingsSizer->Add(savePathLabel, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5));
+    settingsSizer->Add(saveSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
+    //settingsSizer->Add(statePathLabel, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5));
+    //settingsSizer->Add(stateSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
+
+    SettingsPanel->SetSizer(settingsSizer);
+
+    Fit();
+
+    AppSettings* settings = AppSettings::GetInstance();
+    std::string romPath, nativeSavePath, stateSavePath;
+
+    settings->Read("/Paths/RomPath", &romPath);
+    settings->Read("/Paths/NativeSavePath", &nativeSavePath);
+    settings->Read("/Paths/StateSavePath", &stateSavePath);
+
+    RomPathText->SetValue(romPath);
+    SavePathText->SetValue(nativeSavePath);
+    //StatePathText->SetValue(stateSavePath);
+}
+
+void PathSettingsWindow::BindEvents()
+{
+    Bind(wxEVT_COMMAND_BUTTON_CLICKED, &PathSettingsWindow::OnDirectorySelect, this, ID_ROM_PATH_SELECT);
+    Bind(wxEVT_COMMAND_BUTTON_CLICKED, &PathSettingsWindow::OnDirectorySelect, this, ID_SAVE_PATH_SELECT);
+    Bind(wxEVT_COMMAND_BUTTON_CLICKED, &PathSettingsWindow::OnDirectorySelect, this, ID_STATE_PATH_SELECT);
+}
+
+void PathSettingsWindow::DoOk()
 {
     AppSettings* settings = AppSettings::GetInstance();
-    settings->Write("/Paths/RomPath", RomDirectory->GetLineText(0));
-    settings->Save();
+    settings->Write("/Paths/RomPath", RomPathText->GetValue());
+    settings->Write("/Paths/NativeSavePath", SavePathText->GetValue());
+    //settings->Write("/Paths/StateSavePath", StatePathText->GetValue());
+
+    std::string newSavePath = SavePathText->GetValue().ToStdString();
+    //std::string newStatePath = StatePathText->GetValue().ToStdString();
+
+    if (!wxDir::Exists(newSavePath))
+    {
+        wxDir::Make(newSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    }
+
+    //if (!wxDir::Exists(newStatePath))
+    //{
+    //    wxDir::Make(newStatePath);
+    //}
+
+    if (Nes != nullptr)
+    {
+        Nes->SetNativeSaveDirectory(newSavePath);
+    }
+
+    Close();
+}
+
+void PathSettingsWindow::DoCancel()
+{
+    Close();
+}
+
+void PathSettingsWindow::DoClose()
+{
+    wxCommandEvent* evt = new wxCommandEvent(EVT_PATH_WINDOW_CLOSED);
+    wxQueueEvent(GetParent(), evt);
+    Hide();
 }

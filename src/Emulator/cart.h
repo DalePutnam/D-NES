@@ -28,6 +28,7 @@ public:
 
     const std::string& GetGameName();
 
+    void SetSaveDirectory(const std::string& saveDir);
     void AttachCPU(CPU* cpu);
     MirrorMode GetMirrorMode();
 

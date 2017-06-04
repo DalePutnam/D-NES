@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 
 #include "../cart.h"
 
@@ -12,8 +13,9 @@ public:
     MapperBase(const std::string& fileName, const std::string& saveDir);
     virtual ~MapperBase();
 
-    virtual const std::string& GetGameName() final;
-    virtual void AttachCPU(CPU* cpu) final;
+    const std::string& GetGameName();
+    void SetSaveDirectory(const std::string& saveDir);
+    void AttachCPU(CPU* cpu);
 
     virtual Cart::MirrorMode GetMirrorMode() = 0;
 
@@ -36,7 +38,9 @@ protected:
     Cart::MirrorMode Mirroring;
 
     std::string GameName;
-    const std::string SaveDir;
+    std::string SaveDir;
+
+    std::mutex MapperMutex;
 
     CPU* Cpu;
 };

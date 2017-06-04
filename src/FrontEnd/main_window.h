@@ -20,6 +20,7 @@
 class NES;
 class GameList;
 class PPUViewerWindow;
+class PathSettingsWindow;
 class AudioSettingsWindow;
 class VideoSettingsWindow;
 
@@ -48,6 +49,7 @@ private:
     NES* Nes;
 
     PPUViewerWindow* PpuWindow;
+    PathSettingsWindow* PathWindow;
     AudioSettingsWindow* AudioWindow;
     VideoSettingsWindow* VideoWindow;
 
@@ -110,6 +112,7 @@ private:
 
     void OnUnexpectedShutdown(wxThreadEvent& event);
     void OnPpuViewerClosed(wxCommandEvent& event);
+    void OnPathSettingsClosed(wxCommandEvent& event);
     void OnAudioSettingsClosed(wxCommandEvent& event);
     void OnVideoSettingsClosed(wxCommandEvent& event);
 
