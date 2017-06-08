@@ -1,5 +1,6 @@
 #include <sstream>
 #include <iostream>
+#include <cstring>
 
 #include <wx/msgdlg.h>
 #include <wx/filedlg.h>
@@ -41,17 +42,11 @@ void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
     UpdateFrame(frameBuffer);
 #elif __linux
     std::unique_lock<std::mutex> lock(FrameMutex);
-    if (StopFlag)
-    {
-        return;
-    }
 
-    FrameBuffer = frameBuffer;
+    memcpy(FrameBuffer, frameBuffer, 256*240*3);
 
     wxThreadEvent evt(EVT_NES_UPDATE_FRAME);
     wxQueueEvent(this, evt.Clone());
-
-    FrameCv.wait(lock);
 #endif
 }
 
@@ -104,7 +99,6 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
 {
     wxImage image(256, 240, frameBuffer, true);
     wxBitmap bitmap(image, 24);
-    static wxBitmap b(512, 480);
 
     wxMemoryDC mdc(bitmap);
 
@@ -125,7 +119,7 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
         dc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 8, 256, 224);
     }
 
-    if (ShowFpsCounter)
+    if (ShowFpsCounter && Nes != nullptr)
     {
         dc.SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
         dc.SetTextForeground(*wxWHITE);
@@ -221,12 +215,6 @@ void MainWindow::StartEmulator(const std::string& filename)
             return;
         }
 
-#ifdef __linux
-        StopFlag = false;
-#endif
-
-        Nes->Start();
-
         if (PpuWindow != nullptr)
         {
             PpuWindow->SetNes(Nes);
@@ -260,6 +248,8 @@ void MainWindow::StartEmulator(const std::string& filename)
 #ifdef __linux
         Panel->SetFocus();
 #endif
+
+        Nes->Start();
     }
     else
     {
@@ -272,14 +262,8 @@ void MainWindow::StopEmulator(bool showRomList)
 {
     if (Nes != nullptr)
     {
-#ifdef __linux
-        FrameMutex.lock();
-        StopFlag = true;
-        FrameCv.notify_all();
-        FrameMutex.unlock();
-#endif
-
         Nes->Stop();
+
         delete Nes;
         Nes = nullptr;
 
@@ -464,16 +448,16 @@ void MainWindow::OpenVideoSettings(wxCommandEvent& event)
 void MainWindow::OnUpdateFrame(wxThreadEvent& event)
 {
     std::unique_lock<std::mutex> lock(FrameMutex);
-
+/*
     if (Nes == nullptr)
     {
         FrameCv.notify_all();
         return;
-    }
+        }*/
 
     UpdateFrame(FrameBuffer);
 
-    FrameCv.notify_all();
+    //FrameCv.notify_all();
 }
 #endif
 
@@ -678,9 +662,6 @@ MainWindow::MainWindow()
     , PathWindow(nullptr)
     , AudioWindow(nullptr)
     , VideoWindow(nullptr)
-#ifdef __linux
-    , StopFlag(false)
-#endif
 {
     InitializeMenus();
     InitializeLayout();

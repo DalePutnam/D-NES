@@ -70,10 +70,8 @@ private:
     bool ShowFpsCounter;
 
 #ifdef __linux
-    std::atomic<bool> StopFlag;
     std::mutex FrameMutex;
-    std::condition_variable FrameCv;
-    uint8_t* FrameBuffer;
+    uint8_t FrameBuffer[256 * 240 * 3];
 #endif
 
     bool OverscanEnabled;

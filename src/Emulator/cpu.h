@@ -63,8 +63,9 @@ private:
     bool StartupFlag;
 
     std::atomic<bool> StopFlag;
+
+    volatile bool Paused;
     std::atomic<bool> PauseFlag;
-    std::atomic<bool> Paused;
     std::mutex PauseMutex;
     std::condition_variable PauseCv;
 

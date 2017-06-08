@@ -1350,8 +1350,8 @@ CPU::CPU()
     , Clock(0)
     , StartupFlag(true)
     , StopFlag(false)
-    , PauseFlag(false)
     , Paused(false)
+    , PauseFlag(false)
     , LogEnabled(false)
     , EnableLogFlag(false)
     , LogFile(nullptr)
@@ -1429,9 +1429,12 @@ uint8_t CPU::GetControllerOneState()
 
 void CPU::Pause()
 {
+    std::unique_lock<std::mutex> lock(PauseMutex);
+
     if (!Paused)
     {
         PauseFlag = true;
+        PauseCv.wait(lock);
     }
 }
 
@@ -1518,10 +1521,12 @@ void CPU::Run()
         {
             std::unique_lock<std::mutex> lock(PauseMutex);
             Paused = true;
-
-            PauseCv.wait(lock);
-            Paused = false;
             PauseFlag = false;
+
+            PauseCv.notify_all();
+            PauseCv.wait(lock);
+
+            Paused = false;
         }
     }
 }
