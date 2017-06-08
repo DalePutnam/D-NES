@@ -174,7 +174,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         NesParams params;
         params.RomPath = filename;
         params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
-        params.FrameLimitEnabled = EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
+        params.FrameLimitEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
 
         bool audioEnabled, filtersEnabled;
         appSettings->Read("/Audio/Enabled", &audioEnabled);
@@ -330,7 +330,7 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        bool enabled = EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->IsChecked();
+        bool enabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
         Nes->PpuSetFrameLimitEnabled(enabled);
     }
 }
@@ -361,24 +361,23 @@ void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
     }
 }
 
-void MainWindow::OnEmulatorResume(wxCommandEvent& WXUNUSED(event))
-{
-    if (Nes != nullptr)
-    {
-        Nes->Resume();
-    }
-}
-
 void MainWindow::OnEmulatorStop(wxCommandEvent& WXUNUSED(event))
 {
     StopEmulator();
 }
 
-void MainWindow::OnEmulatorPause(wxCommandEvent& WXUNUSED(event))
+void MainWindow::OnEmulatorSuspendResume(wxCommandEvent& WXUNUSED(event))
 {
     if (Nes != nullptr)
     {
-        Nes->Pause();
+        if (Nes->IsPaused())
+        {
+            Nes->Resume();
+        }
+        else
+        {
+            Nes->Pause();
+        }
     }
 }
 
@@ -574,20 +573,20 @@ void MainWindow::InitializeMenus()
     FileMenu->Append(wxID_EXIT, wxT("&Quit"));
 
     EmulatorMenu = new wxMenu;
-    EmulatorMenu->Append(ID_EMULATOR_PAUSE, wxT("&Pause"));
-    EmulatorMenu->Append(ID_EMULATOR_RESUME, wxT("&Resume"));
+    EmulatorMenu->Append(ID_EMULATOR_SUSPEND_RESUME, wxT("&Suspend/Resume"));
     EmulatorMenu->Append(ID_EMULATOR_STOP, wxT("&Stop"));
-    EmulatorMenu->AppendSeparator();
-    EmulatorMenu->AppendCheckItem(ID_EMULATOR_LIMIT, wxT("&Limit To 60 FPS"));
-    EmulatorMenu->FindItem(ID_EMULATOR_LIMIT)->Check();
     EmulatorMenu->AppendSeparator();
     EmulatorMenu->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Viewer"));
 
     SettingsMenu = new wxMenu;
     SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
+    SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Limit To 60 FPS"));
+    SettingsMenu->AppendSeparator();
     SettingsMenu->Append(ID_SETTINGS_AUDIO, wxT("&Audio Settings"));
     SettingsMenu->Append(ID_SETTINGS_VIDEO, wxT("&Video Settings"));
     SettingsMenu->Append(ID_SETTINGS_PATHS, wxT("&Path Settings"));
+
+    SettingsMenu->FindItem(ID_FRAME_LIMIT)->Check();
 
     AboutMenu = new wxMenu;
     AboutMenu->Append(wxID_ANY, wxT("&About"));
@@ -644,11 +643,10 @@ void MainWindow::BindEvents()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenAudioSettings), this, ID_SETTINGS_AUDIO);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenVideoSettings), this, ID_SETTINGS_VIDEO);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnOpenROM), this, ID_OPEN_ROM);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorResume), this, ID_EMULATOR_RESUME);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorStop), this, ID_EMULATOR_STOP);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorPause), this, ID_EMULATOR_PAUSE);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorSuspendResume), this, ID_EMULATOR_SUSPEND_RESUME);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenPpuViewer), this, ID_EMULATOR_PPU_DEBUG);
-    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_EMULATOR_LIMIT);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_FRAME_LIMIT);
 
     // Emulator Error Event
     Bind(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);
