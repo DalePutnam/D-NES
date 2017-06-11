@@ -163,61 +163,43 @@ int MapperBase::GetStateSize()
         totalSize += 0x2000;
     }
 
-    totalSize = WramSize == 0 ? 0x2000 : WramSize * 0x2000;
+    totalSize += WramSize == 0 ? 0x2000 : WramSize;
 
     return totalSize;
 }
 
 void MapperBase::SaveState(char* state)
 {
-    /*
-    int mapperNumber = GetMapperNumber();
-    memcpy(state, &mapperNumber, sizeof(int));
-    state += sizeof(int);
-    */
-
     if (ChrSize == 0)
     {
-        memcpy(state, &Chr, sizeof(uint8_t) * 0x2000);
+        memcpy(state, Chr, sizeof(uint8_t) * 0x2000);
         state += sizeof(uint8_t) * 0x2000;
     }
 
     if (WramSize == 0)
     {
-        memcpy(state, &Wram, sizeof(uint8_t) * 0x2000);
+        memcpy(state, Wram, sizeof(uint8_t) * 0x2000);
     }
     else
     {
-        memcpy(state, &Wram, sizeof(uint8_t) * 0x2000 * WramSize);
+        memcpy(state, Wram, sizeof(uint8_t) * WramSize);
     }
 }
 
 void MapperBase::LoadState(const char* state)
 {
-    /*
-    int mapperNumber;
-    memcpy(&mapperNumber, state, sizeof(int));
-
-    if (mapperNumber != GetMapperNumber())
-    {
-        throw std::runtime_error("MapperBase: Tried to load state from non-matching mapper");
-    }
-
-    state += sizeof(int);
-    */
-
     if (ChrSize == 0)
     {
-        memcpy(&Chr, state, sizeof(uint8_t) * 0x2000);
+        memcpy(Chr, state, sizeof(uint8_t) * 0x2000);
         state += sizeof(uint8_t) * 0x2000;
     }
 
     if (WramSize == 0)
     {
-        memcpy(&Wram, state, sizeof(uint8_t) * 0x2000);
+        memcpy(Wram, state, sizeof(uint8_t) * 0x2000);
     }
     else
     {
-        memcpy(&Wram, state, sizeof(uint8_t) * 0x2000 * WramSize);
+        memcpy(Wram, state, sizeof(uint8_t) * WramSize);
     }
 }

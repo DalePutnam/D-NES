@@ -1469,10 +1469,6 @@ void CPU::SaveState(char* state)
     memcpy(state, &ControllerOneShift, sizeof(uint8_t));
     state += sizeof(uint8_t);
 
-    //uint8_t controllerState = ControllerOneState;
-    //memcpy(state, &controllerState, sizeof(uint8_t));
-    //state += sizeof(uint8_t);
-
     memcpy(state, &PpuRendevous, sizeof(int));
     state += sizeof(int);
 
@@ -1507,14 +1503,6 @@ void CPU::SaveState(char* state)
 
 void CPU::LoadState(const char* state)
 {
-    /*
-    std::unique_lock<std::mutex> lock(PauseMutex);
-    if (!Paused)
-    {
-        throw std::runtime_error("CPU: Tried to load state while CPU running");
-    }
-    */
-
     memcpy(&Clock, state, sizeof(uint64_t));
     state += sizeof(uint64_t);
 
@@ -1523,11 +1511,6 @@ void CPU::LoadState(const char* state)
 
     memcpy(&ControllerOneShift, state, sizeof(uint8_t));
     state += sizeof(uint8_t);
-
-    //uint8_t controllerState;
-    //memcpy(&controllerState, state, sizeof(uint8_t));
-    //ControllerOneState = controllerState;
-    //state += sizeof(uint8_t);
 
     memcpy(&PpuRendevous, state, sizeof(int));
     state += sizeof(int);

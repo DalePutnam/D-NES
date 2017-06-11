@@ -943,13 +943,10 @@ void PPU::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
 	OnFrameComplete = fn;
 }
 
-int PPU::STATE_SIZE = (sizeof(uint64_t)*2)+(sizeof(uint16_t)*8)+(sizeof(uint8_t)*(FrameBufferSize+0x96C))+(sizeof(char)*3);
+int PPU::STATE_SIZE = (sizeof(uint64_t)*2)+(sizeof(uint16_t)*8)+(sizeof(uint8_t)*0x96C)+(sizeof(char)*3);
 
 void PPU::SaveState(char* state)
 {
-    memcpy(state, FrameBuffer, sizeof(uint8_t) * FrameBufferSize);
-    state += sizeof(uint8_t) * FrameBufferSize;
-
     memcpy(state, &Clock, sizeof(uint64_t));
     state += sizeof(uint64_t);
 
@@ -1080,9 +1077,6 @@ void PPU::SaveState(char* state)
 
 void PPU::LoadState(const char* state)
 {
-    memcpy(FrameBuffer, state, sizeof(uint8_t) * FrameBufferSize);
-    state += sizeof(uint8_t) * FrameBufferSize;
-
     memcpy(&Clock, state, sizeof(uint64_t));
     state += sizeof(uint64_t);
 

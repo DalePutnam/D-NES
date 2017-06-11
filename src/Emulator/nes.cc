@@ -294,7 +294,7 @@ void NES::SaveState(int slot, const std::string& savePath)
     saveStream.write(state, APU::STATE_SIZE);
     delete[] state;
 
-    state = new char(Cartridge->GetStateSize());
+    state = new char[Cartridge->GetStateSize()];
     Cartridge->SaveState(state);
     saveStream.write(state, Cartridge->GetStateSize());
     delete[] state;
@@ -331,7 +331,7 @@ void NES::LoadState(int slot, const std::string& savePath)
     Apu->LoadState(state);
     delete[] state;
 
-    state = new char(Cartridge->GetStateSize());
+    state = new char[Cartridge->GetStateSize()];
     saveStream.read(state, Cartridge->GetStateSize());
     Cartridge->LoadState(state);
     delete[] state;

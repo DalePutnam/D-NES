@@ -64,6 +64,9 @@ private:
     wxMenu* SettingsMenu;
     wxMenu* AboutMenu;
 
+    wxMenu* StateSaveSubMenu;
+    wxMenu* StateLoadSubMenu;
+
     wxBoxSizer* VerticalBox;
     GameList* RomList;
 
@@ -90,6 +93,8 @@ private:
     void OnOpenROM(wxCommandEvent& event);
     void OnEmulatorSuspendResume(wxCommandEvent& event);
     void OnEmulatorStop(wxCommandEvent& event);
+    void OnSaveState(wxCommandEvent& event);
+    void OnLoadState(wxCommandEvent& event);
     void OpenPpuViewer(wxCommandEvent& event);
     void OpenPathSettings(wxCommandEvent& event);
     void OpenAudioSettings(wxCommandEvent& event);
@@ -128,3 +133,23 @@ const int ID_FRAME_LIMIT = 105;
 const int ID_SETTINGS_AUDIO = 106;
 const int ID_SETTINGS_VIDEO = 107;
 const int ID_SETTINGS_PATHS = 108;
+const int ID_STATE_SAVE_1 = 110;
+const int ID_STATE_SAVE_2 = 111;
+const int ID_STATE_SAVE_3 = 112;
+const int ID_STATE_SAVE_4 = 113;
+const int ID_STATE_SAVE_5 = 114;
+const int ID_STATE_SAVE_6 = 115;
+const int ID_STATE_SAVE_7 = 116;
+const int ID_STATE_SAVE_8 = 117;
+const int ID_STATE_SAVE_9 = 118;
+const int ID_STATE_SAVE_10 = 119;
+const int ID_STATE_LOAD_1 = 120;
+const int ID_STATE_LOAD_2 = 121;
+const int ID_STATE_LOAD_3 = 122;
+const int ID_STATE_LOAD_4 = 123;
+const int ID_STATE_LOAD_5 = 124;
+const int ID_STATE_LOAD_6 = 125;
+const int ID_STATE_LOAD_7 = 126;
+const int ID_STATE_LOAD_8 = 127;
+const int ID_STATE_LOAD_9 = 128;
+const int ID_STATE_LOAD_10 = 129;

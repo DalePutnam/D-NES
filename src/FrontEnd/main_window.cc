@@ -365,6 +365,55 @@ void MainWindow::OnEmulatorSuspendResume(wxCommandEvent& WXUNUSED(event))
     }
 }
 
+void MainWindow::OnSaveState(wxCommandEvent& event)
+{
+    if (Nes != nullptr)
+    {
+        AppSettings* settings = AppSettings::GetInstance();
+
+        std::string stateSavePath;
+        settings->Read("/Paths/StateSavePath", &stateSavePath);
+
+        if (!wxDir::Exists(stateSavePath))
+        {
+            wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+        }
+
+        try
+        {
+            int slot = event.GetId() % 10;
+            Nes->SaveState(slot, stateSavePath);
+        }
+        catch (std::exception& e)
+        {
+            wxMessageDialog message(nullptr, e.what(), "ERROR", wxOK | wxICON_ERROR);
+            message.ShowModal();
+        }
+
+    }
+}
+
+void MainWindow::OnLoadState(wxCommandEvent& event)
+{
+    if (Nes != nullptr)
+    {
+        AppSettings* settings = AppSettings::GetInstance();
+
+        std::string stateSavePath;
+        settings->Read("/Paths/StateSavePath", &stateSavePath);
+
+        try
+        {
+            int slot = event.GetId() % 10;
+            Nes->LoadState(slot, stateSavePath);
+        }
+        catch (std::exception& e)
+        {
+            // Just quietly ignore the exception
+        }
+    }
+}
+
 void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
 {
     OverscanEnabled = overscan;
@@ -447,17 +496,12 @@ void MainWindow::OpenVideoSettings(wxCommandEvent& event)
 #ifdef __linux
 void MainWindow::OnUpdateFrame(wxThreadEvent& event)
 {
-    std::unique_lock<std::mutex> lock(FrameMutex);
-/*
-    if (Nes == nullptr)
+    // Only update the frame is the emulator is still running
+    if (Nes != nullptr)
     {
-        FrameCv.notify_all();
-        return;
-        }*/
-
-    UpdateFrame(FrameBuffer);
-
-    //FrameCv.notify_all();
+        std::unique_lock<std::mutex> lock(FrameMutex);
+        UpdateFrame(FrameBuffer);
+    }
 }
 #endif
 
@@ -556,9 +600,36 @@ void MainWindow::InitializeMenus()
     FileMenu->AppendSeparator();
     FileMenu->Append(wxID_EXIT, wxT("&Quit"));
 
+    StateSaveSubMenu = new wxMenu;
+    StateSaveSubMenu->Append(ID_STATE_SAVE_1, wxT("&Slot 1"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_2, wxT("&Slot 2"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_3, wxT("&Slot 3"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_4, wxT("&Slot 4"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_5, wxT("&Slot 5"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_6, wxT("&Slot 6"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_7, wxT("&Slot 7"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_8, wxT("&Slot 8"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_9, wxT("&Slot 9"));
+    StateSaveSubMenu->Append(ID_STATE_SAVE_10, wxT("&Slot 10"));
+
+    StateLoadSubMenu = new wxMenu;
+    StateLoadSubMenu->Append(ID_STATE_LOAD_1, wxT("&Slot 1"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_2, wxT("&Slot 2"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_3, wxT("&Slot 3"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_4, wxT("&Slot 4"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_5, wxT("&Slot 5"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_6, wxT("&Slot 6"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_7, wxT("&Slot 7"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_8, wxT("&Slot 8"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_9, wxT("&Slot 9"));
+    StateLoadSubMenu->Append(ID_STATE_LOAD_10, wxT("&Slot 10"));
+
     EmulatorMenu = new wxMenu;
     EmulatorMenu->Append(ID_EMULATOR_SUSPEND_RESUME, wxT("&Suspend/Resume"));
     EmulatorMenu->Append(ID_EMULATOR_STOP, wxT("&Stop"));
+    EmulatorMenu->AppendSeparator();
+    EmulatorMenu->AppendSubMenu(StateSaveSubMenu, wxT("&Save State"));
+    EmulatorMenu->AppendSubMenu(StateLoadSubMenu, wxT("&Load State"));
     EmulatorMenu->AppendSeparator();
     EmulatorMenu->Append(ID_EMULATOR_PPU_DEBUG, wxT("&PPU Viewer"));
 
@@ -631,6 +702,28 @@ void MainWindow::BindEvents()
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnEmulatorSuspendResume), this, ID_EMULATOR_SUSPEND_RESUME);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OpenPpuViewer), this, ID_EMULATOR_PPU_DEBUG);
     Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::ToggleFrameLimit), this, ID_FRAME_LIMIT);
+
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_1);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_2);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_3);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_4);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_5);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_6);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_7);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_8);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_9);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnSaveState), this, ID_STATE_SAVE_10);
+
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_1);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_2);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_3);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_4);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_5);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_6);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_7);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_8);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_9);
+    Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainWindow::OnLoadState), this, ID_STATE_LOAD_10);
 
     // Emulator Error Event
     Bind(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEventHandler(MainWindow::OnUnexpectedShutdown), this, wxID_ANY);

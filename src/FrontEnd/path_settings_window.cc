@@ -70,17 +70,17 @@ void PathSettingsWindow::InitializeLayout()
 #ifdef _WIN32
 	RomPathButton = new wxButton(SettingsPanel, ID_ROM_PATH_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	SavePathButton = new wxButton(SettingsPanel, ID_SAVE_PATH_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	//StatePathButton = new wxBitmapButton(SettingsPanel, ID_STATE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
+	StatePathButton = new wxBitmapButton(SettingsPanel, ID_STATE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
 #elif __linux
 	wxBitmap folderBitmap = wxArtProvider::GetBitmap(wxART_FOLDER);
 	RomPathButton = new wxBitmapButton(SettingsPanel, ID_ROM_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
 	SavePathButton = new wxBitmapButton(SettingsPanel, ID_SAVE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
-	//StatePathButton = new wxBitmapButton(SettingsPanel, ID_STATE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
+	StatePathButton = new wxBitmapButton(SettingsPanel, ID_STATE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
 #endif
 
     wxStaticText* romPathLabel = new wxStaticText(SettingsPanel, wxID_ANY, "ROM Path");
     RomPathText = new wxTextCtrl(SettingsPanel, wxID_ANY, "", wxDefaultPosition, wxSize(200, 24));
-   
+
     wxBoxSizer* romSizer = new wxBoxSizer(wxHORIZONTAL);
     romSizer->Add(RomPathText, wxSizerFlags().Border(wxRIGHT, 2).Align(wxALIGN_CENTER_VERTICAL));
     romSizer->Add(RomPathButton, wxSizerFlags().Align(wxALIGN_CENTER_VERTICAL));
@@ -92,20 +92,20 @@ void PathSettingsWindow::InitializeLayout()
     saveSizer->Add(SavePathText, wxSizerFlags().Border(wxRIGHT, 2).Align(wxALIGN_CENTER_VERTICAL));
     saveSizer->Add(SavePathButton, wxSizerFlags().Align(wxALIGN_CENTER_VERTICAL));
 
-    //wxStaticText* statePathLabel = new wxStaticText(SettingsPanel, wxID_ANY, "State Save Path");
-    //StatePathText = new wxTextCtrl(SettingsPanel, wxID_ANY, "", wxDefaultPosition, wxSize(200, 24));
+    wxStaticText* statePathLabel = new wxStaticText(SettingsPanel, wxID_ANY, "State Save Path");
+    StatePathText = new wxTextCtrl(SettingsPanel, wxID_ANY, "", wxDefaultPosition, wxSize(200, 24));
 
-    //wxBoxSizer* stateSizer = new wxBoxSizer(wxHORIZONTAL);
-    //stateSizer->Add(StatePathText, wxSizerFlags().Border(wxRIGHT, 2).Align(wxALIGN_CENTER_VERTICAL));
-    //stateSizer->Add(StatePathButton, wxSizerFlags().Align(wxALIGN_CENTER_VERTICAL));
+    wxBoxSizer* stateSizer = new wxBoxSizer(wxHORIZONTAL);
+    stateSizer->Add(StatePathText, wxSizerFlags().Border(wxRIGHT, 2).Align(wxALIGN_CENTER_VERTICAL));
+    stateSizer->Add(StatePathButton, wxSizerFlags().Align(wxALIGN_CENTER_VERTICAL));
 
     wxBoxSizer* settingsSizer = new wxBoxSizer(wxVERTICAL);
     settingsSizer->Add(romPathLabel, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5));
     settingsSizer->Add(romSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT, 5));
     settingsSizer->Add(savePathLabel, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5));
     settingsSizer->Add(saveSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
-    //settingsSizer->Add(statePathLabel, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5));
-    //settingsSizer->Add(stateSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
+    settingsSizer->Add(statePathLabel, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5));
+    settingsSizer->Add(stateSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
     SettingsPanel->SetSizer(settingsSizer);
 
@@ -120,7 +120,7 @@ void PathSettingsWindow::InitializeLayout()
 
     RomPathText->SetValue(romPath);
     SavePathText->SetValue(nativeSavePath);
-    //StatePathText->SetValue(stateSavePath);
+    StatePathText->SetValue(stateSavePath);
 }
 
 void PathSettingsWindow::BindEvents()
@@ -135,20 +135,20 @@ void PathSettingsWindow::DoOk()
     AppSettings* settings = AppSettings::GetInstance();
     settings->Write("/Paths/RomPath", RomPathText->GetValue());
     settings->Write("/Paths/NativeSavePath", SavePathText->GetValue());
-    //settings->Write("/Paths/StateSavePath", StatePathText->GetValue());
+    settings->Write("/Paths/StateSavePath", StatePathText->GetValue());
 
     std::string newSavePath = SavePathText->GetValue().ToStdString();
-    //std::string newStatePath = StatePathText->GetValue().ToStdString();
+    std::string newStatePath = StatePathText->GetValue().ToStdString();
 
     if (!wxDir::Exists(newSavePath))
     {
         wxDir::Make(newSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
     }
 
-    //if (!wxDir::Exists(newStatePath))
-    //{
-    //    wxDir::Make(newStatePath);
-    //}
+    if (!wxDir::Exists(newStatePath))
+    {
+        wxDir::Make(newStatePath);
+    }
 
     if (Nes != nullptr)
     {
