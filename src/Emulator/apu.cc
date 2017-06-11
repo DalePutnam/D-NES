@@ -53,7 +53,7 @@ APU::AudioBackend::AudioBackend()
     int rc;
     snd_pcm_hw_params_t* AlsaHwParams = nullptr;
 
-    rc = snd_pcm_open(&AlsaHandle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+    rc = snd_pcm_open(&AlsaHandle, "default", SND_PCM_STREAM_PLAYBACK, 0);
     if (rc < 0) goto FailedExit;
 
     rc = snd_pcm_hw_params_malloc(&AlsaHwParams);
@@ -74,7 +74,10 @@ APU::AudioBackend::AudioBackend()
     rc = snd_pcm_hw_params_set_rate(AlsaHandle, AlsaHwParams, AUDIO_SAMPLE_RATE, 0);
     if (rc < 0) goto FailedExit;
 
-    rc = snd_pcm_hw_params_set_period_size(AlsaHandle, AlsaHwParams, AUDIO_BUFFER_SIZE / 2, 0);
+    rc = snd_pcm_hw_params_set_period_size(AlsaHandle, AlsaHwParams, 128, 0);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_buffer_size(AlsaHandle, AlsaHwParams, 512);
     if (rc < 0) goto FailedExit;
 
     rc = snd_pcm_hw_params(AlsaHandle, AlsaHwParams);

@@ -70,7 +70,7 @@ private:
 
     private:
         static constexpr uint32_t NUM_AUDIO_BUFFERS = 500;
-        static constexpr uint32_t AUDIO_BUFFER_SIZE = AUDIO_SAMPLE_RATE / 120;
+        static constexpr uint32_t AUDIO_BUFFER_SIZE = 128;//AUDIO_SAMPLE_RATE / 120;
 
         bool IsMuted;
         uint32_t BufferIndex;
