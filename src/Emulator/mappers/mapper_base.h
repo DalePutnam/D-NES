@@ -17,6 +17,10 @@ public:
     void SetSaveDirectory(const std::string& saveDir);
     void AttachCPU(CPU* cpu);
 
+    virtual int GetStateSize();
+    virtual void SaveState(char* state);
+    virtual void LoadState(const char* state);
+
     virtual Cart::MirrorMode GetMirrorMode() = 0;
 
     virtual uint8_t PrgRead(uint16_t address) = 0;
@@ -25,12 +29,13 @@ public:
     virtual uint8_t ChrRead(uint16_t address) = 0;
     virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
 
+    //virtual int GetMapperNumber() = 0;
+
 protected:
     int PrgSize;
     const uint8_t* Prg;
     int ChrSize;
-    const uint8_t* Chr;
-    uint8_t* ChrRam;
+    uint8_t* Chr;
     int WramSize;
     uint8_t* Wram;
     bool HasSaveMem;

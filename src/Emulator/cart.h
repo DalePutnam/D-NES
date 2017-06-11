@@ -38,6 +38,10 @@ public:
     uint8_t ChrRead(uint16_t address);
     void ChrWrite(uint8_t M, uint16_t address);
 
+    int GetStateSize();
+    void SaveState(char* state);
+    void LoadState(const char* state);
+
 private:
     MapperBase* Mapper;
 };

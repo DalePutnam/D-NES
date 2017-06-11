@@ -51,6 +51,10 @@ public:
     void SetDmcVolume(float volume);
     float GetDmcVolume();
 
+    static int STATE_SIZE;
+    void SaveState(char* state);
+    void LoadState(const char* state);
+
 private:
     static const uint32_t CpuFrequency;
     static const uint8_t LengthCounterLookupTable[32];
@@ -73,6 +77,10 @@ private:
         void ClockLengthCounter();
 
         operator uint8_t ();
+
+        static int STATE_SIZE;
+        void SaveState(char* state);
+        void LoadState(const char* state);
 
     private:
         static const uint8_t Sequences[4];
@@ -114,6 +122,10 @@ private:
 
         operator uint8_t ();
 
+        static int STATE_SIZE;
+        void SaveState(char* state);
+        void LoadState(const char* state);
+
     private:
         static const uint8_t Sequence[32];
 
@@ -143,6 +155,10 @@ private:
         void ClockLengthCounter();
 
         operator uint8_t ();
+
+        static int STATE_SIZE;
+        void SaveState(char* state);
+        void LoadState(const char* state);
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -176,6 +192,10 @@ private:
         void ClockTimer();
 
         operator uint8_t ();
+
+        static int STATE_SIZE;
+        void SaveState(char* state);
+        void LoadState(const char* state);
 
     private:
         static const uint16_t TimerPeriods[16];

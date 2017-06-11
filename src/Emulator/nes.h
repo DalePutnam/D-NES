@@ -122,6 +122,9 @@ public:
     void Pause();
     void Reset();
 
+    void SaveState(int slot, const std::string& savePath);
+    void LoadState(int slot, const std::string& savePath);
+
 private:
     // Main run function, launched in a new thread by NES::Start
     void Run();

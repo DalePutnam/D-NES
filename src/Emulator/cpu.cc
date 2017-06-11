@@ -1456,6 +1456,111 @@ void CPU::SetLogEnabled(bool enabled)
     EnableLogFlag = enabled;
 }
 
+int CPU::STATE_SIZE = sizeof(uint64_t)+(sizeof(uint8_t)*0x806)+sizeof(uint16_t)+sizeof(int)+sizeof(char);
+
+void CPU::SaveState(char* state)
+{
+    memcpy(state, &Clock, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(state, Memory, sizeof(uint8_t) * 0x800);
+    state += sizeof(uint8_t) * 0x800;
+
+    memcpy(state, &ControllerOneShift, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    //uint8_t controllerState = ControllerOneState;
+    //memcpy(state, &controllerState, sizeof(uint8_t));
+    //state += sizeof(uint8_t);
+
+    memcpy(state, &PpuRendevous, sizeof(int));
+    state += sizeof(int);
+
+    memcpy(state, &PC, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &S, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &P, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &A, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &X, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &Y, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool = 0;
+    packedBool |= ControllerStrobe << 5;
+    packedBool |= NmiLineStatus << 4;
+    packedBool |= NmiRaised << 3;
+    packedBool |= NmiPending << 2;
+    packedBool |= IsStalled << 1;
+    packedBool |= IrqPending;
+
+    memcpy(state, &packedBool, sizeof(char));
+}
+
+void CPU::LoadState(const char* state)
+{
+    /*
+    std::unique_lock<std::mutex> lock(PauseMutex);
+    if (!Paused)
+    {
+        throw std::runtime_error("CPU: Tried to load state while CPU running");
+    }
+    */
+
+    memcpy(&Clock, state, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(Memory, state, sizeof(uint8_t) * 0x800);
+    state += sizeof(uint8_t) * 0x800;
+
+    memcpy(&ControllerOneShift, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    //uint8_t controllerState;
+    //memcpy(&controllerState, state, sizeof(uint8_t));
+    //ControllerOneState = controllerState;
+    //state += sizeof(uint8_t);
+
+    memcpy(&PpuRendevous, state, sizeof(int));
+    state += sizeof(int);
+
+    memcpy(&PC, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&S, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&P, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&A, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&X, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&Y, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool;
+    memcpy(&packedBool, state, sizeof(char));
+
+    ControllerStrobe = !!(packedBool & 0x20);
+    NmiLineStatus = !!(packedBool & 0x10);
+    NmiRaised = !!(packedBool & 0x8);
+    NmiPending = !!(packedBool & 0x4);
+    IsStalled = !!(packedBool & 0x2);
+    IrqPending = !!(packedBool & 0x1);
+}
+
 // Currently unimplemented
 void CPU::Reset()
 {
