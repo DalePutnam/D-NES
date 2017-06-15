@@ -51,7 +51,7 @@ NES::NES(const NesParams& params)
     Ppu->SetFrameLimitEnabled(params.FrameLimitEnabled);
     Ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
 
-    Apu->SetMuted(params.SoundMuted);
+    Apu->SetAudioEnabled(params.AudioEnabled);
     Apu->SetFiltersEnabled(params.FiltersEnabled);
     Apu->SetMasterVolume(params.MasterVolume);
     Apu->SetPulseOneVolume(params.PulseOneVolume);
@@ -121,9 +121,9 @@ void NES::PpuSetNtscDecoderEnabled(bool enabled)
     Ppu->SetNtscDecodingEnabled(enabled);
 }
 
-void NES::ApuSetMuted(bool muted)
+void NES::ApuSetAudioEnabled(bool enabled)
 {
-    Apu->SetMuted(muted);
+    Apu->SetAudioEnabled(enabled);
 }
 
 void NES::ApuSetFiltersEnabled(bool enabled)

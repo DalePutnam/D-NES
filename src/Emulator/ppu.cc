@@ -223,7 +223,7 @@ void PPU::LimitFrameRate()
 
     if (FrameLimitEnabled)
     {
-        steady_clock::time_point then = SingleFrameStart + microseconds(16666);
+        steady_clock::time_point then = SingleFrameStart + microseconds(16667);
 
         // Wake up 3000 microseconds early then busy wait
         // to ensure we don't miss the mark
@@ -239,7 +239,6 @@ void PPU::LimitFrameRate()
         }
     }
 
-    Apu->UpdatePlaybackRate(duration_cast<microseconds>(steady_clock::now() - SingleFrameStart));
     SingleFrameStart = steady_clock::now();
 }
 

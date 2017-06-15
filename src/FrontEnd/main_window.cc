@@ -180,7 +180,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         appSettings->Read("/Audio/Enabled", &audioEnabled);
         appSettings->Read("/Audio/FiltersEnabled", &filtersEnabled);
 
-        params.SoundMuted = !audioEnabled;
+        params.AudioEnabled = audioEnabled;
         params.FiltersEnabled = filtersEnabled;
 
         int master, pulseOne, pulseTwo, triangle, noise, dmc;

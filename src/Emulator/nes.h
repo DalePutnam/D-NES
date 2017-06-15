@@ -29,7 +29,7 @@ struct NesParams
     bool NtscDecoderEnabled;
 
     // APU Settings
-    bool SoundMuted;
+    bool AudioEnabled;
     bool FiltersEnabled;
     float MasterVolume;
     float PulseOneVolume;
@@ -44,7 +44,7 @@ struct NesParams
         , CpuLogEnabled(false)
         , FrameLimitEnabled(true)
         , NtscDecoderEnabled(false)
-        , SoundMuted(false)
+        , AudioEnabled(true)
         , FiltersEnabled(false)
         , MasterVolume(1.0f)
         , PulseOneVolume(1.0f)
@@ -103,7 +103,7 @@ public:
     void PpuSetFrameLimitEnabled(bool enabled);
     void PpuSetNtscDecoderEnabled(bool enabled);
 
-    void ApuSetMuted(bool muted);
+    void ApuSetAudioEnabled(bool enabled);
     void ApuSetFiltersEnabled(bool enabled);
     void ApuSetMasterVolume(float volume);
     void ApuSetPulseOneVolume(float volume);
