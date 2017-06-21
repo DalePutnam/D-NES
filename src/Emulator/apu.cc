@@ -1,5 +1,6 @@
 #include <exception>
 #include <cstring>
+#include <cmath>
 
 #include "apu.h"
 #include "cpu.h"
@@ -697,9 +698,7 @@ APU::APU()
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
     , CyclesToNextSample(0)
-    , ExtraCount(0)
-    , IsMuted(false)
-    , FilteringEnabled(false)
+    , ExtraCount(0.0f)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
     , PulseTwoVolume(1.0f)
@@ -707,6 +706,13 @@ APU::APU()
     , NoiseVolume(1.0f)
     , DmcVolume(1.0f)
 {
+    // Fraction stores the fractional part of the CPU frequency divided by the sample rate
+    // This is used to add extra cycles between samples occasionally for smoother audio.
+    // Multiplying by 0.88 results in even smoother audio by speeding up the sample rate just
+    // slightly, leaving a margin for error if some stage of the emulation runs to slow.
+    double whole;
+    Fraction = modf(static_cast<double>(CpuFrequency) / AudioBackend::SampleRate, &whole);
+    Fraction *= 0.88f;
 }
 
 APU::~APU()
@@ -802,9 +808,23 @@ void APU::Step()
         }
     }
 
+    GenerateSample();
+}
+
+void APU::GenerateSample()
+{
     if (CyclesToNextSample == 0)
     {
-        CyclesToNextSample = CpuFrequency / Backend.GetSampleRate();
+        if (ExtraCount >= 1.0f)
+        {
+            double whole;
+            CyclesToNextSample = (CpuFrequency / AudioBackend::SampleRate) + 1;
+            ExtraCount = modf(ExtraCount, &whole);
+        }
+        else
+        {
+            CyclesToNextSample = CpuFrequency / AudioBackend::SampleRate;
+        }
 
         // Decided to use the exact calculation rather than the lookup tables for this
         float pulse1 = PulseOne() * PulseOneVolume;
@@ -827,6 +847,8 @@ void APU::Step()
         }
 
         Backend << (PulseOut + TndOut) * MasterVolume;
+
+        ExtraCount += Fraction;
     }
 
     --CyclesToNextSample;

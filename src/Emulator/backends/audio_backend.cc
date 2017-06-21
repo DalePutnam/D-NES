@@ -1,5 +1,4 @@
 #include <cmath>
-#include <iostream>
 
 #include "audio_backend.h"
 
@@ -7,168 +6,41 @@
 // Audio Backend
 //**********************************************************************
 
-const uint32_t AudioBackend::BufferSize = 256;
+const uint32_t AudioBackend::SampleRate = 44100;
 
 AudioBackend::AudioBackend()
     : Enabled(true)
     , FiltersEnabled(false)
-    , SampleRate(44100)
-    , BufferIndex(0)
-    , CurrentBuffer(0)
-#ifdef _WIN32
-    , XAudio2Instance(nullptr)
-    , XAudio2MasteringVoice(nullptr)
-    , XAudio2SourceVoice(nullptr)
-#elif __linux
-    , AlsaHandle(nullptr)
-#endif
+    , HighPass90Hz(SampleRate, 90.0f, 1.0f, false)
+    , HighPass440Hz(SampleRate, 440.0f, 1.0f, false)
+    , LowPass14KHz(SampleRate, 14000.0f, 1.0f, true)
 {
 #ifdef _WIN32
-    WAVEFORMATEX WaveFormat = { 0 };
-    WaveFormat.nChannels = 1;
-    WaveFormat.nSamplesPerSec = SampleRate;
-    WaveFormat.wBitsPerSample = sizeof(float) * 8;
-    WaveFormat.nAvgBytesPerSec = SampleRate * sizeof(float);
-    WaveFormat.nBlockAlign = sizeof(float);
-    WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-
-    HRESULT hr;
-    hr = XAudio2Create(&XAudio2Instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
-    if (FAILED(hr)) goto FailedExit;
-
-    hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice);
-    if (FAILED(hr)) goto FailedExit;
-
-    hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
-    if (FAILED(hr)) goto FailedExit;
-
-    XAudio2SourceVoice->Start(0);
-
+    InitializeXAudio2();
 #elif __linux
-    int rc;
-    snd_pcm_hw_params_t* AlsaHwParams = nullptr;
-    snd_pcm_uframes_t periodSize, bufferSize;
-
-    rc = snd_pcm_open(&AlsaHandle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_malloc(&AlsaHwParams);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_any(AlsaHandle, AlsaHwParams);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_access(AlsaHandle, AlsaHwParams, SND_PCM_ACCESS_RW_INTERLEAVED);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_format(AlsaHandle, AlsaHwParams, SND_PCM_FORMAT_FLOAT_LE);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_channels(AlsaHandle, AlsaHwParams, 1);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_rate(AlsaHandle, AlsaHwParams, SampleRate, 0);
-    if (rc < 0) goto FailedExit;
-
-    periodSize = BufferSize;
-    rc = snd_pcm_hw_params_set_period_size_near(AlsaHandle, AlsaHwParams, &periodSize, 0);
-    if (rc < 0) goto FailedExit;
-
-    //bufferSize = BufferSize * 4;
-    bufferSize = (SampleRate / 60);
-    rc = snd_pcm_hw_params_set_buffer_size_min(AlsaHandle, AlsaHwParams, &bufferSize);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_buffer_size_first(AlsaHandle, AlsaHwParams, &bufferSize);
-    if (rc < 0) goto FailedExit;
-
-    std::cout << bufferSize << std::endl;
-
-    rc = snd_pcm_hw_params(AlsaHandle, AlsaHwParams);
-    if (rc < 0) goto FailedExit;
-
-    snd_pcm_hw_params_free(AlsaHwParams);
-
-#endif
-
-    HighPass90Hz = Filter(SampleRate, 90.0f, 1.0f, false);
-    HighPass440Hz = Filter(SampleRate, 440.0f, 1.0f, false);
-    LowPass14KHz = Filter(SampleRate, 14000.0f, 1.0f, true);
-
-    NumBuffers = SampleRate / BufferSize;
-
-    OutputBuffers = new float*[NumBuffers];
-    for (size_t i = 0; i < NumBuffers; ++i)
-    {
-        OutputBuffers[i] = new float[BufferSize];
-    }
-
-    return;
-
-FailedExit:
-#ifdef _WIN32
-    if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
-    if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
-    if (XAudio2Instance) XAudio2Instance->Release();
-
-    throw std::runtime_error("APU: Failed to initialize XAudio2");
-#elif __linux
-    if (AlsaHandle) snd_pcm_close(AlsaHandle);
-    if (AlsaHwParams) snd_pcm_hw_params_free(AlsaHwParams);
-
-    throw std::runtime_error("APU: Failed to initialize ALSA");
+    InitializeAlsa();
 #endif
 }
 
 AudioBackend::~AudioBackend()
 {
 #ifdef _WIN32
-    XAudio2SourceVoice->Stop();
-    XAudio2SourceVoice->FlushSourceBuffers();
-
-    XAudio2SourceVoice->DestroyVoice();
-    XAudio2MasteringVoice->DestroyVoice();
-    XAudio2Instance->Release();
+    CleanUpXAudio2();
 #elif __linux
-    snd_pcm_drop(AlsaHandle);
-    snd_pcm_close(AlsaHandle);
+    CleanUpAlsa();
 #endif
-
-    for (size_t i = 0; i < NumBuffers; ++i)
-    {
-        delete[] OutputBuffers[i];
-    }
-    delete[] OutputBuffers;
 }
 
-uint32_t AudioBackend::GetSampleRate()
-{
-    return SampleRate;
-}
 
 void AudioBackend::SetEnabled(bool enabled)
 {
     std::unique_lock<std::mutex> lock(Mutex);
 
-    if (!enabled && Enabled)
-    {
 #ifdef _WIN32
-        XAudio2SourceVoice->Stop(0);
-        XAudio2SourceVoice->FlushSourceBuffers();
+    SetEnabledXAudio2(enabled);
 #elif __linux
-        snd_pcm_drop(AlsaHandle);
+    SetEnabledAlsa(enabled);
 #endif
-    }
-    else if (enabled && !Enabled)
-    {
-#ifdef _WIN32
-        XAudio2SourceVoice->Start(0);
-#elif __linux
-        snd_pcm_prepare(AlsaHandle);
-#endif
-        CurrentBuffer = 0;
-        BufferIndex = 0;
-    }
 
     Enabled = enabled;
 }
@@ -198,41 +70,212 @@ void AudioBackend::operator<<(float sample)
             sample = LowPass14KHz(HighPass440Hz(HighPass90Hz(sample)));
         }
 
-        float* Buffer = OutputBuffers[CurrentBuffer];
-        Buffer[BufferIndex++] = sample;
-
-        if (BufferIndex == BufferSize)
-        {
 #ifdef _WIN32
-            XAUDIO2_BUFFER XAudio2Buffer = { 0 };
-            XAudio2Buffer.AudioBytes = BufferSize * sizeof(float);
-            XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
-            XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
+        ProcessSampleXAudio2(sample);
 #elif __linux
-            int rc;
-            do
-            {
-                rc = snd_pcm_writei(AlsaHandle, reinterpret_cast<void*>(Buffer), BufferSize);
-                if (rc == -EPIPE)
-                {
-                    snd_pcm_prepare(AlsaHandle);
-                    rc = snd_pcm_writei(AlsaHandle, reinterpret_cast<void*>(Buffer), BufferSize);
-                }
-            } while (rc == -EAGAIN);
+        ProcessSampleAlsa(sample);
 #endif
-            CurrentBuffer = (CurrentBuffer + 1) % NumBuffers;
-            BufferIndex = 0;
-        }
     }
 }
+
+#ifdef _WIN32
+const uint32_t AudioBackend::BufferSize = 128;
+const uint32_t AudioBackend::NumBuffers = SampleRate / BufferSize;
+
+void AudioBackend::InitializeXAudio2()
+{
+    XAudio2Instance = nullptr;
+    XAudio2MasteringVoice = nullptr;
+    XAudio2SourceVoice = nullptr;
+    BufferIndex = 0;
+    CurrentBuffer = 0;
+
+    WAVEFORMATEX WaveFormat = { 0 };
+    WaveFormat.nChannels = 1;
+    WaveFormat.nSamplesPerSec = SampleRate;
+    WaveFormat.wBitsPerSample = sizeof(float) * 8;
+    WaveFormat.nAvgBytesPerSec = SampleRate * sizeof(float);
+    WaveFormat.nBlockAlign = sizeof(float);
+    WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+
+    HRESULT hr;
+    hr = XAudio2Create(&XAudio2Instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    if (FAILED(hr)) goto FailedExit;
+
+    hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice);
+    if (FAILED(hr)) goto FailedExit;
+
+    hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
+    if (FAILED(hr)) goto FailedExit;
+
+    OutputBuffers = new float*[NumBuffers];
+    for (size_t i = 0; i < NumBuffers; ++i)
+    {
+        OutputBuffers[i] = new float[BufferSize];
+    }
+
+    XAudio2SourceVoice->Start(0);
+
+    return;
+
+FailedExit:
+    if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
+    if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
+    if (XAudio2Instance) XAudio2Instance->Release();
+    throw std::runtime_error("APU: Failed to initialize XAudio2");
+}
+
+void AudioBackend::CleanUpXAudio2()
+{
+    XAudio2SourceVoice->Stop();
+    XAudio2SourceVoice->FlushSourceBuffers();
+    XAudio2SourceVoice->DestroyVoice();
+    XAudio2MasteringVoice->DestroyVoice();
+    XAudio2Instance->Release();
+
+    for (size_t i = 0; i < NumBuffers; ++i)
+    {
+        delete[] OutputBuffers[i];
+    }
+    delete[] OutputBuffers;
+}
+
+void AudioBackend::SetEnabledXAudio2(bool enabled)
+{
+    if (!enabled && Enabled)
+    {
+        XAudio2SourceVoice->Stop(0);
+        XAudio2SourceVoice->FlushSourceBuffers();
+    }
+    else if (enabled && !Enabled)
+    {
+        XAudio2SourceVoice->Start(0);
+        CurrentBuffer = 0;
+        BufferIndex = 0;
+    }
+}
+
+void AudioBackend::ProcessSampleXAudio2(float sample)
+{
+    float* Buffer = OutputBuffers[CurrentBuffer];
+    Buffer[BufferIndex++] = sample;
+
+    if (BufferIndex == BufferSize)
+    {
+        XAUDIO2_BUFFER XAudio2Buffer = { 0 };
+        XAudio2Buffer.AudioBytes = BufferSize * sizeof(float);
+        XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
+        XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
+
+        CurrentBuffer = (CurrentBuffer + 1) % NumBuffers;
+        BufferIndex = 0;
+    }
+}
+
+#elif __linux
+void AudioBackend::InitializeAlsa()
+{
+    int rc, dir;
+    snd_pcm_hw_params_t* AlsaHwParams = nullptr;
+    snd_pcm_uframes_t bufferSize;
+
+    AlsaHandle = nullptr;
+    PeriodSize = 128;
+    BufferIndex = 0;
+
+    rc = snd_pcm_open(&AlsaHandle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_malloc(&AlsaHwParams);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_any(AlsaHandle, AlsaHwParams);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_access(AlsaHandle, AlsaHwParams, SND_PCM_ACCESS_RW_INTERLEAVED);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_format(AlsaHandle, AlsaHwParams, SND_PCM_FORMAT_FLOAT_LE);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_channels(AlsaHandle, AlsaHwParams, 1);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_rate(AlsaHandle, AlsaHwParams, SampleRate, 0);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_period_size_min(AlsaHandle, AlsaHwParams, &PeriodSize, 0);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_period_size_first(AlsaHandle, AlsaHwParams, &PeriodSize, &dir);
+    if (rc < 0) goto FailedExit;
+
+    bufferSize = SampleRate / 30; // Two (video) frames worth of audio data
+    rc = snd_pcm_hw_params_set_buffer_size_min(AlsaHandle, AlsaHwParams, &bufferSize);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params_set_buffer_size_first(AlsaHandle, AlsaHwParams, &bufferSize);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_hw_params(AlsaHandle, AlsaHwParams);
+    if (rc < 0) goto FailedExit;
+
+    snd_pcm_hw_params_free(AlsaHwParams);
+
+    SampleBuffer = new float[PeriodSize];
+
+    return;
+
+FailedExit:
+    if (AlsaHandle) snd_pcm_close(AlsaHandle);
+    if (AlsaHwParams) snd_pcm_hw_params_free(AlsaHwParams);
+    throw std::runtime_error(std::string("Failed to initialize ALSA. ") + snd_strerror(rc));
+}
+
+void AudioBackend::CleanUpAlsa()
+{
+    snd_pcm_drop(AlsaHandle);
+    snd_pcm_close(AlsaHandle);
+
+    delete [] SampleBuffer;
+}
+
+void AudioBackend::SetEnabledAlsa(bool enabled)
+{
+    if (!enabled && Enabled)
+    {
+        snd_pcm_drop(AlsaHandle);
+    }
+    else if (enabled && !Enabled)
+    {
+        snd_pcm_prepare(AlsaHandle);
+    }
+}
+
+void AudioBackend::ProcessSampleAlsa(float sample)
+{
+    SampleBuffer[BufferIndex++] = sample;
+    if (BufferIndex == PeriodSize)
+    {
+        int rc = 0;
+        //do {
+        rc = snd_pcm_writei(AlsaHandle, SampleBuffer, PeriodSize);
+        if (rc == -EPIPE)
+        {
+            snd_pcm_prepare(AlsaHandle);
+            rc = snd_pcm_writei(AlsaHandle, SampleBuffer, PeriodSize);
+        }
+        //} while (rc == -EAGAIN);
+
+        BufferIndex = 0;
+    }
+}
+
+#endif
 
 //**********************************************************************
 // Butterworth filter
 //**********************************************************************
-
-AudioBackend::Filter::Filter()
-{
-}
 
 AudioBackend::Filter::Filter(int sampleRate, float frequency, float resonance, bool isLowPass)
 {

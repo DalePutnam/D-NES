@@ -34,9 +34,9 @@ public:
 
     void SetAudioEnabled(bool mute);
     void SetMasterVolume(float volume);
-    float GetMasterVolume();
-
     void SetFiltersEnabled(bool enabled);
+
+    float GetMasterVolume();
 
     void SetPulseOneVolume(float volume);
     float GetPulseOneVolume();
@@ -52,6 +52,8 @@ public:
 private:
     static const uint32_t CpuFrequency;
     static const uint8_t LengthCounterLookupTable[32];
+
+    void GenerateSample();
 
     class PulseUnit
     {
@@ -218,10 +220,8 @@ private:
     uint8_t FrameResetCountdown;
 
     uint32_t CyclesToNextSample;
-    uint32_t ExtraCount;
-
-    bool IsMuted;
-    bool FilteringEnabled;
+    double ExtraCount;
+    double Fraction;
 
     AudioBackend Backend;
 
