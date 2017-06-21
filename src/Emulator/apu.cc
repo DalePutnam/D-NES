@@ -1,6 +1,7 @@
 #include <exception>
 #include <cstring>
 #include <cmath>
+#include <iostream>
 
 #include "apu.h"
 #include "cpu.h"
@@ -201,7 +202,7 @@ void APU::PulseUnit::ClockLengthCounter()
     }
 }
 
-uint8_t APU::PulseUnit::operator()()
+APU::PulseUnit::operator uint8_t ()
 {
     uint8_t SequenceValue = (Sequences[DutyCycle] >> SequenceCount) & 0x1;
 
@@ -334,7 +335,7 @@ void APU::TriangleUnit::ClockLengthCounter()
     }
 }
 
-uint8_t APU::TriangleUnit::operator()()
+APU::TriangleUnit::operator uint8_t ()
 {
     return Sequence[SequenceCount];
 }
@@ -472,7 +473,7 @@ void APU::NoiseUnit::ClockLengthCounter()
     }
 }
 
-uint8_t APU::NoiseUnit::operator()()
+APU::NoiseUnit::operator uint8_t ()
 {
     if (LengthCounter != 0 && !(LinearFeedbackShiftRegister & 0x0001))
     {
@@ -675,7 +676,7 @@ void APU::DmcUnit::ClockTimer()
     }
 }
 
-uint8_t APU::DmcUnit::operator()()
+APU::DmcUnit::operator uint8_t ()
 {
     return OutputLevel;
 }
@@ -697,8 +698,11 @@ APU::APU()
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
+    , CurrentFrameLength(16667)
     , CyclesToNextSample(0)
+    , EffectiveCpuFrequency(CpuFrequency)
     , ExtraCount(0.0f)
+    , Fraction(0.0f)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
     , PulseTwoVolume(1.0f)
@@ -706,13 +710,9 @@ APU::APU()
     , NoiseVolume(1.0f)
     , DmcVolume(1.0f)
 {
-    // Fraction stores the fractional part of the CPU frequency divided by the sample rate
-    // This is used to add extra cycles between samples occasionally for smoother audio.
-    // Multiplying by 0.88 results in even smoother audio by speeding up the sample rate just
-    // slightly, leaving a margin for error if some stage of the emulation runs to slow.
-    double whole;
-    Fraction = modf(static_cast<double>(CpuFrequency) / AudioBackend::SampleRate, &whole);
-    Fraction *= 0.88f;
+    double whole, frequency;
+    frequency = CpuFrequency;
+    Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
 }
 
 APU::~APU()
@@ -727,6 +727,36 @@ void APU::AttachCPU(CPU* cpu)
 void APU::AttachCart(Cart* cart)
 {
     this->Cartridge = cart;
+}
+
+void APU::SetFrameLength(int32_t length)
+{
+    int32_t delta = length - CurrentFrameLength;
+
+    // Only update the frame length if the change is
+    // greater than 100 microsecods in either direction
+    if (delta > 100 || delta < -100)
+    {
+        double whole, frequency;
+        if (length >= 16567 && length <= 16767)
+        {
+            frequency = CpuFrequency;
+            EffectiveCpuFrequency = CpuFrequency;
+        }
+        else
+        {
+            frequency = (16667.f / length) * CpuFrequency;
+            EffectiveCpuFrequency = frequency;
+        }
+
+        // Fraction represents the fractional part of the CPU frequency divided by the sample rate
+        // It is used to add extra cycles between samples now and then to keep the rate of sample
+        // generation close to 44100 samples per second. Multiplying by 0.89 also gives a margin
+        // for error so that the emulator doesn't fall behind in generating audio if there are
+        // any hiccups in the speed of emulation
+        Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
+        CurrentFrameLength = length;
+    }
 }
 
 void APU::Step()
@@ -818,20 +848,20 @@ void APU::GenerateSample()
         if (ExtraCount >= 1.0f)
         {
             double whole;
-            CyclesToNextSample = (CpuFrequency / AudioBackend::SampleRate) + 1;
+            CyclesToNextSample = (EffectiveCpuFrequency / AudioBackend::SampleRate) + 1;
             ExtraCount = modf(ExtraCount, &whole);
         }
         else
         {
-            CyclesToNextSample = CpuFrequency / AudioBackend::SampleRate;
+            CyclesToNextSample = EffectiveCpuFrequency / AudioBackend::SampleRate;
         }
 
         // Decided to use the exact calculation rather than the lookup tables for this
-        float pulse1 = PulseOne() * PulseOneVolume;
-        float pulse2 = PulseTwo() * PulseTwoVolume;
-        float triangle = Triangle() * TriangleVolume;
-        float noise = Noise() * NoiseVolume;
-        float dmc = Dmc() * DmcVolume;
+        float pulse1 = PulseOne * PulseOneVolume;
+        float pulse2 = PulseTwo * PulseTwoVolume;
+        float triangle = Triangle * TriangleVolume;
+        float noise = Noise * NoiseVolume;
+        float dmc = Dmc * DmcVolume;
 
         float PulseOut = 0.0f;
         float TndOut = 0.0f;

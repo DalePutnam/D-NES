@@ -22,6 +22,8 @@ public:
     void Step();
     bool CheckIRQ();
 
+    void SetFrameLength(int32_t length);
+
     void WritePulseOneRegister(uint8_t reg, uint8_t value);
     void WritePulseTwoRegister(uint8_t reg, uint8_t value);
     void WriteTriangleRegister(uint8_t reg, uint8_t value);
@@ -70,7 +72,7 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint8_t Sequences[4];
@@ -110,7 +112,7 @@ private:
         void ClockLinearCounter();
         void ClockLengthCounter();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint8_t Sequence[32];
@@ -140,7 +142,7 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -173,7 +175,7 @@ private:
 
         void ClockTimer();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -219,7 +221,9 @@ private:
     bool FrameResetFlag;
     uint8_t FrameResetCountdown;
 
+    int32_t CurrentFrameLength;
     uint32_t CyclesToNextSample;
+    uint32_t EffectiveCpuFrequency;
     double ExtraCount;
     double Fraction;
 

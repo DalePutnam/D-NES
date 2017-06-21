@@ -239,6 +239,7 @@ void PPU::LimitFrameRate()
         }
     }
 
+    Apu->SetFrameLength(duration_cast<microseconds>(steady_clock::now() - SingleFrameStart).count());
     SingleFrameStart = steady_clock::now();
 }
 
