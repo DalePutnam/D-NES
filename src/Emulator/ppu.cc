@@ -21,6 +21,14 @@ const uint32_t PPU::RgbLookupTable[64] =
     0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490, 0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
 };
 
+void PPU::ResetFrameCounter()
+{
+	FrameCountStart = std::chrono::steady_clock::now();
+	SingleFrameStart = std::chrono::steady_clock::now();
+	FpsCounter = 0;
+	CurrentFps = 0;
+}
+
 int PPU::GetFrameRate()
 {
     return CurrentFps;
@@ -239,7 +247,8 @@ void PPU::LimitFrameRate()
         }
     }
 
-    Apu->SetFrameLength(duration_cast<microseconds>(steady_clock::now() - SingleFrameStart).count());
+	microseconds span = duration_cast<microseconds>(steady_clock::now() - SingleFrameStart);
+    Apu->SetFrameLength(span.count());
     SingleFrameStart = steady_clock::now();
 }
 
@@ -927,6 +936,11 @@ void PPU::AttachAPU(APU* apu)
 void PPU::AttachCart(Cart* cart)
 {
     Cartridge = cart;
+}
+
+void PPU::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
+{
+	OnFrameComplete = fn;
 }
 
 void PPU::SetFrameLimitEnabled(bool enabled)

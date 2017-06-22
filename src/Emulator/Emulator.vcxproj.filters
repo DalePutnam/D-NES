@@ -19,6 +19,12 @@
     <Filter Include="Source Files\Mappers">
       <UniqueIdentifier>{5f44222b-4992-43d8-b028-cd22ac026d36}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Backends">
+      <UniqueIdentifier>{9a385fc7-3c07-46f3-a3a2-db1867257c34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Backends">
+      <UniqueIdentifier>{8f432b86-8435-413e-bdaa-16dac11e8b9d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h">
@@ -45,6 +51,9 @@
     <ClInclude Include="cart.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="backends\audio_backend.h">
+      <Filter>Header Files\Backends</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
@@ -70,6 +79,9 @@
     </ClCompile>
     <ClCompile Include="cart.cc">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="backends\audio_backend.cc">
+      <Filter>Source Files\Backends</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

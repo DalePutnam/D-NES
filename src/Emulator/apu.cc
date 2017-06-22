@@ -746,7 +746,7 @@ void APU::SetFrameLength(int32_t length)
         else
         {
             frequency = (16667.f / length) * CpuFrequency;
-            EffectiveCpuFrequency = frequency;
+            EffectiveCpuFrequency = static_cast<int32_t>(frequency);
         }
 
         // Fraction represents the fractional part of the CPU frequency divided by the sample rate

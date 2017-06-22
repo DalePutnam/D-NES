@@ -66,7 +66,18 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>./backends;./mappers;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>./backends;./mappers;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>./backends;./mappers;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>./backends;./mappers;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -149,6 +160,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="apu.h" />
+    <ClInclude Include="backends\audio_backend.h" />
     <ClInclude Include="cart.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="mappers\mapper_base.h" />
@@ -159,6 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="apu.cc" />
+    <ClCompile Include="backends\audio_backend.cc" />
     <ClCompile Include="cart.cc" />
     <ClCompile Include="cpu.cc" />
     <ClCompile Include="mappers\mapper_base.cc" />

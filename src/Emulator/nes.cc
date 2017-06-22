@@ -8,6 +8,10 @@
 #include <exception>
 
 #include "nes.h"
+#include "cpu.h"
+#include "apu.h"
+#include "ppu.h"
+#include "cart.h"
 #include "mappers/nrom.h"
 
 NES::NES(const NesParams& params)
@@ -249,6 +253,16 @@ void NES::Pause()
 }
 
 void NES::Reset() {}
+
+void NES::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
+{
+	Ppu->BindFrameCompleteCallback(fn);
+}
+
+void NES::BindErrorCallback(const std::function<void(std::string)>& fn)
+{
+	OnError = fn;
+}
 
 NES::~NES()
 {
