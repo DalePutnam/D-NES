@@ -166,7 +166,7 @@ void AudioSettingsWindow::DoCancel()
         settings->Read("/Audio/Enabled", &audioEnabled);
         settings->Read("/Audio/FiltersEnabled", &filtersEnabled);
 
-        Nes->ApuSetMuted(!audioEnabled);
+        Nes->ApuSetAudioEnabled(audioEnabled);
         Nes->ApuSetFiltersEnabled(filtersEnabled);
 
         int master, pulseOne, pulseTwo, triangle, noise, dmc;
@@ -192,7 +192,7 @@ void AudioSettingsWindow::EnableAudioClicked(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetMuted(!EnableAudioCheckBox->GetValue());
+        Nes->ApuSetAudioEnabled(EnableAudioCheckBox->GetValue());
     }
 }
 

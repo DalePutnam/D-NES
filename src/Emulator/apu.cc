@@ -1,6 +1,7 @@
 #include <exception>
 #include <cstring>
 #include <cmath>
+#include <iostream>
 
 #include "apu.h"
 #include "cpu.h"
@@ -13,244 +14,7 @@ namespace {
     }
 };
 
-//**********************************************************************
-// Audio Backend
-//**********************************************************************
-
-APU::AudioBackend::AudioBackend()
-    : BufferIndex(0)
-    , CurrentBuffer(0)
-#ifdef _WIN32
-    , XAudio2Instance(nullptr)
-    , XAudio2MasteringVoice(nullptr)
-    , XAudio2SourceVoice(nullptr)
-#elif __linux
-    , AlsaHandle(nullptr)
-#endif
-{
-#ifdef _WIN32
-    WAVEFORMATEX WaveFormat = { 0 };
-    WaveFormat.nChannels = 1;
-    WaveFormat.nSamplesPerSec = AUDIO_SAMPLE_RATE;
-    WaveFormat.wBitsPerSample = sizeof(float) * 8;
-    WaveFormat.nAvgBytesPerSec = AUDIO_SAMPLE_RATE * sizeof(float);
-    WaveFormat.nBlockAlign = sizeof(float);
-    WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-
-    HRESULT hr;
-    hr = XAudio2Create(&XAudio2Instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
-    if (FAILED(hr)) goto FailedExit;
-
-    hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice);
-    if (FAILED(hr)) goto FailedExit;
-
-    hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
-    if (FAILED(hr)) goto FailedExit;
-
-    XAudio2SourceVoice->Start(0);
-
-#elif __linux
-    int rc;
-    snd_pcm_hw_params_t* AlsaHwParams = nullptr;
-
-    rc = snd_pcm_open(&AlsaHandle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_malloc(&AlsaHwParams);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_any(AlsaHandle, AlsaHwParams);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_access(AlsaHandle, AlsaHwParams, SND_PCM_ACCESS_RW_INTERLEAVED);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_format(AlsaHandle, AlsaHwParams, SND_PCM_FORMAT_FLOAT_LE);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_channels(AlsaHandle, AlsaHwParams, 1);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_rate(AlsaHandle, AlsaHwParams, AUDIO_SAMPLE_RATE, 0);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_period_size(AlsaHandle, AlsaHwParams, AUDIO_BUFFER_SIZE / 2, 0);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params(AlsaHandle, AlsaHwParams);
-    if (rc < 0) goto FailedExit;
-
-    snd_pcm_hw_params_free(AlsaHwParams);
-
-#endif
-
-    for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
-    {
-        OutputBuffers[i] = new float[AUDIO_BUFFER_SIZE];
-    }
-
-    return;
-
-FailedExit:
-#ifdef _WIN32
-    if (XAudio2SourceVoice) XAudio2SourceVoice->DestroyVoice();
-    if (XAudio2MasteringVoice) XAudio2MasteringVoice->DestroyVoice();
-    if (XAudio2Instance) XAudio2Instance->Release();
-
-    throw std::runtime_error("APU: Failed to initialize XAudio2");
-#elif __linux
-    if (AlsaHandle) snd_pcm_close(AlsaHandle);
-    if (AlsaHwParams) snd_pcm_hw_params_free(AlsaHwParams);
-
-    throw std::runtime_error("APU: Failed to initialize ALSA");
-#endif
-}
-
-APU::AudioBackend::~AudioBackend()
-{
-#ifdef _WIN32
-    XAudio2SourceVoice->Stop();
-    XAudio2SourceVoice->FlushSourceBuffers();
-
-    XAudio2SourceVoice->DestroyVoice();
-    XAudio2MasteringVoice->DestroyVoice();
-    XAudio2Instance->Release();
-#elif __linux
-    snd_pcm_drop(AlsaHandle);
-    snd_pcm_close(AlsaHandle);
-#endif
-
-    for (size_t i = 0; i < NUM_AUDIO_BUFFERS; ++i)
-    {
-        delete[] OutputBuffers[i];
-    }
-}
-
-void APU::AudioBackend::SetMuted(bool mute)
-{
-    if (mute && !IsMuted)
-    {
-#ifdef _WIN32
-        XAudio2SourceVoice->Stop(0);
-        XAudio2SourceVoice->FlushSourceBuffers();
-#elif __linux
-        //snd_pcm_pause(AlsaHandle, 1);
-
-        snd_pcm_drop(AlsaHandle);
-        //snd_pcm_reset(AlsaHandle);
-#endif
-        IsMuted = true;
-    }
-    else if (!mute && IsMuted)
-    {
-#ifdef _WIN32
-        XAudio2SourceVoice->Start(0);
-#elif __linux
-        snd_pcm_prepare(AlsaHandle);
-        //snd_pcm_pause(AlsaHandle, 0);
-#endif
-        CurrentBuffer = 0;
-        BufferIndex = 0;
-        IsMuted = false;
-    }
-}
-
-void APU::AudioBackend::UpdatePlaybackRate(const std::chrono::microseconds& frameLength)
-{
-    float length = static_cast<float>(frameLength.count());
-    float ratio = 16666.f / length;
-
-#ifdef _WIN32
-    if (ratio > 0.9f && ratio < 1.1f)
-    {
-        XAudio2SourceVoice->SetFrequencyRatio(1.0f);
-    }
-    else
-    {
-        XAudio2SourceVoice->SetFrequencyRatio(ratio);
-    }
-#elif __linux
-    (void) ratio;
-#endif
-}
-
-void APU::AudioBackend::operator<<(float sample)
-{
-    float* Buffer = OutputBuffers[CurrentBuffer];
-    Buffer[BufferIndex++] = sample;
-
-    if (BufferIndex == AUDIO_BUFFER_SIZE)
-    {
-        CurrentBuffer = (CurrentBuffer + 1) % NUM_AUDIO_BUFFERS;
-        BufferIndex = 0;
-
-#ifdef _WIN32
-        XAUDIO2_BUFFER XAudio2Buffer = { 0 };
-        XAudio2Buffer.AudioBytes = AUDIO_BUFFER_SIZE * sizeof(float);
-        XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
-
-        XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
-#elif __linux
-        int rc = snd_pcm_writei(AlsaHandle, reinterpret_cast<void*>(Buffer), AUDIO_BUFFER_SIZE);
-
-        if (rc == -EPIPE)
-        {
-            snd_pcm_prepare(AlsaHandle);
-        }
-#endif
-    }
-}
-
-//**********************************************************************
-// Butterworth filter
-//**********************************************************************
-
-APU::Filter::Filter(float frequency, float resonance, bool isLowPass)
-{
-    static constexpr float pi = 3.14159265f;
-
-    if (isLowPass)
-    {
-        c = 1.0f / std::tan(pi * frequency / AUDIO_SAMPLE_RATE);
-        a1 = 1.0f / (1.0f + resonance * c + c * c);
-        a2 = 2.0f * a1;
-        a3 = a1;
-        b1 = 2.0f * (1.0f - c * c) * a1;
-        b2 = (1.0f - resonance * c + c * c) * a1;
-    }
-    else
-    {
-        c = std::tan(pi * frequency / AUDIO_SAMPLE_RATE);
-        a1 = 1.0f / (1.0f + resonance * c + c * c);
-        a2 = -2.0f * a1;
-        a3 = a1;
-        b1 = 2.0f * (c * c - 1.0f) * a1;
-        b2 = (1.0f - resonance * c + c * c) * a1;
-    }
-
-    memset(InputHistory, 0, sizeof(float) * 2);
-    memset(OutputHistory, 0, sizeof(float) * 2);
-}
-
-void APU::Filter::Reset()
-{
-    memset(InputHistory, 0, sizeof(float) * 2);
-    memset(OutputHistory, 0, sizeof(float) * 2);
-}
-
-float APU::Filter::operator()(float sample)
-{
-    float output = (a1 * sample) + (a2 * InputHistory[0]) + (a3 * InputHistory[1]) - (b1 * OutputHistory[0]) - (b2 * OutputHistory[1]);
-
-    InputHistory[1] = InputHistory[0];
-    InputHistory[0] = sample;
-
-    OutputHistory[1] = OutputHistory[0];
-    OutputHistory[0] = output;
-
-    return output;
-}
-
+const uint32_t APU::CpuFrequency = 1789773;
 
 const uint8_t APU::LengthCounterLookupTable[32] =
 {
@@ -438,7 +202,7 @@ void APU::PulseUnit::ClockLengthCounter()
     }
 }
 
-uint8_t APU::PulseUnit::operator()()
+APU::PulseUnit::operator uint8_t ()
 {
     uint8_t SequenceValue = (Sequences[DutyCycle] >> SequenceCount) & 0x1;
 
@@ -571,7 +335,7 @@ void APU::TriangleUnit::ClockLengthCounter()
     }
 }
 
-uint8_t APU::TriangleUnit::operator()()
+APU::TriangleUnit::operator uint8_t ()
 {
     return Sequence[SequenceCount];
 }
@@ -709,7 +473,7 @@ void APU::NoiseUnit::ClockLengthCounter()
     }
 }
 
-uint8_t APU::NoiseUnit::operator()()
+APU::NoiseUnit::operator uint8_t ()
 {
     if (LengthCounter != 0 && !(LinearFeedbackShiftRegister & 0x0001))
     {
@@ -912,7 +676,7 @@ void APU::DmcUnit::ClockTimer()
     }
 }
 
-uint8_t APU::DmcUnit::operator()()
+APU::DmcUnit::operator uint8_t ()
 {
     return OutputLevel;
 }
@@ -934,13 +698,11 @@ APU::APU()
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
+    , CurrentFrameLength(16667)
     , CyclesToNextSample(0)
-    , ExtraCount(0)
-    , IsMuted(false)
-    , FilteringEnabled(false)
-    , HighPass90Hz(90.0f, 1.0f, false)
-    , HighPass440Hz(440.0f, 1.0f, false)
-    , LowPass14KHz(14000.0f, 1.0f, true)
+    , EffectiveCpuFrequency(CpuFrequency)
+    , ExtraCount(0.0f)
+    , Fraction(0.0f)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
     , PulseTwoVolume(1.0f)
@@ -948,6 +710,9 @@ APU::APU()
     , NoiseVolume(1.0f)
     , DmcVolume(1.0f)
 {
+    double whole, frequency;
+    frequency = CpuFrequency;
+    Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
 }
 
 APU::~APU()
@@ -964,9 +729,34 @@ void APU::AttachCart(Cart* cart)
     this->Cartridge = cart;
 }
 
-void APU::UpdatePlaybackRate(const std::chrono::microseconds& frameLength)
+void APU::SetFrameLength(int32_t length)
 {
-    Backend.UpdatePlaybackRate(frameLength);
+    int32_t delta = length - CurrentFrameLength;
+
+    // Only update the frame length if the change is
+    // greater than 100 microsecods in either direction
+    if (delta > 100 || delta < -100)
+    {
+        double whole, frequency;
+        if (length >= 16567 && length <= 16767)
+        {
+            frequency = CpuFrequency;
+            EffectiveCpuFrequency = CpuFrequency;
+        }
+        else
+        {
+            frequency = (16667.f / length) * CpuFrequency;
+            EffectiveCpuFrequency = static_cast<int32_t>(frequency);
+        }
+
+        // Fraction represents the fractional part of the CPU frequency divided by the sample rate
+        // It is used to add extra cycles between samples now and then to keep the rate of sample
+        // generation close to 44100 samples per second. Multiplying by 0.89 also gives a margin
+        // for error so that the emulator doesn't fall behind in generating audio if there are
+        // any hiccups in the speed of emulation
+        Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
+        CurrentFrameLength = length;
+    }
 }
 
 void APU::Step()
@@ -1048,62 +838,47 @@ void APU::Step()
         }
     }
 
+    GenerateSample();
+}
+
+void APU::GenerateSample()
+{
     if (CyclesToNextSample == 0)
     {
-        // Since the audio sample rate doesn't divide
-        // the CPU frequency evenly, we need to add 2 extra
-        // cycles for every 7 samples
-        if (ExtraCount == 3 || ExtraCount == 7)
+        if (ExtraCount >= 1.0f)
         {
-            CyclesToNextSample = (CPU_FREQUENCY / AUDIO_SAMPLE_RATE) + 1;
+            double whole;
+            CyclesToNextSample = (EffectiveCpuFrequency / AudioBackend::SampleRate) + 1;
+            ExtraCount = modf(ExtraCount, &whole);
         }
         else
         {
-            CyclesToNextSample = CPU_FREQUENCY / AUDIO_SAMPLE_RATE;
+            CyclesToNextSample = EffectiveCpuFrequency / AudioBackend::SampleRate;
         }
 
-        std::lock_guard<std::mutex> Lock(ControlMutex);
+        // Decided to use the exact calculation rather than the lookup tables for this
+        float pulse1 = PulseOne * PulseOneVolume;
+        float pulse2 = PulseTwo * PulseTwoVolume;
+        float triangle = Triangle * TriangleVolume;
+        float noise = Noise * NoiseVolume;
+        float dmc = Dmc * DmcVolume;
 
-        if (!IsMuted)
+        float PulseOut = 0.0f;
+        float TndOut = 0.0f;
+
+        if (pulse1 != 0.0f || pulse2 != 0.0f)
         {
-            // Decided to use the exact calculation rather than the lookup tables for this
-            float pulse1 = PulseOne() * PulseOneVolume;
-            float pulse2 = PulseTwo() * PulseTwoVolume;
-            float triangle = Triangle() * TriangleVolume;
-            float noise = Noise() * NoiseVolume;
-            float dmc = Dmc() * DmcVolume;
-
-            float PulseOut = 0.0f;
-            float TndOut = 0.0f;
-
-            if (pulse1 != 0.0f || pulse2 != 0.0f)
-            {
-                PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
-            }
-
-            if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
-            {
-                TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
-            }
-
-            float RawOutput = PulseOut + TndOut;
-
-            float FinalOutput;
-            if (FilteringEnabled)
-            {
-                RawOutput = HighPass90Hz(RawOutput);
-                RawOutput = HighPass440Hz(RawOutput);
-                FinalOutput = LowPass14KHz(RawOutput);
-            }
-            else
-            {
-                FinalOutput = RawOutput;
-            }
-
-            Backend << (FinalOutput * MasterVolume);
+            PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
         }
 
-        ExtraCount = (ExtraCount + 1) % 7;
+        if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
+        {
+            TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
+        }
+
+        Backend << (PulseOut + TndOut) * MasterVolume;
+
+        ExtraCount += Fraction;
     }
 
     --CyclesToNextSample;
@@ -1196,26 +971,9 @@ void APU::WriteAPUFrameCounter(uint8_t value)
     FrameResetCountdown = 2;
 }
 
-void APU::SetMuted(bool mute)
+void APU::SetAudioEnabled(bool enabled)
 {
-    if (mute && !IsMuted)
-    {
-        std::lock_guard<std::mutex> Lock(ControlMutex);
-
-        Backend.SetMuted(mute);
-        IsMuted = true;
-    }
-    else if (!mute && IsMuted)
-    {
-        std::lock_guard<std::mutex> Lock(ControlMutex);
-
-        Backend.SetMuted(mute);
-        IsMuted = false;
-
-        HighPass90Hz.Reset();
-        HighPass440Hz.Reset();
-        LowPass14KHz.Reset();
-    }
+    Backend.SetEnabled(enabled);
 }
 
 void APU::SetMasterVolume(float volume)
@@ -1230,22 +988,7 @@ float APU::GetMasterVolume()
 
 void APU::SetFiltersEnabled(bool enabled)
 {
-    if (enabled && !FilteringEnabled)
-    {
-        std::lock_guard<std::mutex> Lock(ControlMutex);
-
-        FilteringEnabled = true;
-
-        HighPass90Hz.Reset();
-        HighPass440Hz.Reset();
-        LowPass14KHz.Reset();
-    }
-    else if (!enabled && FilteringEnabled)
-    {
-        std::lock_guard<std::mutex> Lock(ControlMutex);
-
-        FilteringEnabled = false;
-    }
+    Backend.SetFiltersEnabled(enabled);
 }
 
 void APU::SetPulseOneVolume(float volume)

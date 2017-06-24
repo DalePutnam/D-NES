@@ -8,6 +8,10 @@
 #include <exception>
 
 #include "nes.h"
+#include "cpu.h"
+#include "apu.h"
+#include "ppu.h"
+#include "cart.h"
 #include "mappers/nrom.h"
 
 NES::NES(const NesParams& params)
@@ -51,7 +55,7 @@ NES::NES(const NesParams& params)
     Ppu->SetFrameLimitEnabled(params.FrameLimitEnabled);
     Ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
 
-    Apu->SetMuted(params.SoundMuted);
+    Apu->SetAudioEnabled(params.AudioEnabled);
     Apu->SetFiltersEnabled(params.FiltersEnabled);
     Apu->SetMasterVolume(params.MasterVolume);
     Apu->SetPulseOneVolume(params.PulseOneVolume);
@@ -121,9 +125,9 @@ void NES::PpuSetNtscDecoderEnabled(bool enabled)
     Ppu->SetNtscDecodingEnabled(enabled);
 }
 
-void NES::ApuSetMuted(bool muted)
+void NES::ApuSetAudioEnabled(bool enabled)
 {
-    Apu->SetMuted(muted);
+    Apu->SetAudioEnabled(enabled);
 }
 
 void NES::ApuSetFiltersEnabled(bool enabled)
@@ -249,6 +253,16 @@ void NES::Pause()
 }
 
 void NES::Reset() {}
+
+void NES::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
+{
+	Ppu->BindFrameCompleteCallback(fn);
+}
+
+void NES::BindErrorCallback(const std::function<void(std::string)>& fn)
+{
+	OnError = fn;
+}
 
 NES::~NES()
 {

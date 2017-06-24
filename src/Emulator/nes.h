@@ -13,11 +13,6 @@
 #include <iostream>
 #include <functional>
 
-#include "cpu.h"
-#include "ppu.h"
-#include "apu.h"
-#include "cart.h"
-
 struct NesParams
 {
     std::string RomPath;
@@ -29,7 +24,7 @@ struct NesParams
     bool NtscDecoderEnabled;
 
     // APU Settings
-    bool SoundMuted;
+    bool AudioEnabled;
     bool FiltersEnabled;
     float MasterVolume;
     float PulseOneVolume;
@@ -44,7 +39,7 @@ struct NesParams
         , CpuLogEnabled(false)
         , FrameLimitEnabled(true)
         , NtscDecoderEnabled(false)
-        , SoundMuted(false)
+        , AudioEnabled(true)
         , FiltersEnabled(false)
         , MasterVolume(1.0f)
         , PulseOneVolume(1.0f)
@@ -55,6 +50,11 @@ struct NesParams
     {}
 };
 
+class CPU;
+class APU;
+class PPU;
+class Cart;
+
 class NES
 {
 public:
@@ -63,26 +63,19 @@ public:
 
     const std::string& GetGameName();
 
-    void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
+	void BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn);
+	void BindErrorCallback(const std::function<void(std::string)>& fn);
+
+    template<class T>
+    void BindFrameCompleteCallback(void(T::*fn)(uint8_t*), T* obj)
     {
-        Ppu->BindFrameCompleteCallback(Fn);
+        BindFrameCompleteCallback(std::bind(fn, obj, std::placeholders::_1));
     }
 
     template<class T>
-    void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
+    void BindErrorCallback(void(T::*fn)(std::string), T* obj)
     {
-        Ppu->BindFrameCompleteCallback(Fn, Obj);
-    }
-
-    void BindErrorCallback(void(*Fn)(std::string))
-    {
-        OnError = Fn;
-    }
-
-    template<class T>
-    void BindErrorCallback(void(T::*Fn)(std::string), T* Obj)
-    {
-        OnError = std::bind(Fn, Obj, std::placeholders::_1);
+        BindErrorCallback(std::bind(fn, obj, std::placeholders::_1));
     }
 
     bool IsStopped();
@@ -103,7 +96,7 @@ public:
     void PpuSetFrameLimitEnabled(bool enabled);
     void PpuSetNtscDecoderEnabled(bool enabled);
 
-    void ApuSetMuted(bool muted);
+    void ApuSetAudioEnabled(bool enabled);
     void ApuSetFiltersEnabled(bool enabled);
     void ApuSetMasterVolume(float volume);
     void ApuSetPulseOneVolume(float volume);

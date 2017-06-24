@@ -1438,6 +1438,7 @@ void CPU::Pause()
 void CPU::Resume()
 {
     std::unique_lock<std::mutex> lock(PauseMutex);
+	Ppu->ResetFrameCounter();
     PauseCv.notify_all();
 }
 

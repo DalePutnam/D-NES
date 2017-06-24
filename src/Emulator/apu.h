@@ -5,12 +5,7 @@
 #include <chrono>
 #include <cstdint>
 
-#ifdef _WIN32
-#include <xaudio2.h>
-#elif __linux
-#define ALSA_PCM_NEW_HW_PARAMS_API
-#include <alsa/asoundlib.h>
-#endif
+#include "audio_backend.h"
 
 class CPU;
 class Cart;
@@ -23,11 +18,11 @@ public:
 
     void AttachCPU(CPU* cpu);
     void AttachCart(Cart* cart);
-    void UpdatePlaybackRate(const std::chrono::microseconds& frameLength);
 
     void Step();
-
     bool CheckIRQ();
+
+    void SetFrameLength(int32_t length);
 
     void WritePulseOneRegister(uint8_t reg, uint8_t value);
     void WritePulseTwoRegister(uint8_t reg, uint8_t value);
@@ -39,11 +34,11 @@ public:
     uint8_t ReadAPUStatus();
     void WriteAPUFrameCounter(uint8_t value);
 
-    void SetMuted(bool mute);
+    void SetAudioEnabled(bool mute);
     void SetMasterVolume(float volume);
-    float GetMasterVolume();
-
     void SetFiltersEnabled(bool enabled);
+
+    float GetMasterVolume();
 
     void SetPulseOneVolume(float volume);
     float GetPulseOneVolume();
@@ -57,52 +52,10 @@ public:
     float GetDmcVolume();
 
 private:
-    static constexpr uint32_t CPU_FREQUENCY = 1789773;
-    static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
-
-    class AudioBackend {
-    public:
-        AudioBackend();
-        ~AudioBackend();
-        void SetMuted(bool mute);
-        void UpdatePlaybackRate(const std::chrono::microseconds& frameLength);
-        void operator<<(float sample);
-
-    private:
-        static constexpr uint32_t NUM_AUDIO_BUFFERS = 500;
-        static constexpr uint32_t AUDIO_BUFFER_SIZE = AUDIO_SAMPLE_RATE / 120;
-
-        bool IsMuted;
-        uint32_t BufferIndex;
-        uint32_t CurrentBuffer;
-        float* OutputBuffers[NUM_AUDIO_BUFFERS];
-
-#ifdef _WIN32
-        IXAudio2* XAudio2Instance;
-        IXAudio2MasteringVoice* XAudio2MasteringVoice;
-        IXAudio2SourceVoice* XAudio2SourceVoice;
-#elif __linux
-        snd_pcm_t* AlsaHandle;
-#endif
-    };
-
-
-    // Butterworth filter implementation shamelessly stolen from
-    // http://stackoverflow.com/questions/8079526/lowpass-and-high-pass-filter-in-c-sharp
-    class Filter
-    {
-    public:
-        Filter(float frequency, float resonance, bool isLowPass);
-        float operator()(float sample);
-        void Reset();
-
-    private:
-        float c, a1, a2, a3, b1, b2;
-        float InputHistory[2];
-        float OutputHistory[2];
-    };
-
+    static const uint32_t CpuFrequency;
     static const uint8_t LengthCounterLookupTable[32];
+
+    void GenerateSample();
 
     class PulseUnit
     {
@@ -119,7 +72,7 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint8_t Sequences[4];
@@ -159,7 +112,7 @@ private:
         void ClockLinearCounter();
         void ClockLengthCounter();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint8_t Sequence[32];
@@ -189,7 +142,7 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -222,7 +175,7 @@ private:
 
         void ClockTimer();
 
-        uint8_t operator()();
+        operator uint8_t ();
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -268,15 +221,11 @@ private:
     bool FrameResetFlag;
     uint8_t FrameResetCountdown;
 
+    int32_t CurrentFrameLength;
     uint32_t CyclesToNextSample;
-    uint32_t ExtraCount;
-
-    bool IsMuted;
-    bool FilteringEnabled;
-
-    Filter HighPass90Hz;
-    Filter HighPass440Hz;
-    Filter LowPass14KHz;
+    uint32_t EffectiveCpuFrequency;
+    double ExtraCount;
+    double Fraction;
 
     AudioBackend Backend;
 

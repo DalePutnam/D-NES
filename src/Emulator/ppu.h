@@ -28,16 +28,7 @@ public:
     void AttachAPU(APU* apu);
     void AttachCart(Cart* cart);
 
-    void BindFrameCompleteCallback(void(*Fn)(uint8_t*))
-    {
-        OnFrameComplete = Fn;
-    }
-
-    template<class T>
-    void BindFrameCompleteCallback(void(T::*Fn)(uint8_t*), T* Obj)
-    {
-        OnFrameComplete = std::bind(Fn, Obj, std::placeholders::_1);
-    }
+	void BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn);
 
     uint16_t GetCurrentDot();
     uint16_t GetCurrentScanline();
@@ -61,6 +52,7 @@ public:
     void WritePPUDATA(uint8_t M);
 
     int GetFrameRate();
+	void ResetFrameCounter();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
