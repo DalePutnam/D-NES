@@ -4,9 +4,7 @@
 
 #include <mutex>
 #include <atomic>
-#include <thread>
 #include <vector>
-#include <condition_variable>
 
 #include <wx/menu.h>
 #include <wx/event.h>
@@ -55,6 +53,7 @@ private:
 
 #ifdef _WIN32
     std::mutex PpuViewerMutex;
+    std::mutex OverlayMutex;
 #elif __linux
     wxPanel* Panel;
 #endif
@@ -80,6 +79,11 @@ private:
     bool OverscanEnabled;
     wxSize GameWindowSize;
     wxSize GameMenuSize;
+
+    bool StateLoad;
+    int StateDisplayFrames;
+    int StateFadeFrames;
+    int StateSlot;
 
     void InitializeMenus();
     void InitializeLayout();
@@ -119,6 +123,9 @@ private:
     void OnVideoSettingsClosed(wxCommandEvent& event);
 
     void UpdateFrame(uint8_t* frameBuffer);
+    void DrawFpsCounter(wxDC* dc);
+    void DrawStateSaveDisplay(wxDC* dc);
+    void ShowStateSaveDisplay(bool load, int slot);
 };
 
 wxDECLARE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);

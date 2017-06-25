@@ -119,19 +119,8 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
         dc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 8, 256, 224);
     }
 
-    if (ShowFpsCounter && Nes != nullptr)
-    {
-        dc.SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
-        dc.SetTextForeground(*wxWHITE);
-
-        std::string fpsText = std::to_string(Nes->GetFrameRate());
-        wxSize textSize = dc.GetTextExtent(fpsText);
-
-        dc.SetPen(wxPen(*wxBLACK, 0));
-        dc.SetBrush(wxBrush(*wxBLACK));
-        dc.DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
-        dc.DrawText(fpsText, GetVirtualSize().GetWidth() - textSize.GetWidth() - 8, 6);
-    }
+    DrawFpsCounter(&dc);
+    DrawStateSaveDisplay(&dc);
 
 #ifdef _WIN32
     if (PpuWindow != nullptr)
@@ -148,6 +137,85 @@ void MainWindow::UpdateFrame(uint8_t* frameBuffer)
         PpuWindow->Update();
     }
 #endif
+}
+
+void MainWindow::DrawFpsCounter(wxDC* dc)
+{
+#ifdef _WIN32
+    std::unique_lock<std::mutex> lock(OverlayMutex);
+#endif
+
+    if (ShowFpsCounter && Nes != nullptr)
+    {
+        dc->SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
+        dc->SetTextForeground(*wxWHITE);
+        dc->SetPen(wxPen(*wxBLACK, 0));
+        dc->SetBrush(wxBrush(*wxBLACK));
+
+        std::string fpsText = std::to_string(Nes->GetFrameRate());
+        wxSize textSize = dc->GetTextExtent(fpsText);
+
+        dc->DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
+        dc->DrawText(fpsText, GetVirtualSize().GetWidth() - textSize.GetWidth() - 8, 6);
+    }
+}
+
+void MainWindow::DrawStateSaveDisplay(wxDC* dc)
+{
+#ifdef _WIN32
+    std::unique_lock<std::mutex> lock(OverlayMutex);
+#endif
+
+    wxColour background, foreground;
+    if (StateDisplayFrames > 0)
+    {
+        background = wxColour(0, 0, 0, 255);
+        foreground = wxColour(255, 255, 255, 255);
+        StateDisplayFrames--;
+    }
+    else if (StateFadeFrames > 0)
+    {
+        background = wxColour(0, 0, 0, (StateFadeFrames * 2) + 15);
+        foreground = wxColour(255, 255, 255, (StateFadeFrames * 2) + 15);
+        StateFadeFrames--;
+    }
+    else
+    {
+        return;
+    }
+
+    dc->SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
+    dc->SetTextForeground(*foreground);
+    dc->SetPen(wxPen(*background, 0));
+    dc->SetBrush(wxBrush(*background));
+
+    std::string stateText;
+    if (StateLoad)
+    {
+        stateText = "Loaded State ";
+    }
+    else
+    {
+        stateText = "Saved State ";
+    }
+
+    stateText += std::to_string(StateSlot + 1);
+    wxSize textSize = dc->GetTextExtent(stateText);
+
+    dc->DrawRoundedRectangle(8, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
+    dc->DrawText(stateText, 12, 6);
+}
+
+void MainWindow::ShowStateSaveDisplay(bool load, int slot)
+{
+#ifdef _WIN32
+    std::unique_lock<std::mutex> lock(OverlayMutex);
+#endif
+
+    StateLoad = load;
+    StateSlot = slot;
+    StateDisplayFrames = 120;
+    StateFadeFrames = 120;
 }
 
 void MainWindow::EmulatorErrorCallback(std::string err)
@@ -234,6 +302,9 @@ void MainWindow::StartEmulator(const std::string& filename)
         {
             PathWindow->SetNes(Nes);
         }
+
+        StateDisplayFrames = 0;
+        StateFadeFrames = 0;
 
         GameMenuSize.SetWidth(GetSize().GetWidth());
         GameMenuSize.SetHeight(GetSize().GetHeight());
@@ -383,6 +454,7 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
         {
             int slot = event.GetId() % 10;
             Nes->SaveState(slot, stateSavePath);
+            ShowStateSaveDisplay(false, slot);
         }
         catch (std::exception& e)
         {
@@ -406,10 +478,11 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
         {
             int slot = event.GetId() % 10;
             Nes->LoadState(slot, stateSavePath);
+            ShowStateSaveDisplay(true, slot);
         }
         catch (std::exception& e)
         {
-            // Just quietly ignore the exception
+            // Just quietly discard the exception
         }
     }
 }
@@ -443,6 +516,10 @@ void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
 
 void MainWindow::SetShowFpsCounter(bool enabled)
 {
+#ifdef _WIN32
+    std::unique_lock<std::mutex> lock(OverlayMutex);
+#endif
+
     ShowFpsCounter = enabled;
 }
 

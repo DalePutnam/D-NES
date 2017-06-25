@@ -23,10 +23,7 @@ const uint32_t PPU::RgbLookupTable[64] =
 
 void PPU::ResetFrameCounter()
 {
-	FrameCountStart = std::chrono::steady_clock::now();
 	SingleFrameStart = std::chrono::steady_clock::now();
-	FpsCounter = 0;
-	CurrentFps = 0;
 }
 
 int PPU::GetFrameRate()
