@@ -245,7 +245,7 @@ void PPU::LimitFrameRate()
     }
 
 	microseconds span = duration_cast<microseconds>(steady_clock::now() - SingleFrameStart);
-    Apu->SetFrameLength(span.count());
+    Apu->SetFrameLength(static_cast<int32_t>(span.count()));
     SingleFrameStart = steady_clock::now();
 }
 
@@ -1045,7 +1045,7 @@ void PPU::SaveState(char* state)
     packedBool |= SpriteSizeSwitch << 3;
     packedBool |= NmiEnabled << 2;
     packedBool |= GrayScaleEnabled << 1;
-    packedBool |= ShowBackgroundLeft;
+    packedBool |= ShowBackgroundLeft << 0;
 
     memcpy(state, &packedBool, sizeof(char));
     state += sizeof(char);

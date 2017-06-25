@@ -70,7 +70,7 @@ void PathSettingsWindow::InitializeLayout()
 #ifdef _WIN32
 	RomPathButton = new wxButton(SettingsPanel, ID_ROM_PATH_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	SavePathButton = new wxButton(SettingsPanel, ID_SAVE_PATH_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	StatePathButton = new wxBitmapButton(SettingsPanel, ID_STATE_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));
+	StatePathButton = new wxButton(SettingsPanel, ID_STATE_PATH_SELECT, "...", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 #elif __linux
 	wxBitmap folderBitmap = wxArtProvider::GetBitmap(wxART_FOLDER);
 	RomPathButton = new wxBitmapButton(SettingsPanel, ID_ROM_PATH_SELECT, folderBitmap, wxDefaultPosition, wxSize(-1, 24));

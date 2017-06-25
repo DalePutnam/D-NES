@@ -185,9 +185,9 @@ void MainWindow::DrawStateSaveDisplay(wxDC* dc)
     }
 
     dc->SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
-    dc->SetTextForeground(*foreground);
-    dc->SetPen(wxPen(*background, 0));
-    dc->SetBrush(wxBrush(*background));
+    dc->SetTextForeground(foreground);
+    dc->SetPen(wxPen(background, 0));
+    dc->SetBrush(wxBrush(background));
 
     std::string stateText;
     if (StateLoad)
@@ -480,7 +480,7 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
             Nes->LoadState(slot, stateSavePath);
             ShowStateSaveDisplay(true, slot);
         }
-        catch (std::exception& e)
+        catch (std::exception&)
         {
             // Just quietly discard the exception
         }

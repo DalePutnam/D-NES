@@ -1496,7 +1496,7 @@ void CPU::SaveState(char* state)
     packedBool |= NmiRaised << 3;
     packedBool |= NmiPending << 2;
     packedBool |= IsStalled << 1;
-    packedBool |= IrqPending;
+    packedBool |= IrqPending << 0;
 
     memcpy(state, &packedBool, sizeof(char));
 }
