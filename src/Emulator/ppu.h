@@ -58,17 +58,22 @@ public:
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
 
+    static int STATE_SIZE;
+    void SaveState(char* state);
+    void LoadState(const char* state);
+
 private:
     CPU* Cpu;
     APU* Apu;
     Cart* Cartridge;
 
-    uint8_t FrameBuffer[256 * 240 * 3];
-
     enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
 
     static const uint32_t RgbLookupTable[64];
     static constexpr uint32_t ResetDelay = 88974;
+    static constexpr uint32_t FrameBufferSize = 256 * 240 * 3;
+
+    uint8_t FrameBuffer[FrameBufferSize];
 
     int FpsCounter;
     std::atomic<int> CurrentFps;

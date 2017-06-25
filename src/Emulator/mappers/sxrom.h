@@ -10,6 +10,10 @@ public:
     SXROM(const std::string& fileName, const std::string& saveDir);
     ~SXROM();
 
+    int GetStateSize();
+    void SaveState(char* state);
+    void LoadState(const char* state);
+
     Cart::MirrorMode GetMirrorMode() override;
 
     uint8_t PrgRead(uint16_t address) override;
@@ -19,7 +23,7 @@ public:
     void ChrWrite(uint8_t M, uint16_t address) override;
 
 private:
-    unsigned long long LastWriteCycle;
+    uint64_t LastWriteCycle;
     uint8_t Counter;
     uint8_t TempRegister;
     uint8_t ControlRegister;

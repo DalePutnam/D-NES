@@ -5,6 +5,63 @@
 #include "../nes.h"
 #include "../cpu.h"
 
+int SXROM::GetStateSize()
+{
+    return MapperBase::GetStateSize() + sizeof(uint64_t) + (sizeof(uint8_t) * 6);
+}
+
+void SXROM::SaveState(char* state)
+{
+    memcpy(state, &LastWriteCycle, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(state, &Counter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &TempRegister, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &ControlRegister, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &ChrRegister1, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &ChrRegister2, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &PrgRegister, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    MapperBase::SaveState(state);
+}
+
+void SXROM::LoadState(const char* state)
+{
+    memcpy(&LastWriteCycle, state, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(&Counter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&TempRegister, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&ControlRegister, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&ChrRegister1, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&ChrRegister2, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&PrgRegister, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    MapperBase::LoadState(state);
+}
+
 Cart::MirrorMode SXROM::GetMirrorMode()
 {
     uint8_t mirroring = ControlRegister & 0x3;
@@ -37,7 +94,7 @@ uint8_t SXROM::ChrRead(uint16_t address)
 
             if (ChrSize == 0)
             {
-                return ChrRam[(addr + (0x1000 * page)) % 0x2000];
+                return Chr[(addr + (0x1000 * page)) % 0x2000];
             }
             else
             {
@@ -51,7 +108,7 @@ uint8_t SXROM::ChrRead(uint16_t address)
 
             if (ChrSize == 0)
             {
-                return ChrRam[(addr + (0x1000 * page)) % 0x2000];
+                return Chr[(addr + (0x1000 * page)) % 0x2000];
             }
             else
             {
@@ -66,7 +123,7 @@ uint8_t SXROM::ChrRead(uint16_t address)
 
         if (ChrSize == 0)
         {
-            return ChrRam[addr];
+            return Chr[addr];
         }
         else
         {
@@ -87,19 +144,19 @@ void SXROM::ChrWrite(uint8_t M, uint16_t address)
             {
                 uint8_t page = ChrRegister1;
                 uint32_t addr = address;
-                ChrRam[(addr + (0x1000 * page)) % 0x2000] = M;
+                Chr[(addr + (0x1000 * page)) % 0x2000] = M;
             }
             else
             {
                 uint8_t page = ChrRegister2;
                 uint32_t addr = address - 0x1000;
-                ChrRam[(addr + (0x1000 * page)) % 0x2000] = M;
+                Chr[(addr + (0x1000 * page)) % 0x2000] = M;
             }
         }
         else
         {
             uint32_t addr = address;
-            ChrRam[addr] = M;
+            Chr[addr] = M;
         }
     }
     else

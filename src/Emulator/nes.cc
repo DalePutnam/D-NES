@@ -5,6 +5,7 @@
  *      Author: Dale
  */
 
+#include <fstream>
 #include <exception>
 
 #include "nes.h"
@@ -262,6 +263,80 @@ void NES::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
 void NES::BindErrorCallback(const std::function<void(std::string)>& fn)
 {
 	OnError = fn;
+}
+
+void NES::SaveState(int slot, const std::string& savePath)
+{
+    std::string fileName = savePath + "/" + GetGameName() + ".state" + std::to_string(slot);
+    std::ofstream saveStream(fileName.c_str(), std::ofstream::out | std::ofstream::binary);
+
+    if (!saveStream.good())
+    {
+        throw std::runtime_error("NES: Failed to open state save file");
+    }
+
+    // Pause the emulator and bring the PPU up to date with the CPU
+    Cpu->Pause();
+    Ppu->Run();
+
+    char* state = new char[CPU::STATE_SIZE];
+    Cpu->SaveState(state);
+    saveStream.write(state, CPU::STATE_SIZE);
+    delete[] state;
+
+    state = new char[PPU::STATE_SIZE];
+    Ppu->SaveState(state);
+    saveStream.write(state, PPU::STATE_SIZE);
+    delete[] state;
+
+    state = new char[APU::STATE_SIZE];
+    Apu->SaveState(state);
+    saveStream.write(state, APU::STATE_SIZE);
+    delete[] state;
+
+    state = new char[Cartridge->GetStateSize()];
+    Cartridge->SaveState(state);
+    saveStream.write(state, Cartridge->GetStateSize());
+    delete[] state;
+
+    Cpu->Resume();
+}
+
+void NES::LoadState(int slot, const std::string& savePath)
+{
+    std::string fileName = savePath + "/" + GetGameName() + ".state" + std::to_string(slot);
+    std::ifstream saveStream(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
+
+    if (!saveStream.good())
+    {
+        throw std::runtime_error("NES: Failed to open state save file");
+    }
+
+    // Pause the emulator and bring the PPU up to date with the CPU
+    Cpu->Pause();
+    Ppu->Run();
+
+    char* state = new char[CPU::STATE_SIZE];
+    saveStream.read(state, CPU::STATE_SIZE);
+    Cpu->LoadState(state);
+    delete[] state;
+
+    state = new char[PPU::STATE_SIZE];
+    saveStream.read(state, PPU::STATE_SIZE);
+    Ppu->LoadState(state);
+    delete[] state;
+
+    state = new char[APU::STATE_SIZE];
+    saveStream.read(state, APU::STATE_SIZE);
+    Apu->LoadState(state);
+    delete[] state;
+
+    state = new char[Cartridge->GetStateSize()];
+    saveStream.read(state, Cartridge->GetStateSize());
+    Cartridge->LoadState(state);
+    delete[] state;
+
+    Cpu->Resume();
 }
 
 NES::~NES()

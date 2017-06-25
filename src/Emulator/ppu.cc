@@ -23,10 +23,7 @@ const uint32_t PPU::RgbLookupTable[64] =
 
 void PPU::ResetFrameCounter()
 {
-	FrameCountStart = std::chrono::steady_clock::now();
 	SingleFrameStart = std::chrono::steady_clock::now();
-	FpsCounter = 0;
-	CurrentFps = 0;
 }
 
 int PPU::GetFrameRate()
@@ -248,7 +245,7 @@ void PPU::LimitFrameRate()
     }
 
 	microseconds span = duration_cast<microseconds>(steady_clock::now() - SingleFrameStart);
-    Apu->SetFrameLength(span.count());
+    Apu->SetFrameLength(static_cast<int32_t>(span.count()));
     SingleFrameStart = steady_clock::now();
 }
 
@@ -941,6 +938,266 @@ void PPU::AttachCart(Cart* cart)
 void PPU::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
 {
 	OnFrameComplete = fn;
+}
+
+int PPU::STATE_SIZE = (sizeof(uint64_t)*2)+(sizeof(uint16_t)*8)+(sizeof(uint8_t)*0x96C)+(sizeof(char)*3);
+
+void PPU::SaveState(char* state)
+{
+    memcpy(state, &Clock, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(state, &Dot, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &Line, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &NmiOccuredCycle, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(state, &BaseSpriteTableAddress, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &BaseBackgroundTableAddress, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &LowerBits, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &OamAddress, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &PpuAddress, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &PpuTempAddress, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &FineXScroll, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &DataBuffer, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &PrimaryOam, sizeof(uint8_t) * 0x100);
+    state += sizeof(uint8_t) * 0x100;
+
+    memcpy(state, &SecondaryOam, sizeof(uint8_t) * 0x20);
+    state += sizeof(uint8_t) * 0x20;
+
+    memcpy(state, &NameTable0, sizeof(uint8_t) * 0x400);
+    state += sizeof(uint8_t) * 0x400;
+
+    memcpy(state, &NameTable1, sizeof(uint8_t) * 0x400);
+    state += sizeof(uint8_t) * 0x400;
+
+    memcpy(state, &PaletteTable, sizeof(uint8_t) * 0x20);
+    state += sizeof(uint8_t) * 0x20;
+
+    memcpy(state, &NameTableByte, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &AttributeByte, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &TileBitmapLow, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &TileBitmapHigh, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &BackgroundShift0, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &BackgroundShift1, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &BackgroundAttributeShift0, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &BackgroundAttributeShift1, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &BackgroundAttribute, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SpriteCount, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SpriteShift0, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    memcpy(state, &SpriteShift1, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    memcpy(state, &SpriteAttribute, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    memcpy(state, &SpriteCounter, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    char packedBool = 0;
+    packedBool |= Even << 7;
+    packedBool |= SuppressNmi << 6;
+    packedBool |= InterruptActive << 5;
+    packedBool |= PpuAddressIncrement << 4;
+    packedBool |= SpriteSizeSwitch << 3;
+    packedBool |= NmiEnabled << 2;
+    packedBool |= GrayScaleEnabled << 1;
+    packedBool |= ShowBackgroundLeft << 0;
+
+    memcpy(state, &packedBool, sizeof(char));
+    state += sizeof(char);
+
+    packedBool = 0;
+    packedBool |= ShowSpritesLeft << 7;
+    packedBool |= ShowBackground << 6;
+    packedBool |= ShowSprites << 5;
+    packedBool |= IntenseRed << 4;
+    packedBool |= IntenseGreen << 3;
+    packedBool |= IntenseBlue << 2;
+    packedBool |= SpriteOverflowFlag << 1;
+    packedBool |= SpriteZeroHitFlag << 0;
+
+    memcpy(state, &packedBool, sizeof(char));
+    state += sizeof(char);
+
+    packedBool = 0;
+    packedBool |= VblankFlag << 7;
+    packedBool |= NmiOccuredFlag << 6;
+    packedBool |= SpriteZeroSecondaryOamFlag << 5;
+    packedBool |= AddressLatch << 4;
+
+    memcpy(state, &packedBool, sizeof(char));
+}
+
+void PPU::LoadState(const char* state)
+{
+    memcpy(&Clock, state, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(&Dot, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&Line, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&NmiOccuredCycle, state, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(&BaseSpriteTableAddress, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&BaseBackgroundTableAddress, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&LowerBits, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&OamAddress, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&PpuAddress, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&PpuTempAddress, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&FineXScroll, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&DataBuffer, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&PrimaryOam, state, sizeof(uint8_t) * 0x100);
+    state += sizeof(uint8_t) * 0x100;
+
+    memcpy(&SecondaryOam, state, sizeof(uint8_t) * 0x20);
+    state += sizeof(uint8_t) * 0x20;
+
+    memcpy(&NameTable0, state, sizeof(uint8_t) * 0x400);
+    state += sizeof(uint8_t) * 0x400;
+
+    memcpy(&NameTable1, state, sizeof(uint8_t) * 0x400);
+    state += sizeof(uint8_t) * 0x400;
+
+    memcpy(&PaletteTable, state, sizeof(uint8_t) * 0x20);
+    state += sizeof(uint8_t) * 0x20;
+
+    memcpy(&NameTableByte, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&AttributeByte, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&TileBitmapLow, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&TileBitmapHigh, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&BackgroundShift0, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&BackgroundShift1, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&BackgroundAttributeShift0, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&BackgroundAttributeShift1, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&BackgroundAttribute, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SpriteCount, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SpriteShift0, state, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    memcpy(&SpriteShift1, state, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    memcpy(&SpriteAttribute, state, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    memcpy(&SpriteCounter, state, sizeof(uint8_t) * 8);
+    state += sizeof(uint8_t) * 8;
+
+    char packedBool;
+    memcpy(&packedBool, state, sizeof(char));
+    state += sizeof(char);
+
+    Even = !!(packedBool & 0x80);
+    SuppressNmi = !!(packedBool & 0x40);
+    InterruptActive = !!(packedBool & 0x20);
+    PpuAddressIncrement = !!(packedBool & 0x10);
+    SpriteSizeSwitch = !!(packedBool & 0x8);
+    NmiEnabled = !!(packedBool & 0x4);
+    GrayScaleEnabled = !!(packedBool & 0x2);
+    ShowBackgroundLeft = !!(packedBool & 0x1);
+
+    memcpy(&packedBool, state, sizeof(char));
+    state += sizeof(char);
+
+    ShowSpritesLeft = !!(packedBool & 0x80);
+    ShowBackground = !!(packedBool & 0x40);
+    ShowSprites = !!(packedBool & 0x20);
+    IntenseRed = !!(packedBool & 0x10);
+    IntenseGreen = !!(packedBool & 0x8);
+    IntenseBlue = !!(packedBool & 0x4);
+    SpriteOverflowFlag = !!(packedBool & 0x2);
+    SpriteZeroHitFlag = !!(packedBool & 0x1);
+
+    memcpy(&packedBool, state, sizeof(char));
+
+    VblankFlag = !!(packedBool & 0x80);
+    NmiOccuredFlag = !!(packedBool & 0x40);
+    SpriteZeroSecondaryOamFlag = !!(packedBool & 0x20);
+    AddressLatch = !!(packedBool & 0x10);
 }
 
 void PPU::SetFrameLimitEnabled(bool enabled)

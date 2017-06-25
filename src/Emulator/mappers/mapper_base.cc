@@ -10,7 +10,6 @@ using namespace std;
 MapperBase::MapperBase(const string& fileName, const string& saveDir)
     : Prg(nullptr)
     , Chr(nullptr)
-    , ChrRam(nullptr)
     , Wram(nullptr)
     , HasSaveMem(false)
     , SaveDir(saveDir)
@@ -109,8 +108,8 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
         }
         else
         {
-            ChrRam = new uint8_t[0x2000];
-            memset(ChrRam, 0, sizeof(uint8_t) * 0x2000);
+            Chr = new uint8_t[0x2000];
+            memset(Chr, 0, sizeof(uint8_t) * 0x2000);
         }
     }
     else
@@ -135,15 +134,7 @@ MapperBase::~MapperBase()
 
     delete[] Wram;
     delete[] Prg;
-
-    if (ChrSize != 0)
-    {
-        delete[] Chr;
-    }
-    else
-    {
-        delete[] ChrRam;
-    }
+    delete[] Chr;
 }
 
 const string& MapperBase::GetGameName()
@@ -161,4 +152,54 @@ void MapperBase::SetSaveDirectory(const std::string& saveDir)
 void MapperBase::AttachCPU(CPU* cpu)
 {
     Cpu = cpu;
+}
+
+int MapperBase::GetStateSize()
+{
+    int totalSize = 0;
+
+    if (ChrSize == 0)
+    {
+        totalSize += 0x2000;
+    }
+
+    totalSize += WramSize == 0 ? 0x2000 : WramSize;
+
+    return totalSize;
+}
+
+void MapperBase::SaveState(char* state)
+{
+    if (ChrSize == 0)
+    {
+        memcpy(state, Chr, sizeof(uint8_t) * 0x2000);
+        state += sizeof(uint8_t) * 0x2000;
+    }
+
+    if (WramSize == 0)
+    {
+        memcpy(state, Wram, sizeof(uint8_t) * 0x2000);
+    }
+    else
+    {
+        memcpy(state, Wram, sizeof(uint8_t) * WramSize);
+    }
+}
+
+void MapperBase::LoadState(const char* state)
+{
+    if (ChrSize == 0)
+    {
+        memcpy(Chr, state, sizeof(uint8_t) * 0x2000);
+        state += sizeof(uint8_t) * 0x2000;
+    }
+
+    if (WramSize == 0)
+    {
+        memcpy(Wram, state, sizeof(uint8_t) * 0x2000);
+    }
+    else
+    {
+        memcpy(Wram, state, sizeof(uint8_t) * WramSize);
+    }
 }

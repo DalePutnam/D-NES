@@ -50,6 +50,11 @@ public:
 
     void SetLogEnabled(bool enabled);
 
+    void SaveState(char* state);
+    void LoadState(const char* state);
+
+    static int STATE_SIZE;
+
 private:
     PPU* Ppu;
     APU* Apu;
@@ -63,8 +68,9 @@ private:
     bool StartupFlag;
 
     std::atomic<bool> StopFlag;
+
+    volatile bool Paused;
     std::atomic<bool> PauseFlag;
-    std::atomic<bool> Paused;
     std::mutex PauseMutex;
     std::condition_variable PauseCv;
 

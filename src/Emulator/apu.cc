@@ -226,6 +226,102 @@ APU::PulseUnit::operator uint8_t ()
     }
 }
 
+int APU::PulseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*9)+sizeof(char);
+
+void APU::PulseUnit::SaveState(char* state)
+{
+    memcpy(state, &Timer, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &TimerPeriod, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &SequenceCount, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &LengthCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &DutyCycle, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &EnvelopeDividerVolume, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &EnvelopeDividerCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &EnvelopeCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SweepShiftCount, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SweepDivider, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SweepDividerCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool = 0;
+    packedBool |= LengthHaltEnvelopeLoopFlag << 7;
+    packedBool |= ConstantVolumeFlag << 6;
+    packedBool |= SweepEnableFlag << 5;
+    packedBool |= SweepReloadFlag << 4;
+    packedBool |= SweepNegateFlag << 3;
+    packedBool |= EnvelopeStartFlag << 2;
+    packedBool |= EnabledFlag << 1;
+
+    memcpy(state, &packedBool, sizeof(char));
+}
+
+void APU::PulseUnit::LoadState(const char* state)
+{
+    memcpy(&Timer, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&TimerPeriod, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&SequenceCount, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&LengthCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&DutyCycle, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&EnvelopeDividerVolume, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&EnvelopeDividerCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&EnvelopeCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SweepShiftCount, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SweepDivider, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SweepDividerCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool;
+    memcpy(&packedBool, state, sizeof(char));
+
+    LengthHaltEnvelopeLoopFlag = !!(packedBool & 0x80);
+    ConstantVolumeFlag = !!(packedBool & 0x40);
+    SweepEnableFlag = !!(packedBool & 0x20);
+    SweepReloadFlag = !!(packedBool & 0x10);
+    SweepNegateFlag = !!(packedBool & 0x8);
+    EnvelopeStartFlag = !!(packedBool & 0x4);
+    EnabledFlag = !!(packedBool & 0x2);
+}
+
 //**********************************************************************
 // APU Triangle Unit
 //**********************************************************************
@@ -338,6 +434,64 @@ void APU::TriangleUnit::ClockLengthCounter()
 APU::TriangleUnit::operator uint8_t ()
 {
     return Sequence[SequenceCount];
+}
+
+int APU::TriangleUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*4)+sizeof(char);
+
+void APU::TriangleUnit::SaveState(char* state)
+{
+    memcpy(state, &Timer, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &TimerPeriod, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &SequenceCount, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &LinearCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &LinearCounterPeriod, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &LengthCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool = 0;
+    packedBool |= LengthHaltControlFlag << 7;
+    packedBool |= LinearCounterReloadFlag << 6;
+    packedBool |= EnabledFlag << 5;
+
+    memcpy(state, &packedBool, sizeof(char));
+}
+
+void APU::TriangleUnit::LoadState(const char* state)
+{
+    memcpy(&Timer, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&TimerPeriod, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&SequenceCount, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&LinearCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&LinearCounterPeriod, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&LengthCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool;
+    memcpy(&packedBool, state, sizeof(char));
+
+    LengthHaltControlFlag = !!(packedBool & 0x80);
+    LinearCounterReloadFlag = !!(packedBool & 0x40);
+    EnabledFlag = !!(packedBool & 0x20);
 }
 
 //**********************************************************************
@@ -492,14 +646,82 @@ APU::NoiseUnit::operator uint8_t ()
     }
 }
 
-const uint16_t APU::DmcUnit::TimerPeriods[16] =
+int APU::NoiseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*5)+sizeof(char);
+
+void APU::NoiseUnit::SaveState(char* state)
 {
-    214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53,  42,  36,  27
-};
+    memcpy(state, &Timer, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &TimerPeriodIndex, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &LinearFeedbackShiftRegister, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &LengthCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &EnvelopeDividerVolume, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &EnvelopeDividerCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &EnvelopeCounter, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool = 0;
+    packedBool |= LengthHaltEnvelopeLoopFlag << 7;
+    packedBool |= ConstantVolumeFlag << 6;
+    packedBool |= EnvelopeStartFlag << 5;
+    packedBool |= ModeFlag << 4;
+    packedBool |= EnabledFlag << 3;
+
+    memcpy(state, &packedBool, sizeof(char));
+}
+
+void APU::NoiseUnit::LoadState(const char* state)
+{
+    memcpy(&Timer, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&TimerPeriodIndex, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&LinearFeedbackShiftRegister, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&LengthCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&EnvelopeDividerVolume, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&EnvelopeDividerCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&EnvelopeCounter, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool;
+    memcpy(&packedBool, state, sizeof(char));
+
+    LengthHaltEnvelopeLoopFlag = !!(packedBool & 0x80);
+    ConstantVolumeFlag = !!(packedBool & 0x40);
+    EnvelopeStartFlag = !!(packedBool & 0x20);
+    ModeFlag = !!(packedBool & 0x10);
+    EnabledFlag = !!(packedBool & 0x8);
+}
 
 //**********************************************************************
 // APU DMC Unit
 //**********************************************************************
+
+const uint16_t APU::DmcUnit::TimerPeriods[16] =
+{
+    214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53,  42,  36,  27
+};
 
 APU::DmcUnit::DmcUnit(APU& apu)
     : Apu(apu)
@@ -679,6 +901,100 @@ void APU::DmcUnit::ClockTimer()
 APU::DmcUnit::operator uint8_t ()
 {
     return OutputLevel;
+}
+
+int APU::DmcUnit::STATE_SIZE = (sizeof(uint16_t)*5)+(sizeof(uint8_t)*6)+sizeof(char);
+
+void APU::DmcUnit::SaveState(char* state)
+{
+    memcpy(state, &Timer, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &TimerPeriodIndex, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &OutputLevel, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SampleAddress, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &CurrentAddress, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &SampleLength, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &SampleBytesRemaining, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(state, &SampleBuffer, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SampleShiftRegister, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &SampleBitsRemaining, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(state, &MemoryStallCountdown, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool = 0;
+    packedBool |= InterruptFlag << 7;
+    packedBool |= InterruptEnabledFlag << 6;
+    packedBool |= SampleLoopFlag << 5;
+    packedBool |= SampleBufferEmptyFlag << 4;
+    packedBool |= InMemoryStall << 3;
+    packedBool |= SilenceFlag << 2;
+
+    memcpy(state, &packedBool, sizeof(char));
+}
+
+void APU::DmcUnit::LoadState(const char* state)
+{
+    memcpy(&Timer, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&TimerPeriodIndex, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&OutputLevel, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SampleAddress, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&CurrentAddress, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&SampleLength, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&SampleBytesRemaining, state, sizeof(uint16_t));
+    state += sizeof(uint16_t);
+
+    memcpy(&SampleBuffer, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SampleShiftRegister, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&SampleBitsRemaining, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    memcpy(&MemoryStallCountdown, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool;
+    memcpy(&packedBool, state, sizeof(char));
+
+    InterruptFlag = !!(packedBool & 0x80);
+    InterruptEnabledFlag = !!(packedBool & 0x40);
+    SampleLoopFlag = !!(packedBool & 0x20);
+    SampleBufferEmptyFlag = !!(packedBool & 0x10);
+    InMemoryStall = !!(packedBool & 0x8);
+    SilenceFlag = !!(packedBool & 0x4);
 }
 
 //**********************************************************************
@@ -1039,4 +1355,76 @@ void APU::SetDmcVolume(float volume)
 float APU::GetDmcVolume()
 {
     return DmcVolume;
+}
+
+int APU::STATE_SIZE = (PulseUnit::STATE_SIZE*2)+TriangleUnit::STATE_SIZE+NoiseUnit::STATE_SIZE+DmcUnit::STATE_SIZE+sizeof(uint64_t)+sizeof(uint32_t)+sizeof(uint8_t)+sizeof(char);
+
+void APU::SaveState(char* state)
+{
+    PulseOne.SaveState(state);
+    state += PulseUnit::STATE_SIZE;
+
+    PulseTwo.SaveState(state);
+    state += PulseUnit::STATE_SIZE;
+
+    Triangle.SaveState(state);
+    state += TriangleUnit::STATE_SIZE;
+
+    Noise.SaveState(state);
+    state += NoiseUnit::STATE_SIZE;
+
+    Dmc.SaveState(state);
+    state += DmcUnit::STATE_SIZE;
+
+    memcpy(state, &Clock, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(state, &SequenceCount, sizeof(uint32_t));
+    state += sizeof(uint32_t);
+
+    memcpy(state, &FrameResetCountdown, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool = 0;
+    packedBool |= SequenceMode << 7;
+    packedBool |= InterruptInhibit << 6;
+    packedBool |= FrameInterruptFlag << 5;
+    packedBool |= FrameResetFlag << 4;
+
+    memcpy(state, &packedBool, sizeof(char));
+}
+
+void APU::LoadState(const char* state)
+{
+    PulseOne.LoadState(state);
+    state += PulseUnit::STATE_SIZE;
+
+    PulseTwo.LoadState(state);
+    state += PulseUnit::STATE_SIZE;
+
+    Triangle.LoadState(state);
+    state += TriangleUnit::STATE_SIZE;
+
+    Noise.LoadState(state);
+    state += NoiseUnit::STATE_SIZE;
+
+    Dmc.LoadState(state);
+    state += DmcUnit::STATE_SIZE;
+
+    memcpy(&Clock, state, sizeof(uint64_t));
+    state += sizeof(uint64_t);
+
+    memcpy(&SequenceCount, state, sizeof(uint32_t));
+    state += sizeof(uint32_t);
+
+    memcpy(&FrameResetCountdown, state, sizeof(uint8_t));
+    state += sizeof(uint8_t);
+
+    char packedBool;
+    memcpy(&packedBool, state, sizeof(char));
+
+    SequenceMode = !!(packedBool & 0x80);
+    InterruptInhibit = !!(packedBool & 0x40);
+    FrameInterruptFlag = !!(packedBool & 0x20);
+    FrameResetCountdown = !!(packedBool & 0x10);
 }
