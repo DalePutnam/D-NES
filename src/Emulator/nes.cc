@@ -81,7 +81,7 @@ uint8_t NES::GetControllerOneState()
     return Cpu->GetControllerOneState();
 }
 
-void NES::CpuSetLogEnabled(bool enabled)
+void NES::SetCpuLogEnabled(bool enabled)
 {
     Cpu->SetLogEnabled(enabled);
 }
@@ -116,77 +116,77 @@ void NES::GetPrimarySprite(int sprite, uint8_t* pixels)
     Ppu->GetPrimaryOAM(sprite, pixels);
 }
 
-void NES::PpuSetFrameLimitEnabled(bool enabled)
+void NES::SetFrameLimitEnabled(bool enabled)
 {
     Ppu->SetFrameLimitEnabled(enabled);
 }
 
-void NES::PpuSetNtscDecoderEnabled(bool enabled)
+void NES::SetNtscDecoderEnabled(bool enabled)
 {
     Ppu->SetNtscDecodingEnabled(enabled);
 }
 
-void NES::ApuSetAudioEnabled(bool enabled)
+void NES::SetAudioEnabled(bool enabled)
 {
     Apu->SetAudioEnabled(enabled);
 }
 
-void NES::ApuSetFiltersEnabled(bool enabled)
+void NES::SetAudioFiltersEnabled(bool enabled)
 {
     Apu->SetFiltersEnabled(enabled);
 }
 
-void NES::ApuSetMasterVolume(float volume)
+void NES::SetMasterVolume(float volume)
 {
     Apu->SetMasterVolume(volume);
 }
 
-void NES::ApuSetPulseOneVolume(float volume)
+void NES::SetPulseOneVolume(float volume)
 {
     Apu->SetPulseOneVolume(volume);
 }
 
-float NES::ApuGetPulseOneVolume()
+float NES::GetPulseOneVolume()
 {
     return Apu->GetPulseOneVolume();
 }
 
-void NES::ApuSetPulseTwoVolume(float volume)
+void NES::SetPulseTwoVolume(float volume)
 {
     Apu->SetPulseTwoVolume(volume);
 }
 
-float NES::ApuGetPulseTwoVolume()
+float NES::GetPulseTwoVolume()
 {
     return Apu->GetPulseTwoVolume();
 }
 
-void NES::ApuSetTriangleVolume(float volume)
+void NES::SetTriangleVolume(float volume)
 {
     Apu->SetTriangleVolume(volume);
 }
 
-float NES::ApuGetTriangleVolume()
+float NES::GetTriangleVolume()
 {
     return Apu->GetTriangleVolume();
 }
 
-void NES::ApuSetNoiseVolume(float volume)
+void NES::SetNoiseVolume(float volume)
 {
     Apu->SetNoiseVolume(volume);
 }
 
-float NES::ApuGetNoiseVolume()
+float NES::GetNoiseVolume()
 {
     return Apu->GetNoiseVolume();
 }
 
-void NES::ApuSetDmcVolume(float volume)
+void NES::SetDmcVolume(float volume)
 {
     Apu->SetDmcVolume(volume);
 }
 
-float NES::ApuGetDmcVolume()
+float NES::GetDmcVolume()
 {
     return Apu->GetDmcVolume();
 }

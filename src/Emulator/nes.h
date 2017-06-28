@@ -84,7 +84,7 @@ public:
     void SetControllerOneState(uint8_t state);
     uint8_t GetControllerOneState();
 
-    void CpuSetLogEnabled(bool enabled);
+    void SetCpuLogEnabled(bool enabled);
     void SetNativeSaveDirectory(const std::string& saveDir);
 
     int GetFrameRate();
@@ -92,23 +92,23 @@ public:
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimarySprite(int sprite, uint8_t* pixels);
+    void SetFrameLimitEnabled(bool enabled);
+    void SetNtscDecoderEnabled(bool enabled);
 
-    void PpuSetFrameLimitEnabled(bool enabled);
-    void PpuSetNtscDecoderEnabled(bool enabled);
+    void SetAudioEnabled(bool enabled);
+    void SetAudioFiltersEnabled(bool enabled);
+    void SetMasterVolume(float volume);
 
-    void ApuSetAudioEnabled(bool enabled);
-    void ApuSetFiltersEnabled(bool enabled);
-    void ApuSetMasterVolume(float volume);
-    void ApuSetPulseOneVolume(float volume);
-    float ApuGetPulseOneVolume();
-    void ApuSetPulseTwoVolume(float volume);
-    float ApuGetPulseTwoVolume();
-    void ApuSetTriangleVolume(float volume);
-    float ApuGetTriangleVolume();
-    void ApuSetNoiseVolume(float volume);
-    float ApuGetNoiseVolume();
-    void ApuSetDmcVolume(float volume);
-    float ApuGetDmcVolume();
+    void SetPulseOneVolume(float volume);
+    float GetPulseOneVolume();
+    void SetPulseTwoVolume(float volume);
+    float GetPulseTwoVolume();
+    void SetTriangleVolume(float volume);
+    float GetTriangleVolume();
+    void SetNoiseVolume(float volume);
+    float GetNoiseVolume();
+    void SetDmcVolume(float volume);
+    float GetDmcVolume();
 
     // Launch the emulator on a new thread.
     // This function returns immediately.

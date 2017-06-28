@@ -166,8 +166,8 @@ void AudioSettingsWindow::DoCancel()
         settings->Read("/Audio/Enabled", &audioEnabled);
         settings->Read("/Audio/FiltersEnabled", &filtersEnabled);
 
-        Nes->ApuSetAudioEnabled(audioEnabled);
-        Nes->ApuSetFiltersEnabled(filtersEnabled);
+        Nes->SetAudioEnabled(audioEnabled);
+        Nes->SetAudioFiltersEnabled(filtersEnabled);
 
         int master, pulseOne, pulseTwo, triangle, noise, dmc;
         settings->Read("/Audio/MasterVolume", &master);
@@ -177,12 +177,12 @@ void AudioSettingsWindow::DoCancel()
         settings->Read("/Audio/NoiseVolume", &noise);
         settings->Read("/Audio/DmcVolume", &dmc);
 
-        Nes->ApuSetMasterVolume(master / 100.0f);
-        Nes->ApuSetPulseOneVolume(pulseOne / 100.0f);
-        Nes->ApuSetPulseTwoVolume(pulseTwo / 100.0f);
-        Nes->ApuSetTriangleVolume(triangle / 100.0f);
-        Nes->ApuSetNoiseVolume(noise / 100.0f);
-        Nes->ApuSetDmcVolume(dmc / 100.0f);
+        Nes->SetMasterVolume(master / 100.0f);
+        Nes->SetPulseOneVolume(pulseOne / 100.0f);
+        Nes->SetPulseTwoVolume(pulseTwo / 100.0f);
+        Nes->SetTriangleVolume(triangle / 100.0f);
+        Nes->SetNoiseVolume(noise / 100.0f);
+        Nes->SetDmcVolume(dmc / 100.0f);
     }
 
     Close();
@@ -192,7 +192,7 @@ void AudioSettingsWindow::EnableAudioClicked(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetAudioEnabled(EnableAudioCheckBox->GetValue());
+        Nes->SetAudioEnabled(EnableAudioCheckBox->GetValue());
     }
 }
 
@@ -200,7 +200,7 @@ void AudioSettingsWindow::EnableFiltersClicked(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetFiltersEnabled(EnableFiltersCheckBox->GetValue());
+        Nes->SetAudioFiltersEnabled(EnableFiltersCheckBox->GetValue());
     }
 }
 
@@ -208,7 +208,7 @@ void AudioSettingsWindow::MasterVolumeChanged(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetMasterVolume(MasterVolume->GetValue() / 100.0f);
+        Nes->SetMasterVolume(MasterVolume->GetValue() / 100.0f);
     }
 
     CurrentMasterVolume->SetLabel(std::to_string(MasterVolume->GetValue()));
@@ -218,7 +218,7 @@ void AudioSettingsWindow::PulseOneVolumeChanged(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetPulseOneVolume(PulseOneVolume->GetValue() / 100.0f);
+        Nes->SetPulseOneVolume(PulseOneVolume->GetValue() / 100.0f);
     }
 
     CurrentPulseOneVolume->SetLabel(std::to_string(PulseOneVolume->GetValue()));
@@ -228,7 +228,7 @@ void AudioSettingsWindow::PulseTwoVolumeChanged(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetPulseTwoVolume(PulseTwoVolume->GetValue() / 100.0f);
+        Nes->SetPulseTwoVolume(PulseTwoVolume->GetValue() / 100.0f);
     }
 
     CurrentPulseTwoVolume->SetLabel(std::to_string(PulseTwoVolume->GetValue()));
@@ -238,7 +238,7 @@ void AudioSettingsWindow::TriangleVolumeChanged(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetTriangleVolume(TriangleVolume->GetValue() / 100.0f);
+        Nes->SetTriangleVolume(TriangleVolume->GetValue() / 100.0f);
     }
 
     CurrentTriangleVolume->SetLabel(std::to_string(TriangleVolume->GetValue()));
@@ -248,7 +248,7 @@ void AudioSettingsWindow::NoiseVolumeChanged(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetNoiseVolume(NoiseVolume->GetValue() / 100.0f);
+        Nes->SetNoiseVolume(NoiseVolume->GetValue() / 100.0f);
     }
 
     CurrentNoiseVolume->SetLabel(std::to_string(NoiseVolume->GetValue()));
@@ -258,7 +258,7 @@ void AudioSettingsWindow::DmcVolumeChanged(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        Nes->ApuSetDmcVolume(DmcVolume->GetValue() / 100.0f);
+        Nes->SetDmcVolume(DmcVolume->GetValue() / 100.0f);
     }
 
     CurrentDmcVolume->SetLabel(std::to_string(DmcVolume->GetValue()));

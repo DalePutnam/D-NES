@@ -377,7 +377,7 @@ void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
     if (Nes != nullptr)
     {
         bool logEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
-        Nes->CpuSetLogEnabled(logEnabled);
+        Nes->SetCpuLogEnabled(logEnabled);
     }
 }
 
@@ -386,7 +386,7 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
     if (Nes != nullptr)
     {
         bool enabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
-        Nes->PpuSetFrameLimitEnabled(enabled);
+        Nes->SetFrameLimitEnabled(enabled);
     }
 }
 

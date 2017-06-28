@@ -149,7 +149,7 @@ void VideoSettingsWindow::UpdateNtscDecoding(bool enabled)
 {
     if (Nes != nullptr)
     {
-        Nes->PpuSetNtscDecoderEnabled(enabled);
+        Nes->SetNtscDecoderEnabled(enabled);
     }
 }
 
