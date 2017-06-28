@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <exception>
+#include <cstring>
 
 #include "cart.h"
 #include "mappers/mapper_base.h"
