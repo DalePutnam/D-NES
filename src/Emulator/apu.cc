@@ -754,6 +754,12 @@ void APU::DmcUnit::SetEnabled(bool enabled)
     {
         CurrentAddress = SampleAddress;
         SampleBytesRemaining = SampleLength;
+
+		if (SampleBufferEmptyFlag)
+		{
+			InMemoryStall = true;
+			MemoryStallCountdown = 4;
+		}	
     }
 }
 
@@ -805,51 +811,13 @@ bool APU::DmcUnit::CheckIRQ()
     return InterruptFlag;
 }
 
+bool APU::DmcUnit::CheckStalled()
+{
+	return InMemoryStall;
+}
+
 void APU::DmcUnit::ClockTimer()
 {
-    // Memory Reader
-    if (InMemoryStall)
-    {
-        if (--MemoryStallCountdown == 0)
-        {
-            SampleBuffer = Apu.Cartridge->PrgRead(CurrentAddress - 0x6000);
-            SampleBufferEmptyFlag = false;
-
-            if (--SampleBytesRemaining == 0)
-            {
-                if (SampleLoopFlag)
-                {
-                    CurrentAddress = SampleAddress;
-                    SampleBytesRemaining = SampleLength;
-                }
-                else if (InterruptEnabledFlag)
-                {
-                    InterruptFlag = true;
-                }
-            }
-            else
-            {
-                if (CurrentAddress == 0xFFFF)
-                {
-                    CurrentAddress = 0x8000;
-                }
-                else
-                {
-                    ++CurrentAddress;
-                }
-            }
-
-            InMemoryStall = false;
-            Apu.Cpu->SetStalled(false);
-        }
-    }
-    else if (SampleBufferEmptyFlag && SampleBytesRemaining > 0)
-    {
-        InMemoryStall = true;
-        MemoryStallCountdown = 2;
-        Apu.Cpu->SetStalled(true);
-    }
-
     if (Timer == 0)
     {
         Timer = TimerPeriods[TimerPeriodIndex];
@@ -888,14 +856,60 @@ void APU::DmcUnit::ClockTimer()
             {
                 SilenceFlag = false;
                 SampleShiftRegister = SampleBuffer;
-                SampleBufferEmptyFlag = true;
+				SampleBufferEmptyFlag = true;
             }
+
+			if (SampleBytesRemaining != 0)
+			{
+				InMemoryStall = true;
+				MemoryStallCountdown = 4;
+			}
         }
     }
-    else
-    {
-        --Timer;
-    }
+
+    --Timer;
+}
+
+void APU::DmcUnit::ClockMemoryReader()
+{
+	if (!InMemoryStall)
+	{
+		return;
+	}
+
+	--MemoryStallCountdown;
+
+	if (MemoryStallCountdown == 0)
+	{
+		SampleBuffer = Apu.Cartridge->PrgRead(CurrentAddress - 0x6000);
+		SampleBufferEmptyFlag = false;
+
+		if (CurrentAddress == 0xFFFF)
+		{
+			CurrentAddress = 0x8000;
+		}
+		else
+		{
+			++CurrentAddress;
+		}
+
+		--SampleBytesRemaining;
+
+		if (SampleBytesRemaining == 0)
+		{
+			if (SampleLoopFlag)
+			{
+				CurrentAddress = SampleAddress;
+				SampleBytesRemaining = SampleLength;
+			}
+			else if (InterruptEnabledFlag)
+			{
+				InterruptFlag = true;
+			}
+		}
+
+		InMemoryStall = false;
+	}
 }
 
 APU::DmcUnit::operator uint8_t ()
@@ -1079,7 +1093,13 @@ void APU::Step()
 {
     ++Clock;
 
+	if (Dmc.CheckStalled())
+	{
+		Dmc.ClockMemoryReader();
+	}
+
     Triangle.ClockTimer();
+
     if (Clock % 2 == 0)
     {
         PulseOne.ClockTimer();
@@ -1203,6 +1223,11 @@ void APU::GenerateSample()
 bool APU::CheckIRQ()
 {
     return FrameInterruptFlag || Dmc.CheckIRQ();
+}
+
+bool APU::CheckStalled()
+{
+	return Dmc.CheckStalled();
 }
 
 void APU::WritePulseOneRegister(uint8_t reg, uint8_t value)

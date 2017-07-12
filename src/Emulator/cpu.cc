@@ -53,7 +53,7 @@ uint8_t CPU::Read(uint16_t address)
     do
     {
         IncrementClock();
-    } while (IsStalled);
+    } while (Apu->CheckStalled());
 
 
     // Any address less then 0x2000 is just the
@@ -116,14 +116,14 @@ void CPU::Write(uint8_t M, uint16_t address)
     {
         uint16_t page = M * 0x100;
 
-        if (Clock % 6 == 0)
+        if ((Clock - 3) % 6 == 0)
         {
-            IncrementClock();
+			Read(PC);
         }
         else
         {
-            IncrementClock();
-            IncrementClock();
+			Read(PC);
+			Read(PC);
         }
 
         for (int i = 0; i < 0x100; ++i)
@@ -1362,7 +1362,6 @@ CPU::CPU()
     , NmiLineStatus(false)
     , NmiRaised(false)
     , NmiPending(false)
-    , IsStalled(false)
     , IrqPending(false)
     , S(0xFD)
     , P(0x24)
@@ -1401,7 +1400,7 @@ void CPU::AttachCart(Cart* cart)
 
 void CPU::SetStalled(bool stalled)
 {
-    IsStalled = stalled;
+    //IsStalled = stalled;
 }
 
 bool CPU::IsLogEnabled()
@@ -1495,7 +1494,7 @@ void CPU::SaveState(char* state)
     packedBool |= NmiLineStatus << 4;
     packedBool |= NmiRaised << 3;
     packedBool |= NmiPending << 2;
-    packedBool |= IsStalled << 1;
+    //packedBool |= IsStalled << 1;
     packedBool |= IrqPending << 0;
 
     memcpy(state, &packedBool, sizeof(char));
@@ -1540,7 +1539,7 @@ void CPU::LoadState(const char* state)
     NmiLineStatus = !!(packedBool & 0x10);
     NmiRaised = !!(packedBool & 0x8);
     NmiPending = !!(packedBool & 0x4);
-    IsStalled = !!(packedBool & 0x2);
+    //IsStalled = !!(packedBool & 0x2);
     IrqPending = !!(packedBool & 0x1);
 }
 

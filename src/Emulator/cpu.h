@@ -97,7 +97,6 @@ private:
     bool NmiRaised;
     bool NmiPending;
 
-    bool IsStalled;
     bool IrqPending;
 
     // Registers

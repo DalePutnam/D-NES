@@ -21,6 +21,7 @@ public:
 
     void Step();
     bool CheckIRQ();
+	bool CheckStalled();
 
     void SetFrameLength(int32_t length);
 
@@ -188,8 +189,10 @@ private:
         bool GetEnabled();
         void ClearInterrupt();
         bool CheckIRQ();
+		bool CheckStalled();
 
         void ClockTimer();
+		void ClockMemoryReader();
 
         operator uint8_t ();
 
