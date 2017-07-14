@@ -502,20 +502,6 @@ void PPU::Render()
         BackgroundShift0 = BackgroundShift0 << 1;
         BackgroundShift1 = BackgroundShift1 << 1;
 
-        bool active[8] = { false, false, false, false, false, false, false, false };
-
-        for (int f = 0; f < 8; ++f)
-        {
-            if (SpriteCounter[f] == 0)
-            {
-                active[f] = true;
-            }
-            else
-            {
-                --SpriteCounter[f];
-            }
-        }
-
         bool spriteFound = false;
         uint16_t spPixel = 0;
         uint16_t spPaletteIndex = 0x3F10;
@@ -523,7 +509,7 @@ void PPU::Render()
 
         for (int f = 0; f < 8; ++f)
         {
-            if (active[f])
+            if (SpriteCounter[f] == 0)
             {
                 bool horizontalFlip = ((SpriteAttribute[f] & 0x40) >> 6) != 0;
                 uint16_t pixel;
@@ -560,6 +546,11 @@ void PPU::Render()
                     }
                 }
             }
+
+			if (SpriteCounter[f] != 0)
+			{
+				--SpriteCounter[f];
+			}
         }
 
         uint16_t paletteIndex;
@@ -616,11 +607,11 @@ void PPU::Render()
         uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
         uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
         uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
-        uint32_t index = (Dot - 1) + (Line * 256);
+        uint32_t index = ((Dot - 1) + (Line << 8)) * 3;
 
-        FrameBuffer[index * 3] = red;
-        FrameBuffer[(index * 3) + 1] = green;
-        FrameBuffer[(index * 3) + 2] = blue;
+        FrameBuffer[index] = red;
+        FrameBuffer[index + 1] = green;
+        FrameBuffer[index + 2] = blue;
     }
 
     if (Dot == 256 && Line == 239)
