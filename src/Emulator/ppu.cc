@@ -226,7 +226,7 @@ void PPU::LimitFrameRate()
 {
     using namespace std::chrono;
 
-    if (FrameLimitEnabled)
+    if (FrameLimitEnabled && !TurboModeEnabled)
     {
         steady_clock::time_point then = SingleFrameStart + microseconds(16667);
 
@@ -474,156 +474,162 @@ void PPU::SpriteEvaluation()
     }
 }
 
-void PPU::Render()
+void PPU::RenderPixel()
 {
-    uint16_t colour;
+	uint16_t bgPixel, bgAttribute, bgPaletteIndex;
+	if (!ShowBackground || (!ShowBackgroundLeft && Dot <= 8))
+	{
+		bgPixel = 0;
+	}
+	else
+	{
+		bgPixel = (((BackgroundShift0 << FineXScroll) & 0x8000) >> 15) | (((BackgroundShift1 << FineXScroll) & 0x8000) >> 14);
+		bgAttribute = (((BackgroundAttributeShift0 << FineXScroll) & 0x80) >> 5) | (((BackgroundAttributeShift1 << FineXScroll) & 0x80) >> 4);
+		bgPaletteIndex = 0x3F00 | bgAttribute | bgPixel;
+	}
 
-    if (!ShowSprites && !ShowBackground)
-    {
-        if (PpuAddress >= 0x3F00 && PpuAddress <= 0x3FFF)
-        {
-            colour = Read(PpuAddress);
-        }
-        else
-        {
-            colour = Read(0x3F00);
-        }
-    }
-    else
-    {
-        uint16_t bgPixel = (((BackgroundShift0 << FineXScroll) & 0x8000) >> 15) | (((BackgroundShift1 << FineXScroll) & 0x8000) >> 14);
-        uint8_t bgAttribute = (((BackgroundAttributeShift0 << FineXScroll) & 0x80) >> 7) | (((BackgroundAttributeShift1 << FineXScroll) & 0x80) >> 6);
-        uint16_t bgPaletteIndex = 0x3F00 | (bgAttribute << 2) | bgPixel;
+	BackgroundAttributeShift0 = (BackgroundAttributeShift0 << 1) | (BackgroundAttribute & 0x1);
+	BackgroundAttributeShift1 = (BackgroundAttributeShift1 << 1) | ((BackgroundAttribute & 0x2) >> 1);
+	BackgroundShift0 <<= 1;
+	BackgroundShift1 <<= 1;
 
-        if (!ShowBackground || (!ShowBackgroundLeft && Dot <= 8)) bgPixel = 0;
+    uint16_t spPixel;
+    uint16_t spPaletteIndex = 0x3F10;
+    bool spPriority = true;
+	bool spriteFound = false;
 
-        BackgroundAttributeShift0 = (BackgroundAttributeShift0 << 1) | (BackgroundAttribute & 0x1);
-        BackgroundAttributeShift1 = (BackgroundAttributeShift1 << 1) | ((BackgroundAttribute & 0x2) >> 1);
-        BackgroundShift0 = BackgroundShift0 << 1;
-        BackgroundShift1 = BackgroundShift1 << 1;
+	for (int i = 0; i < 8; ++i)
+	{
+		if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
+		{
+			bool horizontalFlip = !!(SpriteAttribute[i] & 0x40);
+			uint16_t pixel;
 
-        bool spriteFound = false;
-        uint16_t spPixel = 0;
-        uint16_t spPaletteIndex = 0x3F10;
-        uint8_t spPriority = 1;
-
-        for (int f = 0; f < 8; ++f)
-        {
-            if (SpriteCounter[f] == 0)
-            {
-                bool horizontalFlip = ((SpriteAttribute[f] & 0x40) >> 6) != 0;
-                uint16_t pixel;
-
-                if (horizontalFlip)
-                {
-                    pixel = (SpriteShift0[f] & 0x1) | ((SpriteShift1[f] & 0x1) << 1);
-                    SpriteShift0[f] = SpriteShift0[f] >> 1;
-                    SpriteShift1[f] = SpriteShift1[f] >> 1;
-                }
-                else
-                {
-                    pixel = ((SpriteShift0[f] & 0x80) >> 7) | ((SpriteShift1[f] & 0x80) >> 6);
-                    SpriteShift0[f] = SpriteShift0[f] << 1;
-                    SpriteShift1[f] = SpriteShift1[f] << 1;
-                }
-
-                if (!spriteFound && pixel != 0)
-                {
-                    spPixel = pixel;
-                    spPriority = (SpriteAttribute[f] & 0x20) >> 5;
-                    spPaletteIndex |= ((SpriteAttribute[f] & 0x03) << 2) | spPixel;
-                    spriteFound = true;
-
-                    if (!ShowSprites || (!ShowSpritesLeft && Dot <= 8)) spPixel = 0;
-
-                    // Detect a sprite 0 hit
-                    if (SpriteZeroSecondaryOamFlag && f == 0)
-                    {
-                        if (Dot > 1 && spPixel != 0 && bgPixel != 0 && Dot != 256)
-                        {
-                            SpriteZeroHitFlag = true;
-                        }
-                    }
-                }
-            }
-
-			if (SpriteCounter[f] != 0)
+			if (horizontalFlip)
 			{
-				--SpriteCounter[f];
+				pixel = (SpriteShift0[i] & 0x1) | ((SpriteShift1[i] & 0x1) << 1);
+				SpriteShift0[i] >>= 1;
+				SpriteShift1[i] >>= 1;
 			}
-        }
+			else
+			{
+				pixel = ((SpriteShift0[i] & 0x80) >> 7) | ((SpriteShift1[i] & 0x80) >> 6);
+				SpriteShift0[i] <<= 1;
+				SpriteShift1[i] <<= 1;
+			}
 
-        uint16_t paletteIndex;
+			if (!spriteFound && pixel != 0)
+			{
+				if (!ShowSprites || (!ShowSpritesLeft && Dot <= 8))
+				{
+					spPixel = 0;
+				}
+				else
+				{
+					spPixel = pixel;
+					spPriority = !!(SpriteAttribute[i] & 0x20);
+					spPaletteIndex |= ((SpriteAttribute[i] & 0x03) << 2) | spPixel;
+				}
 
-        if (bgPixel == 0 && spPixel == 0)
-        {
-            paletteIndex = 0x3F00;
-        }
-        else if (bgPixel == 0 && spPixel != 0)
-        {
-            paletteIndex = spPaletteIndex;
-        }
-        else if (bgPixel != 0 && spPixel == 0)
-        {
-            paletteIndex = bgPaletteIndex;
-        }
-        else if (spPriority == 0)
-        {
-            paletteIndex = spPaletteIndex;
-        }
-        else
-        {
-            paletteIndex = bgPaletteIndex;
-        }
+				spriteFound = true;
 
-        if ((paletteIndex & 0x3) == 0)
-        {
-            paletteIndex = 0x3F00;
-        }
+				// Detect a sprite 0 hit
+				if (SpriteZeroSecondaryOamFlag && i == 0 && Dot > 1 && spPixel != 0 && bgPixel != 0 && Dot != 256)
+				{
+					SpriteZeroHitFlag = true;
+				}
+			}
+		}
 
-        colour = Read(paletteIndex);
-    }
+		--SpriteCounter[i];
+	}
 
-    // Can only switch render modes at the start of the frame
-    if (Dot == 1 && Line == 0 && NtscMode != RequestNtscMode)
-    {
-        NtscMode = RequestNtscMode;
-    }
+	if (TurboFrameSkip == 0)
+	{
+		uint16_t colour;
+		uint16_t paletteIndex;
 
-    if (NtscMode)
-    {
-        uint16_t pixel = colour & 0x3F;
-        pixel = pixel | (IntenseRed << 6);
-        pixel = pixel | (IntenseGreen << 7);
-        pixel = pixel | (IntenseBlue << 8);
+		if (bgPixel == 0 && spPixel == 0)
+		{
+			paletteIndex = 0x3F00;
+		}
+		else if (bgPixel == 0 && spPixel != 0)
+		{
+			paletteIndex = spPaletteIndex;
+		}
+		else if (bgPixel != 0 && spPixel == 0)
+		{
+			paletteIndex = bgPaletteIndex;
+		}
+		else if (!spPriority)
+		{
+			paletteIndex = spPaletteIndex;
+		}
+		else
+		{
+			paletteIndex = bgPaletteIndex;
+		}
 
-        RenderNtscPixel(pixel);
-        if (Dot == 256) RenderNtscLine();
-    }
-    else
-    {
-        uint32_t pixel = RgbLookupTable[colour];
+		if ((paletteIndex & 0x3) == 0)
+		{
+			paletteIndex = 0x3F00;
+		}
 
-        uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
-        uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
-        uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
-        uint32_t index = ((Dot - 1) + (Line << 8)) * 3;
+		colour = Read(paletteIndex);
 
-        FrameBuffer[index] = red;
-        FrameBuffer[index + 1] = green;
-        FrameBuffer[index + 2] = blue;
-    }
+		DecodePixel(colour);
+	}
 
-    if (Dot == 256 && Line == 239)
-    {
-        UpdateFrameRate();
-        LimitFrameRate();
 
-        if (OnFrameComplete)
-        {
-            OnFrameComplete(FrameBuffer);
-        }
-    }
+}
+
+void PPU::RenderPixelIdle()
+{
+	if (TurboFrameSkip == 0)
+	{
+		uint16_t colour;
+
+		if (PpuAddress >= 0x3F00 && PpuAddress <= 0x3FFF)
+		{
+			colour = Read(PpuAddress);
+		}
+		else
+		{
+			colour = Read(0x3F00);
+		}
+
+		DecodePixel(colour);
+	}
+}
+
+void PPU::DecodePixel(uint16_t colour)
+{
+	if (TurboFrameSkip == 0)
+	{
+		if (NtscMode)
+		{
+			uint16_t pixel = colour & 0x3F;
+			pixel = pixel | (IntenseRed << 6);
+			pixel = pixel | (IntenseGreen << 7);
+			pixel = pixel | (IntenseBlue << 8);
+
+			RenderNtscPixel(pixel);
+			if (Dot == 256) RenderNtscLine();
+		}
+		else
+		{
+			uint32_t pixel = RgbLookupTable[colour];
+
+			uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
+			uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
+			uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
+			uint32_t index = ((Dot - 1) + (Line << 8)) * 3;
+
+			FrameBuffer[index] = red;
+			FrameBuffer[index + 1] = green;
+			FrameBuffer[index + 2] = blue;
+		}
+	}
 }
 
 void PPU::IncrementXScroll()
@@ -735,7 +741,7 @@ uint8_t PPU::ReadNameTable(uint16_t address)
 {
     uint16_t nametableaddr = address % 0x2000;
 
-    Cart::MirrorMode mode = Cartridge->GetMirrorMode();
+	Cart::MirrorMode mode = Cartridge->GetMirrorMode();
 
     switch (mode)
     {
@@ -849,13 +855,16 @@ uint16_t PPU::GetCurrentScanline()
 }
 
 PPU::PPU()
-    : Cpu(nullptr)
-    , Cartridge(nullptr)
-    , FpsCounter(0)
-    , CurrentFps(0)
-    , FrameCountStart(std::chrono::steady_clock::now())
-    , SingleFrameStart(std::chrono::steady_clock::now())
-    , FrameLimitEnabled(true)
+	: Cpu(nullptr)
+	, Cartridge(nullptr)
+	, FpsCounter(0)
+	, CurrentFps(0)
+	, FrameCountStart(std::chrono::steady_clock::now())
+	, SingleFrameStart(std::chrono::steady_clock::now())
+	, FrameLimitEnabled(true)
+	, RequestTurboMode(false)
+	, TurboModeEnabled(false)
+	, TurboFrameSkip(0)
     , Clock(0)
     , Dot(0)
     , Line(241)
@@ -1191,6 +1200,11 @@ void PPU::LoadState(const char* state)
     AddressLatch = !!(packedBool & 0x10);
 }
 
+void PPU::SetTurboModeEnabled(bool enabled)
+{
+	RequestTurboMode = enabled;
+}
+
 void PPU::SetFrameLimitEnabled(bool enabled)
 {
     FrameLimitEnabled = enabled;
@@ -1198,7 +1212,11 @@ void PPU::SetFrameLimitEnabled(bool enabled)
 
 void PPU::SetNtscDecodingEnabled(bool enabled)
 {
-    RequestNtscMode = enabled;
+	// NTSC Rendering not supported in Turbo Mode
+	if (!RequestTurboMode && !TurboModeEnabled)
+	{
+		RequestNtscMode = enabled;
+	}
 }
 
 uint8_t PPU::ReadPPUStatus()
@@ -1356,51 +1374,51 @@ void PPU::WritePPUSCROLL(uint8_t M)
             else
             {
                 FineXScroll = static_cast<uint8_t>(0x7 & M);
-                PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
-            }
+PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
+			}
 
-            AddressLatch = !AddressLatch;
-            LowerBits = static_cast<uint8_t>(0x1F & M);
-        }
-        else
-        {
-            RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUSCROLL));
-        }
+			AddressLatch = !AddressLatch;
+			LowerBits = static_cast<uint8_t>(0x1F & M);
+		}
+		else
+		{
+			RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUSCROLL));
+		}
 
-    }
+	}
 }
 
 void PPU::WritePPUADDR(uint8_t M)
 {
-    if (Cpu->GetClock() > ResetDelay)
-    {
-        if (VblankFlag || Cpu->GetClock() == Clock - 1)
-        {
-            AddressLatch ? PpuTempAddress = (PpuTempAddress & 0x7F00) | M : PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
-            if (AddressLatch) PpuAddress = PpuTempAddress;
-            AddressLatch = !AddressLatch;
-            LowerBits = static_cast<uint8_t>(0x1F & M);
-        }
-        else
-        {
-            RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUADDR));
-        }
+	if (Cpu->GetClock() > ResetDelay)
+	{
+		if (VblankFlag || Cpu->GetClock() == Clock - 1)
+		{
+			AddressLatch ? PpuTempAddress = (PpuTempAddress & 0x7F00) | M : PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
+			if (AddressLatch) PpuAddress = PpuTempAddress;
+			AddressLatch = !AddressLatch;
+			LowerBits = static_cast<uint8_t>(0x1F & M);
+		}
+		else
+		{
+			RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUADDR));
+		}
 
-    }
+	}
 }
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-    if (VblankFlag || Cpu->GetClock() == Clock - 1)
-    {
-        Write(PpuAddress, M);
-        PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
-        LowerBits = (0x1F & M);
-    }
-    else
-    {
-        RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUDATA));
-    }
+	if (VblankFlag || Cpu->GetClock() == Clock - 1)
+	{
+		Write(PpuAddress, M);
+		PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
+		LowerBits = (0x1F & M);
+	}
+	else
+	{
+		RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUDATA));
+	}
 
 }
 
@@ -1410,388 +1428,383 @@ void PPU::WritePPUDATA(uint8_t M)
 // I chose to do it this way because it simplifies the issue of variable frame length, something that is subject to change until after the pre-render line.
 int PPU::ScheduleSync()
 {
-    if ((Line >= 242 && Line <= 261) || (Line == 241 && Dot >= 2)) // Any point in VBLANK or the Pre-Render line
-    {
-        if (NmiOccuredFlag)
-        {
-            return 0;
-        }
-        else
-        {
-            return 7169; // Guaranteed to be after the pre-render line
-        }
-    }
-    else
-    {
-        return ((240 - Line) * 341) + (341 - Dot + 1) + 1; // Time to next NMI
-    }
+	if ((Line >= 242 && Line <= 261) || (Line == 241 && Dot >= 2)) // Any point in VBLANK or the Pre-Render line
+	{
+		if (NmiOccuredFlag)
+		{
+			return 0;
+		}
+		else
+		{
+			return 7169; // Guaranteed to be after the pre-render line
+		}
+	}
+	else
+	{
+		return ((240 - Line) * 341) + (341 - Dot + 1) + 1; // Time to next NMI
+	}
 }
 
 bool PPU::CheckNMI(uint64_t& occurredCycle)
 {
-    occurredCycle = NmiOccuredCycle;
-    return InterruptActive;
+	occurredCycle = NmiOccuredCycle;
+	return InterruptActive;
 }
 
 void PPU::UpdateFrameRate()
 {
-    using namespace std::chrono;
+	using namespace std::chrono;
 
-    steady_clock::time_point now = steady_clock::now();
-    microseconds time_span = duration_cast<microseconds>(now - FrameCountStart);
-    if (time_span.count() >= 1000000)
-    {
-        CurrentFps = FpsCounter;
-        FpsCounter = 0;
-        FrameCountStart = steady_clock::now();
-    }
-    else
-    {
-        FpsCounter++;
-    }
+	steady_clock::time_point now = steady_clock::now();
+	microseconds time_span = duration_cast<microseconds>(now - FrameCountStart);
+	if (time_span.count() >= 1000000)
+	{
+		CurrentFps = FpsCounter;
+		FpsCounter = 0;
+		FrameCountStart = steady_clock::now();
+	}
+	else
+	{
+		FpsCounter++;
+	}
+}
+
+void PPU::ClockBackgroundShiftRegisters()
+{
+	BackgroundAttributeShift0 = (BackgroundAttributeShift0 << 1) | (BackgroundAttribute & 0x1);
+	BackgroundAttributeShift1 = (BackgroundAttributeShift1 << 1) | ((BackgroundAttribute & 0x2) >> 1);
+	BackgroundShift0 <<= 1;
+	BackgroundShift1 <<= 1;
+}
+
+void PPU::ClockSpriteShiftRegisters()
+{
+	for (int i = 0; i < 8; ++i)
+	{
+		if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
+		{
+			bool horizontalFlip = !!(SpriteAttribute[i] & 0x40);
+			if (horizontalFlip)
+			{
+				SpriteShift0[i] >>= 1;
+				SpriteShift1[i] >>= 1;
+			}
+			else
+			{
+				SpriteShift0[i] <<= 1;
+				SpriteShift1[i] <<= 1;
+			}
+		}
+
+		--SpriteCounter[i];
+	}
+}
+
+void PPU::NameTableFetch()
+{
+	NameTableByte = ReadNameTable(0x2000 | (PpuAddress & 0x0FFF));
+}
+
+void PPU::BackgroundAttributeFetch()
+{
+	// Get the attribute byte, determines the palette to use when rendering
+	AttributeByte = ReadNameTable(0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
+	uint8_t attributeShift = (((PpuAddress & 0x0002) >> 1) | ((PpuAddress & 0x0040) >> 5)) << 1;
+	AttributeByte = (AttributeByte >> attributeShift) & 0x3;
+}
+
+void PPU::BackgroundLowByteFetch()
+{
+	uint8_t fineY = PpuAddress >> 12; // Get fine y scroll bits from address
+	uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
+	TileBitmapLow = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
+}
+
+void PPU::BackgroundHighByteFetch()
+{
+	uint8_t fineY = PpuAddress >> 12; // Get fine y scroll
+	uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
+	TileBitmapHigh = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
+}
+
+void PPU::SpriteAttributeFetch()
+{
+	uint8_t sprite = (Dot - 257) / 8;
+	SpriteAttribute[sprite] = SecondaryOam[(sprite << 2) + 2];
+}
+
+void PPU::SpriteXCoordinateFetch()
+{
+	uint8_t sprite = (Dot - 257) / 8;
+	SpriteCounter[sprite] = SecondaryOam[(sprite << 2) + 3];
+}
+
+void PPU::SpriteLowByteFetch()
+{
+	uint8_t sprite = (Dot - 257) / 8;
+	if (sprite < SpriteCount)
+	{
+		bool flipVertical = ((0x80 & SpriteAttribute[sprite]) >> 7) != 0;
+		uint8_t spriteY = SecondaryOam[(sprite << 2)];
+
+		if (SpriteSizeSwitch) // if spriteSize is 8x16
+		{
+			uint16_t base = (0x1 & SecondaryOam[(sprite << 2) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+			uint16_t patternIndex = base + ((SecondaryOam[(sprite << 2) + 1] >> 1) << 5); // Index of the beginning of the pattern
+			uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
+			if (offset >= 8) offset += 8;
+
+			SpriteShift0[sprite] = Cartridge->ChrRead(patternIndex + offset);
+		}
+		else
+		{
+			uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite << 2) + 1] << 4); // Index of the beginning of the pattern
+			uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
+
+			SpriteShift0[sprite] = Cartridge->ChrRead(patternIndex + offset);
+		}
+	}
+	else
+	{
+		SpriteShift0[sprite] = 0x00;
+	}
+}
+
+void PPU::SpriteHighByteFetch()
+{
+	uint8_t sprite = (Dot - 257) / 8;
+	if (sprite < SpriteCount)
+	{
+		bool flipVertical = ((0x80 & SpriteAttribute[sprite]) >> 7) != 0;
+		uint8_t spriteY = SecondaryOam[(sprite << 2)];
+
+		if (SpriteSizeSwitch) // if spriteSize is 8x16
+		{
+			uint16_t base = (0x1 & SecondaryOam[(sprite << 2) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+			uint16_t patternIndex = base + ((SecondaryOam[(sprite << 2) + 1] >> 1) << 5); // Index of the beginning of the pattern
+			uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
+			if (offset >= 8) offset += 8;
+
+			SpriteShift1[sprite] = Cartridge->ChrRead(patternIndex + offset + 8);
+		}
+		else
+		{
+			uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite << 2) + 1] << 4); // Index of the beginning of the pattern
+			uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
+
+			SpriteShift1[sprite] = Cartridge->ChrRead(patternIndex + offset + 8);
+		}
+	}
+	else
+	{
+		SpriteShift1[sprite] = 0x00;
+	}
+}
+
+void PPU::Step(uint64_t cycles)
+{
+	while (cycles > 0)
+	{
+		if ((Line >= 0 && Line <= 239) || Line == 261)
+		{
+			UpdateState();
+
+			if (Line == 261 && Dot == 1)
+			{
+				VblankFlag = false;
+				NmiOccuredFlag = false;
+				InterruptActive = false;
+				SpriteZeroHitFlag = false;
+			}
+
+			if (ShowSprites || ShowBackground)
+			{
+				if (Dot == 0)
+				{
+					if (Line == 0) Even = !Even;
+				}
+				else if ((Dot >= 1 && Dot <= 256) || (Dot >= 321 && Dot <= 336))
+				{
+					uint8_t cycle = (Dot - 1) % 8;
+					switch (cycle)
+					{
+					case 0:
+						if (Dot == 1) break;
+						BackgroundShift0 = (BackgroundShift0 & 0xFF00) | TileBitmapLow;
+						BackgroundShift1 = (BackgroundShift1 & 0xFF00) | TileBitmapHigh;
+						BackgroundAttribute = AttributeByte;
+						break;
+					case 1:
+						NameTableFetch();
+						break;
+					case 3:
+						BackgroundAttributeFetch();
+						break;
+					case 5:
+						BackgroundHighByteFetch();
+						break;
+					case 7:
+						BackgroundLowByteFetch();
+						IncrementXScroll();
+						break;
+					default:
+						break;
+					}
+
+					if (Dot == 256)
+					{
+						IncrementYScroll();
+					}
+				} 
+				else if (Dot >= 257 && Dot <= 320)
+				{
+					uint8_t cycle = (Dot - 257) % 8;
+					switch (cycle)
+					{
+					case 2:
+						SpriteAttributeFetch();
+						break;
+					case 3:
+						SpriteXCoordinateFetch();
+						break;
+					case 5:
+						SpriteLowByteFetch();
+						break;
+					case 7:
+						SpriteHighByteFetch();
+						break;
+					}
+
+					if (Line != 261 && Dot == 257) SpriteEvaluation();
+					if (Dot == 257) PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+				}
+				else if (Dot >= 337 && Dot <= 340)
+				{
+					if (Dot == 337)
+					{
+						BackgroundShift0 = (BackgroundShift0 << 8) | TileBitmapLow;
+						BackgroundShift1 = (BackgroundShift1 << 8) | TileBitmapHigh;
+						BackgroundAttributeShift0 = (BackgroundAttribute & 0x1) ? 0xFF : 0x00;
+						BackgroundAttributeShift1 = (BackgroundAttribute & 0x2) ? 0xFF : 0x00;
+						BackgroundAttribute = AttributeByte;
+					}
+					else if (Dot == 338 || Dot == 340)
+					{
+						NameTableFetch();
+					}
+				}
+
+				// From dot 280 to 304 of the pre-render line copy all vertical position bits to ppuAddress from ppuTempAddress
+				if (Line == 261 && Dot >= 280 && Dot <= 304)
+				{
+					PpuAddress = (PpuAddress & 0x041F) | (PpuTempAddress & 0x7BE0);
+				}
+
+				if (Line != 261 && Dot >= 1 && Dot <= 256)
+				{
+					RenderPixel();
+				}
+			}
+			else
+			{
+				if (Line != 261 && Dot >= 1 && Dot <= 256)
+				{
+					RenderPixelIdle();
+				}
+			}
+
+			if (Dot == 256 && Line == 239)
+			{
+				if (TurboModeEnabled)
+				{
+					if (TurboFrameSkip == 0)
+					{
+						TurboFrameSkip = 120;
+					}
+					else
+					{
+						TurboFrameSkip--;
+					}
+				}
+
+				if (TurboModeEnabled != RequestTurboMode)
+				{
+					TurboModeEnabled.store(RequestTurboMode);
+					if (TurboModeEnabled)
+					{
+						NtscMode = false;
+						RequestNtscMode = false;
+					}
+					else
+					{
+						TurboFrameSkip = 0;
+					}
+				}
+				else if (NtscMode != RequestNtscMode)
+				{
+					NtscMode = RequestNtscMode;
+				}
+
+				UpdateFrameRate();
+				LimitFrameRate();
+
+				if (OnFrameComplete && TurboFrameSkip == 0)
+				{
+					OnFrameComplete(FrameBuffer);
+				}
+			}
+		}
+		else if (Line == 240 || (Line == 241 && Dot == 0))
+		{
+			UpdateState();
+		}
+		else if (Line >= 241 && Line <= 260)
+		{
+			if (Dot == 1 && Line == 241 && Clock > ResetDelay)
+			{
+				UpdateState();
+
+				if (Dot == 1 && Line == 241 && !SuppressNmi)
+				{
+					NmiOccuredFlag = true;
+
+					if (NmiOccuredFlag && NmiEnabled)
+					{
+						NmiOccuredCycle = Clock;
+						InterruptActive = true;
+					}
+				}
+
+				SuppressNmi = false;
+			}
+			else
+			{
+				if (!NmiOccuredFlag || !NmiEnabled)
+				{
+					InterruptActive = false;
+				}
+
+				UpdateState();
+
+				if (NmiOccuredFlag && NmiEnabled)
+				{
+					if (!InterruptActive)
+					{
+						NmiOccuredCycle = Clock;
+						InterruptActive = true;
+					}
+				}
+			}
+		}
+
+		IncrementClock();
+		--cycles;
+	}
 }
 
 void PPU::Run()
 {
-    while (Cpu->GetClock() >= Clock)
-    {
-        while (((Line >= 0 && Line <= 239) || Line == 261) && Cpu->GetClock() >= Clock)
-        {
-            if (Dot == 0)
-            {
-                UpdateState();
-
-                if (Line == 0)
-                {
-                    Even = !Even;
-                }
-
-                IncrementClock();
-
-                if (Cpu->GetClock() < Clock) return;
-            }
-
-            while (Dot >= 1 && Dot <= 256 && Cpu->GetClock() >= Clock)
-            {
-                UpdateState();
-
-                if (Dot == 1 && Line == 261)
-                {
-                    VblankFlag = false;
-                    NmiOccuredFlag = false;
-                    InterruptActive = false;
-                    SpriteZeroHitFlag = false;
-                }
-
-                //*************************************************************************************
-                // Background Fetch Phase
-                //*************************************************************************************
-                uint8_t cycle = (Dot - 1) % 8; // The current point in the background fetch cycle
-
-                if (ShowSprites || ShowBackground)
-                {
-
-                    // Reload background shift registers
-                    if (cycle == 0 && Dot != 1)
-                    {
-                        BackgroundShift0 = (BackgroundShift0 & 0xFF00) | TileBitmapLow;
-                        BackgroundShift1 = (BackgroundShift1 & 0xFF00) | TileBitmapHigh;
-                        BackgroundAttribute = AttributeByte;
-                    }
-
-                    // Perform fetches
-                    if (cycle == 1)
-                    {
-                        NameTableByte = ReadNameTable(0x2000 | (PpuAddress & 0x0FFF)); // Get the Name Table byte, a pointer into the pattern table
-                    }
-                    else if (cycle == 3)
-                    {
-                        // Get the attribute byte, determines the palette to use when rendering
-                        AttributeByte = ReadNameTable(0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
-                        uint8_t attributeShift = (((PpuAddress & 0x0002) >> 1) | ((PpuAddress & 0x0040) >> 5)) * 2;
-                        AttributeByte = (AttributeByte >> attributeShift) & 0x3;
-                    }
-                    else if (cycle == 5)
-                    {
-                        uint8_t fineY = PpuAddress >> 12; // Get fine y scroll bits from address
-                        uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) * 16; // Get pattern address, independent of the table
-                        TileBitmapLow = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
-                    }
-                    else if (cycle == 7)
-                    {
-                        uint8_t fineY = PpuAddress >> 12; // Get fine y scroll
-                        uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) * 16; // Get pattern address, independent of the table
-                        TileBitmapHigh = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
-                    }
-                }
-
-                if (Line != 261) // Render on all visible lines
-                {
-                    Render();
-                }
-
-                if (ShowSprites || ShowBackground)
-                {
-                    // Every 8 dots increment the coarse X scroll
-                    if (cycle == 7)
-                    {
-                        IncrementXScroll();
-                    }
-
-                    // Exactly at dot 256 increment the Y scroll
-                    if (Dot == 256)
-                    {
-                        IncrementYScroll();
-                    }
-                }
-
-                IncrementClock();
-            }
-
-            while (Dot >= 257 && Dot <= 320 && Cpu->GetClock() >= Clock)
-            {
-                UpdateState();
-
-                if (ShowSprites || ShowBackground)
-                {
-                    //*************************************************************************************
-                    // Sprite Fetch Phase
-                    //*************************************************************************************
-
-                    OamAddress = 0;
-
-                    if (Dot == 257 && Line != 261)
-                    {
-                        SpriteEvaluation();
-                    }
-
-                    // Exactly at dot 257 copy all horizontal position bits to ppuAddress from ppuTempAddress
-                    if (Dot == 257)
-                    {
-                        PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
-                    }
-
-                    // From dot 280 to 304 of the pre-render line copy all vertical position bits to ppuAddress from ppuTempAddress
-                    if (Dot >= 280 && Dot <= 304 && Line == 261)
-                    {
-                        PpuAddress = (PpuAddress & 0x041F) | (PpuTempAddress & 0x7BE0);
-                    }
-
-                    uint8_t cycle = (Dot - 257) % 8; // The current point in the sprite fetch cycle
-                    uint8_t sprite = (Dot - 257) / 8;
-
-                    if (cycle == 2)
-                    {
-                        SpriteAttribute[sprite] = SecondaryOam[(sprite * 4) + 2];
-                    }
-                    else if (cycle == 3)
-                    {
-                        SpriteCounter[sprite] = SecondaryOam[(sprite * 4) + 3];
-                    }
-                    else if (cycle == 5)
-                    {
-                        if (sprite < SpriteCount)
-                        {
-                            bool flipVertical = ((0x80 & SpriteAttribute[sprite]) >> 7) != 0;
-                            uint8_t spriteY = SecondaryOam[(sprite * 4)];
-
-                            if (SpriteSizeSwitch) // if spriteSize is 8x16
-                            {
-                                uint16_t base = (0x1 & SecondaryOam[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-                                uint16_t patternIndex = base + ((SecondaryOam[(sprite * 4) + 1] >> 1) * 32); // Index of the beginning of the pattern
-                                uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
-                                if (offset >= 8) offset += 8;
-
-                                SpriteShift0[sprite] = Cartridge->ChrRead(patternIndex + offset);
-                            }
-                            else
-                            {
-                                uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] * 16); // Index of the beginning of the pattern
-                                uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
-
-                                SpriteShift0[sprite] = Cartridge->ChrRead(patternIndex + offset);
-                            }
-                        }
-                        else
-                        {
-                            SpriteShift0[sprite] = 0x00;
-                        }
-                    }
-                    else if (cycle == 7)
-                    {
-                        if (sprite < SpriteCount)
-                        {
-                            bool flipVertical = ((0x80 & SpriteAttribute[sprite]) >> 7) != 0;
-                            uint8_t spriteY = SecondaryOam[(sprite * 4)];
-
-                            if (SpriteSizeSwitch) // if spriteSize is 8x16
-                            {
-                                uint16_t base = (0x1 & SecondaryOam[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-                                uint16_t patternIndex = base + ((SecondaryOam[(sprite * 4) + 1] >> 1) * 32); // Index of the beginning of the pattern
-                                uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
-                                if (offset >= 8) offset += 8;
-
-                                SpriteShift1[sprite] = Cartridge->ChrRead(patternIndex + offset + 8);
-                            }
-                            else
-                            {
-                                uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] * 16); // Index of the beginning of the pattern
-                                uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
-
-                                SpriteShift1[sprite] = Cartridge->ChrRead(patternIndex + offset + 8);
-                            }
-                        }
-                        else
-                        {
-                            SpriteShift1[sprite] = 0x00;
-                        }
-                    }
-                }
-
-                IncrementClock();
-            }
-
-            while (Dot >= 321 && Dot <= 336 && Cpu->GetClock() >= Clock)
-            {
-                UpdateState();
-
-                if (ShowSprites || ShowBackground)
-                {
-                    //*************************************************************************************
-                    // Background Fetch Phase (Again)
-                    //*************************************************************************************
-                    uint8_t cycle = (Dot - 1) % 8; // The current point in the background fetch cycle
-
-                    // Reload background shift registers
-                    if (cycle == 0 && Dot != 1)
-                    {
-                        BackgroundShift0 = (BackgroundShift0 & 0xFF00) | TileBitmapLow;
-                        BackgroundShift1 = (BackgroundShift1 & 0xFF00) | TileBitmapHigh;
-                        BackgroundAttribute = AttributeByte;
-                    }
-
-                    // Perform fetches
-                    if (cycle == 1)
-                    {
-                        NameTableByte = ReadNameTable(0x2000 | (PpuAddress & 0x0FFF)); // Get the Name Table byte, a pointer into the pattern table
-                    }
-                    else if (cycle == 3)
-                    {
-                        // Get the attribute byte, determines the palette to use when rendering
-                        AttributeByte = ReadNameTable(0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
-                        uint8_t attributeShift = (((PpuAddress & 0x0002) >> 1) | ((PpuAddress & 0x0040) >> 5)) * 2;
-                        AttributeByte = (AttributeByte >> attributeShift) & 0x3;
-                    }
-                    else if (cycle == 5)
-                    {
-                        uint8_t fineY = PpuAddress >> 12; // Get fine y scroll bits from address
-                        uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) * 16; // Get pattern address, independent of the table
-                        TileBitmapLow = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
-                    }
-                    else if (cycle == 7)
-                    {
-                        uint8_t fineY = PpuAddress >> 12; // Get fine y scroll
-                        uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) * 16; // Get pattern address, independent of the table
-                        TileBitmapHigh = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
-                    }
-
-                    // Every 8 dots increment the coarse X scroll
-                    if (cycle == 7)
-                    {
-                        IncrementXScroll();
-                    }
-                }
-
-                IncrementClock();
-            }
-
-            while (Dot >= 337 && Dot <= 340 && Cpu->GetClock() >= Clock)
-            {
-                UpdateState();
-
-                if (ShowSprites || ShowBackground)
-                {
-                    if (Dot == 337) // The final load of the background shifters occurs here
-                    {
-                        // These shifters haven't been changed since the last load, so shift them 8 places.
-                        BackgroundShift0 = BackgroundShift0 << 8;
-                        BackgroundShift1 = BackgroundShift1 << 8;
-
-                        BackgroundShift0 |= TileBitmapLow;
-                        BackgroundShift1 |= TileBitmapHigh;
-
-                        BackgroundAttributeShift0 = 0;
-                        BackgroundAttributeShift1 = 0;
-
-                        for (int i = 0; i < 8; ++i)
-                        {
-                            BackgroundAttributeShift0 = BackgroundAttributeShift0 | ((BackgroundAttribute & 0x1) << i);
-                            BackgroundAttributeShift1 = BackgroundAttributeShift1 | (((BackgroundAttribute & 0x2) >> 1) << i);
-                        }
-
-                        BackgroundAttribute = AttributeByte;
-                    }
-
-                    uint8_t cycle = (Dot - 337) % 2;
-
-                    if (cycle == 1)
-                    {
-                        ReadNameTable(0x2000 | (PpuAddress & 0x0FFF));
-                    }
-                }
-
-                IncrementClock();
-            }
-        }
-
-        while (Line >= 240 && Line <= 260 && Cpu->GetClock() >= Clock)
-        {
-            if (Line == 240 || (Dot == 0 && Line == 241))
-            {
-                UpdateState();
-                IncrementClock();
-            }
-            else if (Dot == 1 && Line == 241 && Clock > ResetDelay)
-            {
-                UpdateState();
-
-                if (Dot == 1 && Line == 241 && !SuppressNmi)
-                {
-                    NmiOccuredFlag = true;
-
-                    if (NmiOccuredFlag && NmiEnabled)
-                    {
-                        NmiOccuredCycle = Clock;
-                        InterruptActive = true;
-                    }
-                }
-
-                SuppressNmi = false;
-
-                IncrementClock();
-            }
-            else
-            {
-                if (!NmiOccuredFlag || !NmiEnabled)
-                {
-                    InterruptActive = false;
-                }
-
-                UpdateState();
-
-                if (NmiOccuredFlag && NmiEnabled)
-                {
-                    if (!InterruptActive)
-                    {
-                        NmiOccuredCycle = Clock;
-                        InterruptActive = true;
-                    }
-                }
-
-                IncrementClock();
-            }
-        }
-    }
+	Step(Cpu->GetClock() - Clock + 1);
 }
 
 PPU::~PPU() {}

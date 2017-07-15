@@ -53,6 +53,7 @@ NES::NES(const NesParams& params)
 
     Cpu->SetLogEnabled(params.CpuLogEnabled);
 
+	Ppu->SetTurboModeEnabled(true);
     Ppu->SetFrameLimitEnabled(params.FrameLimitEnabled);
     Ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
 

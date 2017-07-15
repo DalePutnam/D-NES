@@ -34,8 +34,9 @@ bool MyApp::OnInit()
 	{
 		MainWindow* window = new MainWindow();
 		window->Show(true);
-		return true;
 	}
+
+	return true;
 }
 
 // Main Function

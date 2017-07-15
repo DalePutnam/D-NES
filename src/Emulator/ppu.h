@@ -34,9 +34,11 @@ public:
     uint16_t GetCurrentScanline();
 
     void Run();
+	void Step(uint64_t cycles);
     int ScheduleSync();
     bool CheckNMI(uint64_t& occuredCycle);
 
+	void SetTurboModeEnabled(bool enabled);
     void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecodingEnabled(bool enabled);
 
@@ -80,6 +82,10 @@ private:
     std::chrono::steady_clock::time_point FrameCountStart;
     std::chrono::steady_clock::time_point SingleFrameStart;
     std::atomic<bool> FrameLimitEnabled;
+
+	std::atomic<bool> RequestTurboMode;
+	std::atomic<bool> TurboModeEnabled;
+	int TurboFrameSkip;
 
     uint64_t Clock;
     uint16_t Dot;
@@ -159,7 +165,7 @@ private:
     uint8_t SpriteShift0[8];
     uint8_t SpriteShift1[8];
     uint8_t SpriteAttribute[8];
-    uint8_t SpriteCounter[8];
+    int16_t SpriteCounter[8];
 
     bool NtscMode;
     std::atomic<bool> RequestNtscMode;
@@ -172,11 +178,26 @@ private:
 
     void UpdateState();
     void SpriteEvaluation();
-    void Render();
+    void RenderPixel();
+	void RenderPixelIdle();
+
+	void DecodePixel(uint16_t colour);
 
     void IncrementXScroll();
     void IncrementYScroll();
     void IncrementClock();
+	//void LoadBackgroundShiftRegisters();
+	void NameTableFetch();
+	void BackgroundAttributeFetch();
+	void BackgroundLowByteFetch();
+	void BackgroundHighByteFetch();
+	void SpriteAttributeFetch();
+	void SpriteXCoordinateFetch();
+	void SpriteLowByteFetch();
+	void SpriteHighByteFetch();
+
+	void ClockBackgroundShiftRegisters();
+	void ClockSpriteShiftRegisters();
 
     uint8_t Read(uint16_t address);
     void Write(uint16_t address, uint8_t value);
