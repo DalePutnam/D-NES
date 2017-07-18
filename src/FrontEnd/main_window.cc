@@ -236,7 +236,8 @@ void MainWindow::StartEmulator(const std::string& filename)
         NesParams params;
         params.RomPath = filename;
         params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
-        params.FrameLimitEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
+		params.TurboModeEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
+        //params.FrameLimitEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
 
         bool audioEnabled, filtersEnabled;
         appSettings->Read("/Audio/Enabled", &audioEnabled);
@@ -386,7 +387,8 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
     if (Nes != nullptr)
     {
         bool enabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
-        Nes->SetFrameLimitEnabled(enabled);
+        //Nes->SetFrameLimitEnabled(enabled);
+		Nes->SetTurboModeEnabled(enabled);
     }
 }
 
@@ -712,13 +714,14 @@ void MainWindow::InitializeMenus()
 
     SettingsMenu = new wxMenu;
     SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
-    SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Limit To 60 FPS"));
+    //SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Limit To 60 FPS"));
+	SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Enable Turbo Mode"));
     SettingsMenu->AppendSeparator();
     SettingsMenu->Append(ID_SETTINGS_AUDIO, wxT("&Audio Settings"));
     SettingsMenu->Append(ID_SETTINGS_VIDEO, wxT("&Video Settings"));
     SettingsMenu->Append(ID_SETTINGS_PATHS, wxT("&Path Settings"));
 
-    SettingsMenu->FindItem(ID_FRAME_LIMIT)->Check();
+    //SettingsMenu->FindItem(ID_FRAME_LIMIT)->Check();
 
     AboutMenu = new wxMenu;
     AboutMenu->Append(wxID_ANY, wxT("&About"));

@@ -21,15 +21,13 @@ public:
     virtual void SaveState(char* state);
     virtual void LoadState(const char* state);
 
-    virtual Cart::MirrorMode GetMirrorMode() = 0;
+    Cart::MirrorMode GetMirrorMode();
 
     virtual uint8_t PrgRead(uint16_t address) = 0;
     virtual void PrgWrite(uint8_t M, uint16_t address) = 0;
 
     virtual uint8_t ChrRead(uint16_t address) = 0;
     virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
-
-    //virtual int GetMapperNumber() = 0;
 
 protected:
     int PrgSize;

@@ -19,6 +19,7 @@ struct NesParams
     std::string SavePath;
     bool CpuLogEnabled;
 
+	bool TurboModeEnabled;
     // PPU Settings
     bool FrameLimitEnabled;
     bool NtscDecoderEnabled;
@@ -86,6 +87,8 @@ public:
 
     void SetCpuLogEnabled(bool enabled);
     void SetNativeSaveDirectory(const std::string& saveDir);
+
+	void SetTurboModeEnabled(bool enabled);
 
     int GetFrameRate();
     void GetNameTable(int table, uint8_t* pixels);

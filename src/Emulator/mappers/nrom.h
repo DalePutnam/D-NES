@@ -15,7 +15,7 @@ public:
     NROM(const std::string& fileName, const std::string& saveDir);
     ~NROM();
 
-    Cart::MirrorMode GetMirrorMode() override;
+    //Cart::MirrorMode GetMirrorMode() override;
 
     uint8_t PrgRead(uint16_t address) override;
     void PrgWrite(uint8_t M, uint16_t address) override;

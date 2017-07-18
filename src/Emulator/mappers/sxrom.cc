@@ -7,7 +7,7 @@
 
 int SXROM::GetStateSize()
 {
-    return MapperBase::GetStateSize() + sizeof(uint64_t) + (sizeof(uint8_t) * 6);
+    return MapperBase::GetStateSize()+sizeof(uint64_t)+(sizeof(uint8_t)*5)+(sizeof(uint8_t*)*4)+sizeof(char);
 }
 
 void SXROM::SaveState(char* state)
@@ -21,17 +21,35 @@ void SXROM::SaveState(char* state)
     memcpy(state, &TempRegister, sizeof(uint8_t));
     state += sizeof(uint8_t);
 
-    memcpy(state, &ControlRegister, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(state, &PrgPage0Pointer, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
 
-    memcpy(state, &ChrRegister1, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(state, &PrgPage1Pointer, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
 
-    memcpy(state, &ChrRegister2, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(state, &ChrPage0Pointer, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
 
-    memcpy(state, &PrgRegister, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(state, &ChrPage1Pointer, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
+
+	memcpy(state, &PrgPage, sizeof(uint8_t));
+	state += sizeof(uint8_t);
+
+	memcpy(state, &ChrPage0, sizeof(uint8_t));
+	state += sizeof(uint8_t);
+
+	memcpy(state, &ChrPage1, sizeof(uint8_t));
+	state += sizeof(uint8_t);
+
+	char packedBool = 0;
+	packedBool |= WramDisable << 3;
+	packedBool |= PrgLastPageFixed << 2;
+	packedBool |= PrgPageSize16K << 1;
+	packedBool |= ChrPageSize4K << 0;
+
+	memcpy(state, &packedBool, sizeof(char));
+	state += sizeof(char);
 
     MapperBase::SaveState(state);
 }
@@ -47,116 +65,82 @@ void SXROM::LoadState(const char* state)
     memcpy(&TempRegister, state, sizeof(uint8_t));
     state += sizeof(uint8_t);
 
-    memcpy(&ControlRegister, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(&PrgPage0Pointer, state, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
 
-    memcpy(&ChrRegister1, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(&PrgPage1Pointer, state, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
 
-    memcpy(&ChrRegister2, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(&ChrPage0Pointer, state, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
 
-    memcpy(&PrgRegister, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+	memcpy(&ChrPage1Pointer, state, sizeof(uint8_t*));
+	state += sizeof(uint8_t*);
+
+	memcpy(&PrgPage, state, sizeof(uint8_t));
+	state += sizeof(uint8_t);
+
+	memcpy(&ChrPage0, state, sizeof(uint8_t));
+	state += sizeof(uint8_t);
+
+	memcpy(&ChrPage1, state, sizeof(uint8_t));
+	state += sizeof(uint8_t);
+
+	char packedBool;
+	memcpy(&packedBool, state, sizeof(char));
+	state += sizeof(char);
+
+	WramDisable = !!(packedBool & 0x8);
+	PrgLastPageFixed = !!(packedBool & 0x4);
+	PrgPageSize16K = !!(packedBool & 0x2);
+	ChrPageSize4K = !!(packedBool & 0x1);
 
     MapperBase::LoadState(state);
 }
 
-Cart::MirrorMode SXROM::GetMirrorMode()
-{
-    uint8_t mirroring = ControlRegister & 0x3;
-
-    switch (mirroring)
-    {
-    case 0:
-        return Cart::MirrorMode::SINGLE_SCREEN_A;
-    case 1:
-        return Cart::MirrorMode::SINGLE_SCREEN_B;
-    case 2:
-        return Cart::MirrorMode::VERTICAL;
-    case 3:
-        return Cart::MirrorMode::HORIZONTAL;
-    default:
-        throw std::runtime_error("If you're seeing this something has gone horribly wrong.");
-    }
-}
-
 uint8_t SXROM::ChrRead(uint16_t address)
 {
-    bool modeSize = !!(ControlRegister & 0x10);
-
-    if (modeSize)
+    if (ChrPageSize4K)
     {
         if (address < 0x1000)
         {
-            uint8_t page = ChrRegister1;
             uint32_t addr = address;
-
-            if (ChrSize == 0)
-            {
-                return Chr[(addr + (0x1000 * page)) % 0x2000];
-            }
-            else
-            {
-                return Chr[(addr + (0x1000 * page)) % ChrSize];
-            }
+			return ChrPage0Pointer[addr];
         }
         else
         {
-            uint8_t page = ChrRegister2;
             uint32_t addr = address - 0x1000;
-
-            if (ChrSize == 0)
-            {
-                return Chr[(addr + (0x1000 * page)) % 0x2000];
-            }
-            else
-            {
-                return Chr[(addr + (0x1000 * page)) % ChrSize];
-            }
+			return ChrPage1Pointer[addr];
         }
     }
     else
     {
-        uint8_t page = ChrRegister1 >> 1;
         uint32_t addr = address;
-
-        if (ChrSize == 0)
-        {
-            return Chr[addr];
-        }
-        else
-        {
-            return Chr[(addr + (0x2000 * page)) % ChrSize];
-        }
+		return ChrPage0Pointer[addr];
     }
 }
 
 void SXROM::ChrWrite(uint8_t M, uint16_t address)
 {
-    bool modeSize = !!(ControlRegister & 0x10);
-
     if (ChrSize == 0)
     {
-        if (modeSize)
+        if (ChrPageSize4K)
         {
             if (address < 0x1000)
             {
-                uint8_t page = ChrRegister1;
                 uint32_t addr = address;
-                Chr[(addr + (0x1000 * page)) % 0x2000] = M;
+				ChrPage0Pointer[addr] = M;
             }
             else
             {
-                uint8_t page = ChrRegister2;
                 uint32_t addr = address - 0x1000;
-                Chr[(addr + (0x1000 * page)) % 0x2000] = M;
+				ChrPage1Pointer[addr] = M;
             }
         }
         else
         {
             uint32_t addr = address;
-            Chr[addr] = M;
+			ChrPage0Pointer[addr] = M;
         }
     }
     else
@@ -170,7 +154,7 @@ uint8_t SXROM::PrgRead(uint16_t address)
     // Battery backed memory
     if (address >= 0x0000 && address < 0x2000)
     {
-        if (!!(PrgRegister & 0x10))
+        if (WramDisable)
         {
             return 0xFF;
         }
@@ -181,45 +165,24 @@ uint8_t SXROM::PrgRead(uint16_t address)
     }
     else
     {
-        bool modeSize = !!(ControlRegister & 0x08);
-        bool modeSlot = !!(ControlRegister & 0x04);
-        uint8_t page = PrgRegister & 0x0F;
-
-        if (modeSize)
+        if (PrgPageSize16K)
         {
-            if (modeSlot)
-            {
-                if (address < 0x6000)
-                {
-                    uint32_t addr = address - 0x2000;
-                    return Prg[(addr + (0x4000 * page)) % PrgSize];
-                }
-                else
-                {
-                    uint32_t addr = address - 0x6000;
-                    return Prg[(addr + (0x4000 * 0xF)) % PrgSize];
-                }
-            }
-            else
-            {
-                if (address < 0x6000)
-                {
-                    uint32_t addr = address - 0x2000;
-                    return Prg[addr % PrgSize];
+			if (address < 0x6000)
+			{
+				uint32_t addr = address - 0x2000;
+				return PrgPage0Pointer[addr];
 
-                }
-                else
-                {
-                    uint32_t addr = address - 0x6000;
-                    return Prg[(addr + (0x4000 * page)) % PrgSize];
-                }
-            }
+			}
+			else
+			{
+				uint32_t addr = address - 0x6000;
+				return PrgPage1Pointer[addr];
+			}
         }
         else
         {
-            page = page >> 1;
             uint32_t addr = address - 0x2000;
-            return Prg[(addr + (0x8000 * page)) % PrgSize];
+            return PrgPage0Pointer[addr];
         }
     }
 }
@@ -228,7 +191,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 {
     if (address < 0x2000)
     {
-        if (!(PrgRegister & 0x10))
+        if (!WramDisable)
         {
             Wram[address] = M;
         }
@@ -239,7 +202,11 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
         {
             Counter = 0;
             TempRegister = 0;
-            PrgRegister = PrgRegister | 0x0C;
+			PrgPage = 0xC;
+			WramDisable = false;
+
+			UpdatePageOffsets();
+
             return;
         }
         else
@@ -260,20 +227,42 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
         {
             if (address >= 0x2000 && address < 0x4000)
             {
-                ControlRegister = TempRegister;
+				ChrPageSize4K = !!(TempRegister & 0x10);
+				PrgPageSize16K = !!(TempRegister & 0x8);
+				PrgLastPageFixed = !!(TempRegister & 0x4);
+
+				uint8_t mirroring = TempRegister & 0x3;
+				switch (mirroring)
+				{
+				case 0:
+					Mirroring = Cart::MirrorMode::SINGLE_SCREEN_A;
+					break;
+				case 1:
+					Mirroring = Cart::MirrorMode::SINGLE_SCREEN_B;
+					break;
+				case 2:
+					Mirroring = Cart::MirrorMode::VERTICAL;
+					break;
+				case 3:
+					Mirroring = Cart::MirrorMode::HORIZONTAL;
+					break;
+				}
             }
             else if (address >= 0x4000 && address < 0x6000)
             {
-                ChrRegister1 = TempRegister;
+				ChrPage0 = TempRegister;
             }
             else if (address >= 0x6000 && address < 0x8000)
             {
-                ChrRegister2 = TempRegister;
+				ChrPage1 = TempRegister;
             }
             else if (address >= 0x8000 && address < 0xA000)
             {
-                PrgRegister = TempRegister;
+				PrgPage = TempRegister & 0xF;
+				WramDisable = !!(TempRegister & 0x10);
             }
+
+			UpdatePageOffsets();
 
             Counter = 0;
             TempRegister = 0;
@@ -281,15 +270,63 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
+void SXROM::UpdatePageOffsets()
+{
+	uint32_t prgOffset, chrOffset0, chrOffset1;
+
+	if (PrgPageSize16K)
+	{
+		prgOffset = (PrgPage * 0x4000) % PrgSize;
+
+		if (PrgLastPageFixed)
+		{
+			PrgPage0Pointer = Prg + prgOffset;
+			PrgPage1Pointer = Prg + ((0x4000 * 0xf) % PrgSize);
+		}
+		else
+		{
+			PrgPage0Pointer = Prg;
+			PrgPage1Pointer = Prg + prgOffset;
+		}
+	}
+	else
+	{
+		prgOffset = ((PrgPage >> 1) * 0x8000) % PrgSize;
+		PrgPage0Pointer = Prg + prgOffset;
+	}
+
+	if (ChrPageSize4K)
+	{
+		chrOffset0 = (ChrPage0 * 0x1000) % (ChrSize == 0 ? 0x2000 : ChrSize);
+		chrOffset1 = (ChrPage1 * 0x1000) % (ChrSize == 0 ? 0x2000 : ChrSize);
+
+		ChrPage0Pointer = Chr + chrOffset0;
+		ChrPage1Pointer = Chr + chrOffset1;
+	}
+	else
+	{
+		chrOffset0 = ((ChrPage0 >> 1) * 0x2000) % (ChrSize == 0 ? 0x2000 : ChrSize);
+		ChrPage0Pointer = Chr + chrOffset0;
+	}
+	
+}
+
 SXROM::SXROM(const std::string& fileName, const std::string& saveDir)
     : MapperBase(fileName, saveDir)
     , LastWriteCycle(0)
     , Counter(0)
     , TempRegister(0)
-    , ControlRegister(0x0C)
-    , ChrRegister1(0)
-    , ChrRegister2(0)
-    , PrgRegister(0)
+	, PrgPage0Pointer(Prg)
+	, PrgPage1Pointer(Prg)
+	, ChrPage0Pointer(Chr)
+	, ChrPage1Pointer(Chr)
+	, PrgPage(0)
+	, ChrPage0(0)
+	, ChrPage1(0)
+	, WramDisable(false)
+	, PrgLastPageFixed(false)
+	, PrgPageSize16K(false)
+	, ChrPageSize4K(false)
 {
 }
 

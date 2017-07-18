@@ -1033,6 +1033,7 @@ APU::APU()
     , EffectiveCpuFrequency(CpuFrequency)
     , ExtraCount(0.0f)
     , Fraction(0.0f)
+	, TurboModeEnabled(false)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
     , PulseTwoVolume(1.0f)
@@ -1174,7 +1175,10 @@ void APU::Step()
         }
     }
 
-    GenerateSample();
+	if (!TurboModeEnabled)
+	{
+		GenerateSample();
+	}
 }
 
 void APU::GenerateSample()
@@ -1310,6 +1314,11 @@ void APU::WriteAPUFrameCounter(uint8_t value)
 
     FrameResetFlag = true;
     FrameResetCountdown = 2;
+}
+
+void APU::SetTurboModeEnabled(bool enabled)
+{
+	TurboModeEnabled = enabled;
 }
 
 void APU::SetAudioEnabled(bool enabled)

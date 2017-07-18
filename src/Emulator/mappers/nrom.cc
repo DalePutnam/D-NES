@@ -7,11 +7,6 @@
 
 #include "nrom.h"
 
-Cart::MirrorMode NROM::GetMirrorMode()
-{
-    return Mirroring;
-}
-
 uint8_t NROM::PrgRead(uint16_t address)
 {
     // Battery backed memory, not implemented

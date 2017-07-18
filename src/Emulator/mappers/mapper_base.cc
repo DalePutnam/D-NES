@@ -203,3 +203,8 @@ void MapperBase::LoadState(const char* state)
         memcpy(Wram, state, sizeof(uint8_t) * WramSize);
     }
 }
+
+Cart::MirrorMode MapperBase::GetMirrorMode()
+{
+	return Mirroring;
+}

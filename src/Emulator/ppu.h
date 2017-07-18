@@ -157,8 +157,8 @@ private:
     // Shift Registers, Latches and Counters
     uint16_t BackgroundShift0;
     uint16_t BackgroundShift1;
-    uint8_t BackgroundAttributeShift0;
-    uint8_t BackgroundAttributeShift1;
+    uint16_t BackgroundAttributeShift0;
+    uint16_t BackgroundAttributeShift1;
     uint8_t BackgroundAttribute;
 
     uint8_t SpriteCount;
@@ -178,6 +178,7 @@ private:
 
     void UpdateState();
     void SpriteEvaluation();
+	void SpriteZeroHitCheck();
     void RenderPixel();
 	void RenderPixelIdle();
 

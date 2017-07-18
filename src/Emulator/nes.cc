@@ -53,10 +53,11 @@ NES::NES(const NesParams& params)
 
     Cpu->SetLogEnabled(params.CpuLogEnabled);
 
-	Ppu->SetTurboModeEnabled(true);
+	Ppu->SetTurboModeEnabled(params.TurboModeEnabled);
     Ppu->SetFrameLimitEnabled(params.FrameLimitEnabled);
     Ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
 
+	Apu->SetTurboModeEnabled(params.TurboModeEnabled);
     Apu->SetAudioEnabled(params.AudioEnabled);
     Apu->SetFiltersEnabled(params.FiltersEnabled);
     Apu->SetMasterVolume(params.MasterVolume);
@@ -90,6 +91,12 @@ void NES::SetCpuLogEnabled(bool enabled)
 void NES::SetNativeSaveDirectory(const std::string& saveDir)
 {
     Cartridge->SetSaveDirectory(saveDir);
+}
+
+void NES::SetTurboModeEnabled(bool enabled)
+{
+	Ppu->SetTurboModeEnabled(enabled);
+	Apu->SetTurboModeEnabled(enabled);
 }
 
 int NES::GetFrameRate()

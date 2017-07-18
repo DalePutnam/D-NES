@@ -21,6 +21,9 @@ const uint32_t PPU::RgbLookupTable[64] =
     0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490, 0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000
 };
 
+static constexpr uint16_t bgBitMasks[16] = { 0x8000, 0x4000, 0x2000, 0x1000, 0x800, 0x400, 0x200, 0x100, 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1 };
+static constexpr uint8_t spBitMasks[8] = { 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1 };
+
 void PPU::ResetFrameCounter()
 {
 	SingleFrameStart = std::chrono::steady_clock::now();
@@ -474,113 +477,120 @@ void PPU::SpriteEvaluation()
     }
 }
 
+void PPU::SpriteZeroHitCheck()
+{
+	if (SpriteZeroSecondaryOamFlag && !SpriteZeroHitFlag)
+	{
+		int16_t spZeroCounter = SpriteCounter[0];
+		bool ShowingBackground = ShowBackground && (ShowBackgroundLeft || Dot > 8);
+		bool ShowingSprites = ShowSprites && (ShowSpritesLeft || Dot > 8);
+
+		if (ShowingBackground && ShowingSprites && spZeroCounter <= 0 && spZeroCounter >= -7)
+		{
+			uint16_t bgMask = bgBitMasks[FineXScroll + ((Dot - 1) % 8)];
+			uint8_t spMask = spBitMasks[(SpriteAttribute[0] & 0x40) ? 7 - -spZeroCounter : -spZeroCounter];
+
+			bool NonZeroBg = (BackgroundShift0 & bgMask) || (BackgroundShift1 & bgMask);
+			bool NonZeroSp = (SpriteShift0[0] & spMask) || (SpriteShift1[0] & spMask);
+
+			SpriteZeroHitFlag = Dot > 1 && Dot < 256 && NonZeroBg && NonZeroSp;
+		}
+	}
+}
+
 void PPU::RenderPixel()
 {
-	uint16_t bgPixel, bgAttribute, bgPaletteIndex;
-	if (!ShowBackground || (!ShowBackgroundLeft && Dot <= 8))
+	uint16_t bgPixel = 0;
+	uint16_t bgAttribute = 0;
+	uint16_t bgPaletteIndex = 0x3F00;
+
+	if (ShowBackground && (ShowBackgroundLeft || Dot > 8))
 	{
-		bgPixel = 0;
-	}
-	else
-	{
-		bgPixel = (((BackgroundShift0 << FineXScroll) & 0x8000) >> 15) | (((BackgroundShift1 << FineXScroll) & 0x8000) >> 14);
-		bgAttribute = (((BackgroundAttributeShift0 << FineXScroll) & 0x80) >> 5) | (((BackgroundAttributeShift1 << FineXScroll) & 0x80) >> 4);
-		bgPaletteIndex = 0x3F00 | bgAttribute | bgPixel;
+		uint16_t cycle = (Dot - 1) % 8;
+		uint16_t shift = 15 - FineXScroll - cycle;
+		uint16_t mask = bgBitMasks[FineXScroll + cycle];
+
+		bgPixel = ((BackgroundShift0 & mask) >> shift) | (((BackgroundShift1 & mask) >> shift) << 1);
+		bgAttribute = (((BackgroundAttributeShift0 & mask) >> shift) << 2) | (((BackgroundAttributeShift1 & mask) >> shift) << 3);
+		bgPaletteIndex |= bgAttribute | bgPixel;
 	}
 
-	BackgroundAttributeShift0 = (BackgroundAttributeShift0 << 1) | (BackgroundAttribute & 0x1);
-	BackgroundAttributeShift1 = (BackgroundAttributeShift1 << 1) | ((BackgroundAttribute & 0x2) >> 1);
-	BackgroundShift0 <<= 1;
-	BackgroundShift1 <<= 1;
-
-    uint16_t spPixel;
+    uint16_t spPixel = 0;
     uint16_t spPaletteIndex = 0x3F10;
     bool spPriority = true;
 	bool spriteFound = false;
 
-	for (int i = 0; i < 8; ++i)
+	if (ShowSprites && (ShowSpritesLeft || Dot > 8))
 	{
-		if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
+		for (int i = 0; i < 8; ++i)
 		{
-			bool horizontalFlip = !!(SpriteAttribute[i] & 0x40);
-			uint16_t pixel;
+			if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
+			{
+				uint16_t pixel;
+				uint8_t mask, shift;
+				uint8_t index = -SpriteCounter[i];
 
-			if (horizontalFlip)
-			{
-				pixel = (SpriteShift0[i] & 0x1) | ((SpriteShift1[i] & 0x1) << 1);
-				SpriteShift0[i] >>= 1;
-				SpriteShift1[i] >>= 1;
-			}
-			else
-			{
-				pixel = ((SpriteShift0[i] & 0x80) >> 7) | ((SpriteShift1[i] & 0x80) >> 6);
-				SpriteShift0[i] <<= 1;
-				SpriteShift1[i] <<= 1;
-			}
-
-			if (!spriteFound && pixel != 0)
-			{
-				if (!ShowSprites || (!ShowSpritesLeft && Dot <= 8))
+				if (SpriteAttribute[i] & 0x40)
 				{
-					spPixel = 0;
+					mask = spBitMasks[7 - index];
+					shift = index;
 				}
 				else
+				{
+					mask = spBitMasks[index];
+					shift = 7 - index;
+				}
+
+				pixel = ((SpriteShift0[i] & mask) >> shift) | (((SpriteShift1[i] & mask) >> shift) << 1);
+
+				if (pixel != 0)
 				{
 					spPixel = pixel;
 					spPriority = !!(SpriteAttribute[i] & 0x20);
 					spPaletteIndex |= ((SpriteAttribute[i] & 0x03) << 2) | spPixel;
-				}
-
-				spriteFound = true;
-
-				// Detect a sprite 0 hit
-				if (SpriteZeroSecondaryOamFlag && i == 0 && Dot > 1 && spPixel != 0 && bgPixel != 0 && Dot != 256)
-				{
-					SpriteZeroHitFlag = true;
+					spriteFound = true;
 				}
 			}
-		}
 
-		--SpriteCounter[i];
+			if (spriteFound)
+			{
+				break;
+			}
+		}
 	}
 
-	if (TurboFrameSkip == 0)
+	uint16_t colour;
+	uint16_t paletteIndex;
+
+	if (bgPixel == 0 && spPixel == 0)
 	{
-		uint16_t colour;
-		uint16_t paletteIndex;
-
-		if (bgPixel == 0 && spPixel == 0)
-		{
-			paletteIndex = 0x3F00;
-		}
-		else if (bgPixel == 0 && spPixel != 0)
-		{
-			paletteIndex = spPaletteIndex;
-		}
-		else if (bgPixel != 0 && spPixel == 0)
-		{
-			paletteIndex = bgPaletteIndex;
-		}
-		else if (!spPriority)
-		{
-			paletteIndex = spPaletteIndex;
-		}
-		else
-		{
-			paletteIndex = bgPaletteIndex;
-		}
-
-		if ((paletteIndex & 0x3) == 0)
-		{
-			paletteIndex = 0x3F00;
-		}
-
-		colour = Read(paletteIndex);
-
-		DecodePixel(colour);
+		paletteIndex = 0x3F00;
+	}
+	else if (bgPixel == 0 && spPixel != 0)
+	{
+		paletteIndex = spPaletteIndex;
+	}
+	else if (bgPixel != 0 && spPixel == 0)
+	{
+		paletteIndex = bgPaletteIndex;
+	}
+	else if (!spPriority)
+	{
+		paletteIndex = spPaletteIndex;
+	}
+	else
+	{
+		paletteIndex = bgPaletteIndex;
 	}
 
+	if ((paletteIndex & 0x3) == 0)
+	{
+		paletteIndex = 0x3F00;
+	}
 
+	colour = Read(paletteIndex);
+
+	DecodePixel(colour);
 }
 
 void PPU::RenderPixelIdle()
@@ -676,13 +686,11 @@ void PPU::IncrementYScroll()
 
 void PPU::IncrementClock()
 {
-    bool renderingEnabled = ShowSprites || ShowBackground;
-
-    if (Dot == 339 && Line == 261 && !Even && renderingEnabled)
+    if (Line == 261 && !Even && (ShowSprites || ShowBackground) && Dot == 339)
     {
         Dot = Line = 0;
     }
-    else if (Dot == 340 && Line == 261)
+    else if (Line == 261 && Dot == 340)
     {
         Dot = Line = 0;
     }
@@ -1530,13 +1538,13 @@ void PPU::BackgroundHighByteFetch()
 void PPU::SpriteAttributeFetch()
 {
 	uint8_t sprite = (Dot - 257) / 8;
-	SpriteAttribute[sprite] = SecondaryOam[(sprite << 2) + 2];
+	SpriteAttribute[sprite] = SecondaryOam[(sprite * 4) + 2];
 }
 
 void PPU::SpriteXCoordinateFetch()
 {
 	uint8_t sprite = (Dot - 257) / 8;
-	SpriteCounter[sprite] = SecondaryOam[(sprite << 2) + 3];
+	SpriteCounter[sprite] = SecondaryOam[(sprite * 4) + 3];
 }
 
 void PPU::SpriteLowByteFetch()
@@ -1544,13 +1552,13 @@ void PPU::SpriteLowByteFetch()
 	uint8_t sprite = (Dot - 257) / 8;
 	if (sprite < SpriteCount)
 	{
-		bool flipVertical = ((0x80 & SpriteAttribute[sprite]) >> 7) != 0;
-		uint8_t spriteY = SecondaryOam[(sprite << 2)];
+		bool flipVertical = !!(0x80 & SpriteAttribute[sprite]);
+		uint8_t spriteY = SecondaryOam[sprite * 4];
 
 		if (SpriteSizeSwitch) // if spriteSize is 8x16
 		{
-			uint16_t base = (0x1 & SecondaryOam[(sprite << 2) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-			uint16_t patternIndex = base + ((SecondaryOam[(sprite << 2) + 1] >> 1) << 5); // Index of the beginning of the pattern
+			uint16_t base = (0x1 & SecondaryOam[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+			uint16_t patternIndex = base + ((SecondaryOam[(sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
 			uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 			if (offset >= 8) offset += 8;
 
@@ -1558,7 +1566,7 @@ void PPU::SpriteLowByteFetch()
 		}
 		else
 		{
-			uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite << 2) + 1] << 4); // Index of the beginning of the pattern
+			uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
 			uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
 			SpriteShift0[sprite] = Cartridge->ChrRead(patternIndex + offset);
@@ -1575,13 +1583,13 @@ void PPU::SpriteHighByteFetch()
 	uint8_t sprite = (Dot - 257) / 8;
 	if (sprite < SpriteCount)
 	{
-		bool flipVertical = ((0x80 & SpriteAttribute[sprite]) >> 7) != 0;
-		uint8_t spriteY = SecondaryOam[(sprite << 2)];
+		bool flipVertical = !!(0x80 & SpriteAttribute[sprite]);
+		uint8_t spriteY = SecondaryOam[sprite * 4];
 
 		if (SpriteSizeSwitch) // if spriteSize is 8x16
 		{
-			uint16_t base = (0x1 & SecondaryOam[(sprite << 2) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-			uint16_t patternIndex = base + ((SecondaryOam[(sprite << 2) + 1] >> 1) << 5); // Index of the beginning of the pattern
+			uint16_t base = (0x1 & SecondaryOam[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+			uint16_t patternIndex = base + ((SecondaryOam[(sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
 			uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 			if (offset >= 8) offset += 8;
 
@@ -1589,7 +1597,7 @@ void PPU::SpriteHighByteFetch()
 		}
 		else
 		{
-			uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite << 2) + 1] << 4); // Index of the beginning of the pattern
+			uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
 			uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
 			SpriteShift1[sprite] = Cartridge->ChrRead(patternIndex + offset + 8);
@@ -1623,16 +1631,17 @@ void PPU::Step(uint64_t cycles)
 				{
 					if (Line == 0) Even = !Even;
 				}
-				else if ((Dot >= 1 && Dot <= 256) || (Dot >= 321 && Dot <= 336))
+				else if ((Dot >= 1 && Dot <= 256) || (Dot >= 321 && Dot <= 337))
 				{
 					uint8_t cycle = (Dot - 1) % 8;
 					switch (cycle)
 					{
 					case 0:
 						if (Dot == 1) break;
-						BackgroundShift0 = (BackgroundShift0 & 0xFF00) | TileBitmapLow;
-						BackgroundShift1 = (BackgroundShift1 & 0xFF00) | TileBitmapHigh;
-						BackgroundAttribute = AttributeByte;
+						BackgroundShift0 = (BackgroundShift0 << 8) | TileBitmapLow;
+						BackgroundShift1 = (BackgroundShift1 << 8) | TileBitmapHigh;
+						BackgroundAttributeShift0 = (BackgroundAttributeShift0 << 8) | ((AttributeByte & 0x1) ? 0xFF : 0x00);
+						BackgroundAttributeShift1 = (BackgroundAttributeShift1 << 8) | ((AttributeByte & 0x2) ? 0xFF : 0x00);
 						break;
 					case 1:
 						NameTableFetch();
@@ -1678,20 +1687,9 @@ void PPU::Step(uint64_t cycles)
 					if (Line != 261 && Dot == 257) SpriteEvaluation();
 					if (Dot == 257) PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
 				}
-				else if (Dot >= 337 && Dot <= 340)
+				else if (Dot == 338 || Dot == 340)
 				{
-					if (Dot == 337)
-					{
-						BackgroundShift0 = (BackgroundShift0 << 8) | TileBitmapLow;
-						BackgroundShift1 = (BackgroundShift1 << 8) | TileBitmapHigh;
-						BackgroundAttributeShift0 = (BackgroundAttribute & 0x1) ? 0xFF : 0x00;
-						BackgroundAttributeShift1 = (BackgroundAttribute & 0x2) ? 0xFF : 0x00;
-						BackgroundAttribute = AttributeByte;
-					}
-					else if (Dot == 338 || Dot == 340)
-					{
-						NameTableFetch();
-					}
+					NameTableFetch();
 				}
 
 				// From dot 280 to 304 of the pre-render line copy all vertical position bits to ppuAddress from ppuTempAddress
@@ -1702,14 +1700,31 @@ void PPU::Step(uint64_t cycles)
 
 				if (Line != 261 && Dot >= 1 && Dot <= 256)
 				{
-					RenderPixel();
+					SpriteZeroHitCheck();
+
+					if (TurboFrameSkip == 0)
+					{
+						RenderPixel();
+					}
+						
+					--SpriteCounter[0];
+					--SpriteCounter[1];
+					--SpriteCounter[2];
+					--SpriteCounter[3];
+					--SpriteCounter[4];
+					--SpriteCounter[5];
+					--SpriteCounter[6];
+					--SpriteCounter[7];
 				}
 			}
 			else
 			{
 				if (Line != 261 && Dot >= 1 && Dot <= 256)
 				{
-					RenderPixelIdle();
+					if (TurboFrameSkip == 0)
+					{
+						RenderPixelIdle();
+					}
 				}
 			}
 
