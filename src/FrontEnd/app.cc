@@ -1,14 +1,26 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include <thread>
-#include <chrono>
 #include <wx/cmdline.h>
 
 #include "nes.h"
 #include "app.h"
 #include "main_window.h"
 #include "utilities/app_settings.h"
+
+#ifdef _WIN32
+static void InitConsole()
+{
+	AllocConsole();
+	freopen("CONIN$", "r", stdin);
+	freopen("CONOUT$", "w", stdout);
+	freopen("CONOUT$", "w", stderr);
+
+	std::cout.clear();
+	std::cerr.clear();
+	std::cin.clear();
+}
+#endif
 
 // App Implementation
 bool MyApp::OnInit()
@@ -21,31 +33,51 @@ bool MyApp::OnInit()
 	wxString game;
 	if (parser.Found("p", &game))
 	{
-		NesParams params;
-		params.RomPath = game;
-		params.FrameLimitEnabled = false;
-		params.AudioEnabled = false;
+#ifdef _WIN32
+		InitConsole();
+#endif
+		std::cout << "D-NES Profile Mode" << std::endl;
 
-		NES nes(params);
-
-		/*
-		auto UpdateFps = [&nes](uint8_t*)
 		{
-			//std::cout << nes.GetFrameRate() << '\r' << std::flush;
-			//OutputDebugStringA((std::to_string(nes.GetFrameRate()) + "\r").c_str());
-		};
-		*/
-		//nes.BindFrameCompleteCallback(UpdateFps);
-		nes.Start();
+			NesParams params;
+			params.RomPath = game;
+			params.TurboModeEnabled = true;
 
-		//while (!wxGetKeyState(WXK_ESCAPE));
-		while (true)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			//Sleep(1000);
+			try 
+			{
+				std::cout << "Loading ROM " << params.RomPath << std::flush;
+				NES nes(params);
+
+				std::cout << ": Success!" << std::endl;
+
+				auto UpdateFps = [&nes](uint8_t*)
+				{
+					std::cout << "\rFPS: " << nes.GetFrameRate() << std::flush;
+				};
+
+				nes.BindFrameCompleteCallback(UpdateFps);
+
+				std::cout << "Starting Emulator. Press ENTER to Terminate." << std::endl;
+
+				nes.Start();
+
+				std::cin.get();
+
+				nes.Stop();
+			} 
+			catch (...)
+			{
+				std::cout << ": Failed!" << std::endl;
+				std::cout << "Press Enter to Terminate." << std::endl;
+				
+				std::cin.get();
+			}
 		}
 
-		nes.Stop();
+#ifdef _WIN32
+		FreeConsole();
+#endif
+		exit(0);
 	}
 	else
 	{
