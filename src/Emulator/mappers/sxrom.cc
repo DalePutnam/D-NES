@@ -202,8 +202,8 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
         {
             Counter = 0;
             TempRegister = 0;
-			PrgPage = 0xC;
-			WramDisable = false;
+			PrgPageSize16K = true;
+			PrgLastPageFixed = true;
 
 			UpdatePageOffsets();
 
@@ -317,15 +317,15 @@ SXROM::SXROM(const std::string& fileName, const std::string& saveDir)
     , Counter(0)
     , TempRegister(0)
 	, PrgPage0Pointer(Prg)
-	, PrgPage1Pointer(Prg)
+	, PrgPage1Pointer(Prg + ((0x4000 * 0xf) % PrgSize))
 	, ChrPage0Pointer(Chr)
 	, ChrPage1Pointer(Chr)
 	, PrgPage(0)
 	, ChrPage0(0)
 	, ChrPage1(0)
-	, WramDisable(false)
-	, PrgLastPageFixed(false)
-	, PrgPageSize16K(false)
+	, WramDisable(true)
+	, PrgLastPageFixed(true)
+	, PrgPageSize16K(true)
 	, ChrPageSize4K(false)
 {
 }
