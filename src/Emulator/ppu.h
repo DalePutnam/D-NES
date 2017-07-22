@@ -84,7 +84,7 @@ private:
     std::atomic<bool> FrameLimitEnabled;
 
 	std::atomic<bool> RequestTurboMode;
-	std::atomic<bool> TurboModeEnabled;
+	bool TurboModeEnabled;
 	int TurboFrameSkip;
 
     uint64_t Clock;
@@ -181,13 +181,13 @@ private:
 	void SpriteZeroHitCheck();
     void RenderPixel();
 	void RenderPixelIdle();
-
 	void DecodePixel(uint16_t colour);
 
+	void MaybeChangeModes();
     void IncrementXScroll();
     void IncrementYScroll();
     void IncrementClock();
-	//void LoadBackgroundShiftRegisters();
+	void LoadBackgroundShiftRegisters();
 	void NameTableFetch();
 	void BackgroundAttributeFetch();
 	void BackgroundLowByteFetch();
@@ -196,9 +196,7 @@ private:
 	void SpriteXCoordinateFetch();
 	void SpriteLowByteFetch();
 	void SpriteHighByteFetch();
-
-	void ClockBackgroundShiftRegisters();
-	void ClockSpriteShiftRegisters();
+	void ClockSpriteCounters();
 
     uint8_t Read(uint16_t address);
     void Write(uint16_t address, uint8_t value);
@@ -206,6 +204,7 @@ private:
     void WriteNameTable(uint16_t address, uint8_t value);
 
     void UpdateFrameRate();
+	void UpdateFrameSkipCounters();
 
     std::function<void(uint8_t*)> OnFrameComplete;
 };
