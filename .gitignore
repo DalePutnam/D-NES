@@ -5,9 +5,10 @@ Debug
 ROMs
 D-NES.*
 ext/wxWidgets
-ref_emulators
 src/Emulator/Emulator.vcxproj.user
 src/FrontEnd/FrontEnd.vcxproj.user
+*.vspx
+*.psess
 
 # Linux
 D-NES
