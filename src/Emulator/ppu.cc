@@ -1455,7 +1455,7 @@ bool PPU::CheckNMI(uint64_t& occurredCycle)
 	occurredCycle = NmiOccuredCycle;
 	return InterruptActive;
 }
-__forceinline
+
 void PPU::UpdateFrameRate()
 {
 	using namespace std::chrono;
@@ -1766,7 +1766,7 @@ void PPU::Step(uint64_t cycles)
 					default:
 						break;
 					}
-				} 
+				}
 				else if (Dot >= 258 && Dot <= 320)
 				{
 					uint8_t cycle = (Dot - 1) % 8;
@@ -1812,7 +1812,7 @@ void PPU::Step(uint64_t cycles)
 					}
 
 					ClockSpriteCounters();
-				}				
+				}
 			}
 			else
 			{
