@@ -12,6 +12,7 @@
 #include "ppu.h"
 #include "cpu.h"
 #include "apu.h"
+#include "video_backend.h"
 
 const uint32_t PPU::RgbLookupTable[64] =
 {
@@ -630,15 +631,18 @@ void PPU::DecodePixel(uint16_t colour)
 		else
 		{
 			uint32_t pixel = RgbLookupTable[colour];
+            *VB << pixel;
 
+/*
 			uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
 			uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
 			uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
 			uint32_t index = ((Dot - 1) + (Line << 8)) * 3;
-
+            
 			FrameBuffer[index] = red;
 			FrameBuffer[index + 1] = green;
 			FrameBuffer[index + 2] = blue;
+            */
 		}
 	}
 }
@@ -863,9 +867,10 @@ uint16_t PPU::GetCurrentScanline()
     }
 }
 
-PPU::PPU()
+PPU::PPU(VideoBackend* vb)
 	: Cpu(nullptr)
 	, Cartridge(nullptr)
+    , VB(vb)
 	, FpsCounter(0)
 	, CurrentFps(0)
 	, FrameCountStart(std::chrono::steady_clock::now())

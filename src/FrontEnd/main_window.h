@@ -69,6 +69,8 @@ private:
     wxBoxSizer* VerticalBox;
     GameList* RomList;
 
+    wxPanel* RenderSurface;
+
     bool ShowFpsCounter;
 
 #ifdef __linux
@@ -105,6 +107,7 @@ private:
     void OpenVideoSettings(wxCommandEvent& event);
 
     void OnQuit(wxCommandEvent& event);
+    void OnSize(wxSizeEvent& event);
 
     void OnKeyDown(wxKeyEvent& event);
     void OnKeyUp(wxKeyEvent& event);

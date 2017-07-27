@@ -34,6 +34,8 @@ struct NesParams
     float NoiseVolume;
     float DmcVolume;
 
+    void* WindowHandle;
+
     NesParams()
         : RomPath("")
         , SavePath("")
@@ -55,6 +57,7 @@ class CPU;
 class APU;
 class PPU;
 class Cart;
+class VideoBackend;
 
 class NES
 {
@@ -138,6 +141,7 @@ private:
     CPU* Cpu;
     PPU* Ppu;
     Cart* Cartridge;
+    VideoBackend* VB;
 
     std::function<void(std::string)> OnError;
 };

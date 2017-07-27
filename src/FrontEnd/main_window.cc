@@ -261,6 +261,9 @@ void MainWindow::StartEmulator(const std::string& filename)
         params.NoiseVolume = noise / 100.0f;
         params.DmcVolume = dmc / 100.0f;
 
+        RenderSurface->Show();
+        params.WindowHandle = RenderSurface->GetHandle();
+
         appSettings->Read("/Paths/NativeSavePath", &params.SavePath);
 
         if (!wxDir::Exists(params.SavePath))
@@ -271,7 +274,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         try
         {
             Nes = new NES(params);
-            Nes->BindFrameCompleteCallback(&MainWindow::EmulatorFrameCallback, this);
+            //Nes->BindFrameCompleteCallback(&MainWindow::EmulatorFrameCallback, this);
             Nes->BindErrorCallback(&MainWindow::EmulatorErrorCallback, this);
         }
         catch (std::exception &e)
@@ -317,8 +320,11 @@ void MainWindow::StartEmulator(const std::string& filename)
         SetMinClientSize(GameWindowSize);
         SetMaxClientSize(GameWindowSize);
 
+        RenderSurface->SetSize(GetClientSize());
+        RenderSurface->SetFocus();
+
 #ifdef __linux
-        Panel->SetFocus();
+        //Panel->SetFocus();
 #endif
 
         Nes->Start();
@@ -672,6 +678,12 @@ void MainWindow::OnKeyUp(wxKeyEvent& event)
     }
 }
 
+void MainWindow::OnSize(wxSizeEvent& event)
+{
+    RenderSurface->SetSize(GetClientSize());
+    event.Skip();
+}
+
 void MainWindow::InitializeMenus()
 {
     FileMenu = new wxMenu;
@@ -763,6 +775,9 @@ void MainWindow::InitializeLayout()
     GameMenuSize = wxSize(menuWidth, menuHeight);
     SetSize(GameMenuSize);
 
+    RenderSurface = new wxPanel(this, wxID_ANY, wxDefaultPosition, GetClientSize());
+    RenderSurface->Hide();
+
     Centre();
 }
 
@@ -814,12 +829,14 @@ void MainWindow::BindEvents()
     Bind(EVT_AUDIO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnAudioSettingsClosed), this);
     Bind(EVT_VIDEO_WINDOW_CLOSED, wxCommandEventHandler(MainWindow::OnVideoSettingsClosed), this);
 
+    Bind(wxEVT_SIZE, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
+
 #ifdef __linux
     // On Linux we need a panel to intercept keyboard events for some reason
     // Only used for this, so I'm leaving it here rather than putting it in InitializeLayout
     Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
-    Panel->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
-    Panel->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+    RenderSurface->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
+    RenderSurface->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
 
     Bind(EVT_NES_UPDATE_FRAME, wxThreadEventHandler(MainWindow::OnUpdateFrame), this, wxID_ANY);
 #elif _WIN32

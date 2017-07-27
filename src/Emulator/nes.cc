@@ -14,6 +14,7 @@
 #include "ppu.h"
 #include "cart.h"
 #include "mappers/nrom.h"
+#include "video_backend.h"
 
 NES::NES(const NesParams& params)
     : Apu(nullptr)
@@ -21,11 +22,13 @@ NES::NES(const NesParams& params)
     , Ppu(nullptr)
     , Cartridge(nullptr)
 {
+    VB = new VideoBackend(params.WindowHandle);
+
     try
     {
         Apu = new APU;
         Cpu = new CPU;
-        Ppu = new PPU;
+        Ppu = new PPU(VB);
         Cartridge = new Cart(params.RomPath, params.SavePath);
     }
     catch (std::runtime_error& e)
@@ -353,4 +356,5 @@ NES::~NES()
     delete Cpu;
     delete Ppu;
     delete Cartridge;
+    delete VB;
 }

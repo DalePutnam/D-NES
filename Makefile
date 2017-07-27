@@ -17,7 +17,7 @@ EMU_OBJECTS = $(subst src,$(BUILD_DIR),$(EMU_SOURCES:.cc=.o))
 OBJECTS += $(EMU_OBJECTS)
 DEPENDS += $(EMU_OBJECTS:.o=.d)
 
-EMU_INCLUDE_DIRS = $(addprefix -I,$(shell find $(EMU_SOURCE_DIR) -type d))
+EMU_INCLUDE_DIRS = $(addprefix -I,$(shell find $(EMU_SOURCE_DIR) -type d)) `pkg-config --cflags gtk+-3.0`
 
 ####################################################################
 # FrontEnd Definitions
@@ -58,7 +58,7 @@ $(FE_BUILD_DIR)/%.o: $(FE_SOURCE_DIR)/%.cc
 
 $(EXEC): $(OBJECTS)
 	@echo 'Building Target: $@'
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) `wx-config --cxxflags --libs` -lasound
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) `wx-config --cxxflags --libs` -lasound `pkg-config --libs gtk+-3.0` -lX11
 	@echo ''
 
 .PHONY: clean deep-clean

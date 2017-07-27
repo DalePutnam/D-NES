@@ -17,11 +17,12 @@
 
 class CPU;
 class APU;
+class VideoBackend;
 
 class PPU
 {
 public:
-    PPU();
+    PPU(VideoBackend* vb);
     ~PPU();
 
     void AttachCPU(CPU* cpu);
@@ -68,6 +69,7 @@ private:
     CPU* Cpu;
     APU* Apu;
     Cart* Cartridge;
+    VideoBackend* VB;
 
     enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
 
