@@ -155,8 +155,8 @@ void VideoSettingsWindow::UpdateNtscDecoding(bool enabled)
 
 void VideoSettingsWindow::UpdateShowFpsCounter(bool enabled)
 {
-    if (MainWindow* parent = dynamic_cast<MainWindow*>(GetParent()))
+    if (Nes != nullptr)
     {
-        parent->SetShowFpsCounter(enabled);
+        Nes->SetFpsDisplayEnabled(enabled);
     }
 }

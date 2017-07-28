@@ -23,6 +23,7 @@ struct NesParams
     // PPU Settings
     bool FrameLimitEnabled;
     bool NtscDecoderEnabled;
+    bool FpsDisplayEnabled;
 
     // APU Settings
     bool AudioEnabled;
@@ -100,6 +101,7 @@ public:
     void GetPrimarySprite(int sprite, uint8_t* pixels);
     void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecoderEnabled(bool enabled);
+    void SetFpsDisplayEnabled(bool enabled);
 
     void SetAudioEnabled(bool enabled);
     void SetAudioFiltersEnabled(bool enabled);

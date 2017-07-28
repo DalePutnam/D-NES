@@ -18,9 +18,16 @@ public:
     ~VideoBackend();
     VideoBackend& operator<<(uint32_t pixel);
 
+    void ShowFps(bool show);
+    void SetFps(uint32_t fps);
+
 private:
     void Swap();
     void RenderWorker();
+
+    void UpdateSurfaceSize();
+    void DrawFrame();
+    void DrawFps();
 
     std::thread RenderThread;
     std::mutex RenderLock;
@@ -34,6 +41,9 @@ private:
     uint32_t WindowHeight;
 
     bool StopRendering;
+
+    uint32_t CurrentFps;
+    bool ShowingFps;
 
 #ifdef _WIN32
 #elif __linux

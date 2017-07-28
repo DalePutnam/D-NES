@@ -23,6 +23,7 @@ NES::NES(const NesParams& params)
     , Cartridge(nullptr)
 {
     VB = new VideoBackend(params.WindowHandle);
+    VB->ShowFps(params.FpsDisplayEnabled);
 
     try
     {
@@ -135,6 +136,11 @@ void NES::SetFrameLimitEnabled(bool enabled)
 void NES::SetNtscDecoderEnabled(bool enabled)
 {
     Ppu->SetNtscDecodingEnabled(enabled);
+}
+
+void NES::SetFpsDisplayEnabled(bool enabled)
+{
+    VB->ShowFps(enabled);
 }
 
 void NES::SetAudioEnabled(bool enabled)

@@ -264,6 +264,8 @@ void MainWindow::StartEmulator(const std::string& filename)
         RenderSurface->Show();
         params.WindowHandle = RenderSurface->GetHandle();
 
+        appSettings->Read("/Video/ShowFps", &params.FpsDisplayEnabled);
+
         appSettings->Read("/Paths/NativeSavePath", &params.SavePath);
 
         if (!wxDir::Exists(params.SavePath))

@@ -335,11 +335,8 @@ void PPU::RenderNtscLine()
         int green = static_cast<int>(clamp(255.95f * (y + -0.274788f*i + -0.635691f*q)));
         int blue = static_cast<int>(clamp(255.95f * (y + -1.108545f*i + 1.709007f*q)));
 
-        int index = x | (Line << 8);
-
-        FrameBuffer[index * 3] = red;
-        FrameBuffer[(index * 3) + 1] = green;
-        FrameBuffer[(index * 3) + 2] = blue;
+        uint32_t pixel = (red << 16) | (green << 8) | blue;
+        *VB << pixel;
     }
 }
 
@@ -1472,6 +1469,8 @@ void PPU::UpdateFrameRate()
 		CurrentFps = FpsCounter;
 		FpsCounter = 0;
 		FrameCountStart = steady_clock::now();
+
+        VB->SetFps(CurrentFps);
 	}
 	else
 	{
