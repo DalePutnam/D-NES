@@ -3,6 +3,9 @@
 
 #include <thread>
 #include <mutex>
+#include <atomic>
+#include <chrono>
+#include <vector>
 #include <condition_variable>
 
 #ifdef _WIN32
@@ -18,8 +21,12 @@ public:
     ~VideoBackend();
     VideoBackend& operator<<(uint32_t pixel);
 
+    void SetFramePosition(uint32_t x, uint32_t y);
+    void SetOverscanEnabled(bool enabled);
+
     void ShowFps(bool show);
     void SetFps(uint32_t fps);
+    void ShowMessage(const std::string& message, uint32_t duration);
 
 private:
     void Swap();
@@ -28,6 +35,7 @@ private:
     void UpdateSurfaceSize();
     void DrawFrame();
     void DrawFps();
+    void DrawMessages();
 
     std::thread RenderThread;
     std::mutex RenderLock;
@@ -42,8 +50,12 @@ private:
 
     bool StopRendering;
 
+    bool OverscanEnabled;
+
     uint32_t CurrentFps;
     bool ShowingFps;
+
+    std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
 #ifdef _WIN32
 #elif __linux

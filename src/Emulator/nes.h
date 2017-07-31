@@ -24,6 +24,7 @@ struct NesParams
     bool FrameLimitEnabled;
     bool NtscDecoderEnabled;
     bool FpsDisplayEnabled;
+    bool OverscanEnabled;
 
     // APU Settings
     bool AudioEnabled;
@@ -102,6 +103,9 @@ public:
     void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecoderEnabled(bool enabled);
     void SetFpsDisplayEnabled(bool enabled);
+    void SetOverscanEnabled(bool enabled);
+
+    void ShowMessage(const std::string& message, uint32_t duration);
 
     void SetAudioEnabled(bool enabled);
     void SetAudioFiltersEnabled(bool enabled);

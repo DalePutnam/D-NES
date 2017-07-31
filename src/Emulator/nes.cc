@@ -24,6 +24,7 @@ NES::NES(const NesParams& params)
 {
     VB = new VideoBackend(params.WindowHandle);
     VB->ShowFps(params.FpsDisplayEnabled);
+    VB->SetOverscanEnabled(params.OverscanEnabled);
 
     try
     {
@@ -141,6 +142,16 @@ void NES::SetNtscDecoderEnabled(bool enabled)
 void NES::SetFpsDisplayEnabled(bool enabled)
 {
     VB->ShowFps(enabled);
+}
+
+void NES::SetOverscanEnabled(bool enabled)
+{
+    VB->SetOverscanEnabled(enabled);
+}
+
+void NES::ShowMessage(const std::string& message, uint32_t duration)
+{
+    VB->ShowMessage(message, duration);
 }
 
 void NES::SetAudioEnabled(bool enabled)
@@ -316,6 +327,8 @@ void NES::SaveState(int slot, const std::string& savePath)
     saveStream.write(state, Cartridge->GetStateSize());
     delete[] state;
 
+    VB->ShowMessage("Saved State " + std::to_string(slot), 5);
+
     Cpu->Resume();
 }
 
@@ -352,6 +365,8 @@ void NES::LoadState(int slot, const std::string& savePath)
     saveStream.read(state, Cartridge->GetStateSize());
     Cartridge->LoadState(state);
     delete[] state;
+
+    VB->ShowMessage("Loaded State " + std::to_string(slot), 5);
 
     Cpu->Resume();
 }

@@ -1209,6 +1209,24 @@ void PPU::LoadState(const char* state)
     NmiOccuredFlag = !!(packedBool & 0x40);
     SpriteZeroSecondaryOamFlag = !!(packedBool & 0x20);
     AddressLatch = !!(packedBool & 0x10);
+
+    // Set the current pixel being rendered in the frame buffer
+    if (Line >= 0 && Line <= 239)
+    {
+        if (Dot >= 1 && Dot <= 256)
+        {
+            VB->SetFramePosition(Dot - 1, Line);
+        }
+        else
+        {
+            VB->SetFramePosition(0, Line + 1);
+        }
+    }
+    else
+    {
+        VB->SetFramePosition(0, 0);
+    }
+    
 }
 
 void PPU::SetTurboModeEnabled(bool enabled)

@@ -39,7 +39,6 @@ public:
 
     void StopEmulator(bool showRomList = true);
     void SetGameResolution(GameResolutions resolution, bool overscan);
-    void SetShowFpsCounter(bool enabled);
 
 private:
     static std::vector<std::pair<wxSize, wxSize> > ResolutionsList;
@@ -50,13 +49,6 @@ private:
     PathSettingsWindow* PathWindow;
     AudioSettingsWindow* AudioWindow;
     VideoSettingsWindow* VideoWindow;
-
-#ifdef _WIN32
-    std::mutex PpuViewerMutex;
-    std::mutex OverlayMutex;
-#elif __linux
-    wxPanel* Panel;
-#endif
 
     wxMenu* FileMenu;
     wxMenu* EmulatorMenu;
@@ -71,21 +63,8 @@ private:
 
     wxPanel* RenderSurface;
 
-    bool ShowFpsCounter;
-
-#ifdef __linux
-    std::mutex FrameMutex;
-    uint8_t FrameBuffer[256 * 240 * 3];
-#endif
-
-    bool OverscanEnabled;
     wxSize GameWindowSize;
     wxSize GameMenuSize;
-
-    bool StateLoad;
-    int StateDisplayFrames;
-    int StateFadeFrames;
-    int StateSlot;
 
     void InitializeMenus();
     void InitializeLayout();
@@ -115,23 +94,13 @@ private:
     void EmulatorErrorCallback(std::string err);
     void EmulatorFrameCallback(uint8_t* frameBuffer);
 
-#ifdef __linux
-    void OnUpdateFrame(wxThreadEvent& event);
-#endif
-
     void OnUnexpectedShutdown(wxThreadEvent& event);
     void OnPpuViewerClosed(wxCommandEvent& event);
     void OnPathSettingsClosed(wxCommandEvent& event);
     void OnAudioSettingsClosed(wxCommandEvent& event);
     void OnVideoSettingsClosed(wxCommandEvent& event);
-
-    void UpdateFrame(uint8_t* frameBuffer);
-    void DrawFpsCounter(wxDC* dc);
-    void DrawStateSaveDisplay(wxDC* dc);
-    void ShowStateSaveDisplay(bool load, int slot);
 };
 
-wxDECLARE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);
 wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
 const int ID_OPEN_ROM = 100;

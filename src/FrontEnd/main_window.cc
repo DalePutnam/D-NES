@@ -19,6 +19,18 @@
 #include "video_settings_window.h"
 #include "utilities/app_settings.h"
 
+#ifdef __linux
+
+#include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+
+static Window GetX11WindowHandle(void* handle)
+{
+    return gdk_x11_window_get_xid(gtk_widget_get_window(reinterpret_cast<GtkWidget*>(handle)));
+}
+
+#endif
+
 wxDEFINE_EVENT(EVT_NES_UPDATE_FRAME, wxThreadEvent);
 wxDEFINE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);
 
@@ -35,27 +47,14 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
 
 void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
 {
-    // Windows works just fine if the window is updated from the emulator
-    // thread, but Linux, or at least X has trouble with it so we need
-    // to queue a thread event on Linux builds to update the frame
-#ifdef _WIN32
-    UpdateFrame(frameBuffer);
-#elif __linux
-    std::unique_lock<std::mutex> lock(FrameMutex);
-
-    memcpy(FrameBuffer, frameBuffer, 256*240*3);
-
-    wxThreadEvent evt(EVT_NES_UPDATE_FRAME);
-    wxQueueEvent(this, evt.Clone());
-#endif
+    if (PpuWindow != nullptr)
+    {
+        PpuWindow->Update();
+    }
 }
 
 void MainWindow::OnPpuViewerClosed(wxCommandEvent& WXUNUSED(event))
 {
-#ifdef _WIN32
-    std::lock_guard<std::mutex> lock(PpuViewerMutex);
-#endif
-
     if (PpuWindow != nullptr)
     {
         PpuWindow->Destroy();
@@ -95,129 +94,6 @@ void MainWindow::OnVideoSettingsClosed(wxCommandEvent& event)
     }
 }
 
-void MainWindow::UpdateFrame(uint8_t* frameBuffer)
-{
-    wxImage image(256, 240, frameBuffer, true);
-    wxBitmap bitmap(image, 24);
-
-    wxMemoryDC mdc(bitmap);
-
-    // Need explicit double buffering on Windows to prevent the fps counter from flickering
-#ifdef _WIN32
-    wxClientDC cdc(this);
-    wxBufferedDC dc(&cdc);
-#elif __linux
-    wxClientDC dc(this);
-#endif
-
-    if (!OverscanEnabled)
-    {
-        dc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 0, 256, 240);
-    }
-    else
-    {
-        dc.StretchBlit(0, 0, GetVirtualSize().GetWidth(), GetVirtualSize().GetHeight(), &mdc, 0, 8, 256, 224);
-    }
-
-    DrawFpsCounter(&dc);
-    DrawStateSaveDisplay(&dc);
-
-#ifdef _WIN32
-    if (PpuWindow != nullptr)
-    {
-        std::lock_guard<std::mutex> lock(PpuViewerMutex);
-        if (PpuWindow != nullptr)
-        {
-            PpuWindow->Update();
-        }
-    }
-#elif __linux
-    if (PpuWindow != nullptr)
-    {
-        PpuWindow->Update();
-    }
-#endif
-}
-
-void MainWindow::DrawFpsCounter(wxDC* dc)
-{
-#ifdef _WIN32
-    std::unique_lock<std::mutex> lock(OverlayMutex);
-#endif
-
-    if (ShowFpsCounter && Nes != nullptr)
-    {
-        dc->SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
-        dc->SetTextForeground(*wxWHITE);
-        dc->SetPen(wxPen(*wxBLACK, 0));
-        dc->SetBrush(wxBrush(*wxBLACK));
-
-        std::string fpsText = std::to_string(Nes->GetFrameRate());
-        wxSize textSize = dc->GetTextExtent(fpsText);
-
-        dc->DrawRoundedRectangle(GetVirtualSize().GetWidth() - textSize.GetWidth() - 12, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
-        dc->DrawText(fpsText, GetVirtualSize().GetWidth() - textSize.GetWidth() - 8, 6);
-    }
-}
-
-void MainWindow::DrawStateSaveDisplay(wxDC* dc)
-{
-#ifdef _WIN32
-    std::unique_lock<std::mutex> lock(OverlayMutex);
-#endif
-
-    wxColour background, foreground;
-    if (StateDisplayFrames > 0)
-    {
-        background = wxColour(0, 0, 0, 255);
-        foreground = wxColour(255, 255, 255, 255);
-        StateDisplayFrames--;
-    }
-    else if (StateFadeFrames > 0)
-    {
-        background = wxColour(0, 0, 0, (StateFadeFrames * 2) + 15);
-        foreground = wxColour(255, 255, 255, (StateFadeFrames * 2) + 15);
-        StateFadeFrames--;
-    }
-    else
-    {
-        return;
-    }
-
-    dc->SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
-    dc->SetTextForeground(foreground);
-    dc->SetPen(wxPen(background, 0));
-    dc->SetBrush(wxBrush(background));
-
-    std::string stateText;
-    if (StateLoad)
-    {
-        stateText = "Loaded State ";
-    }
-    else
-    {
-        stateText = "Saved State ";
-    }
-
-    stateText += std::to_string(StateSlot + 1);
-    wxSize textSize = dc->GetTextExtent(stateText);
-
-    dc->DrawRoundedRectangle(8, 5, textSize.GetWidth() + 7, textSize.GetHeight() + 1, 6.0);
-    dc->DrawText(stateText, 12, 6);
-}
-
-void MainWindow::ShowStateSaveDisplay(bool load, int slot)
-{
-#ifdef _WIN32
-    std::unique_lock<std::mutex> lock(OverlayMutex);
-#endif
-
-    StateLoad = load;
-    StateSlot = slot;
-    StateDisplayFrames = 120;
-    StateFadeFrames = 120;
-}
-
 void MainWindow::EmulatorErrorCallback(std::string err)
 {
     wxThreadEvent evt(EVT_NES_UNEXPECTED_SHUTDOWN);
@@ -237,7 +113,6 @@ void MainWindow::StartEmulator(const std::string& filename)
         params.RomPath = filename;
         params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
 		params.TurboModeEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
-        //params.FrameLimitEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
 
         bool audioEnabled, filtersEnabled;
         appSettings->Read("/Audio/Enabled", &audioEnabled);
@@ -262,10 +137,15 @@ void MainWindow::StartEmulator(const std::string& filename)
         params.DmcVolume = dmc / 100.0f;
 
         RenderSurface->Show();
+
+#ifdef _WIN32
         params.WindowHandle = RenderSurface->GetHandle();
-
+#elif __linux
+        params.WindowHandle = reinterpret_cast<void*>(GetX11WindowHandle(RenderSurface->GetHandle()));
+#endif
+        
         appSettings->Read("/Video/ShowFps", &params.FpsDisplayEnabled);
-
+        appSettings->Read("/Video/Overscan", &params.OverscanEnabled);
         appSettings->Read("/Paths/NativeSavePath", &params.SavePath);
 
         if (!wxDir::Exists(params.SavePath))
@@ -309,9 +189,6 @@ void MainWindow::StartEmulator(const std::string& filename)
             PathWindow->SetNes(Nes);
         }
 
-        StateDisplayFrames = 0;
-        StateFadeFrames = 0;
-
         GameMenuSize.SetWidth(GetSize().GetWidth());
         GameMenuSize.SetHeight(GetSize().GetHeight());
 
@@ -324,10 +201,6 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         RenderSurface->SetSize(GetClientSize());
         RenderSurface->SetFocus();
-
-#ifdef __linux
-        //Panel->SetFocus();
-#endif
 
         Nes->Start();
     }
@@ -463,8 +336,7 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
         try
         {
             int slot = event.GetId() % 10;
-            Nes->SaveState(slot, stateSavePath);
-            ShowStateSaveDisplay(false, slot);
+            Nes->SaveState(slot + 1, stateSavePath);
         }
         catch (std::exception& e)
         {
@@ -487,8 +359,7 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
         try
         {
             int slot = event.GetId() % 10;
-            Nes->LoadState(slot, stateSavePath);
-            ShowStateSaveDisplay(true, slot);
+            Nes->LoadState(slot + 1, stateSavePath);
         }
         catch (std::exception&)
         {
@@ -499,9 +370,7 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
 
 void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
 {
-    OverscanEnabled = overscan;
-
-    if (!OverscanEnabled)
+    if (!overscan)
     {
         GameWindowSize = ResolutionsList[resolution].first;
     }
@@ -512,6 +381,8 @@ void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
 
     if (Nes != nullptr)
     {
+        Nes->SetOverscanEnabled(overscan);
+
         // To avoid setting the min size to larger than the max size
         // or vice versa, first set the min and max to allow any size
         SetMaxClientSize(wxSize(-1, -1));
@@ -522,15 +393,6 @@ void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
 
         SetClientSize(GameWindowSize);
     }
-}
-
-void MainWindow::SetShowFpsCounter(bool enabled)
-{
-#ifdef _WIN32
-    std::unique_lock<std::mutex> lock(OverlayMutex);
-#endif
-
-    ShowFpsCounter = enabled;
 }
 
 void MainWindow::OpenPpuViewer(wxCommandEvent& WXUNUSED(event))
@@ -578,19 +440,6 @@ void MainWindow::OpenVideoSettings(wxCommandEvent& event)
     VideoWindow->SetNes(Nes);
     VideoWindow->Show();
 }
-
-
-#ifdef __linux
-void MainWindow::OnUpdateFrame(wxThreadEvent& event)
-{
-    // Only update the frame is the emulator is still running
-    if (Nes != nullptr)
-    {
-        std::unique_lock<std::mutex> lock(FrameMutex);
-        UpdateFrame(FrameBuffer);
-    }
-}
-#endif
 
 void MainWindow::OnUnexpectedShutdown(wxThreadEvent& event)
 {
@@ -768,8 +617,6 @@ void MainWindow::InitializeLayout()
 
     SetGameResolution(static_cast<GameResolutions>(gameResolutionIndex), overscan);
 
-    settings->Read("/Video/ShowFps", &ShowFpsCounter);
-
     int menuWidth, menuHeight;
     settings->Read("/Menu/Width", &menuWidth);
     settings->Read("/Menu/Height", &menuHeight);
@@ -836,11 +683,8 @@ void MainWindow::BindEvents()
 #ifdef __linux
     // On Linux we need a panel to intercept keyboard events for some reason
     // Only used for this, so I'm leaving it here rather than putting it in InitializeLayout
-    Panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS);
     RenderSurface->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     RenderSurface->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
-
-    Bind(EVT_NES_UPDATE_FRAME, wxThreadEventHandler(MainWindow::OnUpdateFrame), this, wxID_ANY);
 #elif _WIN32
     Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
