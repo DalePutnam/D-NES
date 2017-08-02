@@ -22,12 +22,10 @@ NES::NES(const NesParams& params)
     , Ppu(nullptr)
     , Cartridge(nullptr)
 {
-    VB = new VideoBackend(params.WindowHandle);
-    VB->ShowFps(params.FpsDisplayEnabled);
-    VB->SetOverscanEnabled(params.OverscanEnabled);
-
     try
     {
+        VB = new VideoBackend(params.WindowHandle);
+
         Apu = new APU;
         Cpu = new CPU;
         Ppu = new PPU(VB);
@@ -39,9 +37,13 @@ NES::NES(const NesParams& params)
         delete Cpu;
         delete Ppu;
         delete Cartridge;
+        delete VB;
 
         throw e;
     }
+
+    VB->ShowFps(params.FpsDisplayEnabled);
+    VB->SetOverscanEnabled(params.OverscanEnabled);
 
     Apu->AttachCPU(Cpu);
     Apu->AttachCart(Cartridge);

@@ -166,6 +166,9 @@ void MainWindow::StartEmulator(const std::string& filename)
 
             delete Nes;
             Nes = nullptr;
+
+            RomList->SetFocus();
+
             return;
         }
 
