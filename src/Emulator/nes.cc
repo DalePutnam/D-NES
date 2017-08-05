@@ -126,7 +126,7 @@ void NES::GetPalette(int palette, uint8_t* pixels)
     Ppu->GetPalette(palette, pixels);
 }
 
-void NES::GetPrimarySprite(int sprite, uint8_t* pixels)
+void NES::GetSprite(int sprite, uint8_t* pixels)
 {
     Ppu->GetPrimaryOAM(sprite, pixels);
 }

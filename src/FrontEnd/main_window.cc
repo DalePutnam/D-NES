@@ -47,14 +47,18 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
 
 void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
 {
+    std::unique_lock<std::mutex> lock(PpuViewerMutex);
+    
     if (PpuWindow != nullptr)
     {
-        PpuWindow->Update();
+        PpuWindow->UpdatePanels();
     }
 }
 
 void MainWindow::OnPpuViewerClosed(wxCommandEvent& WXUNUSED(event))
 {
+    std::unique_lock<std::mutex> lock(PpuViewerMutex);
+
     if (PpuWindow != nullptr)
     {
         PpuWindow->Destroy();
@@ -156,7 +160,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         try
         {
             Nes = new NES(params);
-            //Nes->BindFrameCompleteCallback(&MainWindow::EmulatorFrameCallback, this);
+            Nes->BindFrameCompleteCallback(&MainWindow::EmulatorFrameCallback, this);
             Nes->BindErrorCallback(&MainWindow::EmulatorErrorCallback, this);
         }
         catch (std::exception &e)
@@ -234,12 +238,13 @@ void MainWindow::StopEmulator(bool showRomList)
             SetTitle("D-NES");
         }
 
+        // No need for the lock here. NES thread stopped
         if (PpuWindow != nullptr)
         {
             PpuWindow->ClearAll();
             PpuWindow->SetNes(nullptr);
         }
-
+        
         if (AudioWindow != nullptr)
         {
             AudioWindow->SetNes(nullptr);
@@ -400,14 +405,16 @@ void MainWindow::SetGameResolution(GameResolutions resolution, bool overscan)
 
 void MainWindow::OpenPpuViewer(wxCommandEvent& WXUNUSED(event))
 {
-#ifdef _WIN32
     std::lock_guard<std::mutex> lock(PpuViewerMutex);
-#endif
 
     if (PpuWindow == nullptr)
     {
         PpuWindow = new PPUViewerWindow(this, Nes);
         PpuWindow->Show();
+    }
+    else
+    {
+        PpuWindow->Raise();
     }
 }
 

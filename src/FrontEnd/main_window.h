@@ -3,7 +3,6 @@
 #pragma once
 
 #include <mutex>
-#include <atomic>
 #include <vector>
 
 #include <wx/menu.h>
@@ -45,6 +44,7 @@ private:
 
     NES* Nes;
 
+    std::mutex PpuViewerMutex;
     PPUViewerWindow* PpuWindow;
     PathSettingsWindow* PathWindow;
     AudioSettingsWindow* AudioWindow;

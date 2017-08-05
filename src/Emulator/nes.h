@@ -99,7 +99,7 @@ public:
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
-    void GetPrimarySprite(int sprite, uint8_t* pixels);
+    void GetSprite(int sprite, uint8_t* pixels);
     void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecoderEnabled(bool enabled);
     void SetFpsDisplayEnabled(bool enabled);
