@@ -144,12 +144,15 @@ void MainWindow::StartEmulator(const std::string& filename)
 
 #ifdef _WIN32
         params.WindowHandle = RenderSurface->GetHandle();
-#elif __linux
+#endif
+
+#ifdef __linux
         params.WindowHandle = reinterpret_cast<void*>(GetX11WindowHandle(RenderSurface->GetHandle()));
 #endif
         
         appSettings->Read("/Video/ShowFps", &params.FpsDisplayEnabled);
         appSettings->Read("/Video/Overscan", &params.OverscanEnabled);
+        appSettings->Read("/Video/NtscDecoding", &params.NtscDecoderEnabled);
         appSettings->Read("/Paths/NativeSavePath", &params.SavePath);
 
         if (!wxDir::Exists(params.SavePath))
