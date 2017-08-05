@@ -152,11 +152,9 @@ void VideoBackend::UpdateSurfaceSize()
 #ifdef _WIN32
 #elif __linux    
     XWindowAttributes attributes;
-    Status status = XGetWindowAttributes(XDisplay, XParentWindow, &attributes);
-
-    if (status == BadDrawable || status == BadWindow)
+    if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
     {
-        throw std::runtime_error("VideoBackend failed to retrieve window attributes");
+        throw std::runtime_error("Failed to retrieve X11 window attributes");
     }
 
     uint32_t newWidth = static_cast<uint32_t>(attributes.width);
@@ -265,22 +263,18 @@ void VideoBackend::DrawMessages()
 #ifdef __linux
 void VideoBackend::InitXWindow(void* handle)
 {
-    Status status;
-
     XParentWindow = reinterpret_cast<Window>(handle);
     XDisplay = XOpenDisplay(nullptr);
 
     if (XDisplay == nullptr)
     {
-        throw std::runtime_error("VideoBackend failed to connect to Display");
+        throw std::runtime_error("Failed to connect to X11 Display");
     }
 
     XWindowAttributes attributes;
-    status = XGetWindowAttributes(XDisplay, XParentWindow, &attributes);
-
-    if (status == BadDrawable || status == BadWindow)
+    if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
     {
-        throw std::runtime_error("VideoBackend failed to retrieve window attributes");
+        throw std::runtime_error("Failed to retrieve X11 window attributes");
     }
 
     WindowWidth = attributes.width;
@@ -288,15 +282,9 @@ void VideoBackend::InitXWindow(void* handle)
 
     XWindow = XCreateSimpleWindow(XDisplay, XParentWindow, 0, 0, WindowWidth, WindowHeight, 0, 0, 0);
 
-    if (XWindow == BadAlloc || XWindow == BadMatch || XWindow == BadValue || XWindow == BadWindow)
+    if (XMapWindow(XDisplay, XWindow) == 0)
     {
-        throw std::runtime_error("VideoBackend failed to initialize render surface");
-    }
-
-    status = XMapWindow(XDisplay, XWindow);
-    if (status == BadWindow)
-    {
-        throw std::runtime_error("VideoBackend failed to map render surface");
+        throw std::runtime_error("Failed to map X11 window");
     }
 
     XSync(XDisplay, false);
@@ -305,25 +293,23 @@ void VideoBackend::InitXWindow(void* handle)
 void VideoBackend::InitCairo()
 {
     XWindowAttributes attributes;
-    Status status = XGetWindowAttributes(XDisplay, XWindow, &attributes);
-
-    if (status == BadDrawable || status == BadWindow)
+    if (XGetWindowAttributes(XDisplay, XWindow, &attributes) == 0)
     {
-        throw std::runtime_error("VideoBackend failed to retrieve window attributes");
+        throw std::runtime_error("Failed to retrieve X11 window attributes");
     }
 
     CairoXSurface = cairo_xlib_surface_create(XDisplay, XWindow, attributes.visual, attributes.width, attributes.height);
 
     if (CairoXSurface == nullptr)
     {
-        throw std::runtime_error("VideoBackend failed to initialize cairo surface");
+        throw std::runtime_error("Failed to initialize cairo surface");
     }
 
     CairoContext = cairo_create(CairoXSurface);
 
     if (CairoContext == nullptr)
     {
-        throw std::runtime_error("VideoBackend failed to initialize cairo context");
+        throw std::runtime_error("Failed to initialize cairo context");
     }
 
     cairo_select_font_face(CairoContext, "monospace", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
