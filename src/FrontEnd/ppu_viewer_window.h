@@ -2,11 +2,10 @@
 
 #include <mutex>
 #include <condition_variable>
+#include <future>
 #include <wx/frame.h>
 #include <wx/panel.h>
 #include <wx/combobox.h>
-
-#include "pattern_table_display.h"
 
 wxDECLARE_EVENT(EVT_PPU_VIEWER_UPDATE, wxThreadEvent);
 wxDECLARE_EVENT(EVT_PPU_VIEWER_CLOSED, wxCommandEvent);
@@ -28,10 +27,11 @@ private:
     void BindEvents();
 
     void OnQuit(wxCommandEvent& event);
+	void OnPaletteSelected(wxCommandEvent& event);
     void OnPaintPanels(wxPaintEvent& evt);
     void DoUpdate(wxThreadEvent& evt);
 
-    std::mutex UpdateLock;
+    std::recursive_mutex UpdateLock;
 
     wxPanel* PatternTables;
     wxPanel* NameTables;
@@ -41,6 +41,9 @@ private:
 
     NES* Nes;
 
+	std::future<void> fut;
+	bool EventHandled;
+	int SelectedPalette;
     uint8_t* NameTableBuffers[4];
     uint8_t* PatternTableBuffers[2];
     uint8_t* PaletteBuffers[8];

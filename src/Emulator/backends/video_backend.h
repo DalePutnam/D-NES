@@ -9,7 +9,10 @@
 #include <condition_variable>
 
 #ifdef _WIN32
-#elif __linux
+#include <Windows.h>
+#endif
+
+#ifdef __linux
 #include <X11/Xlib.h>
 #include <cairo/cairo.h>
 #endif
@@ -58,7 +61,16 @@ private:
     std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
 #ifdef _WIN32
-#elif __linux
+	void InitWindow(void* handle);
+
+	HWND Window;
+	HFONT Font;
+
+	HBITMAP FrontBitmap;
+	HBITMAP BackBitmap;
+#endif
+
+#ifdef __linux
     void InitXWindow(void* handle);
     void InitCairo();
     void DestroyXWindow();

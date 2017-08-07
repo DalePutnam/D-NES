@@ -54,6 +54,9 @@
     <ClInclude Include="backends\audio_backend.h">
       <Filter>Header Files\Backends</Filter>
     </ClInclude>
+    <ClInclude Include="backends\video_backend.h">
+      <Filter>Header Files\Backends</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
@@ -81,6 +84,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="backends\audio_backend.cc">
+      <Filter>Source Files\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="backends\video_backend.cc">
       <Filter>Source Files\Backends</Filter>
     </ClCompile>
   </ItemGroup>

@@ -4,8 +4,6 @@
 #include <wx/image.h>
 #include <wx/bitmap.h>
 #include <wx/dcclient.h>
-#include <iostream>
-
 
 #include "ppu_viewer_window.h"
 #include "main_window.h"
@@ -23,9 +21,16 @@ void PPUViewerWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
     Hide();
 }
 
+void PPUViewerWindow::OnPaletteSelected(wxCommandEvent&)
+{
+	SelectedPalette = PaletteSelect->GetSelection();
+}
+
 PPUViewerWindow::PPUViewerWindow(wxWindow* parent, NES* nes)
-    : wxFrame(parent, wxID_ANY, "PPU Viewer", wxDefaultPosition, wxDefaultSize, FRAME_STYLE)
-    , Nes(nes)
+	: wxFrame(parent, wxID_ANY, "PPU Viewer", wxDefaultPosition, wxDefaultSize, FRAME_STYLE)
+	, Nes(nes)
+	, EventHandled(true)
+	, SelectedPalette(0)
 {
     for (uint32_t i = 0; i < 64; ++i)
     {
@@ -53,7 +58,12 @@ PPUViewerWindow::PPUViewerWindow(wxWindow* parent, NES* nes)
 
 PPUViewerWindow::~PPUViewerWindow()
 {
-    std::unique_lock<std::mutex> lock(UpdateLock);
+	if (fut.valid())
+	{
+		fut.get();
+	}
+
+    std::unique_lock<std::recursive_mutex> lock(UpdateLock);
 
     for (uint32_t i = 0; i < 64; ++i)
     {
@@ -148,6 +158,7 @@ void PPUViewerWindow::BindEvents()
 {
     Bind(EVT_PPU_VIEWER_UPDATE, wxThreadEventHandler(PPUViewerWindow::DoUpdate), this, wxID_ANY);
     Bind(wxEVT_CLOSE_WINDOW, wxCommandEventHandler(PPUViewerWindow::OnQuit), this, wxID_ANY);
+	Bind(wxEVT_CHOICE, wxCommandEventHandler(PPUViewerWindow::OnPaletteSelected), this, wxID_ANY);
     NameTables->Bind(wxEVT_PAINT, wxPaintEventHandler(PPUViewerWindow::OnPaintPanels), this, wxID_ANY);
     PatternTables->Bind(wxEVT_PAINT, wxPaintEventHandler(PPUViewerWindow::OnPaintPanels), this, wxID_ANY);
     Palettes->Bind(wxEVT_PAINT, wxPaintEventHandler(PPUViewerWindow::OnPaintPanels), this, wxID_ANY);
@@ -195,10 +206,11 @@ void PPUViewerWindow::OnPaintPanels(wxPaintEvent& evt)
 
 void PPUViewerWindow::DoUpdate(wxThreadEvent&)
 {
-    std::unique_lock<std::mutex> lock(UpdateLock);
+    std::unique_lock<std::recursive_mutex> lock(UpdateLock);
 
     if (Nes == nullptr)
     {
+		EventHandled = true;
         return;
     }
 
@@ -233,11 +245,13 @@ void PPUViewerWindow::DoUpdate(wxThreadEvent&)
             dc.DrawBitmap(bitmap, 128*i, 0);
         }
     }
+
+	EventHandled = true;
 }
 
 void PPUViewerWindow::UpdatePanels()
 {
-    std::unique_lock<std::mutex> lock(UpdateLock);
+    std::unique_lock<std::recursive_mutex> lock(UpdateLock);
 
     if (Nes == nullptr)
     {
@@ -260,18 +274,29 @@ void PPUViewerWindow::UpdatePanels()
 
         if (i < 2)
         {
-            int CurrentPalette = PaletteSelect->GetSelection();
-            Nes->GetPatternTable(i, CurrentPalette, PatternTableBuffers[i]);
+            Nes->GetPatternTable(i, SelectedPalette, PatternTableBuffers[i]);
         }
     }
 
-    wxThreadEvent evt(EVT_PPU_VIEWER_UPDATE);
-    wxQueueEvent(this, evt.Clone());
+	//DoUpdate(wxThreadEvent(EVT_PPU_VIEWER_UPDATE));
+
+	//if (EventHandled)
+	if (!fut.valid())
+	{
+		//wxThreadEvent evt(EVT_PPU_VIEWER_UPDATE);
+		//wxQueueEvent(this, evt.Clone());
+		fut = std::async(std::launch::async, &PPUViewerWindow::DoUpdate, this, wxThreadEvent(EVT_PPU_VIEWER_UPDATE));
+		//EventHandled = false;
+	}
+	else
+	{
+		fut.get();
+	}
 }
 
 void PPUViewerWindow::ClearAll()
 {
-    std::unique_lock<std::mutex> lock(UpdateLock);
+    std::unique_lock<std::recursive_mutex> lock(UpdateLock);
 
     {
         wxClientDC dc(NameTables);
@@ -301,7 +326,7 @@ void PPUViewerWindow::ClearAll()
 
 void PPUViewerWindow::SetNes(NES* nes)
 {
-    std::unique_lock<std::mutex> lock(UpdateLock);
+    std::unique_lock<std::recursive_mutex> lock(UpdateLock);
 
     Nes = nes;
 }

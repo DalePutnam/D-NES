@@ -1,21 +1,56 @@
-#include "video_backend.h"
-
+#include <string>
 #ifdef __linux
 #include <cairo/cairo-xlib.h>
 #endif
 
+#include "video_backend.h"
+
 VideoBackend::VideoBackend(void* windowHandle)
-    : FrontBuffer(new uint8_t[256*240*4])
-    , BackBuffer(new uint8_t[256*240*4])
-    , PixelIndex(0)
+    : PixelIndex(0)
     , StopRendering(false)
     , OverscanEnabled(true)
     , CurrentFps(0)
 {
 #ifdef _WIN32
-#elif __linux
+	InitWindow(windowHandle);
+	
+	HDC winDC = GetDC(Window);
+
+	BITMAPINFOHEADER bmih = { 0 };
+	bmih.biSize = sizeof(BITMAPINFOHEADER);
+	bmih.biWidth = 256;
+	bmih.biHeight = -240;
+	bmih.biPlanes = 1;
+	bmih.biBitCount = 32;
+	bmih.biCompression = BI_RGB;
+
+	BITMAPINFO bmi = { 0 };
+	bmi.bmiHeader = bmih;
+	bmi.bmiColors->rgbBlue = 0;
+	bmi.bmiColors->rgbGreen = 0;
+	bmi.bmiColors->rgbRed = 0;
+	bmi.bmiColors->rgbReserved = 0;
+
+	void* frontBuffer;
+	void* backBuffer;
+
+	FrontBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &frontBuffer, NULL, 0);
+	BackBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &backBuffer, NULL, 0);
+
+	FrontBuffer = reinterpret_cast<uint8_t*>(frontBuffer);
+	BackBuffer = reinterpret_cast<uint8_t*>(backBuffer);
+
+	ReleaseDC(Window, winDC);
+	//FrontBuffer = new uint8_t[256 * 240 * 4];
+	//BackBuffer = new uint8_t[256 * 240 * 4];
+#endif
+
+#ifdef __linux
     InitXWindow(windowHandle);
     InitCairo();
+
+	FrontBuffer = new uint8_t[256 * 240 * 4];
+	BackBuffer = new uint8_t[256 * 240 * 4];
 #endif
 
     RenderThread = std::thread(&VideoBackend::RenderWorker, this);
@@ -28,17 +63,25 @@ VideoBackend::~VideoBackend()
         StopRendering = true;
         RenderCv.notify_all();
     }
-
+	
     RenderThread.join();
 
 #ifdef _WIN32
+	//ReleaseDC(Window, WindowContext);
+	DeleteObject(FrontBitmap);
+	DeleteObject(BackBitmap);
+	DeleteObject(Font);
+	//delete[] BackBuffer;
+	//delete[] FrontBuffer;
 #elif __linux
     DestroyCairo();
     DestroyXWindow();
+
+	delete[] BackBuffer;
+	delete[] FrontBuffer;
 #endif
 
-    delete [] BackBuffer;
-    delete [] FrontBuffer;
+    
 }
 
 VideoBackend& VideoBackend::operator<<(uint32_t pixel)
@@ -137,19 +180,17 @@ void VideoBackend::RenderWorker()
 
         UpdateSurfaceSize();
         DrawFrame();
-
-        if (ShowingFps)
-        {
-            DrawFps();
-        }
-
-        DrawMessages();
     }
 }
 
 void VideoBackend::UpdateSurfaceSize()
 {
 #ifdef _WIN32
+	RECT rect;
+	GetWindowRect(Window, &rect);
+
+	WindowWidth = rect.right - rect.left;
+	WindowHeight = rect.bottom - rect.top;
 #elif __linux    
     XWindowAttributes attributes;
     if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
@@ -174,7 +215,69 @@ void VideoBackend::UpdateSurfaceSize()
 void VideoBackend::DrawFrame()
 {
 #ifdef _WIN32
-#elif __linux   
+	HDC winDC = GetDC(Window);
+	HDC memDC = CreateCompatibleDC(winDC);
+	HDC intDC = CreateCompatibleDC(winDC);
+
+	HGDIOBJ winOldObj;
+	HGDIOBJ memOldObj;
+	HGDIOBJ intOldObj;
+
+	BITMAPINFOHEADER bmih = { 0 };
+	bmih.biSize = sizeof(BITMAPINFOHEADER);
+	bmih.biWidth = WindowWidth;
+	bmih.biHeight = -static_cast<int32_t>(WindowHeight);
+	bmih.biPlanes = 1;
+	bmih.biBitCount = 32;
+	bmih.biCompression = BI_RGB;
+
+	BITMAPINFO bmi = { 0 };
+	bmi.bmiHeader = bmih;
+	bmi.bmiColors->rgbBlue = 0;
+	bmi.bmiColors->rgbGreen = 0;
+	bmi.bmiColors->rgbRed = 0;
+	bmi.bmiColors->rgbReserved = 0;
+	
+	//HBITMAP hBitmap = CreateDIBitmap(intDC, &bmih, 0, NULL, &bmi, DIB_RGB_COLORS);
+	void* bits;
+	HBITMAP hBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
+	winOldObj = SelectObject(intDC, Font);
+	intOldObj = SelectObject(intDC, hBitmap);
+	memOldObj = SelectObject(memDC, FrontBitmap);
+
+	if (OverscanEnabled)
+	{
+		StretchBlt(intDC, 0, 0, WindowWidth, WindowHeight, memDC, 0, 8, 256, 224, SRCCOPY);
+	}
+	else
+	{
+		StretchBlt(intDC, 0, 0, WindowWidth, WindowHeight, memDC, 0, 0, 256, 240, SRCCOPY);
+	}
+
+	SetBkMode(intDC, TRANSPARENT);
+	SetTextColor(intDC, RGB(255, 255, 255));
+
+	std::string fps = std::to_string(CurrentFps);
+
+	TextOut(intDC, 0, 0, fps.c_str(), fps.length());
+
+	BitBlt(winDC, 0, 0, WindowWidth, WindowHeight, intDC, 0, 0, SRCCOPY);
+
+	SelectObject(memDC, memOldObj);
+	SelectObject(intDC, intOldObj);
+	SelectObject(intDC, winOldObj);
+
+	DeleteDC(memDC);
+	DeleteDC(intDC);
+	ReleaseDC(Window, winDC);
+	
+	HBITMAP temp = FrontBitmap;
+	FrontBitmap = BackBitmap;
+	BackBitmap = temp;
+	
+	DeleteObject(hBitmap);
+#endif
+#ifdef __linux   
     cairo_save(CairoContext);
 
     cairo_surface_t* frame;
@@ -194,6 +297,13 @@ void VideoBackend::DrawFrame()
     cairo_paint(CairoContext);
     cairo_surface_destroy(frame);
     cairo_restore(CairoContext);
+
+	if (ShowingFps)
+	{
+		DrawFps();
+	}
+
+	DrawMessages();
 #endif
 }
 
@@ -251,13 +361,19 @@ void VideoBackend::DrawMessages()
         cairo_move_to(CairoContext, 10.0, offsetY + 3.0 - extents.y_bearing);
         cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
         cairo_show_text(CairoContext, entry.first.c_str());
-#endif        
 
-        offsetY += extents.height + 6.0;
+		offsetY += extents.height + 6.0;
+#endif        
     }
 }
 
 #ifdef _WIN32
+void VideoBackend::InitWindow(void* handle)
+{
+	Window = reinterpret_cast<HWND>(handle);
+
+	Font = CreateFont(20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, NULL);
+}
 #endif
 
 #ifdef __linux

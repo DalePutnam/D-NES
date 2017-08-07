@@ -210,7 +210,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         SetMaxClientSize(GameWindowSize);
 
         RenderSurface->SetSize(GetClientSize());
-        RenderSurface->SetFocus();
+        //RenderSurface->SetFocus();
 
         Nes->Start();
     }

@@ -39,9 +39,6 @@
     <ClInclude Include="game_list.h">
       <Filter>Header Files\Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="pattern_table_display.h">
-      <Filter>Header Files\Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="audio_settings_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -69,9 +66,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game_list.cc">
-      <Filter>Source Files\Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="pattern_table_display.cc">
       <Filter>Source Files\Utilities</Filter>
     </ClCompile>
     <ClCompile Include="audio_settings_window.cc">

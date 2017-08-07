@@ -154,7 +154,6 @@
     <ClInclude Include="audio_settings_window.h" />
     <ClInclude Include="game_list.h" />
     <ClInclude Include="main_window.h" />
-    <ClInclude Include="pattern_table_display.h" />
     <ClInclude Include="ppu_viewer_window.h" />
     <ClInclude Include="path_settings_window.h" />
     <ClInclude Include="settings_window_base.h" />
@@ -166,7 +165,6 @@
     <ClCompile Include="audio_settings_window.cc" />
     <ClCompile Include="game_list.cc" />
     <ClCompile Include="main_window.cc" />
-    <ClCompile Include="pattern_table_display.cc" />
     <ClCompile Include="ppu_viewer_window.cc" />
     <ClCompile Include="path_settings_window.cc" />
     <ClCompile Include="settings_window_base.cc" />
