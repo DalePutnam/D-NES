@@ -1,11 +1,13 @@
 #pragma once
 
 #include <mutex>
-#include <condition_variable>
-#include <future>
 #include <wx/frame.h>
 #include <wx/panel.h>
 #include <wx/combobox.h>
+
+#ifdef _WIN32
+#include <future>
+#endif
 
 wxDECLARE_EVENT(EVT_PPU_VIEWER_UPDATE, wxThreadEvent);
 wxDECLARE_EVENT(EVT_PPU_VIEWER_CLOSED, wxCommandEvent);
@@ -41,13 +43,17 @@ private:
 
     NES* Nes;
 
-	std::future<void> fut;
-	bool EventHandled;
 	int SelectedPalette;
     uint8_t* NameTableBuffers[4];
     uint8_t* PatternTableBuffers[2];
     uint8_t* PaletteBuffers[8];
     uint8_t* SpriteBuffers[64];
+
+#ifdef _WIN32
+	std::future<void> Future;
+#elif defined(__linux)
+	bool UpdateEventPending;
+#endif
 };
 
 static const int ID_NAME_TABLE_PANEL = 100;

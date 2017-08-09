@@ -3,16 +3,13 @@
 
 #include <thread>
 #include <mutex>
-#include <atomic>
 #include <chrono>
 #include <vector>
 #include <condition_variable>
 
 #ifdef _WIN32
 #include <Windows.h>
-#endif
-
-#ifdef __linux
+#elif defined(__linux)   
 #include <X11/Xlib.h>
 #include <cairo/cairo.h>
 #endif
@@ -37,8 +34,6 @@ private:
 
     void UpdateSurfaceSize();
     void DrawFrame();
-    void DrawFps();
-    void DrawMessages();
 
     std::thread RenderThread;
     std::mutex RenderLock;
@@ -61,20 +56,25 @@ private:
     std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
 #ifdef _WIN32
-	void InitWindow(void* handle);
+	void InitGDIObjects(void* handle);
+	void CleanUpGDIObjects();
+
+	void DrawFps(HDC dc);
+	void DrawMessages(HDC dc);
 
 	HWND Window;
 	HFONT Font;
-
+	TEXTMETRIC FontMetric;
 	HBITMAP FrontBitmap;
 	HBITMAP BackBitmap;
-#endif
-
-#ifdef __linux
+#elif defined(__linux)   
     void InitXWindow(void* handle);
     void InitCairo();
     void DestroyXWindow();
     void DestroyCairo();
+
+	void DrawFps();
+	void DrawMessages();
 
     Display* XDisplay;
     Window XParentWindow;

@@ -143,7 +143,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         RenderSurface->Show();
 
 #ifdef _WIN32
-        params.WindowHandle = RenderSurface->GetHandle();
+		params.WindowHandle = RenderSurface->GetHandle();
 #endif
 
 #ifdef __linux
@@ -210,7 +210,6 @@ void MainWindow::StartEmulator(const std::string& filename)
         SetMaxClientSize(GameWindowSize);
 
         RenderSurface->SetSize(GetClientSize());
-        //RenderSurface->SetFocus();
 
         Nes->Start();
     }
@@ -232,6 +231,8 @@ void MainWindow::StopEmulator(bool showRomList)
 
         if (showRomList)
         {
+			RenderSurface->Hide();
+
             SetMinClientSize(wxSize(-1, -1));
             SetMaxClientSize(wxSize(-1, -1));
 
@@ -694,15 +695,24 @@ void MainWindow::BindEvents()
     Bind(wxEVT_SIZE, wxSizeEventHandler(MainWindow::OnSize), this, wxID_ANY);
 
 #ifdef __linux
-    // On Linux we need a panel to intercept keyboard events for some reason
-    // Only used for this, so I'm leaving it here rather than putting it in InitializeLayout
+    // On Linux the RenderSurface needs to intercept keyboard events
     RenderSurface->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     RenderSurface->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
 #elif _WIN32
+	// On windows the MainWindow need to intercept keyboard events
     Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
+	RenderSurface->Bind(wxEVT_SET_FOCUS, &MainWindow::OnRenderSurfaceFocus, this);
 #endif
 }
+
+#ifdef _WIN32
+// On windows if the render surface is focused, kick focus back up to the main window
+void MainWindow::OnRenderSurfaceFocus(wxFocusEvent& event)
+{
+	SetFocus();
+}
+#endif
 
 MainWindow::MainWindow()
     : wxFrame(NULL, wxID_ANY, "D-NES")

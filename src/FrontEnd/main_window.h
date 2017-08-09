@@ -99,6 +99,10 @@ private:
     void OnPathSettingsClosed(wxCommandEvent& event);
     void OnAudioSettingsClosed(wxCommandEvent& event);
     void OnVideoSettingsClosed(wxCommandEvent& event);
+
+#ifdef _WIN32
+	void OnRenderSurfaceFocus(wxFocusEvent& event);
+#endif
 };
 
 wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);

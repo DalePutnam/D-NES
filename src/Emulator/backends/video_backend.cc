@@ -5,6 +5,27 @@
 
 #include "video_backend.h"
 
+namespace
+{
+std::string ToUpperCase(const std::string& str)
+{
+	std::string allcaps;
+	for (size_t i = 0; i < str.length(); ++i)
+	{
+		if (str[i] >= 'a' && str[i] <= 'z')
+		{
+			allcaps += str[i] - ('a' - 'A');
+		}
+		else
+		{
+			allcaps += str[i];
+		}
+	}
+
+	return allcaps;
+}
+}
+
 VideoBackend::VideoBackend(void* windowHandle)
     : PixelIndex(0)
     , StopRendering(false)
@@ -12,40 +33,8 @@ VideoBackend::VideoBackend(void* windowHandle)
     , CurrentFps(0)
 {
 #ifdef _WIN32
-	InitWindow(windowHandle);
-	
-	HDC winDC = GetDC(Window);
-
-	BITMAPINFOHEADER bmih = { 0 };
-	bmih.biSize = sizeof(BITMAPINFOHEADER);
-	bmih.biWidth = 256;
-	bmih.biHeight = -240;
-	bmih.biPlanes = 1;
-	bmih.biBitCount = 32;
-	bmih.biCompression = BI_RGB;
-
-	BITMAPINFO bmi = { 0 };
-	bmi.bmiHeader = bmih;
-	bmi.bmiColors->rgbBlue = 0;
-	bmi.bmiColors->rgbGreen = 0;
-	bmi.bmiColors->rgbRed = 0;
-	bmi.bmiColors->rgbReserved = 0;
-
-	void* frontBuffer;
-	void* backBuffer;
-
-	FrontBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &frontBuffer, NULL, 0);
-	BackBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &backBuffer, NULL, 0);
-
-	FrontBuffer = reinterpret_cast<uint8_t*>(frontBuffer);
-	BackBuffer = reinterpret_cast<uint8_t*>(backBuffer);
-
-	ReleaseDC(Window, winDC);
-	//FrontBuffer = new uint8_t[256 * 240 * 4];
-	//BackBuffer = new uint8_t[256 * 240 * 4];
-#endif
-
-#ifdef __linux
+	InitGDIObjects(windowHandle);
+#elif defined(__linux)
     InitXWindow(windowHandle);
     InitCairo();
 
@@ -67,12 +56,7 @@ VideoBackend::~VideoBackend()
     RenderThread.join();
 
 #ifdef _WIN32
-	//ReleaseDC(Window, WindowContext);
-	DeleteObject(FrontBitmap);
-	DeleteObject(BackBitmap);
-	DeleteObject(Font);
-	//delete[] BackBuffer;
-	//delete[] FrontBuffer;
+	CleanUpGDIObjects();
 #elif __linux
     DestroyCairo();
     DestroyXWindow();
@@ -138,21 +122,7 @@ void VideoBackend::ShowMessage(const std::string& message, uint32_t duration)
     using namespace std::chrono;
 
     steady_clock::time_point expires = steady_clock::now() + seconds(duration);
-
-    std::string allcaps;
-    for (size_t i = 0; i < message.length(); ++i)
-    {
-        if (message[i] >= 'a' && message[i] <= 'z')
-        {
-            allcaps += message[i] - ('a' - 'A');
-        }
-        else
-        {
-            allcaps += message[i];
-        }
-    }
-    
-    Messages.push_back(std::make_pair(allcaps, expires));
+    Messages.push_back(std::make_pair(ToUpperCase(message), expires));
 }
 
 void VideoBackend::Swap()
@@ -191,7 +161,7 @@ void VideoBackend::UpdateSurfaceSize()
 
 	WindowWidth = rect.right - rect.left;
 	WindowHeight = rect.bottom - rect.top;
-#elif __linux    
+#elif defined(__linux)   
     XWindowAttributes attributes;
     if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
     {
@@ -215,69 +185,61 @@ void VideoBackend::UpdateSurfaceSize()
 void VideoBackend::DrawFrame()
 {
 #ifdef _WIN32
-	HDC winDC = GetDC(Window);
-	HDC memDC = CreateCompatibleDC(winDC);
-	HDC intDC = CreateCompatibleDC(winDC);
+	HDC windowDC = GetDC(Window);
+	HDC initialDC = CreateCompatibleDC(windowDC);
+	HDC intermediateDC = CreateCompatibleDC(windowDC);
 
-	HGDIOBJ winOldObj;
+	// Pointers to hold default objects from device contexts
 	HGDIOBJ memOldObj;
 	HGDIOBJ intOldObj;
+	HGDIOBJ intOldFont;
 
-	BITMAPINFOHEADER bmih = { 0 };
-	bmih.biSize = sizeof(BITMAPINFOHEADER);
-	bmih.biWidth = WindowWidth;
-	bmih.biHeight = -static_cast<int32_t>(WindowHeight);
-	bmih.biPlanes = 1;
-	bmih.biBitCount = 32;
-	bmih.biCompression = BI_RGB;
+	HBITMAP hBitmap = CreateCompatibleBitmap(windowDC, WindowWidth, WindowHeight);
 
-	BITMAPINFO bmi = { 0 };
-	bmi.bmiHeader = bmih;
-	bmi.bmiColors->rgbBlue = 0;
-	bmi.bmiColors->rgbGreen = 0;
-	bmi.bmiColors->rgbRed = 0;
-	bmi.bmiColors->rgbReserved = 0;
-	
-	//HBITMAP hBitmap = CreateDIBitmap(intDC, &bmih, 0, NULL, &bmi, DIB_RGB_COLORS);
-	void* bits;
-	HBITMAP hBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
-	winOldObj = SelectObject(intDC, Font);
-	intOldObj = SelectObject(intDC, hBitmap);
-	memOldObj = SelectObject(memDC, FrontBitmap);
+	// Select fonts and bitmaps into device contexts
+	intOldFont = SelectObject(intermediateDC, Font);
+	intOldObj = SelectObject(intermediateDC, hBitmap);
+	memOldObj = SelectObject(initialDC, FrontBitmap);
 
+	// First we need to blit to an intermediate device context to stretch the frame
 	if (OverscanEnabled)
 	{
-		StretchBlt(intDC, 0, 0, WindowWidth, WindowHeight, memDC, 0, 8, 256, 224, SRCCOPY);
+		StretchBlt(intermediateDC, 0, 0, WindowWidth, WindowHeight, initialDC, 0, 8, 256, 224, SRCCOPY);
 	}
 	else
 	{
-		StretchBlt(intDC, 0, 0, WindowWidth, WindowHeight, memDC, 0, 0, 256, 240, SRCCOPY);
+		StretchBlt(intermediateDC, 0, 0, WindowWidth, WindowHeight, initialDC, 0, 0, 256, 240, SRCCOPY);
 	}
 
-	SetBkMode(intDC, TRANSPARENT);
-	SetTextColor(intDC, RGB(255, 255, 255));
+	// Draw fps and messages on the intermediate device context
+	if (ShowingFps)
+	{
+		DrawFps(intermediateDC);
+	}
 
-	std::string fps = std::to_string(CurrentFps);
+	DrawMessages(intermediateDC);
 
-	TextOut(intDC, 0, 0, fps.c_str(), fps.length());
+	// Copy final frame to the final device context so it will be displayed 
+	BitBlt(windowDC, 0, 0, WindowWidth, WindowHeight, intermediateDC, 0, 0, SRCCOPY);
 
-	BitBlt(winDC, 0, 0, WindowWidth, WindowHeight, intDC, 0, 0, SRCCOPY);
+	// Select default objects back into their device contexts
+	SelectObject(initialDC, memOldObj);
+	SelectObject(intermediateDC, intOldObj);
+	SelectObject(intermediateDC, intOldFont);
 
-	SelectObject(memDC, memOldObj);
-	SelectObject(intDC, intOldObj);
-	SelectObject(intDC, winOldObj);
-
-	DeleteDC(memDC);
-	DeleteDC(intDC);
-	ReleaseDC(Window, winDC);
+	// Clean Up device contexts
+	DeleteDC(initialDC);
+	DeleteDC(intermediateDC);
+	ReleaseDC(Window, windowDC);
 	
+	// Need to display other bitmap next time
 	HBITMAP temp = FrontBitmap;
 	FrontBitmap = BackBitmap;
 	BackBitmap = temp;
 	
+	// Delete intermediate bitmap
 	DeleteObject(hBitmap);
-#endif
-#ifdef __linux   
+#elif defined(__linux)     
     cairo_save(CairoContext);
 
     cairo_surface_t* frame;
@@ -307,12 +269,40 @@ void VideoBackend::DrawFrame()
 #endif
 }
 
-void VideoBackend::DrawFps()
-{
-    std::string fps = std::to_string(CurrentFps);
-
 #ifdef _WIN32
-#elif __linux   
+void VideoBackend::DrawFps(HDC dc)
+#elif defined(__linux)
+void VideoBackend::DrawFps()
+#endif
+{
+	std::string fps = std::to_string(CurrentFps);
+#ifdef _WIN32
+	SetBkMode(dc, TRANSPARENT);
+	SetTextColor(dc, RGB(255, 255, 255));
+	HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+
+	SIZE textSize;
+	GetTextExtentPoint32(dc, fps.c_str(), static_cast<int>(fps.length()), &textSize);
+
+	RECT rect;
+	rect.top = 8;
+	rect.left = WindowWidth - textSize.cx - 8 - (FontMetric.tmInternalLeading*2) + 1;
+	rect.bottom = 8 + textSize.cy;
+	rect.right = WindowWidth - 7;
+
+	// Draw Backing Rectangle
+	FillRect(dc, &rect, brush);
+
+	rect.top = 8;
+	rect.left = WindowWidth - textSize.cx - 8 - FontMetric.tmInternalLeading + 1;
+	rect.bottom = 8 + textSize.cy;
+	rect.right = WindowWidth - 7;
+
+	// Draw FPS text
+	DrawText(dc, fps.c_str(), static_cast<int>(fps.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+	DeleteObject(brush);
+#elif defined(__linux)  
     cairo_text_extents_t extents;
     cairo_text_extents(CairoContext, fps.c_str(), &extents);
     
@@ -325,54 +315,182 @@ void VideoBackend::DrawFps()
     cairo_show_text(CairoContext, fps.c_str());
 #endif
 }
-
-void VideoBackend::DrawMessages()
-{
-    if (Messages.empty())
-    {
-        return;
-    }
-
-    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-    std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > remaining;
-    for (auto& entry : Messages)
-    {
-        if (entry.second > now)
-        {
-            remaining.push_back(entry);
-        }
-    }
-
-    Messages.swap(remaining);
-
-    // Draw Messages
-    double offsetY = 8.0;
-    for (auto& entry : Messages)
-    {
 #ifdef _WIN32
-#elif __linux
-        cairo_text_extents_t extents;
-        cairo_text_extents(CairoContext, entry.first.c_str(), &extents);
+void VideoBackend::DrawMessages(HDC dc)
+#elif defined(__linux)
+void VideoBackend::DrawMessages()
+#endif
+{
+	if (Messages.empty())
+	{
+		return;
+	}
 
-        cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
-        cairo_rectangle(CairoContext, 8.0, offsetY, extents.x_advance + 4.0, extents.height + 6.0);
-        cairo_fill(CairoContext);
+	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+	std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > remaining;
+	for (auto& entry : Messages)
+	{
+		if (entry.second > now)
+		{
+			remaining.push_back(entry);
+		}
+	}
 
-        cairo_move_to(CairoContext, 10.0, offsetY + 3.0 - extents.y_bearing);
-        cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
-        cairo_show_text(CairoContext, entry.first.c_str());
+	Messages.swap(remaining);
+
+	// Draw Messages
+#ifdef _WIN32
+	SetBkMode(dc, TRANSPARENT);
+	SetTextColor(dc, RGB(255, 255, 255));
+	HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+	
+	int offsetY = 8;
+	for (auto& entry : Messages)
+	{
+		std::string& message = entry.first;
+
+		SIZE textSize;
+		GetTextExtentPoint32(dc, message.c_str(), static_cast<int>(message.length()), &textSize);
+
+		RECT rect;
+		rect.top = offsetY;
+		rect.left = 7;
+		rect.bottom = offsetY + textSize.cy;
+		rect.right = 7 + textSize.cx + (FontMetric.tmInternalLeading*2) + 1;
+
+		// Draw Backing Rectangle
+		FillRect(dc, &rect, brush);
+
+		rect.top = offsetY;
+		rect.left = 7 + FontMetric.tmInternalLeading;
+		rect.bottom = offsetY + textSize.cy;
+		rect.right = 7 + FontMetric.tmInternalLeading + textSize.cx;
+
+		// Draw Message Text
+		DrawText(dc, message.c_str(), static_cast<int>(message.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+		offsetY += textSize.cy;
+	}
+
+	DeleteObject(brush);
+#elif defined(__linux)
+	double offsetY = 8.0;
+	for (auto& entry : Messages)
+	{
+		cairo_text_extents_t extents;
+		cairo_text_extents(CairoContext, entry.first.c_str(), &extents);
+
+		cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
+		cairo_rectangle(CairoContext, 8.0, offsetY, extents.x_advance + 4.0, extents.height + 6.0);
+		cairo_fill(CairoContext);
+
+		cairo_move_to(CairoContext, 10.0, offsetY + 3.0 - extents.y_bearing);
+		cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
+		cairo_show_text(CairoContext, entry.first.c_str());
 
 		offsetY += extents.height + 6.0;
+	}
 #endif        
-    }
 }
 
 #ifdef _WIN32
-void VideoBackend::InitWindow(void* handle)
+void VideoBackend::InitGDIObjects(void* handle)
 {
+	std::string error;
+	BITMAPINFOHEADER bmih = { 0 };
+	BITMAPINFO bmi = { 0 };
+
 	Window = reinterpret_cast<HWND>(handle);
 
-	Font = CreateFont(20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FIXED_PITCH, NULL);
+	if (Window == NULL)
+	{
+		error = "Invalid window handle";
+		goto FailedExit;
+	}
+
+	Font = CreateFont(-20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
+		OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, "Consolas");
+
+	// Failed to find consolas, use closest match
+	if (Font == NULL)
+	{
+		Font = CreateFont(-20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
+			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, NULL);
+
+		// Still failed to find a font, error
+		if (Font == NULL)
+		{
+			error = "Failed to initialize message font";
+			goto FailedExit;
+		}
+	}
+
+	HDC winDC = GetDC(Window);
+
+	if (winDC == NULL)
+	{
+		error = "Failed to get window device context";
+		goto FailedExit;
+	}
+
+	if (!GetTextMetrics(winDC, &FontMetric))
+	{
+		error = "Failed to get font metrics";
+		goto FailedExit;
+	}
+	
+	bmih.biSize = sizeof(BITMAPINFOHEADER);
+	bmih.biWidth = 256;
+	bmih.biHeight = -240;
+	bmih.biPlanes = 1;
+	bmih.biBitCount = 32;
+	bmih.biCompression = BI_RGB;
+
+	bmi.bmiHeader = bmih;
+	bmi.bmiColors->rgbBlue = 0;
+	bmi.bmiColors->rgbGreen = 0;
+	bmi.bmiColors->rgbRed = 0;
+	bmi.bmiColors->rgbReserved = 0;
+
+	void* frontBuffer;
+	void* backBuffer;
+
+	FrontBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &frontBuffer, NULL, 0);
+
+	if (FrontBitmap == NULL)
+	{
+		error = "Failed to create front frame buffer";
+		goto FailedExit;
+	}
+
+	BackBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &backBuffer, NULL, 0);
+
+	if (BackBitmap == NULL)
+	{
+		error = "Failed to create back frame buffer";
+		goto FailedExit;
+	}
+
+	FrontBuffer = reinterpret_cast<uint8_t*>(frontBuffer);
+	BackBuffer = reinterpret_cast<uint8_t*>(backBuffer);
+
+	ReleaseDC(Window, winDC);
+
+	return;
+
+FailedExit:
+	DeleteObject(FrontBitmap);
+	DeleteObject(BackBitmap);
+	DeleteObject(Font);
+
+	throw std::runtime_error(error);
+}
+
+void VideoBackend::CleanUpGDIObjects()
+{
+	DeleteObject(FrontBitmap);
+	DeleteObject(BackBitmap);
+	DeleteObject(Font);
 }
 #endif
 
@@ -390,6 +508,7 @@ void VideoBackend::InitXWindow(void* handle)
     XWindowAttributes attributes;
     if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
     {
+		XCloseDisplay(XDisplay);
         throw std::runtime_error("Failed to retrieve X11 window attributes");
     }
 
@@ -400,6 +519,8 @@ void VideoBackend::InitXWindow(void* handle)
 
     if (XMapWindow(XDisplay, XWindow) == 0)
     {
+		XDestroyWindow(XDisplay, XWindow);
+		XCloseDisplay(XDisplay);
         throw std::runtime_error("Failed to map X11 window");
     }
 
@@ -411,6 +532,8 @@ void VideoBackend::InitCairo()
     XWindowAttributes attributes;
     if (XGetWindowAttributes(XDisplay, XWindow, &attributes) == 0)
     {
+		XDestroyWindow(XDisplay, XWindow);
+		XCloseDisplay(XDisplay);
         throw std::runtime_error("Failed to retrieve X11 window attributes");
     }
 
@@ -418,6 +541,8 @@ void VideoBackend::InitCairo()
 
     if (CairoXSurface == nullptr)
     {
+		XDestroyWindow(XDisplay, XWindow);
+		XCloseDisplay(XDisplay);
         throw std::runtime_error("Failed to initialize cairo surface");
     }
 
@@ -425,6 +550,9 @@ void VideoBackend::InitCairo()
 
     if (CairoContext == nullptr)
     {
+		cairo_surface_destroy(CairoXSurface);
+		XDestroyWindow(XDisplay, XWindow);
+		XCloseDisplay(XDisplay);
         throw std::runtime_error("Failed to initialize cairo context");
     }
 
