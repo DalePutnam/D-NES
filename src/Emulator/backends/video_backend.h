@@ -65,6 +65,7 @@ private:
 	HWND Window;
 	HFONT Font;
 	TEXTMETRIC FontMetric;
+	HBITMAP IntermediateBitmap;
 	HBITMAP FrontBitmap;
 	HBITMAP BackBitmap;
 #elif defined(__linux)   

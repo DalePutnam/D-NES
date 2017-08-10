@@ -133,6 +133,13 @@ void VideoBackend::Swap()
     FrontBuffer = BackBuffer;
     BackBuffer = temp;
 
+#ifdef _WIN32
+	// Also need to swap bitmaps on Windows
+	HBITMAP btemp = FrontBitmap;
+	FrontBitmap = BackBitmap;
+	BackBitmap = btemp;
+#endif
+
     PixelIndex = 0;
 
     RenderCv.notify_all();
@@ -159,8 +166,21 @@ void VideoBackend::UpdateSurfaceSize()
 	RECT rect;
 	GetWindowRect(Window, &rect);
 
-	WindowWidth = rect.right - rect.left;
-	WindowHeight = rect.bottom - rect.top;
+	uint32_t newWidth = rect.right - rect.left;
+	uint32_t newHeight = rect.bottom - rect.top;
+
+	if (WindowWidth != newWidth || WindowHeight != newHeight)
+	{
+		WindowWidth = newWidth;
+		WindowHeight = newHeight;
+
+		DeleteObject(IntermediateBitmap);
+
+		HDC windowDC = GetDC(Window);
+		IntermediateBitmap = CreateCompatibleBitmap(windowDC, WindowWidth, WindowHeight);
+		ReleaseDC(Window, windowDC);
+	}
+
 #elif defined(__linux)   
     XWindowAttributes attributes;
     if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
@@ -194,11 +214,9 @@ void VideoBackend::DrawFrame()
 	HGDIOBJ intOldObj;
 	HGDIOBJ intOldFont;
 
-	HBITMAP hBitmap = CreateCompatibleBitmap(windowDC, WindowWidth, WindowHeight);
-
 	// Select fonts and bitmaps into device contexts
 	intOldFont = SelectObject(intermediateDC, Font);
-	intOldObj = SelectObject(intermediateDC, hBitmap);
+	intOldObj = SelectObject(intermediateDC, IntermediateBitmap);
 	memOldObj = SelectObject(initialDC, FrontBitmap);
 
 	// First we need to blit to an intermediate device context to stretch the frame
@@ -231,14 +249,6 @@ void VideoBackend::DrawFrame()
 	DeleteDC(initialDC);
 	DeleteDC(intermediateDC);
 	ReleaseDC(Window, windowDC);
-	
-	// Need to display other bitmap next time
-	HBITMAP temp = FrontBitmap;
-	FrontBitmap = BackBitmap;
-	BackBitmap = temp;
-	
-	// Delete intermediate bitmap
-	DeleteObject(hBitmap);
 #elif defined(__linux)     
     cairo_save(CairoContext);
 
@@ -402,12 +412,6 @@ void VideoBackend::InitGDIObjects(void* handle)
 
 	Window = reinterpret_cast<HWND>(handle);
 
-	if (Window == NULL)
-	{
-		error = "Invalid window handle";
-		goto FailedExit;
-	}
-
 	Font = CreateFont(-20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
 		OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, "Consolas");
 
@@ -476,6 +480,8 @@ void VideoBackend::InitGDIObjects(void* handle)
 
 	ReleaseDC(Window, winDC);
 
+	IntermediateBitmap = NULL;
+
 	return;
 
 FailedExit:
@@ -488,6 +494,7 @@ FailedExit:
 
 void VideoBackend::CleanUpGDIObjects()
 {
+	DeleteObject(IntermediateBitmap);
 	DeleteObject(FrontBitmap);
 	DeleteObject(BackBitmap);
 	DeleteObject(Font);
