@@ -185,7 +185,7 @@ void VideoBackend::UpdateSurfaceSize()
     XWindowAttributes attributes;
     if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
     {
-        throw std::runtime_error("Failed to retrieve X11 window attributes");
+        return;
     }
 
     uint32_t newWidth = static_cast<uint32_t>(attributes.width);
@@ -317,10 +317,10 @@ void VideoBackend::DrawFps()
     cairo_text_extents(CairoContext, fps.c_str(), &extents);
     
     cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
-    cairo_rectangle(CairoContext, WindowWidth - extents.x_advance - 10.0, 8.0, extents.x_advance + 4.0, extents.height + 6.0);
+    cairo_rectangle(CairoContext, WindowWidth - extents.x_advance - 11.0, 8.0, extents.x_advance + 4.0, extents.height + 6.0);
     cairo_fill(CairoContext);
     
-    cairo_move_to(CairoContext, WindowWidth - extents.x_advance - 8.0, 11.0 + extents.height);
+    cairo_move_to(CairoContext, WindowWidth - extents.x_advance - 9.0, 11.0 + extents.height);
     cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
     cairo_show_text(CairoContext, fps.c_str());
 #endif
@@ -391,10 +391,10 @@ void VideoBackend::DrawMessages()
 		cairo_text_extents(CairoContext, entry.first.c_str(), &extents);
 
 		cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
-		cairo_rectangle(CairoContext, 8.0, offsetY, extents.x_advance + 4.0, extents.height + 6.0);
+		cairo_rectangle(CairoContext, 7.0, offsetY, extents.x_advance + 4.0, extents.height + 6.0);
 		cairo_fill(CairoContext);
 
-		cairo_move_to(CairoContext, 10.0, offsetY + 3.0 - extents.y_bearing);
+		cairo_move_to(CairoContext, 9.0, offsetY + 3.0 - extents.y_bearing);
 		cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
 		cairo_show_text(CairoContext, entry.first.c_str());
 

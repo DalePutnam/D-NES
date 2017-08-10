@@ -8,6 +8,10 @@
 #include "main_window.h"
 #include "utilities/app_settings.h"
 
+#ifdef __linux
+#include <X11/Xlib.h>
+#endif
+
 #ifdef _WIN32
 static void InitConsole()
 {
@@ -23,7 +27,7 @@ static void InitConsole()
 #endif
 
 // App Implementation
-bool MyApp::OnInit()
+bool NESApp::OnInit()
 {
 	wxCmdLineParser parser(wxApp::argc, wxApp::argv);
 	parser.AddOption("p", "profile");
@@ -89,5 +93,14 @@ bool MyApp::OnInit()
 	return true;
 }
 
+bool NESApp::Initialize(int& argc, wxChar **argv)
+{
+#ifdef __linux
+	XInitThreads();
+#endif
+
+	return wxApp::Initialize(argc, argv);
+}
+
 // Main Function
-wxIMPLEMENT_APP(MyApp);
+wxIMPLEMENT_APP(NESApp);
