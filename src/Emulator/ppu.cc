@@ -1863,7 +1863,7 @@ void PPU::Step(uint64_t cycles)
 				UpdateFrameRate();
 
 				// Enforce frame limit if enabled
-				//LimitFrameRate();
+				LimitFrameRate();
 
 				// Check if a change in rendering mode or turbo mode has been requested
 				MaybeChangeModes();
