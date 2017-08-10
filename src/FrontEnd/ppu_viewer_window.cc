@@ -257,7 +257,7 @@ void PPUViewerWindow::DoUpdate(wxThreadEvent&)
         }
     }
 #ifdef __linux
-	UpdateEventPending = false;'
+	UpdateEventPending = false;
 #endif
 }
 
