@@ -285,9 +285,9 @@ void NES::Pause()
 
 void NES::Reset() {}
 
-void NES::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
+void NES::BindFrameCallback(const std::function<void()>& fn)
 {
-	Ppu->BindFrameCompleteCallback(fn);
+	Ppu->BindFrameCallback(fn);
 }
 
 void NES::BindErrorCallback(const std::function<void(std::string)>& fn)

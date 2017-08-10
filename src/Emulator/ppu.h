@@ -29,7 +29,7 @@ public:
     void AttachAPU(APU* apu);
     void AttachCart(Cart* cart);
 
-	void BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn);
+	void BindFrameCallback(const std::function<void()>& fn);
 
     uint16_t GetCurrentDot();
     uint16_t GetCurrentScanline();
@@ -75,9 +75,6 @@ private:
 
     static const uint32_t RgbLookupTable[64];
     static constexpr uint32_t ResetDelay = 88974;
-    static constexpr uint32_t FrameBufferSize = 256 * 240 * 3;
-
-    uint8_t FrameBuffer[FrameBufferSize];
 
     int FpsCounter;
     std::atomic<int> CurrentFps;
@@ -208,5 +205,5 @@ private:
     void UpdateFrameRate();
 	void UpdateFrameSkipCounters();
 
-    std::function<void(uint8_t*)> OnFrameComplete;
+    std::function<void()> OnFrameComplete;
 };

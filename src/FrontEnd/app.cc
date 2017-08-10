@@ -50,12 +50,12 @@ bool MyApp::OnInit()
 
 				std::cout << ": Success!" << std::endl;
 
-				auto UpdateFps = [&nes](uint8_t*)
+				auto UpdateFps = [&nes]()
 				{
 					std::cout << "\rFPS: " << nes.GetFrameRate() << std::flush;
 				};
 
-				nes.BindFrameCompleteCallback(UpdateFps);
+				nes.BindFrameCallback(UpdateFps);
 
 				std::cout << "Starting Emulator. Press ENTER to Terminate." << std::endl;
 

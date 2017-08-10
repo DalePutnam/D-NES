@@ -92,7 +92,7 @@ private:
     void OnKeyUp(wxKeyEvent& event);
 
     void EmulatorErrorCallback(std::string err);
-    void EmulatorFrameCallback(uint8_t* frameBuffer);
+    void EmulatorFrameCallback();
 
     void OnUnexpectedShutdown(wxThreadEvent& event);
     void OnPpuViewerClosed(wxCommandEvent& event);

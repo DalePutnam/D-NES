@@ -45,7 +45,7 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
     { wxSize(1024, 960), wxSize(1024, 896) },
 };
 
-void MainWindow::EmulatorFrameCallback(uint8_t* frameBuffer)
+void MainWindow::EmulatorFrameCallback()
 {
     std::unique_lock<std::mutex> lock(PpuViewerMutex);
     
@@ -163,7 +163,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         try
         {
             Nes = new NES(params);
-            Nes->BindFrameCompleteCallback(&MainWindow::EmulatorFrameCallback, this);
+            Nes->BindFrameCallback(&MainWindow::EmulatorFrameCallback, this);
             Nes->BindErrorCallback(&MainWindow::EmulatorErrorCallback, this);
         }
         catch (std::exception &e)

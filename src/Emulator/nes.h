@@ -69,13 +69,13 @@ public:
 
     const std::string& GetGameName();
 
-	void BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn);
+	void BindFrameCallback(const std::function<void()>& fn);
 	void BindErrorCallback(const std::function<void(std::string)>& fn);
 
     template<class T>
-    void BindFrameCompleteCallback(void(T::*fn)(uint8_t*), T* obj)
+    void BindFrameCallback(void(T::*fn)(), T* obj)
     {
-        BindFrameCompleteCallback(std::bind(fn, obj, std::placeholders::_1));
+        BindFrameCallback(std::bind(fn, obj));
     }
 
     template<class T>

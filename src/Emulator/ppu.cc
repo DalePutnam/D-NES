@@ -946,7 +946,7 @@ void PPU::AttachCart(Cart* cart)
     Cartridge = cart;
 }
 
-void PPU::BindFrameCompleteCallback(const std::function<void(uint8_t*)>& fn)
+void PPU::BindFrameCallback(const std::function<void()>& fn)
 {
 	OnFrameComplete = fn;
 }
@@ -1859,14 +1859,14 @@ void PPU::Step(uint64_t cycles)
 				UpdateFrameRate();
 
 				// Enforce frame limit if enabled
-				LimitFrameRate();
+				//LimitFrameRate();
 
 				// Check if a change in rendering mode or turbo mode has been requested
 				MaybeChangeModes();
 
 				if (OnFrameComplete && TurboFrameSkip == 0)
 				{
-					OnFrameComplete(FrameBuffer);
+					OnFrameComplete();
 				}
 			}
 
