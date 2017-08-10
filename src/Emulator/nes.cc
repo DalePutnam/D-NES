@@ -21,14 +21,18 @@ NES::NES(const NesParams& params)
     , Cpu(nullptr)
     , Ppu(nullptr)
     , Cartridge(nullptr)
+	, VB(nullptr)
 {
     try
     {
-        VB = new VideoBackend(params.WindowHandle);
-
+		if (!params.HeadlessMode)
+		{
+			VB = new VideoBackend(params.WindowHandle);
+		}
+        
         Apu = new APU;
         Cpu = new CPU;
-        Ppu = new PPU(VB);
+        Ppu = new PPU(VB); // Will be nullptr in HeadlessMode
         Cartridge = new Cart(params.RomPath, params.SavePath);
     }
     catch (std::runtime_error& e)
@@ -42,9 +46,12 @@ NES::NES(const NesParams& params)
         throw e;
     }
 
-    VB->ShowFps(params.FpsDisplayEnabled);
-    VB->SetOverscanEnabled(params.OverscanEnabled);
-
+    if (VB != nullptr)
+    {
+        VB->ShowFps(params.FpsDisplayEnabled);
+        VB->SetOverscanEnabled(params.OverscanEnabled);
+    }
+    
     Apu->AttachCPU(Cpu);
     Apu->AttachCart(Cartridge);
 

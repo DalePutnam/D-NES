@@ -42,6 +42,7 @@ bool MyApp::OnInit()
 			NesParams params;
 			params.RomPath = game;
 			params.TurboModeEnabled = true;
+            params.HeadlessMode = true;
 
 			try 
 			{

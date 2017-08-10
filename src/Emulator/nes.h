@@ -36,22 +36,25 @@ struct NesParams
     float NoiseVolume;
     float DmcVolume;
 
+	bool HeadlessMode;
     void* WindowHandle;
 
-    NesParams()
-        : RomPath("")
-        , SavePath("")
-        , CpuLogEnabled(false)
-        , FrameLimitEnabled(true)
-        , NtscDecoderEnabled(false)
-        , AudioEnabled(true)
-        , FiltersEnabled(false)
-        , MasterVolume(1.0f)
-        , PulseOneVolume(1.0f)
-        , PulseTwoVolume(1.0f)
-        , TriangleVolume(1.0f)
-        , NoiseVolume(1.0f)
-        , DmcVolume(1.0f)
+	NesParams()
+		: RomPath("")
+		, SavePath("")
+		, CpuLogEnabled(false)
+		, FrameLimitEnabled(true)
+		, NtscDecoderEnabled(false)
+		, AudioEnabled(true)
+		, FiltersEnabled(false)
+		, MasterVolume(1.0f)
+		, PulseOneVolume(1.0f)
+		, PulseTwoVolume(1.0f)
+		, TriangleVolume(1.0f)
+		, NoiseVolume(1.0f)
+		, DmcVolume(1.0f)
+		, HeadlessMode(false)
+		, WindowHandle(nullptr)
     {}
 };
 

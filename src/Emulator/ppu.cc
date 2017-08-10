@@ -335,8 +335,12 @@ void PPU::RenderNtscLine()
         int green = static_cast<int>(clamp(255.95f * (y + -0.274788f*i + -0.635691f*q)));
         int blue = static_cast<int>(clamp(255.95f * (y + -1.108545f*i + 1.709007f*q)));
 
-        uint32_t pixel = (red << 16) | (green << 8) | blue;
-        *VB << pixel;
+        if (VB != nullptr)
+        {
+            uint32_t pixel = (red << 16) | (green << 8) | blue;
+            *VB << pixel;
+        }
+        
     }
 }
 
@@ -627,19 +631,11 @@ void PPU::DecodePixel(uint16_t colour)
 		}
 		else
 		{
-			uint32_t pixel = RgbLookupTable[colour];
-            *VB << pixel;
-
-/*
-			uint8_t red = static_cast<uint8_t>((pixel & 0xFF0000) >> 16);
-			uint8_t green = static_cast<uint8_t>((pixel & 0x00FF00) >> 8);
-			uint8_t blue = static_cast<uint8_t>(pixel & 0x0000FF);
-			uint32_t index = ((Dot - 1) + (Line << 8)) * 3;
-            
-			FrameBuffer[index] = red;
-			FrameBuffer[index + 1] = green;
-			FrameBuffer[index + 2] = blue;
-            */
+            if (VB != nullptr)
+            {
+                uint32_t pixel = RgbLookupTable[colour];
+                *VB << pixel;
+            }
 		}
 	}
 }
@@ -1210,6 +1206,11 @@ void PPU::LoadState(const char* state)
     SpriteZeroSecondaryOamFlag = !!(packedBool & 0x20);
     AddressLatch = !!(packedBool & 0x10);
 
+    if (VB == nullptr)
+    {
+        return;
+    }
+
     // Set the current pixel being rendered in the frame buffer
     if (Line >= 0 && Line <= 239)
     {
@@ -1488,7 +1489,10 @@ void PPU::UpdateFrameRate()
 		FpsCounter = 0;
 		FrameCountStart = steady_clock::now();
 
-        VB->SetFps(CurrentFps);
+        if (VB != nullptr)
+        {
+            VB->SetFps(CurrentFps);
+        }
 	}
 	else
 	{
