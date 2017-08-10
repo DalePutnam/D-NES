@@ -174,6 +174,7 @@ void MainWindow::StartEmulator(const std::string& filename)
             delete Nes;
             Nes = nullptr;
 
+            RenderSurface->Hide();
             RomList->SetFocus();
 
             return;
@@ -210,6 +211,8 @@ void MainWindow::StartEmulator(const std::string& filename)
         SetMaxClientSize(GameWindowSize);
 
         RenderSurface->SetSize(GetClientSize());
+
+        RenderSurface->SetFocus();
 
         Nes->Start();
     }
