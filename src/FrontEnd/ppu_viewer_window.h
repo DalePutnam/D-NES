@@ -29,7 +29,7 @@ private:
     void BindEvents();
 
     void OnQuit(wxCommandEvent& event);
-	void OnPaletteSelected(wxCommandEvent& event);
+    void OnPaletteSelected(wxCommandEvent& event);
     void OnPaintPanels(wxPaintEvent& evt);
     void DoUpdate(wxThreadEvent& evt);
 
@@ -43,16 +43,16 @@ private:
 
     NES* Nes;
 
-	int SelectedPalette;
+    int SelectedPalette;
     uint8_t* NameTableBuffers[4];
     uint8_t* PatternTableBuffers[2];
     uint8_t* PaletteBuffers[8];
     uint8_t* SpriteBuffers[64];
 
 #ifdef _WIN32
-	std::future<void> Future;
+    std::future<void> Future;
 #elif defined(__linux)
-	bool UpdateEventPending;
+    bool UpdateEventPending;
 #endif
 };
 

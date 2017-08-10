@@ -755,11 +755,11 @@ void APU::DmcUnit::SetEnabled(bool enabled)
         CurrentAddress = SampleAddress;
         SampleBytesRemaining = SampleLength;
 
-		if (SampleBufferEmptyFlag)
-		{
-			InMemoryStall = true;
-			MemoryStallCountdown = 4;
-		}	
+        if (SampleBufferEmptyFlag)
+        {
+            InMemoryStall = true;
+            MemoryStallCountdown = 4;
+        }	
     }
 }
 
@@ -813,7 +813,7 @@ bool APU::DmcUnit::CheckIRQ()
 
 bool APU::DmcUnit::CheckStalled()
 {
-	return InMemoryStall;
+    return InMemoryStall;
 }
 
 void APU::DmcUnit::ClockTimer()
@@ -856,14 +856,14 @@ void APU::DmcUnit::ClockTimer()
             {
                 SilenceFlag = false;
                 SampleShiftRegister = SampleBuffer;
-				SampleBufferEmptyFlag = true;
+                SampleBufferEmptyFlag = true;
             }
 
-			if (SampleBytesRemaining != 0)
-			{
-				InMemoryStall = true;
-				MemoryStallCountdown = 4;
-			}
+            if (SampleBytesRemaining != 0)
+            {
+                InMemoryStall = true;
+                MemoryStallCountdown = 4;
+            }
         }
     }
 
@@ -872,44 +872,44 @@ void APU::DmcUnit::ClockTimer()
 
 void APU::DmcUnit::ClockMemoryReader()
 {
-	if (!InMemoryStall)
-	{
-		return;
-	}
+    if (!InMemoryStall)
+    {
+        return;
+    }
 
-	--MemoryStallCountdown;
+    --MemoryStallCountdown;
 
-	if (MemoryStallCountdown == 0)
-	{
-		SampleBuffer = Apu.Cartridge->PrgRead(CurrentAddress - 0x6000);
-		SampleBufferEmptyFlag = false;
+    if (MemoryStallCountdown == 0)
+    {
+        SampleBuffer = Apu.Cartridge->PrgRead(CurrentAddress - 0x6000);
+        SampleBufferEmptyFlag = false;
 
-		if (CurrentAddress == 0xFFFF)
-		{
-			CurrentAddress = 0x8000;
-		}
-		else
-		{
-			++CurrentAddress;
-		}
+        if (CurrentAddress == 0xFFFF)
+        {
+            CurrentAddress = 0x8000;
+        }
+        else
+        {
+            ++CurrentAddress;
+        }
 
-		--SampleBytesRemaining;
+        --SampleBytesRemaining;
 
-		if (SampleBytesRemaining == 0)
-		{
-			if (SampleLoopFlag)
-			{
-				CurrentAddress = SampleAddress;
-				SampleBytesRemaining = SampleLength;
-			}
-			else if (InterruptEnabledFlag)
-			{
-				InterruptFlag = true;
-			}
-		}
+        if (SampleBytesRemaining == 0)
+        {
+            if (SampleLoopFlag)
+            {
+                CurrentAddress = SampleAddress;
+                SampleBytesRemaining = SampleLength;
+            }
+            else if (InterruptEnabledFlag)
+            {
+                InterruptFlag = true;
+            }
+        }
 
-		InMemoryStall = false;
-	}
+        InMemoryStall = false;
+    }
 }
 
 APU::DmcUnit::operator uint8_t ()
@@ -1033,7 +1033,7 @@ APU::APU()
     , EffectiveCpuFrequency(CpuFrequency)
     , ExtraCount(0.0f)
     , Fraction(0.0f)
-	, TurboModeEnabled(false)
+    , TurboModeEnabled(false)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
     , PulseTwoVolume(1.0f)
@@ -1094,10 +1094,10 @@ void APU::Step()
 {
     ++Clock;
 
-	if (Dmc.CheckStalled())
-	{
-		Dmc.ClockMemoryReader();
-	}
+    if (Dmc.CheckStalled())
+    {
+        Dmc.ClockMemoryReader();
+    }
 
     Triangle.ClockTimer();
 
@@ -1175,10 +1175,10 @@ void APU::Step()
         }
     }
 
-	if (!TurboModeEnabled)
-	{
-		GenerateSample();
-	}
+    if (!TurboModeEnabled)
+    {
+        GenerateSample();
+    }
 }
 
 void APU::GenerateSample()
@@ -1231,7 +1231,7 @@ bool APU::CheckIRQ()
 
 bool APU::CheckStalled()
 {
-	return Dmc.CheckStalled();
+    return Dmc.CheckStalled();
 }
 
 void APU::WritePulseOneRegister(uint8_t reg, uint8_t value)
@@ -1318,7 +1318,7 @@ void APU::WriteAPUFrameCounter(uint8_t value)
 
 void APU::SetTurboModeEnabled(bool enabled)
 {
-	TurboModeEnabled = enabled;
+    TurboModeEnabled = enabled;
 }
 
 void APU::SetAudioEnabled(bool enabled)

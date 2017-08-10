@@ -29,17 +29,17 @@ public:
     void AttachAPU(APU* apu);
     void AttachCart(Cart* cart);
 
-	void BindFrameCallback(const std::function<void()>& fn);
+    void BindFrameCallback(const std::function<void()>& fn);
 
     uint16_t GetCurrentDot();
     uint16_t GetCurrentScanline();
 
     void Run();
-	void Step(uint64_t cycles);
+    void Step(uint64_t cycles);
     int ScheduleSync();
     bool CheckNMI(uint64_t& occuredCycle);
 
-	void SetTurboModeEnabled(bool enabled);
+    void SetTurboModeEnabled(bool enabled);
     void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecodingEnabled(bool enabled);
 
@@ -55,7 +55,7 @@ public:
     void WritePPUDATA(uint8_t M);
 
     int GetFrameRate();
-	void ResetFrameCounter();
+    void ResetFrameCounter();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
@@ -82,9 +82,9 @@ private:
     std::chrono::steady_clock::time_point SingleFrameStart;
     std::atomic<bool> FrameLimitEnabled;
 
-	std::atomic<bool> RequestTurboMode;
-	bool TurboModeEnabled;
-	int TurboFrameSkip;
+    std::atomic<bool> RequestTurboMode;
+    bool TurboModeEnabled;
+    int TurboFrameSkip;
 
     uint64_t Clock;
     uint16_t Dot;
@@ -177,25 +177,25 @@ private:
 
     void UpdateState();
     void SpriteEvaluation();
-	void SpriteZeroHitCheck();
+    void SpriteZeroHitCheck();
     void RenderPixel();
-	void RenderPixelIdle();
-	void DecodePixel(uint16_t colour);
+    void RenderPixelIdle();
+    void DecodePixel(uint16_t colour);
 
-	void MaybeChangeModes();
+    void MaybeChangeModes();
     void IncrementXScroll();
     void IncrementYScroll();
     void IncrementClock();
-	void LoadBackgroundShiftRegisters();
-	void NameTableFetch();
-	void BackgroundAttributeFetch();
-	void BackgroundLowByteFetch();
-	void BackgroundHighByteFetch();
-	void SpriteAttributeFetch();
-	void SpriteXCoordinateFetch();
-	void SpriteLowByteFetch();
-	void SpriteHighByteFetch();
-	void ClockSpriteCounters();
+    void LoadBackgroundShiftRegisters();
+    void NameTableFetch();
+    void BackgroundAttributeFetch();
+    void BackgroundLowByteFetch();
+    void BackgroundHighByteFetch();
+    void SpriteAttributeFetch();
+    void SpriteXCoordinateFetch();
+    void SpriteLowByteFetch();
+    void SpriteHighByteFetch();
+    void ClockSpriteCounters();
 
     uint8_t Read(uint16_t address);
     void Write(uint16_t address, uint8_t value);
@@ -203,7 +203,7 @@ private:
     void WriteNameTable(uint16_t address, uint8_t value);
 
     void UpdateFrameRate();
-	void UpdateFrameSkipCounters();
+    void UpdateFrameSkipCounters();
 
     std::function<void()> OnFrameComplete;
 };

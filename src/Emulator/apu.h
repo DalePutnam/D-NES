@@ -21,7 +21,7 @@ public:
 
     void Step();
     bool CheckIRQ();
-	bool CheckStalled();
+    bool CheckStalled();
 
     void SetFrameLength(int32_t length);
 
@@ -35,7 +35,7 @@ public:
     uint8_t ReadAPUStatus();
     void WriteAPUFrameCounter(uint8_t value);
 
-	void SetTurboModeEnabled(bool enabled);
+    void SetTurboModeEnabled(bool enabled);
     void SetAudioEnabled(bool mute);
     void SetMasterVolume(float volume);
     void SetFiltersEnabled(bool enabled);
@@ -190,10 +190,10 @@ private:
         bool GetEnabled();
         void ClearInterrupt();
         bool CheckIRQ();
-		bool CheckStalled();
+        bool CheckStalled();
 
         void ClockTimer();
-		void ClockMemoryReader();
+        void ClockMemoryReader();
 
         operator uint8_t ();
 
@@ -253,7 +253,7 @@ private:
 
     AudioBackend Backend;
 
-	std::atomic<bool> TurboModeEnabled;
+    std::atomic<bool> TurboModeEnabled;
     std::atomic<float> MasterVolume;
     std::atomic<float> PulseOneVolume;
     std::atomic<float> PulseTwoVolume;

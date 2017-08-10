@@ -19,7 +19,7 @@ struct NesParams
     std::string SavePath;
     bool CpuLogEnabled;
 
-	bool TurboModeEnabled;
+    bool TurboModeEnabled;
     // PPU Settings
     bool FrameLimitEnabled;
     bool NtscDecoderEnabled;
@@ -36,25 +36,25 @@ struct NesParams
     float NoiseVolume;
     float DmcVolume;
 
-	bool HeadlessMode;
+    bool HeadlessMode;
     void* WindowHandle;
 
-	NesParams()
-		: RomPath("")
-		, SavePath("")
-		, CpuLogEnabled(false)
-		, FrameLimitEnabled(true)
-		, NtscDecoderEnabled(false)
-		, AudioEnabled(true)
-		, FiltersEnabled(false)
-		, MasterVolume(1.0f)
-		, PulseOneVolume(1.0f)
-		, PulseTwoVolume(1.0f)
-		, TriangleVolume(1.0f)
-		, NoiseVolume(1.0f)
-		, DmcVolume(1.0f)
-		, HeadlessMode(false)
-		, WindowHandle(nullptr)
+    NesParams()
+        : RomPath("")
+        , SavePath("")
+        , CpuLogEnabled(false)
+        , FrameLimitEnabled(true)
+        , NtscDecoderEnabled(false)
+        , AudioEnabled(true)
+        , FiltersEnabled(false)
+        , MasterVolume(1.0f)
+        , PulseOneVolume(1.0f)
+        , PulseTwoVolume(1.0f)
+        , TriangleVolume(1.0f)
+        , NoiseVolume(1.0f)
+        , DmcVolume(1.0f)
+        , HeadlessMode(false)
+        , WindowHandle(nullptr)
     {}
 };
 
@@ -72,8 +72,8 @@ public:
 
     const std::string& GetGameName();
 
-	void BindFrameCallback(const std::function<void()>& fn);
-	void BindErrorCallback(const std::function<void(std::string)>& fn);
+    void BindFrameCallback(const std::function<void()>& fn);
+    void BindErrorCallback(const std::function<void(std::string)>& fn);
 
     template<class T>
     void BindFrameCallback(void(T::*fn)(), T* obj)
@@ -96,7 +96,7 @@ public:
     void SetCpuLogEnabled(bool enabled);
     void SetNativeSaveDirectory(const std::string& saveDir);
 
-	void SetTurboModeEnabled(bool enabled);
+    void SetTurboModeEnabled(bool enabled);
 
     int GetFrameRate();
     void GetNameTable(int table, uint8_t* pixels);

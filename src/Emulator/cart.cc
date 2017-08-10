@@ -47,10 +47,10 @@ Cart::Cart(const string& fileName, const string& saveDir)
                 throw runtime_error(oss.str());
             }
         }
-		else
-		{
-			throw runtime_error("Cart: Unable to load " + fileName + ": Bad header");
-		}
+        else
+        {
+            throw runtime_error("Cart: Unable to load " + fileName + ": Bad header");
+        }
     }
     else
     {

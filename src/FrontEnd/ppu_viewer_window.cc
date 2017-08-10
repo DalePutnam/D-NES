@@ -23,15 +23,15 @@ void PPUViewerWindow::OnQuit(wxCommandEvent& WXUNUSED(event))
 
 void PPUViewerWindow::OnPaletteSelected(wxCommandEvent&)
 {
-	SelectedPalette = PaletteSelect->GetSelection();
+    SelectedPalette = PaletteSelect->GetSelection();
 }
 
 PPUViewerWindow::PPUViewerWindow(wxWindow* parent, NES* nes)
-	: wxFrame(parent, wxID_ANY, "PPU Viewer", wxDefaultPosition, wxDefaultSize, FRAME_STYLE)
-	, Nes(nes)
-	, SelectedPalette(0)
+    : wxFrame(parent, wxID_ANY, "PPU Viewer", wxDefaultPosition, wxDefaultSize, FRAME_STYLE)
+    , Nes(nes)
+    , SelectedPalette(0)
 #ifdef __linux
-	, UpdateEventPending(false)
+    , UpdateEventPending(false)
 #endif
 {
     for (uint32_t i = 0; i < 64; ++i)
@@ -61,11 +61,11 @@ PPUViewerWindow::PPUViewerWindow(wxWindow* parent, NES* nes)
 PPUViewerWindow::~PPUViewerWindow()
 {
 #ifdef _WIN32
-	// Make sure last async call has completed before deleting the window
-	if (Future.valid())
-	{
-		Future.get();
-	}
+    // Make sure last async call has completed before deleting the window
+    if (Future.valid())
+    {
+        Future.get();
+    }
 #endif
 
     std::unique_lock<std::recursive_mutex> lock(UpdateLock);
@@ -163,7 +163,7 @@ void PPUViewerWindow::BindEvents()
 {
     Bind(EVT_PPU_VIEWER_UPDATE, wxThreadEventHandler(PPUViewerWindow::DoUpdate), this, wxID_ANY);
     Bind(wxEVT_CLOSE_WINDOW, wxCommandEventHandler(PPUViewerWindow::OnQuit), this, wxID_ANY);
-	Bind(wxEVT_CHOICE, wxCommandEventHandler(PPUViewerWindow::OnPaletteSelected), this, wxID_ANY);
+    Bind(wxEVT_CHOICE, wxCommandEventHandler(PPUViewerWindow::OnPaletteSelected), this, wxID_ANY);
 
 
     NameTables->Bind(wxEVT_PAINT, wxPaintEventHandler(PPUViewerWindow::OnPaintPanels), this, wxID_ANY);
@@ -178,7 +178,7 @@ void PPUViewerWindow::BindEvents()
 
 void PPUViewerWindow::OnPaintPanels(wxPaintEvent& evt)
 {
-	std::unique_lock<std::recursive_mutex> lock(UpdateLock);
+    std::unique_lock<std::recursive_mutex> lock(UpdateLock);
 
     if (Nes == nullptr)
     {
@@ -220,7 +220,7 @@ void PPUViewerWindow::DoUpdate(wxThreadEvent&)
     if (Nes == nullptr)
     {
 #ifdef __linux
-		UpdateEventPending = false;
+        UpdateEventPending = false;
 #endif
         return;
     }
@@ -257,18 +257,18 @@ void PPUViewerWindow::DoUpdate(wxThreadEvent&)
         }
     }
 #ifdef __linux
-	UpdateEventPending = false;
+    UpdateEventPending = false;
 #endif
 }
 
 void PPUViewerWindow::UpdatePanels()
 {
 #ifdef _WIN32
-	// Before acquiring the lock make sure that the last async call completed
-	if (Future.valid())
-	{
-		Future.get();
-	}
+    // Before acquiring the lock make sure that the last async call completed
+    if (Future.valid())
+    {
+        Future.get();
+    }
 #endif
 
     std::unique_lock<std::recursive_mutex> lock(UpdateLock);
@@ -299,15 +299,15 @@ void PPUViewerWindow::UpdatePanels()
     }
 
 #ifdef _WIN32
-	Future = std::async(std::launch::async, &PPUViewerWindow::DoUpdate, this, wxThreadEvent(EVT_PPU_VIEWER_UPDATE));
+    Future = std::async(std::launch::async, &PPUViewerWindow::DoUpdate, this, wxThreadEvent(EVT_PPU_VIEWER_UPDATE));
 #elif defined(__linux)   
-	// If there's already an update event pending don't bother queuing another one
-	if (!UpdateEventPending)
-	{
-		wxThreadEvent evt(EVT_PPU_VIEWER_UPDATE);
-		wxQueueEvent(this, evt.Clone());
-		UpdateEventPending = true;
-	}
+    // If there's already an update event pending don't bother queuing another one
+    if (!UpdateEventPending)
+    {
+        wxThreadEvent evt(EVT_PPU_VIEWER_UPDATE);
+        wxQueueEvent(this, evt.Clone());
+        UpdateEventPending = true;
+    }
 #endif
 }
 

@@ -101,7 +101,7 @@ private:
     void OnVideoSettingsClosed(wxCommandEvent& event);
 
 #ifdef _WIN32
-	void OnRenderSurfaceFocus(wxFocusEvent& event);
+    void OnRenderSurfaceFocus(wxFocusEvent& event);
 #endif
 };
 

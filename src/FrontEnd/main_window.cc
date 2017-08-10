@@ -116,7 +116,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         NesParams params;
         params.RomPath = filename;
         params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
-		params.TurboModeEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
+        params.TurboModeEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
 
         bool audioEnabled, filtersEnabled;
         appSettings->Read("/Audio/Enabled", &audioEnabled);
@@ -143,7 +143,7 @@ void MainWindow::StartEmulator(const std::string& filename)
         RenderSurface->Show();
 
 #ifdef _WIN32
-		params.WindowHandle = RenderSurface->GetHandle();
+        params.WindowHandle = RenderSurface->GetHandle();
 #endif
 
 #ifdef __linux
@@ -234,7 +234,7 @@ void MainWindow::StopEmulator(bool showRomList)
 
         if (showRomList)
         {
-			RenderSurface->Hide();
+            RenderSurface->Hide();
 
             SetMinClientSize(wxSize(-1, -1));
             SetMaxClientSize(wxSize(-1, -1));
@@ -284,7 +284,7 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
     {
         bool enabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
         //Nes->SetFrameLimitEnabled(enabled);
-		Nes->SetTurboModeEnabled(enabled);
+        Nes->SetTurboModeEnabled(enabled);
     }
 }
 
@@ -595,7 +595,7 @@ void MainWindow::InitializeMenus()
     SettingsMenu = new wxMenu;
     SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
     //SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Limit To 60 FPS"));
-	SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Enable Turbo Mode"));
+    SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Enable Turbo Mode"));
     SettingsMenu->AppendSeparator();
     SettingsMenu->Append(ID_SETTINGS_AUDIO, wxT("&Audio Settings"));
     SettingsMenu->Append(ID_SETTINGS_VIDEO, wxT("&Video Settings"));
@@ -702,10 +702,10 @@ void MainWindow::BindEvents()
     RenderSurface->Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     RenderSurface->Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
 #elif _WIN32
-	// On windows the MainWindow need to intercept keyboard events
+    // On windows the MainWindow need to intercept keyboard events
     Bind(wxEVT_KEY_DOWN, &MainWindow::OnKeyDown, this);
     Bind(wxEVT_KEY_UP, &MainWindow::OnKeyUp, this);
-	RenderSurface->Bind(wxEVT_SET_FOCUS, &MainWindow::OnRenderSurfaceFocus, this);
+    RenderSurface->Bind(wxEVT_SET_FOCUS, &MainWindow::OnRenderSurfaceFocus, this);
 #endif
 }
 
@@ -713,7 +713,7 @@ void MainWindow::BindEvents()
 // On windows if the render surface is focused, kick focus back up to the main window
 void MainWindow::OnRenderSurfaceFocus(wxFocusEvent& event)
 {
-	SetFocus();
+    SetFocus();
 }
 #endif
 

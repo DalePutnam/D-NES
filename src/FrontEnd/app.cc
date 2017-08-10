@@ -15,91 +15,91 @@
 #ifdef _WIN32
 static void InitConsole()
 {
-	AllocConsole();
-	freopen("CONIN$", "r", stdin);
-	freopen("CONOUT$", "w", stdout);
-	freopen("CONOUT$", "w", stderr);
+    AllocConsole();
+    freopen("CONIN$", "r", stdin);
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
 
-	std::cout.clear();
-	std::cerr.clear();
-	std::cin.clear();
+    std::cout.clear();
+    std::cerr.clear();
+    std::cin.clear();
 }
 #endif
 
 // App Implementation
 bool NESApp::OnInit()
 {
-	wxCmdLineParser parser(wxApp::argc, wxApp::argv);
-	parser.AddOption("p", "profile");
+    wxCmdLineParser parser(wxApp::argc, wxApp::argv);
+    parser.AddOption("p", "profile");
 
-	parser.Parse();
+    parser.Parse();
 
-	wxString game;
-	if (parser.Found("p", &game))
-	{
+    wxString game;
+    if (parser.Found("p", &game))
+    {
 #ifdef _WIN32
-		InitConsole();
+        InitConsole();
 #endif
-		std::cout << "D-NES Profile Mode" << std::endl;
+        std::cout << "D-NES Profile Mode" << std::endl;
 
-		{
-			NesParams params;
-			params.RomPath = game;
-			params.TurboModeEnabled = true;
+        {
+            NesParams params;
+            params.RomPath = game;
+            params.TurboModeEnabled = true;
             params.HeadlessMode = true;
 
-			try 
-			{
-				std::cout << "Loading ROM " << params.RomPath << std::flush;
-				NES nes(params);
+            try 
+            {
+                std::cout << "Loading ROM " << params.RomPath << std::flush;
+                NES nes(params);
 
-				std::cout << ": Success!" << std::endl;
+                std::cout << ": Success!" << std::endl;
 
-				auto UpdateFps = [&nes]()
-				{
-					std::cout << "\rFPS: " << nes.GetFrameRate() << std::flush;
-				};
+                auto UpdateFps = [&nes]()
+                {
+                    std::cout << "\rFPS: " << nes.GetFrameRate() << std::flush;
+                };
 
-				nes.BindFrameCallback(UpdateFps);
+                nes.BindFrameCallback(UpdateFps);
 
-				std::cout << "Starting Emulator. Press ENTER to Terminate." << std::endl;
+                std::cout << "Starting Emulator. Press ENTER to Terminate." << std::endl;
 
-				nes.Start();
+                nes.Start();
 
-				std::cin.get();
+                std::cin.get();
 
-				nes.Stop();
-			} 
-			catch (...)
-			{
-				std::cout << ": Failed!" << std::endl;
-				std::cout << "Press Enter to Terminate." << std::endl;
-				
-				std::cin.get();
-			}
-		}
+                nes.Stop();
+            } 
+            catch (...)
+            {
+                std::cout << ": Failed!" << std::endl;
+                std::cout << "Press Enter to Terminate." << std::endl;
+                
+                std::cin.get();
+            }
+        }
 
 #ifdef _WIN32
-		FreeConsole();
+        FreeConsole();
 #endif
-		exit(0);
-	}
-	else
-	{
-		MainWindow* window = new MainWindow();
-		window->Show(true);
-	}
+        exit(0);
+    }
+    else
+    {
+        MainWindow* window = new MainWindow();
+        window->Show(true);
+    }
 
-	return true;
+    return true;
 }
 
 bool NESApp::Initialize(int& argc, wxChar **argv)
 {
 #ifdef __linux
-	XInitThreads();
+    XInitThreads();
 #endif
 
-	return wxApp::Initialize(argc, argv);
+    return wxApp::Initialize(argc, argv);
 }
 
 // Main Function

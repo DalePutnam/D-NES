@@ -21,14 +21,14 @@ NES::NES(const NesParams& params)
     , Cpu(nullptr)
     , Ppu(nullptr)
     , Cartridge(nullptr)
-	, VB(nullptr)
+    , VB(nullptr)
 {
     try
     {
-		if (!params.HeadlessMode)
-		{
-			VB = new VideoBackend(params.WindowHandle);
-		}
+        if (!params.HeadlessMode)
+        {
+            VB = new VideoBackend(params.WindowHandle);
+        }
         
         Apu = new APU;
         Cpu = new CPU;
@@ -67,11 +67,11 @@ NES::NES(const NesParams& params)
 
     Cpu->SetLogEnabled(params.CpuLogEnabled);
 
-	Ppu->SetTurboModeEnabled(params.TurboModeEnabled);
+    Ppu->SetTurboModeEnabled(params.TurboModeEnabled);
     Ppu->SetFrameLimitEnabled(params.FrameLimitEnabled);
     Ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
 
-	Apu->SetTurboModeEnabled(params.TurboModeEnabled);
+    Apu->SetTurboModeEnabled(params.TurboModeEnabled);
     Apu->SetAudioEnabled(params.AudioEnabled);
     Apu->SetFiltersEnabled(params.FiltersEnabled);
     Apu->SetMasterVolume(params.MasterVolume);
@@ -109,8 +109,8 @@ void NES::SetNativeSaveDirectory(const std::string& saveDir)
 
 void NES::SetTurboModeEnabled(bool enabled)
 {
-	Ppu->SetTurboModeEnabled(enabled);
-	Apu->SetTurboModeEnabled(enabled);
+    Ppu->SetTurboModeEnabled(enabled);
+    Apu->SetTurboModeEnabled(enabled);
 }
 
 int NES::GetFrameRate()
@@ -294,12 +294,12 @@ void NES::Reset() {}
 
 void NES::BindFrameCallback(const std::function<void()>& fn)
 {
-	Ppu->BindFrameCallback(fn);
+    Ppu->BindFrameCallback(fn);
 }
 
 void NES::BindErrorCallback(const std::function<void(std::string)>& fn)
 {
-	OnError = fn;
+    OnError = fn;
 }
 
 void NES::SaveState(int slot, const std::string& savePath)

@@ -56,26 +56,26 @@ private:
     std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
 #ifdef _WIN32
-	void InitGDIObjects(void* handle);
-	void CleanUpGDIObjects();
+    void InitGDIObjects(void* handle);
+    void CleanUpGDIObjects();
 
-	void DrawFps(HDC dc);
-	void DrawMessages(HDC dc);
+    void DrawFps(HDC dc);
+    void DrawMessages(HDC dc);
 
-	HWND Window;
-	HFONT Font;
-	TEXTMETRIC FontMetric;
-	HBITMAP IntermediateBitmap;
-	HBITMAP FrontBitmap;
-	HBITMAP BackBitmap;
+    HWND Window;
+    HFONT Font;
+    TEXTMETRIC FontMetric;
+    HBITMAP IntermediateBitmap;
+    HBITMAP FrontBitmap;
+    HBITMAP BackBitmap;
 #elif defined(__linux)   
     void InitXWindow(void* handle);
     void InitCairo();
     void DestroyXWindow();
     void DestroyCairo();
 
-	void DrawFps();
-	void DrawMessages();
+    void DrawFps();
+    void DrawMessages();
 
     Display* XDisplay;
     Window XParentWindow;

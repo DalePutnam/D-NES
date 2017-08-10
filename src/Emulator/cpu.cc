@@ -118,12 +118,12 @@ void CPU::Write(uint8_t M, uint16_t address)
 
         if ((Clock - 3) % 6 == 0)
         {
-			Read(PC);
+            Read(PC);
         }
         else
         {
-			Read(PC);
-			Read(PC);
+            Read(PC);
+            Read(PC);
         }
 
         for (int i = 0; i < 0x100; ++i)
@@ -1440,7 +1440,7 @@ void CPU::Pause()
 void CPU::Resume()
 {
     std::unique_lock<std::mutex> lock(PauseMutex);
-	Ppu->ResetFrameCounter();
+    Ppu->ResetFrameCounter();
     PauseCv.notify_all();
 }
 
