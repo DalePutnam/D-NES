@@ -63,6 +63,7 @@ class APU;
 class PPU;
 class Cart;
 class VideoBackend;
+class AudioBackend;
 
 class NES
 {
@@ -103,7 +104,6 @@ public:
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
     void GetSprite(int sprite, uint8_t* pixels);
-    void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecoderEnabled(bool enabled);
     void SetFpsDisplayEnabled(bool enabled);
     void SetOverscanEnabled(bool enabled);
@@ -150,7 +150,8 @@ private:
     CPU* Cpu;
     PPU* Ppu;
     Cart* Cartridge;
-    VideoBackend* VB;
+    VideoBackend* VideoOut;
+    AudioBackend* AudioOut;
 
     std::function<void(std::string)> OnError;
 };

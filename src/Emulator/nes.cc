@@ -13,26 +13,29 @@
 #include "apu.h"
 #include "ppu.h"
 #include "cart.h"
-#include "mappers/nrom.h"
 #include "video_backend.h"
+#include "audio_backend.h"
 
 NES::NES(const NesParams& params)
     : Apu(nullptr)
     , Cpu(nullptr)
     , Ppu(nullptr)
     , Cartridge(nullptr)
-    , VB(nullptr)
+    , VideoOut(nullptr)
+    , AudioOut(nullptr)
 {
     try
     {
         if (!params.HeadlessMode)
         {
-            VB = new VideoBackend(params.WindowHandle);
+            VideoOut = new VideoBackend(params.WindowHandle);
         }
+
+        AudioOut = new AudioBackend();
         
-        Apu = new APU;
         Cpu = new CPU;
-        Ppu = new PPU(VB); // Will be nullptr in HeadlessMode
+        Ppu = new PPU(VideoOut); // Will be nullptr in HeadlessMode
+        Apu = new APU(AudioOut);
         Cartridge = new Cart(params.RomPath, params.SavePath);
     }
     catch (std::runtime_error& e)
@@ -41,15 +44,16 @@ NES::NES(const NesParams& params)
         delete Cpu;
         delete Ppu;
         delete Cartridge;
-        delete VB;
+        delete VideoOut;
+        delete AudioOut;
 
         throw e;
     }
 
-    if (VB != nullptr)
+    if (VideoOut != nullptr)
     {
-        VB->ShowFps(params.FpsDisplayEnabled);
-        VB->SetOverscanEnabled(params.OverscanEnabled);
+        VideoOut->ShowFps(params.FpsDisplayEnabled);
+        VideoOut->SetOverscanEnabled(params.OverscanEnabled);
     }
     
     Apu->AttachCPU(Cpu);
@@ -68,7 +72,6 @@ NES::NES(const NesParams& params)
     Cpu->SetLogEnabled(params.CpuLogEnabled);
 
     Ppu->SetTurboModeEnabled(params.TurboModeEnabled);
-    Ppu->SetFrameLimitEnabled(params.FrameLimitEnabled);
     Ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
 
     Apu->SetTurboModeEnabled(params.TurboModeEnabled);
@@ -138,11 +141,6 @@ void NES::GetSprite(int sprite, uint8_t* pixels)
     Ppu->GetPrimaryOAM(sprite, pixels);
 }
 
-void NES::SetFrameLimitEnabled(bool enabled)
-{
-    Ppu->SetFrameLimitEnabled(enabled);
-}
-
 void NES::SetNtscDecoderEnabled(bool enabled)
 {
     Ppu->SetNtscDecodingEnabled(enabled);
@@ -150,17 +148,17 @@ void NES::SetNtscDecoderEnabled(bool enabled)
 
 void NES::SetFpsDisplayEnabled(bool enabled)
 {
-    VB->ShowFps(enabled);
+    VideoOut->ShowFps(enabled);
 }
 
 void NES::SetOverscanEnabled(bool enabled)
 {
-    VB->SetOverscanEnabled(enabled);
+    VideoOut->SetOverscanEnabled(enabled);
 }
 
 void NES::ShowMessage(const std::string& message, uint32_t duration)
 {
-    VB->ShowMessage(message, duration);
+    VideoOut->ShowMessage(message, duration);
 }
 
 void NES::SetAudioEnabled(bool enabled)
@@ -254,6 +252,7 @@ void NES::Run()
 {
     try
     {
+        Apu->ResetFrameLimiter();
         Cpu->Run();
     }
     catch (std::exception& e)
@@ -313,7 +312,7 @@ void NES::SaveState(int slot, const std::string& savePath)
     }
 
     // Pause the emulator and bring the PPU up to date with the CPU
-    Cpu->Pause();
+    Pause();
     Ppu->Run();
 
     char* state = new char[CPU::STATE_SIZE];
@@ -336,9 +335,9 @@ void NES::SaveState(int slot, const std::string& savePath)
     saveStream.write(state, Cartridge->GetStateSize());
     delete[] state;
 
-    VB->ShowMessage("Saved State " + std::to_string(slot), 5);
+    VideoOut->ShowMessage("Saved State " + std::to_string(slot), 5);
 
-    Cpu->Resume();
+    Resume();
 }
 
 void NES::LoadState(int slot, const std::string& savePath)
@@ -352,7 +351,7 @@ void NES::LoadState(int slot, const std::string& savePath)
     }
 
     // Pause the emulator and bring the PPU up to date with the CPU
-    Cpu->Pause();
+    Pause();
     Ppu->Run();
 
     char* state = new char[CPU::STATE_SIZE];
@@ -375,9 +374,9 @@ void NES::LoadState(int slot, const std::string& savePath)
     Cartridge->LoadState(state);
     delete[] state;
 
-    VB->ShowMessage("Loaded State " + std::to_string(slot), 5);
+    VideoOut->ShowMessage("Loaded State " + std::to_string(slot), 5);
 
-    Cpu->Resume();
+    Resume();
 }
 
 NES::~NES()
@@ -386,5 +385,6 @@ NES::~NES()
     delete Cpu;
     delete Ppu;
     delete Cartridge;
-    delete VB;
+    delete VideoOut;
+    delete AudioOut;
 }

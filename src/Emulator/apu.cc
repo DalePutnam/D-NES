@@ -2,9 +2,11 @@
 #include <cstring>
 #include <cmath>
 #include <iostream>
+#include <thread>
 
 #include "apu.h"
 #include "cpu.h"
+#include "audio_backend.h"
 
 namespace {
     template<typename T>
@@ -226,7 +228,7 @@ APU::PulseUnit::operator uint8_t ()
     }
 }
 
-int APU::PulseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*9)+sizeof(char);
+const int APU::PulseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*9)+sizeof(char);
 
 void APU::PulseUnit::SaveState(char* state)
 {
@@ -436,7 +438,7 @@ APU::TriangleUnit::operator uint8_t ()
     return Sequence[SequenceCount];
 }
 
-int APU::TriangleUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*4)+sizeof(char);
+const int APU::TriangleUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*4)+sizeof(char);
 
 void APU::TriangleUnit::SaveState(char* state)
 {
@@ -646,7 +648,7 @@ APU::NoiseUnit::operator uint8_t ()
     }
 }
 
-int APU::NoiseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*5)+sizeof(char);
+const int APU::NoiseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*5)+sizeof(char);
 
 void APU::NoiseUnit::SaveState(char* state)
 {
@@ -917,7 +919,7 @@ APU::DmcUnit::operator uint8_t ()
     return OutputLevel;
 }
 
-int APU::DmcUnit::STATE_SIZE = (sizeof(uint16_t)*5)+(sizeof(uint8_t)*6)+sizeof(char);
+const int APU::DmcUnit::STATE_SIZE = (sizeof(uint16_t)*5)+(sizeof(uint8_t)*6)+sizeof(char);
 
 void APU::DmcUnit::SaveState(char* state)
 {
@@ -1015,9 +1017,10 @@ void APU::DmcUnit::LoadState(const char* state)
 // APU Main Unit
 //**********************************************************************
 
-APU::APU()
+APU::APU(AudioBackend* aout)
     : Cpu(nullptr)
     , Cartridge(nullptr)
+    , AudioOut(aout)
     , PulseOne(true)
     , PulseTwo(false)
     , Dmc(*this)
@@ -1028,11 +1031,11 @@ APU::APU()
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
-    , CurrentFrameLength(16667)
-    , CyclesToNextSample(0)
+    , CyclesPerSample(0.0)
+    , CyclesToNextSample(0.0)
     , EffectiveCpuFrequency(CpuFrequency)
-    , ExtraCount(0.0f)
-    , Fraction(0.0f)
+    , SamplesPerFrame(0)
+    , FrameSampleCount(0)
     , TurboModeEnabled(false)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
@@ -1041,9 +1044,10 @@ APU::APU()
     , NoiseVolume(1.0f)
     , DmcVolume(1.0f)
 {
-    double whole, frequency;
-    frequency = CpuFrequency;
-    Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
+    double cpuFrequency = CpuFrequency;
+    CyclesPerSample = cpuFrequency / AudioBackend::SampleRate;
+    SamplesPerFrame = AudioBackend::SampleRate / 60;
+    FramePeriodStart = std::chrono::steady_clock::now();
 }
 
 APU::~APU()
@@ -1059,7 +1063,7 @@ void APU::AttachCart(Cart* cart)
 {
     this->Cartridge = cart;
 }
-
+/*
 void APU::SetFrameLength(int32_t length)
 {
     int32_t delta = length - CurrentFrameLength;
@@ -1088,6 +1092,16 @@ void APU::SetFrameLength(int32_t length)
         Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
         CurrentFrameLength = length;
     }
+}
+*/
+
+void APU::ResetFrameLimiter()
+{
+    FramePeriodStart = std::chrono::steady_clock::now();
+    CyclesToNextSample = 0.0;
+    FrameSampleCount = 0;
+
+    AudioOut->Flush();
 }
 
 void APU::Step()
@@ -1183,19 +1197,8 @@ void APU::Step()
 
 void APU::GenerateSample()
 {
-    if (CyclesToNextSample == 0)
+    if (CyclesToNextSample <= 0.0)
     {
-        if (ExtraCount >= 1.0f)
-        {
-            double whole;
-            CyclesToNextSample = (EffectiveCpuFrequency / AudioBackend::SampleRate) + 1;
-            ExtraCount = modf(ExtraCount, &whole);
-        }
-        else
-        {
-            CyclesToNextSample = EffectiveCpuFrequency / AudioBackend::SampleRate;
-        }
-
         // Decided to use the exact calculation rather than the lookup tables for this
         float pulse1 = PulseOne * PulseOneVolume;
         float pulse2 = PulseTwo * PulseTwoVolume;
@@ -1216,12 +1219,55 @@ void APU::GenerateSample()
             TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
         }
 
-        Backend << (PulseOut + TndOut) * MasterVolume;
+        // Send final sample to the backend
+        *AudioOut << ((PulseOut + TndOut) * MasterVolume);
 
-        ExtraCount += Fraction;
+        CyclesToNextSample = CyclesPerSample + CyclesToNextSample;
+        FrameSampleCount++;
+
+        // Limit emulator speed
+        if (FrameSampleCount >= SamplesPerFrame)
+        {
+            FrameSampleCount = 0;
+
+            using namespace std::chrono;
+
+            steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(16666);
+
+            if (framePeriodEnd < steady_clock::now())
+            {
+                FramePeriodStart = steady_clock::now();
+            }
+            else
+            {
+                FramePeriodStart = framePeriodEnd;
+                microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+
+                while (span.count() > 1000)
+                {
+                    std::this_thread::sleep_for(microseconds(1000));
+                    span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+                }
+
+                // Busy wait for last 1000 microseconds
+                while (span.count() > 0)
+                {
+                    span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+                }
+
+                //FramePeriodStart = steady_clock::now();
+                /*
+                if (span.count() < 0)
+                {
+                    
+                    test_count++;
+                    //std::cout << "Too long: " << span.count() << std::endl;
+                }*/
+            }
+        }
     }
 
-    --CyclesToNextSample;
+    CyclesToNextSample -= 1.0;
 }
 
 bool APU::CheckIRQ()
@@ -1319,11 +1365,17 @@ void APU::WriteAPUFrameCounter(uint8_t value)
 void APU::SetTurboModeEnabled(bool enabled)
 {
     TurboModeEnabled = enabled;
+
+    if (!enabled)
+    {
+        ResetFrameLimiter();
+        AudioOut->Flush();
+    }
 }
 
 void APU::SetAudioEnabled(bool enabled)
 {
-    Backend.SetEnabled(enabled);
+    AudioOut->SetEnabled(enabled);
 }
 
 void APU::SetMasterVolume(float volume)
@@ -1338,7 +1390,7 @@ float APU::GetMasterVolume()
 
 void APU::SetFiltersEnabled(bool enabled)
 {
-    Backend.SetFiltersEnabled(enabled);
+    AudioOut->SetFiltersEnabled(enabled);
 }
 
 void APU::SetPulseOneVolume(float volume)
@@ -1391,7 +1443,15 @@ float APU::GetDmcVolume()
     return DmcVolume;
 }
 
-int APU::STATE_SIZE = (PulseUnit::STATE_SIZE*2)+TriangleUnit::STATE_SIZE+NoiseUnit::STATE_SIZE+DmcUnit::STATE_SIZE+sizeof(uint64_t)+sizeof(uint32_t)+sizeof(uint8_t)+sizeof(char);
+const int APU::STATE_SIZE =
+    (PulseUnit::STATE_SIZE*2) +
+    TriangleUnit::STATE_SIZE +
+    NoiseUnit::STATE_SIZE + 
+    DmcUnit::STATE_SIZE +
+    sizeof(uint64_t) +
+    sizeof(uint32_t) +
+    sizeof(uint8_t) +
+    sizeof(char);
 
 void APU::SaveState(char* state)
 {

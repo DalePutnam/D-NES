@@ -1,4 +1,5 @@
 #include <cmath>
+#include <iostream>
 
 #include "audio_backend.h"
 
@@ -31,6 +32,16 @@ AudioBackend::~AudioBackend()
 #endif
 }
 
+void AudioBackend::Flush()
+{
+    std::unique_lock<std::mutex> lock(Mutex);
+
+#ifdef _WIN32
+    FlushXAudio2();
+#elif defined(__linux)
+    FlushAlsa();
+#endif
+}
 
 void AudioBackend::SetEnabled(bool enabled)
 {
@@ -140,6 +151,15 @@ void AudioBackend::CleanUpXAudio2()
     delete[] OutputBuffers;
 }
 
+void AudioBackend::FlushXAudio2()
+{
+    XAudio2SourceVoice->Stop(0);
+    XAudio2SourceVoice->FlushSourceBuffers();
+    XAudio2SourceVoice->Start(0);
+    CurrentBuffer = 0;
+    BufferIndex = 0;
+}
+
 void AudioBackend::SetEnabledXAudio2(bool enabled)
 {
     if (!enabled && Enabled)
@@ -177,6 +197,7 @@ void AudioBackend::InitializeAlsa()
 {
     int rc, dir;
     snd_pcm_hw_params_t* AlsaHwParams = nullptr;
+    snd_pcm_sw_params_t* AlsaSwParams = nullptr;
     snd_pcm_uframes_t bufferSize;
 
     AlsaHandle = nullptr;
@@ -229,6 +250,7 @@ void AudioBackend::InitializeAlsa()
 FailedExit:
     if (AlsaHandle) snd_pcm_close(AlsaHandle);
     if (AlsaHwParams) snd_pcm_hw_params_free(AlsaHwParams);
+    if (AlsaSwParams) snd_pcm_sw_params_free(AlsaSwParams);
     throw std::runtime_error(std::string("Failed to initialize ALSA. ") + snd_strerror(rc));
 }
 
@@ -240,6 +262,13 @@ void AudioBackend::CleanUpAlsa()
     delete [] SampleBuffer;
 }
 
+void AudioBackend::FlushAlsa()
+{
+    BufferIndex = 0;
+    snd_pcm_drop(AlsaHandle);
+    snd_pcm_prepare(AlsaHandle);
+}
+
 void AudioBackend::SetEnabledAlsa(bool enabled)
 {
     if (!enabled && Enabled)
@@ -249,6 +278,7 @@ void AudioBackend::SetEnabledAlsa(bool enabled)
     else if (enabled && !Enabled)
     {
         snd_pcm_prepare(AlsaHandle);
+        BufferIndex = 0;
     }
 }
 
@@ -257,15 +287,18 @@ void AudioBackend::ProcessSampleAlsa(float sample)
     SampleBuffer[BufferIndex++] = sample;
     if (BufferIndex == PeriodSize)
     {
-        int rc = 0;
-        //do {
-        rc = snd_pcm_writei(AlsaHandle, SampleBuffer, PeriodSize);
-        if (rc == -EPIPE)
+        uint64_t frames = 0;
+        while (frames < PeriodSize)
         {
-            snd_pcm_prepare(AlsaHandle);
-            rc = snd_pcm_writei(AlsaHandle, SampleBuffer, PeriodSize);
+            int rc = snd_pcm_writei(AlsaHandle, SampleBuffer + (frames*sizeof(float)), PeriodSize - frames);
+            if (rc == -EPIPE)
+            {
+                snd_pcm_prepare(AlsaHandle);
+                rc = snd_pcm_writei(AlsaHandle, SampleBuffer + (frames*sizeof(float)), PeriodSize - frames);
+            }
+
+            frames += rc;
         }
-        //} while (rc == -EAGAIN);
 
         BufferIndex = 0;
     }

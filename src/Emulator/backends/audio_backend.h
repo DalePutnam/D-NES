@@ -14,6 +14,8 @@ class AudioBackend
 public:
     AudioBackend();
     ~AudioBackend();
+    
+    void Flush();
     void SetEnabled(bool enabled);
     void SetFiltersEnabled(bool enabled);
     void operator<<(float sample);
@@ -45,6 +47,7 @@ private:
     static const uint32_t NumBuffers;
     void InitializeXAudio2();
     void CleanUpXAudio2();
+    void FlushXAudio2();
     void SetEnabledXAudio2(bool enabled);
     void ProcessSampleXAudio2(float sample);
     IXAudio2* XAudio2Instance;
@@ -56,6 +59,7 @@ private:
 #elif __linux
     void InitializeAlsa();
     void CleanUpAlsa();
+    void FlushAlsa();
     void SetEnabledAlsa(bool enabled);
     void ProcessSampleAlsa(float sample);
     snd_pcm_t* AlsaHandle;

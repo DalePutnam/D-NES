@@ -8,7 +8,6 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
-#include <thread>
 #include "ppu.h"
 #include "cpu.h"
 #include "apu.h"
@@ -24,11 +23,6 @@ const uint32_t PPU::RgbLookupTable[64] =
 
 static constexpr uint16_t bgBitMasks[16] = { 0x8000, 0x4000, 0x2000, 0x1000, 0x800, 0x400, 0x200, 0x100, 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1 };
 static constexpr uint8_t spBitMasks[8] = { 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1 };
-
-void PPU::ResetFrameCounter()
-{
-    SingleFrameStart = std::chrono::steady_clock::now();
-}
 
 int PPU::GetFrameRate()
 {
@@ -226,33 +220,6 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
     }
 }
 
-void PPU::LimitFrameRate()
-{
-    using namespace std::chrono;
-
-    if (FrameLimitEnabled && !TurboModeEnabled)
-    {
-        steady_clock::time_point then = SingleFrameStart + microseconds(16667);
-
-        // Wake up 3000 microseconds early then busy wait
-        // to ensure we don't miss the mark
-        // std::this_thread::sleep_until(SingleFrameStart + microseconds(13666));
-
-        steady_clock::time_point now = steady_clock::now();
-        microseconds span = duration_cast<microseconds>(then - now);
-
-        while (span.count() > 0)
-        {
-            now = steady_clock::now();
-            span = duration_cast<microseconds>(then - now);
-        }
-    }
-
-    microseconds span = duration_cast<microseconds>(steady_clock::now() - SingleFrameStart);
-    Apu->SetFrameLength(static_cast<int32_t>(span.count()));
-    SingleFrameStart = steady_clock::now();
-}
-
 void PPU::RenderNtscPixel(int pixel)
 {
     static constexpr float levels[16] =
@@ -335,10 +302,10 @@ void PPU::RenderNtscLine()
         int green = static_cast<int>(clamp(255.95f * (y + -0.274788f*i + -0.635691f*q)));
         int blue = static_cast<int>(clamp(255.95f * (y + -1.108545f*i + 1.709007f*q)));
 
-        if (VB != nullptr)
+        if (VideoOut != nullptr)
         {
             uint32_t pixel = (red << 16) | (green << 8) | blue;
-            *VB << pixel;
+            *VideoOut << pixel;
         }
         
     }
@@ -631,10 +598,10 @@ void PPU::DecodePixel(uint16_t colour)
         }
         else
         {
-            if (VB != nullptr)
+            if (VideoOut != nullptr)
             {
                 uint32_t pixel = RgbLookupTable[colour];
-                *VB << pixel;
+                *VideoOut << pixel;
             }
         }
     }
@@ -860,15 +827,13 @@ uint16_t PPU::GetCurrentScanline()
     }
 }
 
-PPU::PPU(VideoBackend* vb)
+PPU::PPU(VideoBackend* vout)
     : Cpu(nullptr)
     , Cartridge(nullptr)
-    , VB(vb)
+    , VideoOut(vout)
     , FpsCounter(0)
     , CurrentFps(0)
     , FrameCountStart(std::chrono::steady_clock::now())
-    , SingleFrameStart(std::chrono::steady_clock::now())
-    , FrameLimitEnabled(true)
     , RequestTurboMode(false)
     , TurboModeEnabled(false)
     , TurboFrameSkip(0)
@@ -1206,7 +1171,7 @@ void PPU::LoadState(const char* state)
     SpriteZeroSecondaryOamFlag = !!(packedBool & 0x20);
     AddressLatch = !!(packedBool & 0x10);
 
-    if (VB == nullptr)
+    if (VideoOut == nullptr)
     {
         return;
     }
@@ -1216,16 +1181,16 @@ void PPU::LoadState(const char* state)
     {
         if (Dot >= 1 && Dot <= 256)
         {
-            VB->SetFramePosition(Dot - 1, Line);
+            VideoOut->SetFramePosition(Dot - 1, Line);
         }
         else
         {
-            VB->SetFramePosition(0, Line + 1);
+            VideoOut->SetFramePosition(0, Line + 1);
         }
     }
     else
     {
-        VB->SetFramePosition(0, 0);
+        VideoOut->SetFramePosition(0, 0);
     }
     
 }
@@ -1233,11 +1198,6 @@ void PPU::LoadState(const char* state)
 void PPU::SetTurboModeEnabled(bool enabled)
 {
     RequestTurboMode = enabled;
-}
-
-void PPU::SetFrameLimitEnabled(bool enabled)
-{
-    FrameLimitEnabled = enabled;
 }
 
 void PPU::SetNtscDecodingEnabled(bool enabled)
@@ -1400,7 +1360,7 @@ void PPU::WritePPUSCROLL(uint8_t M)
             else
             {
                 FineXScroll = static_cast<uint8_t>(0x7 & M);
-PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
+                PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
             }
 
             AddressLatch = !AddressLatch;
@@ -1489,9 +1449,9 @@ void PPU::UpdateFrameRate()
         FpsCounter = 0;
         FrameCountStart = steady_clock::now();
 
-        if (VB != nullptr)
+        if (VideoOut != nullptr)
         {
-            VB->SetFps(CurrentFps);
+            VideoOut->SetFps(CurrentFps);
         }
     }
     else
@@ -1861,9 +1821,6 @@ void PPU::Step(uint64_t cycles)
 
                 // Update frame rate counter
                 UpdateFrameRate();
-
-                // Enforce frame limit if enabled
-                LimitFrameRate();
 
                 // Check if a change in rendering mode or turbo mode has been requested
                 MaybeChangeModes();

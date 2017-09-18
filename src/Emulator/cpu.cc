@@ -1440,7 +1440,7 @@ void CPU::Pause()
 void CPU::Resume()
 {
     std::unique_lock<std::mutex> lock(PauseMutex);
-    Ppu->ResetFrameCounter();
+    Apu->ResetFrameLimiter();
     PauseCv.notify_all();
 }
 
@@ -1645,9 +1645,11 @@ void CPU::Step()
         HandleIRQ();
     }
 
+    Ppu->Run();
+
     if (IsLogEnabled())
     {
-        Ppu->Run();
+        //Ppu->Run();
 
         LogProgramCounter();
         LogRegisters();
