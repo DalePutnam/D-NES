@@ -7,7 +7,7 @@
 
 int SXROM::GetStateSize()
 {
-    return MapperBase::GetStateSize()+sizeof(uint64_t)+(sizeof(uint8_t)*5)+(sizeof(uint8_t*)*4)+sizeof(char);
+    return MapperBase::GetStateSize()+sizeof(uint64_t)+(sizeof(uint8_t)*5)+sizeof(char);
 }
 
 void SXROM::SaveState(char* state)
@@ -20,18 +20,6 @@ void SXROM::SaveState(char* state)
 
     memcpy(state, &TempRegister, sizeof(uint8_t));
     state += sizeof(uint8_t);
-
-	memcpy(state, &PrgPage0Pointer, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
-
-	memcpy(state, &PrgPage1Pointer, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
-
-	memcpy(state, &ChrPage0Pointer, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
-
-	memcpy(state, &ChrPage1Pointer, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
 
 	memcpy(state, &PrgPage, sizeof(uint8_t));
 	state += sizeof(uint8_t);
@@ -65,18 +53,6 @@ void SXROM::LoadState(const char* state)
     memcpy(&TempRegister, state, sizeof(uint8_t));
     state += sizeof(uint8_t);
 
-	memcpy(&PrgPage0Pointer, state, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
-
-	memcpy(&PrgPage1Pointer, state, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
-
-	memcpy(&ChrPage0Pointer, state, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
-
-	memcpy(&ChrPage1Pointer, state, sizeof(uint8_t*));
-	state += sizeof(uint8_t*);
-
 	memcpy(&PrgPage, state, sizeof(uint8_t));
 	state += sizeof(uint8_t);
 
@@ -95,7 +71,9 @@ void SXROM::LoadState(const char* state)
 	PrgPageSize16K = !!(packedBool & 0x2);
 	ChrPageSize4K = !!(packedBool & 0x1);
 
-    MapperBase::LoadState(state);
+	MapperBase::LoadState(state);
+	
+	UpdatePageOffsets();
 }
 
 uint8_t SXROM::ChrRead(uint16_t address)
