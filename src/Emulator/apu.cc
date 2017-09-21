@@ -1045,8 +1045,8 @@ APU::APU(AudioBackend* aout)
     , DmcVolume(1.0f)
 {
     double cpuFrequency = CpuFrequency;
-    CyclesPerSample = cpuFrequency / AudioBackend::SampleRate;
-    SamplesPerFrame = AudioBackend::SampleRate / 60;
+    CyclesPerSample = cpuFrequency / AudioBackend::SAMPLE_RATE;
+    SamplesPerFrame = AudioBackend::SAMPLE_RATE / 60;
     FramePeriodStart = std::chrono::steady_clock::now();
 }
 
@@ -1089,7 +1089,7 @@ void APU::SetFrameLength(int32_t length)
         // generation close to 44100 samples per second. Multiplying by 0.89 also gives a margin
         // for error so that the emulator doesn't fall behind in generating audio if there are
         // any hiccups in the speed of emulation
-        Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
+        Fraction = modf(frequency / AudioBackend::SAMPLE_RATE, &whole) * 0.89;
         CurrentFrameLength = length;
     }
 }
@@ -1254,15 +1254,6 @@ void APU::GenerateSample()
                 {
                     span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
                 }
-
-                //FramePeriodStart = steady_clock::now();
-                /*
-                if (span.count() < 0)
-                {
-                    
-                    test_count++;
-                    //std::cout << "Too long: " << span.count() << std::endl;
-                }*/
             }
         }
     }
@@ -1364,13 +1355,12 @@ void APU::WriteAPUFrameCounter(uint8_t value)
 
 void APU::SetTurboModeEnabled(bool enabled)
 {
-    TurboModeEnabled = enabled;
-
-    if (!enabled)
+    if (TurboModeEnabled && !enabled)
     {
         ResetFrameLimiter();
-        AudioOut->Flush();
     }
+
+    TurboModeEnabled = enabled;
 }
 
 void APU::SetAudioEnabled(bool enabled)

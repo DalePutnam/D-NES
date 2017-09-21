@@ -20,7 +20,7 @@ public:
     void SetFiltersEnabled(bool enabled);
     void operator<<(float sample);
 
-    static const uint32_t SampleRate;
+    static constexpr uint32_t SAMPLE_RATE = 44100;
 private:
     // Butterworth filter implementation shamelessly stolen from
     // http://stackoverflow.com/questions/8079526/lowpass-and-high-pass-filter-in-c-sharp
@@ -62,10 +62,13 @@ private:
     void FlushAlsa();
     void SetEnabledAlsa(bool enabled);
     void ProcessSampleAlsa(float sample);
+
     snd_pcm_t* AlsaHandle;
-    snd_pcm_uframes_t PeriodSize;
-    snd_pcm_uframes_t BufferIndex;
+    uint32_t SampleBufferSize;
+    uint32_t SampleBufferIndex;
     float* SampleBuffer;
+    static constexpr uint32_t MAX_BUFFER_SIZE = 2048;
+    static constexpr uint32_t MIN_FRAME_SIZE = 256;
 #endif
 
     Filter HighPass90Hz;
