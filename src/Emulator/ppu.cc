@@ -1216,7 +1216,15 @@ void PPU::LoadState(const char* state)
     {
         if (Dot >= 1 && Dot <= 256)
         {
-            VB->SetFramePosition(Dot - 1, Line);
+            if (NtscMode)
+            {
+                // In NTSC mode all the pixels in a scanline are calculated at the end of that scanline
+                VB->SetFramePosition(0, Line);
+            }
+            else
+            {
+                VB->SetFramePosition(Dot - 1, Line);
+            }
         }
         else
         {
