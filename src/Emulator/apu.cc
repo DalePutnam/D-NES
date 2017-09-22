@@ -8,15 +8,16 @@
 #include "cpu.h"
 #include "audio_backend.h"
 
-namespace {
-    template<typename T>
-    T clamp(T val, T low, T hi)
-    {
-        return (val < low) ? low : ((val > hi) ? hi : val);
-    }
-};
+namespace
+{
 
-const uint32_t APU::CpuFrequency = 1789773;
+template<typename T>
+T clamp(T val, T low, T hi)
+{
+    return (val < low) ? low : ((val > hi) ? hi : val);
+}
+
+};
 
 const uint8_t APU::LengthCounterLookupTable[32] =
 {
@@ -1031,11 +1032,6 @@ APU::APU(AudioBackend* aout)
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
-    , CyclesPerSample(0.0)
-    , CyclesToNextSample(0.0)
-    , EffectiveCpuFrequency(CpuFrequency)
-    , SamplesPerFrame(0)
-    , FrameSampleCount(0)
     , TurboModeEnabled(false)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
@@ -1044,10 +1040,7 @@ APU::APU(AudioBackend* aout)
     , NoiseVolume(1.0f)
     , DmcVolume(1.0f)
 {
-    double cpuFrequency = CpuFrequency;
-    CyclesPerSample = cpuFrequency / AudioBackend::SAMPLE_RATE;
-    SamplesPerFrame = AudioBackend::SAMPLE_RATE / 60;
-    FramePeriodStart = std::chrono::steady_clock::now();
+    SetTargetFrameRate(60);
 }
 
 APU::~APU()
@@ -1063,37 +1056,6 @@ void APU::AttachCart(Cart* cart)
 {
     this->Cartridge = cart;
 }
-/*
-void APU::SetFrameLength(int32_t length)
-{
-    int32_t delta = length - CurrentFrameLength;
-
-    // Only update the frame length if the change is
-    // greater than 100 microsecods in either direction
-    if (delta > 100 || delta < -100)
-    {
-        double whole, frequency;
-        if (length >= 16567 && length <= 16767)
-        {
-            frequency = CpuFrequency;
-            EffectiveCpuFrequency = CpuFrequency;
-        }
-        else
-        {
-            frequency = (16667.f / length) * CpuFrequency;
-            EffectiveCpuFrequency = static_cast<int32_t>(frequency);
-        }
-
-        // Fraction represents the fractional part of the CPU frequency divided by the sample rate
-        // It is used to add extra cycles between samples now and then to keep the rate of sample
-        // generation close to 44100 samples per second. Multiplying by 0.89 also gives a margin
-        // for error so that the emulator doesn't fall behind in generating audio if there are
-        // any hiccups in the speed of emulation
-        Fraction = modf(frequency / AudioBackend::SAMPLE_RATE, &whole) * 0.89;
-        CurrentFrameLength = length;
-    }
-}
-*/
 
 void APU::ResetFrameLimiter()
 {
@@ -1102,6 +1064,33 @@ void APU::ResetFrameLimiter()
     FrameSampleCount = 0;
 
     AudioOut->Flush();
+}
+
+void APU::SetTargetFrameRate(uint32_t rate)
+{
+    // Minimum framerate is 20 fps
+    TargetFrameRate = clamp(rate, 20U, 240U);
+    TargetFramePeriod = 1000000 / TargetFrameRate;
+
+    // Special case for 60 fps to avoid any floating point weirdness
+    if (TargetFrameRate == 60)
+    {
+        CyclesPerSample = static_cast<double>(CPU::NTSC_FREQUENCY) / AudioBackend::SAMPLE_RATE;
+        SamplesPerFrame = AudioBackend::SAMPLE_RATE / TargetFrameRate;
+        TargetCpuFrequency = CPU::NTSC_FREQUENCY;
+        EffectiveCpuFrequency = TargetCpuFrequency;
+    }
+    else
+    {
+        double frameRate = TargetFrameRate;
+        double targetFrequency = static_cast<double>(CPU::NTSC_FREQUENCY) * (frameRate / 60.0);
+        CyclesPerSample = targetFrequency / AudioBackend::SAMPLE_RATE;
+        SamplesPerFrame = AudioBackend::SAMPLE_RATE / TargetFrameRate;
+        TargetCpuFrequency = static_cast<uint32_t>(targetFrequency);
+        EffectiveCpuFrequency = TargetCpuFrequency;
+    }
+
+    ResetFrameLimiter();
 }
 
 void APU::Step()
@@ -1232,14 +1221,26 @@ void APU::GenerateSample()
 
             using namespace std::chrono;
 
-            steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(16666);
+            steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(TargetFramePeriod);
 
             if (framePeriodEnd < steady_clock::now())
             {
+                double targetPeriod = TargetFramePeriod;
+                double effectivePeriod = duration_cast<microseconds>(framePeriodEnd - FramePeriodStart).count();
+                EffectiveCpuFrequency = static_cast<double>(TargetCpuFrequency) * (targetPeriod / effectivePeriod);
+                CyclesPerSample = static_cast<double>(EffectiveCpuFrequency) / AudioBackend::SAMPLE_RATE;
+
                 FramePeriodStart = steady_clock::now();
             }
             else
             {
+                if (EffectiveCpuFrequency != TargetCpuFrequency)
+                {
+                    EffectiveCpuFrequency = TargetCpuFrequency;
+                    CyclesPerSample = static_cast<double>(TargetCpuFrequency) / AudioBackend::SAMPLE_RATE;
+                    AudioOut->Flush();
+                }
+        
                 FramePeriodStart = framePeriodEnd;
                 microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
 

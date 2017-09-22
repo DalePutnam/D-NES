@@ -24,6 +24,7 @@ public:
     bool CheckStalled();
 
     void ResetFrameLimiter();
+    void SetTargetFrameRate(uint32_t rate);
 
     void WritePulseOneRegister(uint8_t reg, uint8_t value);
     void WritePulseTwoRegister(uint8_t reg, uint8_t value);
@@ -57,7 +58,6 @@ public:
     void LoadState(const char* state);
 
 private:
-    static const uint32_t CpuFrequency;
     static const uint8_t LengthCounterLookupTable[32];
 
     void GenerateSample();
@@ -248,6 +248,9 @@ private:
     // Frame limiter
     double CyclesPerSample;
     double CyclesToNextSample;
+    uint32_t TargetFrameRate;
+    uint32_t TargetFramePeriod;
+    uint32_t TargetCpuFrequency;
     uint32_t EffectiveCpuFrequency;
     uint32_t SamplesPerFrame;
     uint32_t FrameSampleCount;
