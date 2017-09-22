@@ -1645,11 +1645,9 @@ void CPU::Step()
         HandleIRQ();
     }
 
-    Ppu->Run();
-
     if (IsLogEnabled())
     {
-        //Ppu->Run();
+        Ppu->Run();
 
         LogProgramCounter();
         LogRegisters();
