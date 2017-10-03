@@ -19,9 +19,9 @@ struct NesParams
     std::string SavePath;
     bool CpuLogEnabled;
 
+    uint32_t TargetFrameRate;
     bool TurboModeEnabled;
     // PPU Settings
-    bool FrameLimitEnabled;
     bool NtscDecoderEnabled;
     bool FpsDisplayEnabled;
     bool OverscanEnabled;
@@ -43,7 +43,8 @@ struct NesParams
         : RomPath("")
         , SavePath("")
         , CpuLogEnabled(false)
-        , FrameLimitEnabled(true)
+        , TargetFrameRate(60)
+        , TurboModeEnabled(false)
         , NtscDecoderEnabled(false)
         , AudioEnabled(true)
         , FiltersEnabled(false)
@@ -97,6 +98,7 @@ public:
     void SetCpuLogEnabled(bool enabled);
     void SetNativeSaveDirectory(const std::string& saveDir);
 
+    void SetTargetFrameRate(uint32_t rate);
     void SetTurboModeEnabled(bool enabled);
 
     int GetFrameRate();
