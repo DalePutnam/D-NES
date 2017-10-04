@@ -14,11 +14,13 @@ class AudioBackend
 public:
     AudioBackend();
     ~AudioBackend();
+    
+    void Flush();
     void SetEnabled(bool enabled);
     void SetFiltersEnabled(bool enabled);
     void operator<<(float sample);
 
-    static const uint32_t SampleRate;
+    static constexpr uint32_t SAMPLE_RATE = 44100;
 private:
     // Butterworth filter implementation shamelessly stolen from
     // http://stackoverflow.com/questions/8079526/lowpass-and-high-pass-filter-in-c-sharp
@@ -41,10 +43,9 @@ private:
     bool FiltersEnabled;
 
 #ifdef _WIN32
-    static const uint32_t BufferSize;
-    static const uint32_t NumBuffers;
     void InitializeXAudio2();
     void CleanUpXAudio2();
+    void FlushXAudio2();
     void SetEnabledXAudio2(bool enabled);
     void ProcessSampleXAudio2(float sample);
     IXAudio2* XAudio2Instance;
@@ -53,15 +54,22 @@ private:
     uint32_t BufferIndex;
     uint32_t CurrentBuffer;
     float** OutputBuffers;
+
+    static constexpr uint32_t BUFFER_SIZE = 147;
+    static constexpr uint32_t NUM_BUFFERS = SAMPLE_RATE / BUFFER_SIZE;
 #elif __linux
     void InitializeAlsa();
     void CleanUpAlsa();
+    void FlushAlsa();
     void SetEnabledAlsa(bool enabled);
     void ProcessSampleAlsa(float sample);
+
     snd_pcm_t* AlsaHandle;
-    snd_pcm_uframes_t PeriodSize;
-    snd_pcm_uframes_t BufferIndex;
+    uint32_t SampleBufferSize;
+    uint32_t SampleBufferIndex;
     float* SampleBuffer;
+    static constexpr uint32_t MAX_BUFFER_SIZE = 2048;
+    static constexpr uint32_t MIN_FRAME_SIZE = 256;
 #endif
 
     Filter HighPass90Hz;

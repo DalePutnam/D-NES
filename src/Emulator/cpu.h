@@ -54,7 +54,7 @@ public:
     void LoadState(const char* state);
 
     static int STATE_SIZE;
-
+    static constexpr uint32_t NTSC_FREQUENCY = 1789773;
 private:
     PPU* Ppu;
     APU* Apu;

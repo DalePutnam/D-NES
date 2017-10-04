@@ -2,19 +2,22 @@
 #include <cstring>
 #include <cmath>
 #include <iostream>
+#include <thread>
 
 #include "apu.h"
 #include "cpu.h"
+#include "audio_backend.h"
 
-namespace {
-    template<typename T>
-    T clamp(T val, T low, T hi)
-    {
-        return (val < low) ? low : ((val > hi) ? hi : val);
-    }
+namespace
+{
+
+template<typename T>
+T clamp(T val, T low, T hi)
+{
+    return (val < low) ? low : ((val > hi) ? hi : val);
+}
+
 };
-
-const uint32_t APU::CpuFrequency = 1789773;
 
 const uint8_t APU::LengthCounterLookupTable[32] =
 {
@@ -202,7 +205,7 @@ void APU::PulseUnit::ClockLengthCounter()
     }
 }
 
-APU::PulseUnit::operator uint8_t ()
+APU::PulseUnit::operator float ()
 {
     uint8_t SequenceValue = (Sequences[DutyCycle] >> SequenceCount) & 0x1;
 
@@ -226,7 +229,7 @@ APU::PulseUnit::operator uint8_t ()
     }
 }
 
-int APU::PulseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*9)+sizeof(char);
+const int APU::PulseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*9)+sizeof(char);
 
 void APU::PulseUnit::SaveState(char* state)
 {
@@ -431,12 +434,12 @@ void APU::TriangleUnit::ClockLengthCounter()
     }
 }
 
-APU::TriangleUnit::operator uint8_t ()
+APU::TriangleUnit::operator float ()
 {
     return Sequence[SequenceCount];
 }
 
-int APU::TriangleUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*4)+sizeof(char);
+const int APU::TriangleUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*4)+sizeof(char);
 
 void APU::TriangleUnit::SaveState(char* state)
 {
@@ -627,7 +630,7 @@ void APU::NoiseUnit::ClockLengthCounter()
     }
 }
 
-APU::NoiseUnit::operator uint8_t ()
+APU::NoiseUnit::operator float ()
 {
     if (LengthCounter != 0 && !(LinearFeedbackShiftRegister & 0x0001))
     {
@@ -646,7 +649,7 @@ APU::NoiseUnit::operator uint8_t ()
     }
 }
 
-int APU::NoiseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*5)+sizeof(char);
+const int APU::NoiseUnit::STATE_SIZE = (sizeof(uint16_t)*2)+(sizeof(uint8_t)*5)+sizeof(char);
 
 void APU::NoiseUnit::SaveState(char* state)
 {
@@ -912,12 +915,12 @@ void APU::DmcUnit::ClockMemoryReader()
     }
 }
 
-APU::DmcUnit::operator uint8_t ()
+APU::DmcUnit::operator float ()
 {
     return OutputLevel;
 }
 
-int APU::DmcUnit::STATE_SIZE = (sizeof(uint16_t)*5)+(sizeof(uint8_t)*6)+sizeof(char);
+const int APU::DmcUnit::STATE_SIZE = (sizeof(uint16_t)*5)+(sizeof(uint8_t)*6)+sizeof(char);
 
 void APU::DmcUnit::SaveState(char* state)
 {
@@ -1015,9 +1018,10 @@ void APU::DmcUnit::LoadState(const char* state)
 // APU Main Unit
 //**********************************************************************
 
-APU::APU()
+APU::APU(AudioBackend* aout)
     : Cpu(nullptr)
     , Cartridge(nullptr)
+    , AudioOut(aout)
     , PulseOne(true)
     , PulseTwo(false)
     , Dmc(*this)
@@ -1028,11 +1032,6 @@ APU::APU()
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
-    , CurrentFrameLength(16667)
-    , CyclesToNextSample(0)
-    , EffectiveCpuFrequency(CpuFrequency)
-    , ExtraCount(0.0f)
-    , Fraction(0.0f)
     , TurboModeEnabled(false)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
@@ -1041,9 +1040,7 @@ APU::APU()
     , NoiseVolume(1.0f)
     , DmcVolume(1.0f)
 {
-    double whole, frequency;
-    frequency = CpuFrequency;
-    Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
+    SetTargetFrameRate(60);
 }
 
 APU::~APU()
@@ -1060,34 +1057,40 @@ void APU::AttachCart(Cart* cart)
     this->Cartridge = cart;
 }
 
-void APU::SetFrameLength(int32_t length)
+void APU::ResetFrameLimiter()
 {
-    int32_t delta = length - CurrentFrameLength;
+    FramePeriodStart = std::chrono::steady_clock::now();
+    CyclesToNextSample = 0.0;
+    FrameSampleCount = 0;
 
-    // Only update the frame length if the change is
-    // greater than 100 microsecods in either direction
-    if (delta > 100 || delta < -100)
+    AudioOut->Flush();
+}
+
+void APU::SetTargetFrameRate(uint32_t rate)
+{
+    // Minimum framerate is 20 fps
+    rate = clamp(rate, 20U, 240U);
+    TargetFramePeriod = 1000000 / rate;
+
+    // Special case for 60 fps to avoid any floating point weirdness
+    if (rate == 60)
     {
-        double whole, frequency;
-        if (length >= 16567 && length <= 16767)
-        {
-            frequency = CpuFrequency;
-            EffectiveCpuFrequency = CpuFrequency;
-        }
-        else
-        {
-            frequency = (16667.f / length) * CpuFrequency;
-            EffectiveCpuFrequency = static_cast<int32_t>(frequency);
-        }
-
-        // Fraction represents the fractional part of the CPU frequency divided by the sample rate
-        // It is used to add extra cycles between samples now and then to keep the rate of sample
-        // generation close to 44100 samples per second. Multiplying by 0.89 also gives a margin
-        // for error so that the emulator doesn't fall behind in generating audio if there are
-        // any hiccups in the speed of emulation
-        Fraction = modf(frequency / AudioBackend::SampleRate, &whole) * 0.89;
-        CurrentFrameLength = length;
+        CyclesPerSample = static_cast<double>(CPU::NTSC_FREQUENCY) / AudioBackend::SAMPLE_RATE;
+        SamplesPerFrame = AudioBackend::SAMPLE_RATE / rate;
+        TargetCpuFrequency = CPU::NTSC_FREQUENCY;
+        EffectiveCpuFrequency = TargetCpuFrequency;
     }
+    else
+    {
+        double frameRate = rate;
+        double targetFrequency = static_cast<double>(CPU::NTSC_FREQUENCY) * (frameRate / 60.0);
+        CyclesPerSample = targetFrequency / AudioBackend::SAMPLE_RATE;
+        SamplesPerFrame = AudioBackend::SAMPLE_RATE / rate;
+        TargetCpuFrequency = static_cast<uint32_t>(targetFrequency);
+        EffectiveCpuFrequency = TargetCpuFrequency;
+    }
+
+    ResetFrameLimiter();
 }
 
 void APU::Step()
@@ -1175,53 +1178,96 @@ void APU::Step()
         }
     }
 
-    if (!TurboModeEnabled)
+    // Generate audio samples at a rate determined by CyclesPerSample
+
+    if (!TurboModeEnabled && CyclesToNextSample <= 0.0)
     {
-        GenerateSample();
+        MixSample();
+
+        CyclesToNextSample = CyclesToNextSample + CyclesPerSample;
+        FrameSampleCount++;
+
+        if (FrameSampleCount >= SamplesPerFrame)
+        {
+            LimitFrameRate();
+            FrameSampleCount = 0;
+        }
     }
+
+    CyclesToNextSample -= 1.0;
 }
 
-void APU::GenerateSample()
+void APU::MixSample()
 {
-    if (CyclesToNextSample == 0)
+    // Decided to use the exact calculation rather than the lookup tables for this
+    float pulse1 = PulseOne * PulseOneVolume;
+    float pulse2 = PulseTwo * PulseTwoVolume;
+    float triangle = Triangle * TriangleVolume;
+    float noise = Noise * NoiseVolume;
+    float dmc = Dmc * DmcVolume;
+
+    float PulseOut = 0.0f;
+    float TndOut = 0.0f;
+
+    if (pulse1 != 0.0f || pulse2 != 0.0f)
     {
-        if (ExtraCount >= 1.0f)
-        {
-            double whole;
-            CyclesToNextSample = (EffectiveCpuFrequency / AudioBackend::SampleRate) + 1;
-            ExtraCount = modf(ExtraCount, &whole);
-        }
-        else
-        {
-            CyclesToNextSample = EffectiveCpuFrequency / AudioBackend::SampleRate;
-        }
-
-        // Decided to use the exact calculation rather than the lookup tables for this
-        float pulse1 = PulseOne * PulseOneVolume;
-        float pulse2 = PulseTwo * PulseTwoVolume;
-        float triangle = Triangle * TriangleVolume;
-        float noise = Noise * NoiseVolume;
-        float dmc = Dmc * DmcVolume;
-
-        float PulseOut = 0.0f;
-        float TndOut = 0.0f;
-
-        if (pulse1 != 0.0f || pulse2 != 0.0f)
-        {
-            PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
-        }
-
-        if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
-        {
-            TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
-        }
-
-        Backend << (PulseOut + TndOut) * MasterVolume;
-
-        ExtraCount += Fraction;
+        PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
     }
 
-    --CyclesToNextSample;
+    if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
+    {
+        TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
+    }
+
+    // Send final sample to the backend
+    *AudioOut << ((PulseOut + TndOut) * MasterVolume);
+}
+
+void APU::LimitFrameRate()
+{
+    using namespace std::chrono;
+    
+    steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(TargetFramePeriod);
+
+    if (framePeriodEnd < steady_clock::now())
+    {
+        // If last frame lasted longer than the target frame period calculate the effective cpu frequency
+        // and adjust the cycles per audio sample appropriately
+
+        double targetPeriod = TargetFramePeriod;
+        double effectivePeriod = duration_cast<microseconds>(framePeriodEnd - FramePeriodStart).count();
+        EffectiveCpuFrequency = static_cast<double>(TargetCpuFrequency) * (targetPeriod / effectivePeriod);
+        CyclesPerSample = static_cast<double>(EffectiveCpuFrequency) / AudioBackend::SAMPLE_RATE;
+
+        FramePeriodStart = steady_clock::now();
+    }
+    else
+    {
+        if (EffectiveCpuFrequency != TargetCpuFrequency)
+        {
+            // If we've returned to normal speed after some slow frames reset the cycles per audio sample
+            EffectiveCpuFrequency = TargetCpuFrequency;
+            CyclesPerSample = static_cast<double>(TargetCpuFrequency) / AudioBackend::SAMPLE_RATE;
+            AudioOut->Flush();
+        }
+
+        // Calculate time to wait
+        FramePeriodStart = framePeriodEnd;
+        microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+
+        // Sleep in 1ms periods
+        while (span.count() > 1000)
+        {
+            std::this_thread::sleep_for(microseconds(1000));
+            span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+        }
+
+        // Busy wait for last 1ms
+        while (span.count() > 0)
+        {
+            span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+        }
+    }
 }
 
 bool APU::CheckIRQ()
@@ -1318,12 +1364,17 @@ void APU::WriteAPUFrameCounter(uint8_t value)
 
 void APU::SetTurboModeEnabled(bool enabled)
 {
+    if (TurboModeEnabled && !enabled)
+    {
+        ResetFrameLimiter();
+    }
+
     TurboModeEnabled = enabled;
 }
 
 void APU::SetAudioEnabled(bool enabled)
 {
-    Backend.SetEnabled(enabled);
+    AudioOut->SetEnabled(enabled);
 }
 
 void APU::SetMasterVolume(float volume)
@@ -1338,7 +1389,7 @@ float APU::GetMasterVolume()
 
 void APU::SetFiltersEnabled(bool enabled)
 {
-    Backend.SetFiltersEnabled(enabled);
+    AudioOut->SetFiltersEnabled(enabled);
 }
 
 void APU::SetPulseOneVolume(float volume)
@@ -1391,7 +1442,15 @@ float APU::GetDmcVolume()
     return DmcVolume;
 }
 
-int APU::STATE_SIZE = (PulseUnit::STATE_SIZE*2)+TriangleUnit::STATE_SIZE+NoiseUnit::STATE_SIZE+DmcUnit::STATE_SIZE+sizeof(uint64_t)+sizeof(uint32_t)+sizeof(uint8_t)+sizeof(char);
+const int APU::STATE_SIZE =
+    (PulseUnit::STATE_SIZE*2) +
+    TriangleUnit::STATE_SIZE +
+    NoiseUnit::STATE_SIZE + 
+    DmcUnit::STATE_SIZE +
+    sizeof(uint64_t) +
+    sizeof(uint32_t) +
+    sizeof(uint8_t) +
+    sizeof(char);
 
 void APU::SaveState(char* state)
 {

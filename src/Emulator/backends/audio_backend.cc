@@ -1,19 +1,19 @@
 #include <cmath>
+#include <iostream>
 
 #include "audio_backend.h"
+
 
 //**********************************************************************
 // Audio Backend
 //**********************************************************************
 
-const uint32_t AudioBackend::SampleRate = 44100;
-
 AudioBackend::AudioBackend()
     : Enabled(true)
     , FiltersEnabled(false)
-    , HighPass90Hz(SampleRate, 90.0f, 1.0f, false)
-    , HighPass440Hz(SampleRate, 440.0f, 1.0f, false)
-    , LowPass14KHz(SampleRate, 14000.0f, 1.0f, true)
+    , HighPass90Hz(SAMPLE_RATE, 90.0f, 1.0f, false)
+    , HighPass440Hz(SAMPLE_RATE, 440.0f, 1.0f, false)
+    , LowPass14KHz(SAMPLE_RATE, 14000.0f, 1.0f, true)
 {
 #ifdef _WIN32
     InitializeXAudio2();
@@ -31,6 +31,16 @@ AudioBackend::~AudioBackend()
 #endif
 }
 
+void AudioBackend::Flush()
+{
+    std::unique_lock<std::mutex> lock(Mutex);
+
+#ifdef _WIN32
+    FlushXAudio2();
+#elif defined(__linux)
+    FlushAlsa();
+#endif
+}
 
 void AudioBackend::SetEnabled(bool enabled)
 {
@@ -79,9 +89,6 @@ void AudioBackend::operator<<(float sample)
 }
 
 #ifdef _WIN32
-const uint32_t AudioBackend::BufferSize = 128;
-const uint32_t AudioBackend::NumBuffers = SampleRate / BufferSize;
-
 void AudioBackend::InitializeXAudio2()
 {
     XAudio2Instance = nullptr;
@@ -92,9 +99,9 @@ void AudioBackend::InitializeXAudio2()
 
     WAVEFORMATEX WaveFormat = { 0 };
     WaveFormat.nChannels = 1;
-    WaveFormat.nSamplesPerSec = SampleRate;
+    WaveFormat.nSamplesPerSec = SAMPLE_RATE;
     WaveFormat.wBitsPerSample = sizeof(float) * 8;
-    WaveFormat.nAvgBytesPerSec = SampleRate * sizeof(float);
+    WaveFormat.nAvgBytesPerSec = SAMPLE_RATE * sizeof(float);
     WaveFormat.nBlockAlign = sizeof(float);
     WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
 
@@ -108,10 +115,10 @@ void AudioBackend::InitializeXAudio2()
     hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
     if (FAILED(hr)) goto FailedExit;
 
-    OutputBuffers = new float*[NumBuffers];
-    for (size_t i = 0; i < NumBuffers; ++i)
+    OutputBuffers = new float*[NUM_BUFFERS];
+    for (size_t i = 0; i < NUM_BUFFERS; ++i)
     {
-        OutputBuffers[i] = new float[BufferSize];
+        OutputBuffers[i] = new float[BUFFER_SIZE];
     }
 
     XAudio2SourceVoice->Start(0);
@@ -133,11 +140,20 @@ void AudioBackend::CleanUpXAudio2()
     XAudio2MasteringVoice->DestroyVoice();
     XAudio2Instance->Release();
 
-    for (size_t i = 0; i < NumBuffers; ++i)
+    for (size_t i = 0; i < NUM_BUFFERS; ++i)
     {
         delete[] OutputBuffers[i];
     }
     delete[] OutputBuffers;
+}
+
+void AudioBackend::FlushXAudio2()
+{
+    XAudio2SourceVoice->Stop(0);
+    XAudio2SourceVoice->FlushSourceBuffers();
+    XAudio2SourceVoice->Start(0);
+    CurrentBuffer = 0;
+    BufferIndex = 0;
 }
 
 void AudioBackend::SetEnabledXAudio2(bool enabled)
@@ -160,14 +176,14 @@ void AudioBackend::ProcessSampleXAudio2(float sample)
     float* Buffer = OutputBuffers[CurrentBuffer];
     Buffer[BufferIndex++] = sample;
 
-    if (BufferIndex == BufferSize)
+    if (BufferIndex == BUFFER_SIZE)
     {
         XAUDIO2_BUFFER XAudio2Buffer = { 0 };
-        XAudio2Buffer.AudioBytes = BufferSize * sizeof(float);
+        XAudio2Buffer.AudioBytes = BUFFER_SIZE * sizeof(float);
         XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
         XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
 
-        CurrentBuffer = (CurrentBuffer + 1) % NumBuffers;
+        CurrentBuffer = (CurrentBuffer + 1) % NUM_BUFFERS;
         BufferIndex = 0;
     }
 }
@@ -175,16 +191,21 @@ void AudioBackend::ProcessSampleXAudio2(float sample)
 #elif __linux
 void AudioBackend::InitializeAlsa()
 {
-    int rc, dir;
+    int32_t rc, dir;
     snd_pcm_hw_params_t* AlsaHwParams = nullptr;
-    snd_pcm_uframes_t bufferSize;
+    snd_pcm_sw_params_t* AlsaSwParams = nullptr;
+    snd_pcm_uframes_t bufferSize, frameSize;
+    uint32_t numPeriods, sampleRate;
 
     AlsaHandle = nullptr;
-    PeriodSize = 128;
-    BufferIndex = 0;
+    bufferSize = MAX_BUFFER_SIZE;
+    frameSize = MIN_FRAME_SIZE;
+    sampleRate = SAMPLE_RATE;
 
     rc = snd_pcm_open(&AlsaHandle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if (rc < 0) goto FailedExit;
+
+    // Set hardware parameters
 
     rc = snd_pcm_hw_params_malloc(&AlsaHwParams);
     if (rc < 0) goto FailedExit;
@@ -195,26 +216,22 @@ void AudioBackend::InitializeAlsa()
     rc = snd_pcm_hw_params_set_access(AlsaHandle, AlsaHwParams, SND_PCM_ACCESS_RW_INTERLEAVED);
     if (rc < 0) goto FailedExit;
 
-    rc = snd_pcm_hw_params_set_format(AlsaHandle, AlsaHwParams, SND_PCM_FORMAT_FLOAT_LE);
+    rc = snd_pcm_hw_params_set_format(AlsaHandle, AlsaHwParams, SND_PCM_FORMAT_FLOAT);
+    if (rc < 0) goto FailedExit;
+
+    dir = 0;
+    rc = snd_pcm_hw_params_set_rate_near(AlsaHandle, AlsaHwParams, &sampleRate, &dir);
     if (rc < 0) goto FailedExit;
 
     rc = snd_pcm_hw_params_set_channels(AlsaHandle, AlsaHwParams, 1);
     if (rc < 0) goto FailedExit;
 
-    rc = snd_pcm_hw_params_set_rate(AlsaHandle, AlsaHwParams, SampleRate, 0);
+    dir = 0;
+    numPeriods = bufferSize / frameSize;
+    rc = snd_pcm_hw_params_set_periods_max(AlsaHandle, AlsaHwParams, &numPeriods, &dir);
     if (rc < 0) goto FailedExit;
 
-    rc = snd_pcm_hw_params_set_period_size_min(AlsaHandle, AlsaHwParams, &PeriodSize, 0);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_period_size_first(AlsaHandle, AlsaHwParams, &PeriodSize, &dir);
-    if (rc < 0) goto FailedExit;
-
-    bufferSize = SampleRate / 30; // Two (video) frames worth of audio data
-    rc = snd_pcm_hw_params_set_buffer_size_min(AlsaHandle, AlsaHwParams, &bufferSize);
-    if (rc < 0) goto FailedExit;
-
-    rc = snd_pcm_hw_params_set_buffer_size_first(AlsaHandle, AlsaHwParams, &bufferSize);
+    rc = snd_pcm_hw_params_set_buffer_size_max(AlsaHandle, AlsaHwParams, &bufferSize);
     if (rc < 0) goto FailedExit;
 
     rc = snd_pcm_hw_params(AlsaHandle, AlsaHwParams);
@@ -222,13 +239,49 @@ void AudioBackend::InitializeAlsa()
 
     snd_pcm_hw_params_free(AlsaHwParams);
 
-    SampleBuffer = new float[PeriodSize];
+    // Get selected values for the buffer size and number of periods
+
+    rc = snd_pcm_hw_params_get_buffer_size(AlsaHwParams, &bufferSize);
+    if (rc < 0) goto FailedExit;
+
+    dir = 0;
+    rc = snd_pcm_hw_params_get_periods_max(AlsaHwParams, &numPeriods, &dir);
+    if (rc < 0) goto FailedExit;
+
+    // Set software parameters
+
+    rc = snd_pcm_sw_params_malloc(&AlsaSwParams);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_sw_params_current(AlsaHandle, AlsaSwParams);
+    if (rc < 0) goto FailedExit;
+
+    // Set the start threshold to a 2 video frame delay (735 samples per frame * 2 = 1470)
+    rc = snd_pcm_sw_params_set_start_threshold(AlsaHandle, AlsaSwParams, 1470);
+    if (rc < 0) goto FailedExit;
+
+    rc = snd_pcm_sw_params(AlsaHandle, AlsaSwParams);
+    if (rc < 0) goto FailedExit;
+
+    snd_pcm_sw_params_free(AlsaSwParams);
+
+    SampleBufferSize = bufferSize / numPeriods;
+    if (SampleBufferSize < MIN_FRAME_SIZE)
+    {
+        SampleBufferSize = MIN_FRAME_SIZE;
+    }
+
+    SampleBuffer = new float[SampleBufferSize];
+    SampleBufferIndex = 0;
+
+    snd_pcm_prepare(AlsaHandle);
 
     return;
 
 FailedExit:
     if (AlsaHandle) snd_pcm_close(AlsaHandle);
     if (AlsaHwParams) snd_pcm_hw_params_free(AlsaHwParams);
+    if (AlsaSwParams) snd_pcm_sw_params_free(AlsaSwParams);
     throw std::runtime_error(std::string("Failed to initialize ALSA. ") + snd_strerror(rc));
 }
 
@@ -240,6 +293,13 @@ void AudioBackend::CleanUpAlsa()
     delete [] SampleBuffer;
 }
 
+void AudioBackend::FlushAlsa()
+{
+    snd_pcm_drop(AlsaHandle);
+    snd_pcm_prepare(AlsaHandle);
+    SampleBufferIndex = 0;
+}
+
 void AudioBackend::SetEnabledAlsa(bool enabled)
 {
     if (!enabled && Enabled)
@@ -249,25 +309,23 @@ void AudioBackend::SetEnabledAlsa(bool enabled)
     else if (enabled && !Enabled)
     {
         snd_pcm_prepare(AlsaHandle);
+        SampleBufferIndex = 0;
     }
 }
 
 void AudioBackend::ProcessSampleAlsa(float sample)
 {
-    SampleBuffer[BufferIndex++] = sample;
-    if (BufferIndex == PeriodSize)
+    SampleBuffer[SampleBufferIndex++] = sample;
+    if (SampleBufferIndex == SampleBufferSize)
     {
-        int rc = 0;
-        //do {
-        rc = snd_pcm_writei(AlsaHandle, SampleBuffer, PeriodSize);
+        SampleBufferIndex = 0;
+
+        int rc = snd_pcm_writei(AlsaHandle, SampleBuffer, SampleBufferSize);
         if (rc == -EPIPE)
         {
             snd_pcm_prepare(AlsaHandle);
-            rc = snd_pcm_writei(AlsaHandle, SampleBuffer, PeriodSize);
+            snd_pcm_writei(AlsaHandle, SampleBuffer, SampleBufferSize);
         }
-        //} while (rc == -EAGAIN);
-
-        BufferIndex = 0;
     }
 }
 

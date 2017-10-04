@@ -19,9 +19,9 @@ struct NesParams
     std::string SavePath;
     bool CpuLogEnabled;
 
+    uint32_t TargetFrameRate;
     bool TurboModeEnabled;
     // PPU Settings
-    bool FrameLimitEnabled;
     bool NtscDecoderEnabled;
     bool FpsDisplayEnabled;
     bool OverscanEnabled;
@@ -43,7 +43,8 @@ struct NesParams
         : RomPath("")
         , SavePath("")
         , CpuLogEnabled(false)
-        , FrameLimitEnabled(true)
+        , TargetFrameRate(60)
+        , TurboModeEnabled(false)
         , NtscDecoderEnabled(false)
         , AudioEnabled(true)
         , FiltersEnabled(false)
@@ -63,6 +64,7 @@ class APU;
 class PPU;
 class Cart;
 class VideoBackend;
+class AudioBackend;
 
 class NES
 {
@@ -96,6 +98,7 @@ public:
     void SetCpuLogEnabled(bool enabled);
     void SetNativeSaveDirectory(const std::string& saveDir);
 
+    void SetTargetFrameRate(uint32_t rate);
     void SetTurboModeEnabled(bool enabled);
 
     int GetFrameRate();
@@ -103,7 +106,6 @@ public:
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
     void GetSprite(int sprite, uint8_t* pixels);
-    void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecoderEnabled(bool enabled);
     void SetFpsDisplayEnabled(bool enabled);
     void SetOverscanEnabled(bool enabled);
@@ -150,7 +152,8 @@ private:
     CPU* Cpu;
     PPU* Ppu;
     Cart* Cartridge;
-    VideoBackend* VB;
+    VideoBackend* VideoOut;
+    AudioBackend* AudioOut;
 
     std::function<void(std::string)> OnError;
 };

@@ -40,7 +40,6 @@ public:
     bool CheckNMI(uint64_t& occuredCycle);
 
     void SetTurboModeEnabled(bool enabled);
-    void SetFrameLimitEnabled(bool enabled);
     void SetNtscDecodingEnabled(bool enabled);
 
     uint8_t ReadPPUStatus();
@@ -69,7 +68,7 @@ private:
     CPU* Cpu;
     APU* Apu;
     Cart* Cartridge;
-    VideoBackend* VB;
+    VideoBackend* VideoOut;
 
     enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
 
@@ -79,8 +78,6 @@ private:
     int FpsCounter;
     std::atomic<int> CurrentFps;
     std::chrono::steady_clock::time_point FrameCountStart;
-    std::chrono::steady_clock::time_point SingleFrameStart;
-    std::atomic<bool> FrameLimitEnabled;
 
     std::atomic<bool> RequestTurboMode;
     bool TurboModeEnabled;
@@ -169,8 +166,6 @@ private:
     bool NtscMode;
     std::atomic<bool> RequestNtscMode;
     float SignalLevels[256 * 8];
-
-    void LimitFrameRate();
 
     void RenderNtscPixel(int pixel);
     void RenderNtscLine();

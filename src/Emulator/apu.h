@@ -1,19 +1,18 @@
 #pragma once
 
-#include <mutex>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 
-#include "audio_backend.h"
 
 class CPU;
 class Cart;
+class AudioBackend;
 
 class APU
 {
 public:
-    APU();
+    APU(AudioBackend* aout);
     ~APU();
 
     void AttachCPU(CPU* cpu);
@@ -23,7 +22,8 @@ public:
     bool CheckIRQ();
     bool CheckStalled();
 
-    void SetFrameLength(int32_t length);
+    void ResetFrameLimiter();
+    void SetTargetFrameRate(uint32_t rate);
 
     void WritePulseOneRegister(uint8_t reg, uint8_t value);
     void WritePulseTwoRegister(uint8_t reg, uint8_t value);
@@ -37,11 +37,10 @@ public:
 
     void SetTurboModeEnabled(bool enabled);
     void SetAudioEnabled(bool mute);
-    void SetMasterVolume(float volume);
     void SetFiltersEnabled(bool enabled);
 
     float GetMasterVolume();
-
+    void SetMasterVolume(float volume);
     void SetPulseOneVolume(float volume);
     float GetPulseOneVolume();
     void SetPulseTwoVolume(float volume);
@@ -53,15 +52,15 @@ public:
     void SetDmcVolume(float volume);
     float GetDmcVolume();
 
-    static int STATE_SIZE;
+    static const int STATE_SIZE;
     void SaveState(char* state);
     void LoadState(const char* state);
 
 private:
-    static const uint32_t CpuFrequency;
     static const uint8_t LengthCounterLookupTable[32];
 
-    void GenerateSample();
+    void MixSample();
+    void LimitFrameRate();
 
     class PulseUnit
     {
@@ -78,9 +77,9 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        operator uint8_t ();
+        operator float ();
 
-        static int STATE_SIZE;
+        static const int STATE_SIZE;
         void SaveState(char* state);
         void LoadState(const char* state);
 
@@ -122,9 +121,9 @@ private:
         void ClockLinearCounter();
         void ClockLengthCounter();
 
-        operator uint8_t ();
+        operator float ();
 
-        static int STATE_SIZE;
+        static const int STATE_SIZE;
         void SaveState(char* state);
         void LoadState(const char* state);
 
@@ -156,9 +155,9 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        operator uint8_t ();
+        operator float ();
 
-        static int STATE_SIZE;
+        static const int STATE_SIZE;
         void SaveState(char* state);
         void LoadState(const char* state);
 
@@ -195,9 +194,9 @@ private:
         void ClockTimer();
         void ClockMemoryReader();
 
-        operator uint8_t ();
+        operator float ();
 
-        static int STATE_SIZE;
+        static const int STATE_SIZE;
         void SaveState(char* state);
         void LoadState(const char* state);
 
@@ -227,14 +226,13 @@ private:
 
     CPU* Cpu;
     Cart* Cartridge;
+    AudioBackend* AudioOut;
 
     PulseUnit PulseOne;
     PulseUnit PulseTwo;
     TriangleUnit Triangle;
     NoiseUnit Noise;
     DmcUnit Dmc;
-
-    std::mutex ControlMutex;
 
     uint64_t Clock;
     uint32_t SequenceCount;
@@ -245,15 +243,18 @@ private:
     bool FrameResetFlag;
     uint8_t FrameResetCountdown;
 
-    int32_t CurrentFrameLength;
-    uint32_t CyclesToNextSample;
+    // Frame limiter fields
+    double CyclesPerSample;
+    double CyclesToNextSample;
+    uint32_t TargetFramePeriod;
+    uint32_t TargetCpuFrequency;
     uint32_t EffectiveCpuFrequency;
-    double ExtraCount;
-    double Fraction;
-
-    AudioBackend Backend;
-
+    uint32_t SamplesPerFrame;
+    uint32_t FrameSampleCount;
+    std::chrono::steady_clock::time_point FramePeriodStart;
     std::atomic<bool> TurboModeEnabled;
+
+    // Volume Controls
     std::atomic<float> MasterVolume;
     std::atomic<float> PulseOneVolume;
     std::atomic<float> PulseTwoVolume;
