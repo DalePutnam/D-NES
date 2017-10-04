@@ -1,6 +1,5 @@
 #pragma once
 
-#include <mutex>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -60,7 +59,8 @@ public:
 private:
     static const uint8_t LengthCounterLookupTable[32];
 
-    void GenerateSample();
+    void MixSample();
+    void LimitFrameRate();
 
     class PulseUnit
     {
@@ -234,8 +234,6 @@ private:
     NoiseUnit Noise;
     DmcUnit Dmc;
 
-    std::mutex ControlMutex;
-
     uint64_t Clock;
     uint32_t SequenceCount;
 
@@ -245,18 +243,18 @@ private:
     bool FrameResetFlag;
     uint8_t FrameResetCountdown;
 
-    // Frame limiter
+    // Frame limiter fields
     double CyclesPerSample;
     double CyclesToNextSample;
-    uint32_t TargetFrameRate;
     uint32_t TargetFramePeriod;
     uint32_t TargetCpuFrequency;
     uint32_t EffectiveCpuFrequency;
     uint32_t SamplesPerFrame;
     uint32_t FrameSampleCount;
     std::chrono::steady_clock::time_point FramePeriodStart;
-
     std::atomic<bool> TurboModeEnabled;
+
+    // Volume Controls
     std::atomic<float> MasterVolume;
     std::atomic<float> PulseOneVolume;
     std::atomic<float> PulseTwoVolume;

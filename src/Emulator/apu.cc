@@ -1069,23 +1069,23 @@ void APU::ResetFrameLimiter()
 void APU::SetTargetFrameRate(uint32_t rate)
 {
     // Minimum framerate is 20 fps
-    TargetFrameRate = clamp(rate, 20U, 240U);
-    TargetFramePeriod = 1000000 / TargetFrameRate;
+    rate = clamp(rate, 20U, 240U);
+    TargetFramePeriod = 1000000 / rate;
 
     // Special case for 60 fps to avoid any floating point weirdness
-    if (TargetFrameRate == 60)
+    if (rate == 60)
     {
         CyclesPerSample = static_cast<double>(CPU::NTSC_FREQUENCY) / AudioBackend::SAMPLE_RATE;
-        SamplesPerFrame = AudioBackend::SAMPLE_RATE / TargetFrameRate;
+        SamplesPerFrame = AudioBackend::SAMPLE_RATE / rate;
         TargetCpuFrequency = CPU::NTSC_FREQUENCY;
         EffectiveCpuFrequency = TargetCpuFrequency;
     }
     else
     {
-        double frameRate = TargetFrameRate;
+        double frameRate = rate;
         double targetFrequency = static_cast<double>(CPU::NTSC_FREQUENCY) * (frameRate / 60.0);
         CyclesPerSample = targetFrequency / AudioBackend::SAMPLE_RATE;
-        SamplesPerFrame = AudioBackend::SAMPLE_RATE / TargetFrameRate;
+        SamplesPerFrame = AudioBackend::SAMPLE_RATE / rate;
         TargetCpuFrequency = static_cast<uint32_t>(targetFrequency);
         EffectiveCpuFrequency = TargetCpuFrequency;
     }
@@ -1178,88 +1178,96 @@ void APU::Step()
         }
     }
 
-    if (!TurboModeEnabled)
+    // Generate audio samples at a rate determined by CyclesPerSample
+    
+    if (!TurboModeEnabled && CyclesToNextSample <= 0.0)
     {
-        GenerateSample();
-    }
-}
+        MixSample();
 
-void APU::GenerateSample()
-{
-    if (CyclesToNextSample <= 0.0)
-    {
-        // Decided to use the exact calculation rather than the lookup tables for this
-        float pulse1 = PulseOne * PulseOneVolume;
-        float pulse2 = PulseTwo * PulseTwoVolume;
-        float triangle = Triangle * TriangleVolume;
-        float noise = Noise * NoiseVolume;
-        float dmc = Dmc * DmcVolume;
-
-        float PulseOut = 0.0f;
-        float TndOut = 0.0f;
-
-        if (pulse1 != 0.0f || pulse2 != 0.0f)
-        {
-            PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
-        }
-
-        if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
-        {
-            TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
-        }
-
-        // Send final sample to the backend
-        *AudioOut << ((PulseOut + TndOut) * MasterVolume);
-
-        CyclesToNextSample = CyclesPerSample + CyclesToNextSample;
+        CyclesToNextSample = CyclesToNextSample + CyclesPerSample;
         FrameSampleCount++;
 
-        // Limit emulator speed
         if (FrameSampleCount >= SamplesPerFrame)
         {
+            LimitFrameRate();
             FrameSampleCount = 0;
-
-            using namespace std::chrono;
-
-            steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(TargetFramePeriod);
-
-            if (framePeriodEnd < steady_clock::now())
-            {
-                double targetPeriod = TargetFramePeriod;
-                double effectivePeriod = duration_cast<microseconds>(framePeriodEnd - FramePeriodStart).count();
-                EffectiveCpuFrequency = static_cast<double>(TargetCpuFrequency) * (targetPeriod / effectivePeriod);
-                CyclesPerSample = static_cast<double>(EffectiveCpuFrequency) / AudioBackend::SAMPLE_RATE;
-
-                FramePeriodStart = steady_clock::now();
-            }
-            else
-            {
-                if (EffectiveCpuFrequency != TargetCpuFrequency)
-                {
-                    EffectiveCpuFrequency = TargetCpuFrequency;
-                    CyclesPerSample = static_cast<double>(TargetCpuFrequency) / AudioBackend::SAMPLE_RATE;
-                    AudioOut->Flush();
-                }
-        
-                FramePeriodStart = framePeriodEnd;
-                microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
-
-                while (span.count() > 1000)
-                {
-                    std::this_thread::sleep_for(microseconds(1000));
-                    span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
-                }
-
-                // Busy wait for last 1000 microseconds
-                while (span.count() > 0)
-                {
-                    span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
-                }
-            }
         }
     }
 
     CyclesToNextSample -= 1.0;
+}
+
+void APU::MixSample()
+{
+    // Decided to use the exact calculation rather than the lookup tables for this
+    float pulse1 = PulseOne * PulseOneVolume;
+    float pulse2 = PulseTwo * PulseTwoVolume;
+    float triangle = Triangle * TriangleVolume;
+    float noise = Noise * NoiseVolume;
+    float dmc = Dmc * DmcVolume;
+
+    float PulseOut = 0.0f;
+    float TndOut = 0.0f;
+
+    if (pulse1 != 0.0f || pulse2 != 0.0f)
+    {
+        PulseOut = 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
+    }
+
+    if (triangle != 0.0f || noise != 0.0f || dmc != 0.0f)
+    {
+        TndOut = 159.79f / ((1.0f / ((triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f))) + 100.0f);
+    }
+
+    // Send final sample to the backend
+    *AudioOut << ((PulseOut + TndOut) * MasterVolume);
+}
+
+void APU::LimitFrameRate()
+{
+    using namespace std::chrono;
+    
+    steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(TargetFramePeriod);
+
+    if (framePeriodEnd < steady_clock::now())
+    {
+        // If last frame lasted longer than the target frame period calculate the effective cpu frequency
+        // and adjust the cycles per audio sample appropriately
+
+        double targetPeriod = TargetFramePeriod;
+        double effectivePeriod = duration_cast<microseconds>(framePeriodEnd - FramePeriodStart).count();
+        EffectiveCpuFrequency = static_cast<double>(TargetCpuFrequency) * (targetPeriod / effectivePeriod);
+        CyclesPerSample = static_cast<double>(EffectiveCpuFrequency) / AudioBackend::SAMPLE_RATE;
+
+        FramePeriodStart = steady_clock::now();
+    }
+    else
+    {
+        if (EffectiveCpuFrequency != TargetCpuFrequency)
+        {
+            // If we've returned to normal speed after some slow frames reset the cycles per audio sample
+            EffectiveCpuFrequency = TargetCpuFrequency;
+            CyclesPerSample = static_cast<double>(TargetCpuFrequency) / AudioBackend::SAMPLE_RATE;
+            AudioOut->Flush();
+        }
+
+        // Calculate time to wait
+        FramePeriodStart = framePeriodEnd;
+        microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+
+        // Sleep in 1ms periods
+        while (span.count() > 1000)
+        {
+            std::this_thread::sleep_for(microseconds(1000));
+            span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+        }
+
+        // Busy wait for last 1ms
+        while (span.count() > 0)
+        {
+            span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+        }
+    }
 }
 
 bool APU::CheckIRQ()
