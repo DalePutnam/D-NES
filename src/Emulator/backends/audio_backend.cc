@@ -89,9 +89,6 @@ void AudioBackend::operator<<(float sample)
 }
 
 #ifdef _WIN32
-const uint32_t AudioBackend::BufferSize = 128;
-const uint32_t AudioBackend::NumBuffers = SAMPLE_RATE / BufferSize;
-
 void AudioBackend::InitializeXAudio2()
 {
     XAudio2Instance = nullptr;
@@ -118,10 +115,10 @@ void AudioBackend::InitializeXAudio2()
     hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
     if (FAILED(hr)) goto FailedExit;
 
-    OutputBuffers = new float*[NumBuffers];
-    for (size_t i = 0; i < NumBuffers; ++i)
+    OutputBuffers = new float*[NUM_BUFFERS];
+    for (size_t i = 0; i < NUM_BUFFERS; ++i)
     {
-        OutputBuffers[i] = new float[BufferSize];
+        OutputBuffers[i] = new float[BUFFER_SIZE];
     }
 
     XAudio2SourceVoice->Start(0);
@@ -143,7 +140,7 @@ void AudioBackend::CleanUpXAudio2()
     XAudio2MasteringVoice->DestroyVoice();
     XAudio2Instance->Release();
 
-    for (size_t i = 0; i < NumBuffers; ++i)
+    for (size_t i = 0; i < NUM_BUFFERS; ++i)
     {
         delete[] OutputBuffers[i];
     }
@@ -179,14 +176,14 @@ void AudioBackend::ProcessSampleXAudio2(float sample)
     float* Buffer = OutputBuffers[CurrentBuffer];
     Buffer[BufferIndex++] = sample;
 
-    if (BufferIndex == BufferSize)
+    if (BufferIndex == BUFFER_SIZE)
     {
         XAUDIO2_BUFFER XAudio2Buffer = { 0 };
-        XAudio2Buffer.AudioBytes = BufferSize * sizeof(float);
+        XAudio2Buffer.AudioBytes = BUFFER_SIZE * sizeof(float);
         XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
         XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
 
-        CurrentBuffer = (CurrentBuffer + 1) % NumBuffers;
+        CurrentBuffer = (CurrentBuffer + 1) % NUM_BUFFERS;
         BufferIndex = 0;
     }
 }

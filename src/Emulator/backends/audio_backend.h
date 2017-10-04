@@ -43,8 +43,6 @@ private:
     bool FiltersEnabled;
 
 #ifdef _WIN32
-    static const uint32_t BufferSize;
-    static const uint32_t NumBuffers;
     void InitializeXAudio2();
     void CleanUpXAudio2();
     void FlushXAudio2();
@@ -56,6 +54,9 @@ private:
     uint32_t BufferIndex;
     uint32_t CurrentBuffer;
     float** OutputBuffers;
+
+    static constexpr uint32_t BUFFER_SIZE = 147;
+    static constexpr uint32_t NUM_BUFFERS = SAMPLE_RATE / BUFFER_SIZE;
 #elif __linux
     void InitializeAlsa();
     void CleanUpAlsa();
