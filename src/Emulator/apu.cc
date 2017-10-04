@@ -205,7 +205,7 @@ void APU::PulseUnit::ClockLengthCounter()
     }
 }
 
-APU::PulseUnit::operator uint8_t ()
+APU::PulseUnit::operator float ()
 {
     uint8_t SequenceValue = (Sequences[DutyCycle] >> SequenceCount) & 0x1;
 
@@ -434,7 +434,7 @@ void APU::TriangleUnit::ClockLengthCounter()
     }
 }
 
-APU::TriangleUnit::operator uint8_t ()
+APU::TriangleUnit::operator float ()
 {
     return Sequence[SequenceCount];
 }
@@ -630,7 +630,7 @@ void APU::NoiseUnit::ClockLengthCounter()
     }
 }
 
-APU::NoiseUnit::operator uint8_t ()
+APU::NoiseUnit::operator float ()
 {
     if (LengthCounter != 0 && !(LinearFeedbackShiftRegister & 0x0001))
     {
@@ -915,7 +915,7 @@ void APU::DmcUnit::ClockMemoryReader()
     }
 }
 
-APU::DmcUnit::operator uint8_t ()
+APU::DmcUnit::operator float ()
 {
     return OutputLevel;
 }
@@ -1179,7 +1179,7 @@ void APU::Step()
     }
 
     // Generate audio samples at a rate determined by CyclesPerSample
-    
+
     if (!TurboModeEnabled && CyclesToNextSample <= 0.0)
     {
         MixSample();

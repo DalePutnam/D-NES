@@ -77,7 +77,7 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        operator uint8_t ();
+        operator float ();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -121,7 +121,7 @@ private:
         void ClockLinearCounter();
         void ClockLengthCounter();
 
-        operator uint8_t ();
+        operator float ();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -155,7 +155,7 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        operator uint8_t ();
+        operator float ();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -194,7 +194,7 @@ private:
         void ClockTimer();
         void ClockMemoryReader();
 
-        operator uint8_t ();
+        operator float ();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
