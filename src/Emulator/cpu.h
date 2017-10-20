@@ -13,6 +13,7 @@
 
 #include <mutex>
 #include <atomic>
+#include <array>
 #include <cstdio>
 #include <cstdint>
 #include <condition_variable>
@@ -80,7 +81,7 @@ private:
 
     // Debug Strings
     char ProgramCounter[5];
-    char Instruction[5];
+    char InstructionStr[5];
     char OpCode[3];
     char AddressingArg1[3];
     char AddressingArg2[3];
@@ -98,6 +99,7 @@ private:
     bool NmiPending;
 
     bool IrqPending;
+    bool AccumulatorFlag;
 
     // Registers
     uint16_t PC; // Program Counter
@@ -107,15 +109,42 @@ private:
     uint8_t X; // X Index
     uint8_t Y; // Y Index
 
+    enum Instruction
+    {
+        // Official Instructions
+        ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CLC,
+        CLD, CLI, CLV, CMP, CPX, CPY, DEC, DEX, DEY, EOR, INC, INX, INY, JMP,
+        JSR, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP, ROL, ROR, RTI,
+        RTS, SBC, SEC, SED, SEI, STA, STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
+        // Unofficial Instructions
+        AHS, AHX, ALR, ANC, ARR, AXS, DCP, ISC, SLO, LAS, LAX, RLA, RRA,
+        SAX, SHX, SHY, SRE, STP, TAS, XAA
+    };
+
+    enum AddressMode
+    {
+        ACC, REL, IMM, IMPL, ZERO, ZERO_X, ZERO_Y, ABS, ABS_X, ABS_Y, IND, IND_X, IND_Y
+    };
+
+    struct InstructionDescriptor
+    {
+        Instruction instruction;
+        AddressMode addressMode;
+        bool isReadModifyWrite;
+        bool isOfficial;
+    };
+
+    static const std::array<InstructionDescriptor, 0x100> InstructionSet;
+
     void IncrementClock();
 
     uint8_t Read(uint16_t address);
     void Write(uint8_t M, uint16_t address);
 
     // Addressing Modes
-    int8_t Relative();
-    uint8_t Accumulator();
-    uint8_t Immediate();
+    uint16_t Relative();
+    uint16_t Accumulator();
+    uint16_t Immediate();
     uint16_t ZeroPage();
     uint16_t ZeroPageX();
     uint16_t ZeroPageY();
@@ -129,75 +158,75 @@ private:
     // Instruction Set
 
     // Read Instructions
-    void ADC(uint8_t M); // Add with Carry
-    void AND(uint8_t M); // Logical AND
-    void BIT(uint8_t M); // Bit Test
-    void CMP(uint8_t M); // Compare
-    void CPX(uint8_t M); // Compare X Register
-    void CPY(uint8_t M); // Compare Y Register
-    void EOR(uint8_t M); // Exclusive OR
-    void LDA(uint8_t M); // Load Accumulator
-    void LDX(uint8_t M); // Load X Register
-    void LDY(uint8_t M); // Load Y Register
-    void ORA(uint8_t M); // Logical Inclusive OR
-    void SBC(uint8_t M); // Subtract with Carry
+    void DoADC(uint16_t address); // Add with Carry
+    void DoAND(uint16_t address); // Logical AND
+    void DoBIT(uint16_t address); // Bit Test
+    void DoCMP(uint16_t address); // Compare
+    void DoCPX(uint16_t address); // Compare X Register
+    void DoCPY(uint16_t address); // Compare Y Register
+    void DoEOR(uint16_t address); // Exclusive OR
+    void DoLDA(uint16_t address); // Load Accumulator
+    void DoLDX(uint16_t address); // Load X Register
+    void DoLDY(uint16_t address); // Load Y Register
+    void DoORA(uint16_t address); // Logical Inclusive OR
+    void DoSBC(uint16_t address); // Subtract with Carry
 
     // Write Instructions
-    uint8_t STA(); // Store Accumulator
-    uint8_t STX(); // Store X Register
-    uint8_t STY(); // Store Y Register
+    void DoSTA(uint16_t address); // Store Accumulator
+    void DoSTX(uint16_t address); // Store X Register
+    void DoSTY(uint16_t address); // Store Y Register
 
     // Read-Modify-Write Instructions
-    uint8_t ASL(uint8_t M); // Arithmetic Shift Left
-    uint8_t DEC(uint8_t M); // Decrement Memory
-    uint8_t INC(uint8_t M); // Increment Memory
-    uint8_t LSR(uint8_t M); // Logical Shift Right
-    uint8_t ROL(uint8_t M); // Rotate Left
-    uint8_t ROR(uint8_t M); // Rotate Right
+    void DoASL(uint16_t address); // Arithmetic Shift Left
+    void DoDEC(uint16_t address); // Decrement Memory
+    void DoINC(uint16_t address); // Increment Memory
+    void DoLSR(uint16_t address); // Logical Shift Right
+    void DoROL(uint16_t address); // Rotate Left
+    void DoROR(uint16_t address); // Rotate Right
 
     // Branch Instructions
-    void Branch(int8_t offset); // Common Branch function
-    void BCC(int8_t offset); // Branch if Carry Clear
-    void BCS(int8_t offset); // Branch if Carry Set
-    void BEQ(int8_t offset); // Branch if Equal
-    void BMI(int8_t offset); // Branch if Minus
-    void BNE(int8_t offset); // Branch if Not Equal
-    void BPL(int8_t offset); // Branch if Positive
-    void BVC(int8_t offset); // Branch if Overflow Clear
-    void BVS(int8_t offset); // Branch if Overflow Set
+    void DoBranch(int8_t offset); // Common Branch function
+    void DoBCC(uint16_t address); // Branch if Carry Clear
+    void DoBCS(uint16_t address); // Branch if Carry Set
+    void DoBEQ(uint16_t address); // Branch if Equal
+    void DoBMI(uint16_t address); // Branch if Minus
+    void DoBNE(uint16_t address); // Branch if Not Equal
+    void DoBPL(uint16_t address); // Branch if Positive
+    void DoBVC(uint16_t address); // Branch if Overflow Clear
+    void DoBVS(uint16_t address); // Branch if Overflow Set
 
     // Stack Instructions
-    void BRK(); // Force Interrupt
-    void JSR(uint16_t M); // Jump to Subroutine
-    void PHA(); // Push Accumulator
-    void PHP(); // Push Processor Status
-    void PLA(); // Pull Accumulator
-    void PLP(); // Pull Processor Status
-    void RTI(); // Return from interrupt
-    void RTS(); // Return from subroutine
+    void DoBRK(); // Force Interrupt
+    void DoJSR(uint16_t address); // Jump to Subroutine
+    void DoPHA(); // Push Accumulator
+    void DoPHP(); // Push Processor Status
+    void DoPLA(); // Pull Accumulator
+    void DoPLP(); // Pull Processor Status
+    void DoRTI(); // Return from interrupt
+    void DoRTS(); // Return from subroutine
 
     // Implied Instructions
-    void CLC(); // Clear Carry Flag
-    void CLD(); // Clear Decimal Mode
-    void CLI(); // Clear Interrupt Disable
-    void CLV(); // Clear Overflow Flag
-    void DEX(); // Decrement X Register
-    void DEY(); // Decrement Y Register
-    void INX(); // Increment X Register
-    void INY(); // Increment Y Register
-    void NOP(); // No Operation
-    void SEC(); // Set Carry Flag
-    void SED(); // Set Decimal Flag
-    void SEI(); // Set Interrupt Disable
-    void TAX(); // Transfer Accumulator to X
-    void TAY(); // Transfer Accumulator to Y
-    void TSX(); // Transfer Stack Pointer to X
-    void TXA(); // Transfer X to Accumulator
-    void TXS(); // Transfer X to Stack Pointer
-    void TYA(); // Transfer Y to Accumulator
+    void DoCLC(); // Clear Carry Flag
+    void DoCLD(); // Clear Decimal Mode
+    void DoCLI(); // Clear Interrupt Disable
+    void DoCLV(); // Clear Overflow Flag
+    void DoDEX(); // Decrement X Register
+    void DoDEY(); // Decrement Y Register
+    void DoINX(); // Increment X Register
+    void DoINY(); // Increment Y Register
+    void DoNOP(); // No Operation
+    void DoSEC(); // Set Carry Flag
+    void DoSED(); // Set Decimal Flag
+    void DoSEI(); // Set Interrupt Disable
+    void DoTAX(); // Transfer Accumulator to X
+    void DoTAY(); // Transfer Accumulator to Y
+    void DoTSX(); // Transfer Stack Pointer to X
+    void DoTXA(); // Transfer X to Accumulator
+    void DoTXS(); // Transfer X to Stack Pointer
+    void DoTYA(); // Transfer Y to Accumulator
 
     // Jump
-    void JMP(uint16_t M); // Jump
+    void DoJMP(uint16_t address); // Jump
 
     void CheckNMI();
     void HandleNMI(); // Handle non-maskable interrupt

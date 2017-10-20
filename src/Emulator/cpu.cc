@@ -7,6 +7,8 @@
 
 #include <string>
 #include <cstring>
+#include <iostream>
+#include <iomanip>
 
 #include "cpu.h"
 #include "ppu.h"
@@ -48,6 +50,15 @@ void CPU::IncrementClock()
 
 uint8_t CPU::Read(uint16_t address)
 {
+    if (AccumulatorFlag)
+    {
+        AccumulatorFlag = false;
+        Read(PC);
+        AccumulatorFlag = true;
+
+        return A;
+    }
+
     uint8_t value;
 
     do
@@ -56,48 +67,41 @@ uint8_t CPU::Read(uint16_t address)
     } while (Apu->CheckStalled());
 
 
-    // Any address less then 0x2000 is just the
-    // Internal Ram mirrored every 0x800 bytes
     if (address < 0x2000)
     {
+        // Internal RAM
         value = Memory[address % 0x800];
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
-        uint16_t addr = (address - 0x2000) % 8;
-
-        if (addr == 2)
+        // PPU Registers
+        switch ((address - 0x2000) % 8)
         {
-            value = Ppu->ReadPPUStatus();
-        }
-        else if (addr == 4)
-        {
-            value = Ppu->ReadOAMData();
-        }
-        else if (addr == 7)
-        {
-            value = Ppu->ReadPPUData();
-        }
-        else
-        {
-            value = 0xFF;
+        case 2:  value = Ppu->ReadPPUStatus(); break;
+        case 4:  value = Ppu->ReadOAMData(); break;
+        case 7:  value = Ppu->ReadPPUData(); break;
+        default: value = 0xFF; break;
         }
     }
-    else if (address == 0x4015)
+    else if (address >= 0x4000 && address < 0x4018)
     {
-        value = Apu->ReadAPUStatus();
+        // APU/IO Registers
+        switch (address)
+        {
+        case 0x4015: value = Apu->ReadAPUStatus(); break;
+        case 0x4016: value = GetControllerOneShift(); break;
+        default:     value = 0xFF; break;
+        }
     }
-    else if (address == 0x4016)
+    else if (address >= 0x6000 && address < 0x10000)
     {
-        value = GetControllerOneShift();
-    }
-    else if (address > 0x5FFF && address < 0x10000)
-    {
+        // Cartridge Space
         value = Cartridge->PrgRead(address - 0x6000);
     }
     else
     {
-        value = 0x00;
+        // All other addresses unassigned
+        value = 0xFF;
     }
 
     CheckNMI();
@@ -108,7 +112,12 @@ uint8_t CPU::Read(uint16_t address)
 
 void CPU::Write(uint8_t M, uint16_t address)
 {
-    // Note: THIS IS NOT THREAD SAFE
+    if (AccumulatorFlag)
+    {
+        A = M;
+        return;
+    }
+
     IncrementClock();
 
     // OAM DMA
@@ -133,47 +142,29 @@ void CPU::Write(uint8_t M, uint16_t address)
             Ppu->WriteOAMDATA(value);
         }
     }
-    // Any address less then 0x2000 is just the
-    // Internal Ram mirrored every 0x800 bytes
     else if (address < 0x2000)
     {
+        // Internal RAM
         Memory[address % 0x800] = M;
     }
     else if (address >= 0x2000 && address < 0x4000)
     {
-        uint16_t addr = (address - 0x2000) % 8;
-
-        if (addr == 0)
+        // PPU Registers
+        switch ((address - 0x2000) % 8)
         {
-            Ppu->WritePPUCTRL(M);
-        }
-        else if (addr == 1)
-        {
-            Ppu->WritePPUMASK(M);
-        }
-        else if (addr == 3)
-        {
-            Ppu->WriteOAMADDR(M);
-        }
-        else if (addr == 4)
-        {
-            Ppu->WriteOAMDATA(M);
-        }
-        else if (addr == 5)
-        {
-            Ppu->WritePPUSCROLL(M);
-        }
-        else if (addr == 6)
-        {
-            Ppu->WritePPUADDR(M);
-        }
-        else if (addr == 7)
-        {
-            Ppu->WritePPUDATA(M);
+        case 0: Ppu->WritePPUCTRL(M); break;
+        case 1: Ppu->WritePPUMASK(M); break;
+        case 3: Ppu->WriteOAMADDR(M); break;
+        case 4: Ppu->WriteOAMDATA(M); break;
+        case 5: Ppu->WritePPUSCROLL(M); break;
+        case 6: Ppu->WritePPUADDR(M); break;
+        case 7: Ppu->WritePPUDATA(M); break;
+        default: break;
         }
     }
-    else if ((address >= 0x4000 && address <= 0x4015) || address == 0x4017)
+    else if (address >= 0x4000 && address < 0x4018)
     {
+        // APU/IO Registers
         switch (address)
         {
         case 0x4000: Apu->WritePulseOneRegister(0, M); break;
@@ -195,16 +186,14 @@ void CPU::Write(uint8_t M, uint16_t address)
         case 0x4012: Apu->WriteDmcRegister(2, M); break;
         case 0x4013: Apu->WriteDmcRegister(3, M); break;
         case 0x4015: Apu->WriteAPUStatus(M); break;
+        case 0x4016: SetControllerStrobe(!!(M & 0x1)); break;
         case 0x4017: Apu->WriteAPUFrameCounter(M); break;
         default: break;
         }
     }
-    else if (address == 0x4016)
+    else if (address >= 0x6000 && address < 0x10000)
     {
-        SetControllerStrobe(!!(M & 0x1));
-    }
-    else if (address > 0x5FFF && address < 0x10000)
-    {
+        // Cartridge Space
         Cartridge->PrgWrite(M, address - 0x6000);
     }
 
@@ -212,40 +201,36 @@ void CPU::Write(uint8_t M, uint16_t address)
     CheckIRQ();
 }
 
-int8_t CPU::Relative()
+uint16_t CPU::Relative()
 {
-    int8_t value = Read(PC++);
-
     if (IsLogEnabled())
     {
-        LogRelative(value);
+        LogRelative(DebugRead(PC));
     }
 
-    return value;
+    return PC++;
 }
 
-uint8_t CPU::Accumulator()
+uint16_t CPU::Accumulator()
 {
-    Read(PC);
-
     if (IsLogEnabled())
     {
         LogAccumulator();
     }
 
-    return A;
+    AccumulatorFlag = true;
+
+    return PC;
 }
 
-uint8_t CPU::Immediate()
+uint16_t CPU::Immediate()
 {
-    uint8_t value = Read(PC++);
-
     if (IsLogEnabled())
     {
-        LogImmediate(value);
+        LogImmediate(DebugRead(PC));
     }
 
-    return value;
+    return PC++;
 }
 
 // ZeroPage Addressing takes the the next byte of memory
@@ -464,9 +449,11 @@ uint16_t CPU::IndirectIndexed(bool isRMW)
 // Adds M  and the Carry flag to the Accumulator (A)
 // Sets the Carry, Negative, Overflow and Zero
 // flags as necessary.
-void CPU::ADC(uint8_t M)
+void CPU::DoADC(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("ADC");
+
+    uint8_t M = Read(address);
 
     uint8_t C = P & 0x01; // get carry flag
     uint8_t origA = A;
@@ -488,9 +475,11 @@ void CPU::ADC(uint8_t M)
 // Logical And
 // Performs a logical and on the Accumulator and M
 // Sets the Negative and Zero flags if necessary
-void CPU::AND(uint8_t M)
+void CPU::DoAND(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("AND");
+
+    uint8_t M = Read(address);
 
     A = A & M;
 
@@ -504,9 +493,12 @@ void CPU::AND(uint8_t M)
 // Performs a left shift on M and sets
 // the Carry, Zero and Negative flags as necessary.
 // In this case Carry gets the former bit 7 of M.
-uint8_t CPU::ASL(uint8_t M)
+void CPU::DoASL(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("ASL");
+
+    uint8_t M = Read(address);
+    Write(M, address);
 
     uint8_t origM = M;
     M = M << 1;
@@ -518,12 +510,12 @@ uint8_t CPU::ASL(uint8_t M)
     // if bit seven is 1 set negative flag
     (M >> 7) == 1 ? P = P | 0x80 : P = P & 0x7F;
 
-    return M;
+    Write(M, address);
 }
 
 // Common Branch function
 // Any branch instruction that takes the branch will use this function to do so
-void CPU::Branch(int8_t offset)
+void CPU::DoBranch(int8_t offset)
 {
     Read(PC);
 
@@ -540,39 +532,45 @@ void CPU::Branch(int8_t offset)
 // Branch if Carry Clear
 // If the Carry flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BCC(int8_t offset)
+void CPU::DoBCC(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BCC");
 
+    int8_t offset = Read(address);
+
     if ((P & 0x01) == 0)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
 // Branch if Carry Set
 // If the Carry flag is 1 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BCS(int8_t offset)
+void CPU::DoBCS(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BCS");
 
+    int8_t offset = Read(address);
+
     if ((P & 0x01) == 1)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
 // Branch if Equal
 // If the Zero flag is 1 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BEQ(int8_t offset)
+void CPU::DoBEQ(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BEQ");
 
+    int8_t offset = Read(address);
+
     if (((P & 0x02) >> 1) == 1)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
@@ -581,9 +579,11 @@ void CPU::BEQ(int8_t offset)
 // The Accumulator is expected to hold a mask pattern and
 // is anded with M to clear or set the Zero flag.
 // The Overflow and Negative flags are also set if necessary.
-void CPU::BIT(uint8_t M)
+void CPU::DoBIT(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BIT");
+
+    uint8_t M = Read(address);
 
     uint8_t result = A & M;
 
@@ -598,48 +598,56 @@ void CPU::BIT(uint8_t M)
 // Branch if Minus
 // If the Negative flag is 1 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BMI(int8_t offset)
+void CPU::DoBMI(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BMI");
 
+    int8_t offset = Read(address);
+
     if (((P & 0x80) >> 7) == 1)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
 // Branch if Not Equal
 // If the Zero flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BNE(int8_t offset)
+void CPU::DoBNE(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BNE");
 
+    int8_t offset = Read(address);
+
     if (((P & 0x02) >> 1) == 0)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
 // Branch if Positive
 // If the Negative flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BPL(int8_t offset)
+void CPU::DoBPL(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BPL");
 
+    int8_t offset = Read(address);
+
     if (((P & 0x80) >> 7) == 0)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
 // Force Interrupt
 // Push PC and P onto the stack and jump to the
 // address stored at the interrupt vector (0xFFFE and 0xFFFF)
-void CPU::BRK()
+void CPU::DoBRK()
 {
     if (IsLogEnabled()) LogInstructionName("BRK");
+
+    PC++;
 
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
@@ -651,37 +659,41 @@ void CPU::BRK()
 
     P |= 0x4;
 
-    PC = Read(0xFFFE) + (((uint16_t)Read(0xFFFF)) * 0x100);
+    PC = Read(0xFFFE) + (static_cast<uint16_t>(Read(0xFFFF)) * 0x100);
 }
 
 // Branch if Overflow Clear
 // If the Overflow flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BVC(int8_t offset)
+void CPU::DoBVC(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BVC");
 
+    int8_t offset = Read(address);
+
     if (((P & 0x40) >> 6) == 0)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
 // Branch if Overflow Set
 // If the Overflow flag is 0 then adjust PC by the (signed) amount
 // found at the next memory location.
-void CPU::BVS(int8_t offset)
+void CPU::DoBVS(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("BVS");
 
+    int8_t offset = Read(address);
+
     if (((P & 0x40) >> 6) == 1)
     {
-        Branch(offset);
+        DoBranch(offset);
     }
 }
 
 // Clear Carry Flag
-void CPU::CLC()
+void CPU::DoCLC()
 {
     if (IsLogEnabled()) LogInstructionName("CLC");
 
@@ -692,7 +704,7 @@ void CPU::CLC()
 // Note: Since this 6502 simulator is for a NES emulator
 // this flag doesn't do anything as the NES's CPU didn't
 // include decimal mode (and it was stupid anyway)
-void CPU::CLD()
+void CPU::DoCLD()
 {
     if (IsLogEnabled()) LogInstructionName("CLD");
 
@@ -700,7 +712,7 @@ void CPU::CLD()
 }
 
 // Clear Interrupt Disable
-void CPU::CLI()
+void CPU::DoCLI()
 {
     if (IsLogEnabled()) LogInstructionName("CLI");
 
@@ -708,7 +720,7 @@ void CPU::CLI()
 }
 
 // Clear Overflow flag
-void CPU::CLV()
+void CPU::DoCLV()
 {
     if (IsLogEnabled()) LogInstructionName("CLV");
 
@@ -719,9 +731,11 @@ void CPU::CLV()
 // Compares the Accumulator with M by subtracting
 // A from M and setting the Zero flag if they were equal
 // and the Carry flag if the Accumulator was larger (or equal)
-void CPU::CMP(uint8_t M)
+void CPU::DoCMP(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("CMP");
+
+    uint8_t M = Read(address);
 
     uint8_t result = A - M;
     // if A >= M set carry flag
@@ -736,9 +750,11 @@ void CPU::CMP(uint8_t M)
 // Compares the X register with M by subtracting
 // X from M and setting the Zero flag if they were equal
 // and the Carry flag if the X register was larger (or equal)
-void CPU::CPX(uint8_t M)
+void CPU::DoCPX(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("CPX");
+
+    uint8_t M = Read(address);
 
     uint8_t result = X - M;
     // if X >= M set carry flag
@@ -753,9 +769,11 @@ void CPU::CPX(uint8_t M)
 // Compares the Y register with M by subtracting
 // Y from M and setting the Zero flag if they were equal
 // and the Carry flag if the Y register was larger (or equal)
-void CPU::CPY(uint8_t M)
+void CPU::DoCPY(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("CPY");
+
+    uint8_t M = Read(address);
 
     uint8_t result = Y - M;
     // if Y >= M set carry flag
@@ -768,21 +786,25 @@ void CPU::CPY(uint8_t M)
 
 // Decrement Memory
 // Subtracts one from M and then returns the new value
-uint8_t CPU::DEC(uint8_t M)
+void CPU::DoDEC(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("DEC");
+
+    uint8_t M = Read(address);
+    Write(M, address);
 
     uint8_t result = M - 1;
     // if result is 0 set zero flag
     (result == 0) ? P = P | 0x02 : P = P & 0xFD;
     // set negative flag to bit 7 of result
     ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
-    return result;
+    
+    Write(result, address);
 }
 
 // Decrement X Register
 // Subtracts one from X
-void CPU::DEX()
+void CPU::DoDEX()
 {
     if (IsLogEnabled()) LogInstructionName("DEX");
 
@@ -795,7 +817,7 @@ void CPU::DEX()
 
 // Decrement X Register
 // Subtracts one from Y
-void CPU::DEY()
+void CPU::DoDEY()
 {
     if (IsLogEnabled()) LogInstructionName("DEY");
 
@@ -809,9 +831,11 @@ void CPU::DEY()
 // Exclusive Or
 // Performs and exclusive or on the Accumulator (A)
 // and M. The Zero and Negative flags are set if necessary.
-void CPU::EOR(uint8_t M)
+void CPU::DoEOR(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("EOR");
+
+    uint8_t M = Read(address);
 
     A = A ^ M;
     // if A is 0 set zero flag
@@ -822,21 +846,25 @@ void CPU::EOR(uint8_t M)
 
 // Increment Memory
 // Adds one to M and then returns the new value
-uint8_t CPU::INC(uint8_t M)
+void CPU::DoINC(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("INC");
+
+    uint8_t M = Read(address);
+    Write(M, address);
 
     uint8_t result = M + 1;
     // if result is 0 set zero flag
     (result == 0) ? P = P | 0x02 : P = P & 0xFD;
     // set negative flag to bit 7 of result
     ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
-    return result;
+    
+    Write(result, address);
 }
 
 // Increment X Register
 // Adds one to X
-void CPU::INX()
+void CPU::DoINX()
 {
     if (IsLogEnabled()) LogInstructionName("INX");
 
@@ -849,7 +877,7 @@ void CPU::INX()
 
 // Increment Y Register
 // Adds one to Y
-void CPU::INY()
+void CPU::DoINY()
 {
     if (IsLogEnabled()) LogInstructionName("INY");
 
@@ -862,11 +890,11 @@ void CPU::INY()
 
 // Jump
 // Sets PC to M
-void CPU::JMP(uint16_t M)
+void CPU::DoJMP(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("JMP");
 
-    PC = M;
+    PC = address;
 }
 
 // Jump to Subroutine
@@ -875,7 +903,7 @@ void CPU::JMP(uint16_t M)
 // in the actual 6502, the last operation of the address fetch doesn't
 // happen until after the rest of JSR has completed, but here
 // it happens before with some fudging to compensate (decrementing PC)
-void CPU::JSR(uint16_t M)
+void CPU::DoJSR(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("JSR");
 
@@ -888,16 +916,16 @@ void CPU::JSR(uint16_t M)
     Write(highPC, 0x100 + S--);
     Write(lowPC, 0x100 + S--);
 
-    PC = M;
+    PC = address;
 }
 
 // Load Accumulator
 // Sets the accumulator to M
-void CPU::LDA(uint8_t M)
+void CPU::DoLDA(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("LDA");
 
-    A = M;
+    A = Read(address);
 
     // if A is 0 set zero flag
     (A == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -907,11 +935,11 @@ void CPU::LDA(uint8_t M)
 
 // Load X Register
 // Sets the X to M
-void CPU::LDX(uint8_t M)
+void CPU::DoLDX(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("LDX");
 
-    X = M;
+    X = Read(address);
 
     // if X is 0 set zero flag
     (X == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -921,11 +949,11 @@ void CPU::LDX(uint8_t M)
 
 // Load Y Register
 // Sets the Y to M
-void CPU::LDY(uint8_t M)
+void CPU::DoLDY(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("LDY");
 
-    Y = M;
+    Y = Read(address);
 
     // if Y is 0 set zero flag
     (Y == 0) ? P = P | 0x02 : P = P & 0xFD;
@@ -937,9 +965,12 @@ void CPU::LDY(uint8_t M)
 // Performs a logical left shift on M and returns the result
 // The Carry flag is set to the former bit zero of M.
 // The Zero and Negative flags are set like normal/
-uint8_t CPU::LSR(uint8_t M)
+void CPU::DoLSR(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("LSR");
+
+    uint8_t M = Read(address);
+    Write(M, address);
 
     uint8_t result = M >> 1;
 
@@ -950,13 +981,13 @@ uint8_t CPU::LSR(uint8_t M)
     // set negative flag to bit 7 of result
     ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 
-    return result;
+    Write(result, address);
 }
 
 // No Operation
 // Admittedly this really doesn't need its own function, but its
 // a convenient place to put the logger code.
-void CPU::NOP()
+void CPU::DoNOP()
 {
     if (IsLogEnabled()) LogInstructionName("NOP");
 }
@@ -964,9 +995,11 @@ void CPU::NOP()
 // Logical Inclusive Or
 // Performs a logical inclusive or on the Accumulator (A) and M.
 // The Zero and Negative flags are set if necessary
-void CPU::ORA(uint8_t M)
+void CPU::DoORA(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("ORA");
+
+    uint8_t M = Read(address);
 
     A = A | M;
     // if A is 0 set zero flag
@@ -977,7 +1010,7 @@ void CPU::ORA(uint8_t M)
 
 // Push Accumulator
 // Pushes the Accumulator (A) onto the stack
-void CPU::PHA()
+void CPU::DoPHA()
 {
     if (IsLogEnabled()) LogInstructionName("PHA");
 
@@ -986,7 +1019,7 @@ void CPU::PHA()
 
 // Push Processor Status
 // Pushes P onto the stack
-void CPU::PHP()
+void CPU::DoPHP()
 {
     if (IsLogEnabled()) LogInstructionName("PHP");
 
@@ -996,7 +1029,7 @@ void CPU::PHP()
 // Pull Accumulator
 // Pulls the Accumulator (A) off the stack
 // Sets Zero and Negative flags if necessary
-void CPU::PLA()
+void CPU::DoPLA()
 {
     if (IsLogEnabled()) LogInstructionName("PLA");
 
@@ -1012,7 +1045,7 @@ void CPU::PLA()
 // Pull Processor Status
 // Pulls P off the stack
 // Sets Zero and Negative flags if necessary
-void CPU::PLP()
+void CPU::DoPLP()
 {
     if (IsLogEnabled()) LogInstructionName("PLP");
 
@@ -1025,9 +1058,12 @@ void CPU::PLP()
 // Rotates the bits of one left. The carry flag is shifted
 // into bit 0 and then set to the former bit 7. Returns the result.
 // The Zero and Negative flags are set if necessary
-uint8_t CPU::ROL(uint8_t M)
+void CPU::DoROL(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("ROL");
+
+    uint8_t M = Read(address);
+    Write(M, address);
 
     uint8_t result = (M << 1) | (P & 0x01);
     // set carry flag to old bit 7
@@ -1038,16 +1074,19 @@ uint8_t CPU::ROL(uint8_t M)
     // set negative flag to bit 7 of result
     ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 
-    return result;
+    Write(result, address);
 }
 
 // Rotate Right
 // Rotates the bits of one left. The carry flag is shifted
 // into bit 7 and then set to the former bit 0
 // The Zero and Negative flags are set if necessary
-uint8_t CPU::ROR(uint8_t M)
+void CPU::DoROR(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("ROR");
+
+    uint8_t M = Read(address);
+    Write(M, address);
 
     uint8_t result = (M >> 1) | ((P & 0x01) << 7);
     // set carry flag to old bit 0
@@ -1057,13 +1096,13 @@ uint8_t CPU::ROR(uint8_t M)
     // set negative flag to bit 7 of result
     ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 
-    return result;
+    Write(result, address);
 }
 
 // Return From Interrupt
 // Pulls PC and P from the stack and continues
 // execution at the new PC
-void CPU::RTI()
+void CPU::DoRTI()
 {
     if (IsLogEnabled()) LogInstructionName("RTI");
 
@@ -1079,7 +1118,7 @@ void CPU::RTI()
 // Return From Subroutine
 // Pulls PC from the stack and continues
 // execution at the new PC
-void CPU::RTS()
+void CPU::DoRTS()
 {
     if (IsLogEnabled()) LogInstructionName("RTS");
 
@@ -1095,9 +1134,11 @@ void CPU::RTS()
 // Subtract With Carry
 // Subtract A from M and the not of the Carry flag.
 // Sets the Carry, Overflow, Negative and Zero flags if necessary
-void CPU::SBC(uint8_t M)
+void CPU::DoSBC(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("SBC");
+
+    uint8_t M = Read(address);
 
     uint8_t C = P & 0x01; // get carry flag
     uint8_t origA = A;
@@ -1119,7 +1160,7 @@ void CPU::SBC(uint8_t M)
 }
 
 // Set Carry Flag
-void CPU::SEC()
+void CPU::DoSEC()
 {
     if (IsLogEnabled()) LogInstructionName("SEC");
 
@@ -1129,7 +1170,7 @@ void CPU::SEC()
 // Set Decimal Mode
 // Setting this flag has no actual effect.
 // See the comment of CLD for why.
-void CPU::SED()
+void CPU::DoSED()
 {
     if (IsLogEnabled()) LogInstructionName("SED");
 
@@ -1137,7 +1178,7 @@ void CPU::SED()
 }
 
 // Set Interrupt Disable
-void CPU::SEI()
+void CPU::DoSEI()
 {
     if (IsLogEnabled()) LogInstructionName("SEI");
 
@@ -1147,35 +1188,35 @@ void CPU::SEI()
 // Store Accumulator
 // This simply returns A since all memory writes
 // are done externally to these functions
-uint8_t CPU::STA()
+void CPU::DoSTA(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("STA");
 
-    return A;
+    Write(A, address);
 }
 
 // Store X Register
 // This simply returns X since all memory writes
 // are done externally to these functions
-uint8_t CPU::STX()
+void CPU::DoSTX(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("STX");
 
-    return X;
+    Write(X, address);
 }
 
 // Store Y Register
 // This simply returns Y since all memory writes
 // are done externally to these functions
-uint8_t CPU::STY()
+void CPU::DoSTY(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("STY");
 
-    return Y;
+    Write(Y, address);
 }
 
 // Transfer Accumulator to X
-void CPU::TAX()
+void CPU::DoTAX()
 {
     if (IsLogEnabled()) LogInstructionName("TAX");
 
@@ -1188,7 +1229,7 @@ void CPU::TAX()
 }
 
 // Transfer Accumulator to Y
-void CPU::TAY()
+void CPU::DoTAY()
 {
     if (IsLogEnabled()) LogInstructionName("TAY");
 
@@ -1201,7 +1242,7 @@ void CPU::TAY()
 }
 
 // Transfer Stack Pointer to X
-void CPU::TSX()
+void CPU::DoTSX()
 {
     if (IsLogEnabled()) LogInstructionName("TSX");
 
@@ -1214,7 +1255,7 @@ void CPU::TSX()
 }
 
 // Transfer X to Accumulator
-void CPU::TXA()
+void CPU::DoTXA()
 {
     if (IsLogEnabled()) LogInstructionName("TXA");
 
@@ -1227,7 +1268,7 @@ void CPU::TXA()
 }
 
 // Transfer X to Stack Pointer
-void CPU::TXS()
+void CPU::DoTXS()
 {
     if (IsLogEnabled()) LogInstructionName("TXS");
 
@@ -1235,7 +1276,7 @@ void CPU::TXS()
 }
 
 // Transfer Y to Accumulator
-void CPU::TYA()
+void CPU::DoTYA()
 {
     if (IsLogEnabled()) LogInstructionName("TYA");
 
@@ -1363,6 +1404,7 @@ CPU::CPU()
     , NmiRaised(false)
     , NmiPending(false)
     , IrqPending(false)
+    , AccumulatorFlag(false)
     , S(0xFD)
     , P(0x24)
     , A(0)
@@ -1372,7 +1414,7 @@ CPU::CPU()
     memset(Memory, 0, sizeof(uint8_t) * 0x800);
 
     sprintf(Addressing, "%s", "");
-    sprintf(Instruction, "%s", "");
+    sprintf(InstructionStr, "%s", "");
     sprintf(ProgramCounter, "%s", "");
     sprintf(AddressingArg1, "%s", "");
     sprintf(AddressingArg2, "%s", "");
@@ -1654,627 +1696,238 @@ void CPU::Step()
     }
 
     uint8_t opcode = Read(PC++); // Retrieve opcode from memory
-    uint16_t addr;
-    uint8_t value;
+    uint16_t address;
 
     if (IsLogEnabled()) LogOpcode(opcode);
 
-    // This switch statement executes the instruction associated with each opcode
-    // With a few exceptions this involves calling one of the 9 addressing mode functions
-    // and passing their result into the instruction function. Depending on the instruction
-    // the result may then be written back to the same address. After this procedure is
-    // complete then the required cycles for that instruction are added to the cycle counter.
-    switch (opcode)
+    // Decode opcode
+    InstructionDescriptor desc = InstructionSet[opcode];
+
+    // Execute corresponding addressing mode
+    switch (desc.addressMode)
     {
-        // ADC OpCodes
-    case 0x69:
-        ADC(Immediate());
+    case ABS:
+        address = Absolute(desc.instruction == JMP || desc.instruction == JSR);
         break;
-    case 0x65:
-        ADC(Read(ZeroPage()));
+    case ABS_X:
+        address = AbsoluteX(desc.isReadModifyWrite);
         break;
-    case 0x75:
-        ADC(Read(ZeroPageX()));
+    case ABS_Y:
+        address = AbsoluteY(desc.isReadModifyWrite);
         break;
-    case 0x6D:
-        ADC(Read(Absolute()));
+    case ACC:
+        address = Accumulator();
         break;
-    case 0x7D:
-        ADC(Read(AbsoluteX()));
+    case IMM:
+        address = Immediate();
         break;
-    case 0x79:
-        ADC(Read(AbsoluteY()));
-        break;
-    case 0x61:
-        ADC(Read(IndexedIndirect()));
-        break;
-    case 0x71:
-        ADC(Read(IndirectIndexed()));
-        break;
-        // AND OpCodes
-    case 0x29:
-        AND(Immediate());
-        break;
-    case 0x25:
-        AND(Read(ZeroPage()));
-        break;
-    case 0x35:
-        AND(Read(ZeroPageX()));
-        break;
-    case 0x2D:
-        AND(Read(Absolute()));
-        break;
-    case 0x3D:
-        AND(Read(AbsoluteX()));
-        break;
-    case 0x39:
-        AND(Read(AbsoluteY()));
-        break;
-    case 0x21:
-        AND(Read(IndexedIndirect()));
-        break;
-    case 0x31:
-        AND(Read(IndirectIndexed()));
-        break;
-        // ASL OpCodes
-    case 0x0A:
-        A = ASL(Accumulator());
-        break;
-    case 0x06:
-        addr = ZeroPage();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ASL(value), addr);
-        break;
-    case 0x16:
-        addr = ZeroPageX();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ASL(value), addr);
-        break;
-    case 0x0E:
-        addr = Absolute();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ASL(value), addr);
-        break;
-    case 0x1E:
-        addr = AbsoluteX(true);
-        value = Read(addr);
-        Write(value, addr);
-        Write(ASL(value), addr);
-        break;
-        // BCC OpCode
-    case 0x90:
-        BCC(Relative());
-        break;
-        // BCS OpCode
-    case 0xB0:
-        BCS(Relative());
-        break;
-        // BEQ OpCode
-    case 0xF0:
-        BEQ(Relative());
-        break;
-        // BIT OpCodes
-    case 0x24:
-        BIT(Read(ZeroPage()));
-        break;
-    case 0x2C:
-        BIT(Read(Absolute()));
-        break;
-        // BMI OpCode
-    case 0x30:
-        BMI(Relative());
-        break;
-        // BNE OpCode
-    case 0xD0:
-        BNE(Relative());
-        break;
-        // BPL OpCode
-    case 0x10:
-        BPL(Relative());
-        break;
-        // BRK OpCode
-    case 0x00:
-        Read(PC++);
-        BRK();
-        break;
-        // BVC OpCode
-    case 0x50:
-        BVC(Relative());
-        break;
-        // BVS OpCode
-    case 0x70:
-        BVS(Relative());
-        break;
-        // CLC OpCode
-    case 0x18:
+    case IMPL:
         Read(PC);
-        CLC();
+        address = PC;
         break;
-        // CLD OpCode
-    case 0xD8:
-        Read(PC);
-        CLD();
+    case IND:
+        address = Indirect();
         break;
-        // CLI OpCode
-    case 0x58:
-        Read(PC);
-        CLI();
+    case IND_X:
+        address = IndexedIndirect();
         break;
-        // CLV OpCode
-    case 0xB8:
-        Read(PC);
-        CLV();
+    case IND_Y:
+        address = IndirectIndexed(desc.isReadModifyWrite);
         break;
-        // CMP OpCodes
-    case 0xC9:
-        CMP(Immediate());
+    case REL:
+        address = Relative();
         break;
-    case 0xC5:
-        CMP(Read(ZeroPage()));
+    case ZERO:
+        address = ZeroPage();
         break;
-    case 0xD5:
-        CMP(Read(ZeroPageX()));
+    case ZERO_X:
+        address = ZeroPageX();
         break;
-    case 0xCD:
-        CMP(Read(Absolute()));
+    case ZERO_Y:
+        address = ZeroPageY();
         break;
-    case 0xDD:
-        CMP(Read(AbsoluteX()));
-        break;
-    case 0xD9:
-        CMP(Read(AbsoluteY()));
-        break;
-    case 0xC1:
-        CMP(Read(IndexedIndirect()));
-        break;
-    case 0xD1:
-        CMP(Read(IndirectIndexed()));
-        break;
-        // CPX OpCodes
-    case 0xE0:
-        CPX(Immediate());
-        break;
-    case 0xE4:
-        CPX(Read(ZeroPage()));
-        break;
-    case 0xEC:
-        CPX(Read(Absolute()));
-        break;
-        // CPY OpCodes
-    case 0xC0:
-        CPY(Immediate());
-        break;
-    case 0xC4:
-        CPY(Read(ZeroPage()));
-        break;
-    case 0xCC:
-        CPY(Read(Absolute()));
-        break;
-        // DEC OpCodes
-    case 0xC6:
-        addr = ZeroPage();
-        value = Read(addr);
-        Write(value, addr);
-        Write(DEC(value), addr);
-        break;
-    case 0xD6:
-        addr = ZeroPageX();
-        value = Read(addr);
-        Write(value, addr);
-        Write(DEC(value), addr);
-        break;
-    case 0xCE:
-        addr = Absolute();
-        value = Read(addr);
-        Write(value, addr);
-        Write(DEC(value), addr);
-        break;
-    case 0xDE:
-        addr = AbsoluteX(true);
-        value = Read(addr);
-        Write(value, addr);
-        Write(DEC(value), addr);
-        break;
-        // DEX Opcode
-    case 0xCA:
-        Read(PC);
-        DEX();
-        break;
-        // DEX Opcode
-    case 0x88:
-        Read(PC);
-        DEY();
-        break;
-        // EOR OpCodes
-    case 0x49:
-        EOR(Immediate());
-        break;
-    case 0x45:
-        EOR(Read(ZeroPage()));
-        break;
-    case 0x55:
-        EOR(Read(ZeroPageX()));
-        break;
-    case 0x4D:
-        EOR(Read(Absolute()));
-        break;
-    case 0x5D:
-        EOR(Read(AbsoluteX()));
-        break;
-    case 0x59:
-        EOR(Read(AbsoluteY()));
-        break;
-    case 0x41:
-        EOR(Read(IndexedIndirect()));
-        break;
-    case 0x51:
-        EOR(Read(IndirectIndexed()));
-        break;
-        // INC OpCodes
-    case 0xE6:
-        addr = ZeroPage();
-        value = Read(addr);
-        Write(value, addr);
-        Write(INC(value), addr);
-        break;
-    case 0xF6:
-        addr = ZeroPageX();
-        value = Read(addr);
-        Write(value, addr);
-        Write(INC(value), addr);
-        break;
-    case 0xEE:
-        addr = Absolute();
-        value = Read(addr);
-        Write(value, addr);
-        Write(INC(value), addr);
-        break;
-    case 0xFE:
-        addr = AbsoluteX(true);
-        value = Read(addr);
-        Write(value, addr);
-        Write(INC(value), addr);
-        break;
-        // INX OpCode
-    case 0xE8:
-        Read(PC);
-        INX();
-        break;
-        // INY OpCode
-    case 0xC8:
-        Read(PC);
-        INY();
-        break;
-        // JMP OpCodes
-    case 0x4C:
-        JMP(Absolute(true));
-        break;
-    case 0x6C:
-        JMP(Indirect());
-        break;
-        // JSR OpCode
-    case 0x20:
-        JSR(Absolute(true));
-        break;
-        // LDA OpCodes
-    case 0xA9:
-        LDA(Immediate());
-        break;
-    case 0xA5:
-        LDA(Read(ZeroPage()));
-        break;
-    case 0xB5:
-        LDA(Read(ZeroPageX()));
-        break;
-    case 0xAD:
-        LDA(Read(Absolute()));
-        break;
-    case 0xBD:
-        LDA(Read(AbsoluteX()));
-        break;
-    case 0xB9:
-        LDA(Read(AbsoluteY()));
-        break;
-    case 0xA1:
-        LDA(Read(IndexedIndirect()));
-        break;
-    case 0xB1:
-        LDA(Read(IndirectIndexed()));
-        break;
-        // LDX OpCodes
-    case 0xA2:
-        LDX(Immediate());
-        break;
-    case 0xA6:
-        LDX(Read(ZeroPage()));
-        break;
-    case 0xB6:
-        LDX(Read(ZeroPageY()));
-        break;
-    case 0xAE:
-        LDX(Read(Absolute()));
-        break;
-    case 0xBE:
-        LDX(Read(AbsoluteY()));
-        break;
-        // LDY OpCodes
-    case 0xA0:
-        LDY(Immediate());
-        break;
-    case 0xA4:
-        LDY(Read(ZeroPage()));
-        break;
-    case 0xB4:
-        LDY(Read(ZeroPageX()));
-        break;
-    case 0xAC:
-        LDY(Read(Absolute()));
-        break;
-    case 0xBC:
-        LDY(Read(AbsoluteX()));
-        break;
-        // LSR OpCodes
-    case 0x4A:
-        A = LSR(Accumulator());
-        break;
-    case 0x46:
-        addr = ZeroPage();
-        value = Read(addr);
-        Write(value, addr);
-        Write(LSR(value), addr);
-        break;
-    case 0x56:
-        addr = ZeroPageX();
-        value = Read(addr);
-        Write(value, addr);
-        Write(LSR(value), addr);
-        break;
-    case 0x4E:
-        addr = Absolute();
-        value = Read(addr);
-        Write(value, addr);
-        Write(LSR(value), addr);
-        break;
-    case 0x5E:
-        addr = AbsoluteX(true);
-        value = Read(addr);
-        Write(value, addr);
-        Write(LSR(value), addr);
-        break;
-        // NOP OPCode
-    case 0xEA:
-        Read(PC);
-        NOP();
-        break;
-        // ORA OpCodes
-    case 0x09:
-        ORA(Immediate());
-        break;
-    case 0x05:
-        ORA(Read(ZeroPage()));
-        break;
-    case 0x15:
-        ORA(Read(ZeroPageX()));
-        break;
-    case 0x0D:
-        ORA(Read(Absolute()));
-        break;
-    case 0x1D:
-        ORA(Read(AbsoluteX()));
-        break;
-    case 0x19:
-        ORA(Read(AbsoluteY()));
-        break;
-    case 0x01:
-        ORA(Read(IndexedIndirect()));
-        break;
-    case 0x11:
-        ORA(Read(IndirectIndexed()));
-        break;
-        // PHA OpCode
-    case 0x48:
-        Read(PC);
-        PHA();
-        break;
-        // PHP OpCode
-    case 0x08:
-        Read(PC);
-        PHP();
-        break;
-        // PLA OpCode
-    case 0x68:
-        Read(PC);
-        PLA();
-        break;
-        // PLP OpCode
-    case 0x28:
-        Read(PC);
-        PLP();
-        break;
-        // ROL OpCodes
-    case 0x2A:
-        A = ROL(Accumulator());
-        break;
-    case 0x26:
-        addr = ZeroPage();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROL(value), addr);
-        break;
-    case 0x36:
-        addr = ZeroPageX();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROL(value), addr);
-        break;
-    case 0x2E:
-        addr = Absolute();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROL(value), addr);
-        break;
-    case 0x3E:
-        addr = AbsoluteX(true);
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROL(value), addr);
-        break;
-        // ROR OpCodes
-    case 0x6A:
-        A = ROR(Accumulator());
-        break;
-    case 0x66:
-        addr = ZeroPage();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROR(value), addr);
-        break;
-    case 0x76:
-        addr = ZeroPageX();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROR(value), addr);
-        break;
-    case 0x6E:
-        addr = Absolute();
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROR(value), addr);
-        break;
-    case 0x7E:
-        addr = AbsoluteX(true);
-        value = Read(addr);
-        Write(value, addr);
-        Write(ROR(value), addr);
-        break;
-        // RTI OpCode
-    case 0x40:
-        Read(PC);
-        RTI();
-        break;
-        // RTS OpCode
-    case 0x60:
-        Read(PC);
-        RTS();
-        break;
-        // SBC OpCodes
-    case 0xE9:
-        SBC(Immediate());
-        break;
-    case 0xE5:
-        SBC(Read(ZeroPage()));
-        break;
-    case 0xF5:
-        SBC(Read(ZeroPageX()));
-        break;
-    case 0xED:
-        SBC(Read(Absolute()));
-        break;
-    case 0xFD:
-        SBC(Read(AbsoluteX()));
-        break;
-    case 0xF9:
-        SBC(Read(AbsoluteY()));
-        break;
-    case 0xE1:
-        SBC(Read(IndexedIndirect()));
-        break;
-    case 0xF1:
-        SBC(Read(IndirectIndexed()));
-        break;
-        // SEC OpCode
-    case 0x38:
-        Read(PC);
-        SEC();
-        break;
-        // SED OpCode
-    case 0xF8:
-        Read(PC);
-        SED();
-        break;
-        // SEI OpCode
-    case 0x78:
-        Read(PC);
-        SEI();
-        break;
-        // STA OpCodes
-    case 0x85:
-        Write(STA(), ZeroPage());
-        break;
-    case 0x95:
-        Write(STA(), ZeroPageX());
-        break;
-    case 0x8D:
-        Write(STA(), Absolute());
-        break;
-    case 0x9D:
-        Write(STA(), AbsoluteX(true));
-        break;
-    case 0x99:
-        Write(STA(), AbsoluteY(true));
-        break;
-    case 0x81:
-        Write(STA(), IndexedIndirect());
-        break;
-    case 0x91:
-        Write(STA(), IndirectIndexed(true));
-        break;
-        // STX OpCodes
-    case 0x86:
-        Write(STX(), ZeroPage());
-        break;
-    case 0x96:
-        Write(STX(), ZeroPageY());
-        break;
-    case 0x8E:
-        Write(STX(), Absolute());
-        break;
-        // STY OpCodes
-    case 0x84:
-        Write(STY(), ZeroPage());
-        break;
-    case 0x94:
-        Write(STY(), ZeroPageX());
-        break;
-    case 0x8C:
-        Write(STY(), Absolute());
-        break;
-        // TAX OpCode
-    case 0xAA:
-        Read(PC);
-        TAX();
-        break;
-        // TAY OpCode
-    case 0xA8:
-        Read(PC);
-        TAY();
-        break;
-        // TSX OpCode
-    case 0xBA:
-        Read(PC);
-        TSX();
-        break;
-        // TXA OpCode
-    case 0x8A:
-        Read(PC);
-        TXA();
-        break;
-        // TXS OpCode
-    case 0x9A:
-        Read(PC);
-        TXS();
-        break;
-        // TYA OpCode
-    case 0x98:
-        Read(PC);
-        TYA();
-        break;
-    default: // Otherwise illegal OpCode
-        throw std::runtime_error("CPU tried to execute invalid opcode!");
     }
+
+    // Execute instruction
+    switch (desc.instruction)
+    {
+    case ADC:
+        DoADC(address);
+        break;
+    case AND:
+        DoAND(address);
+        break;
+    case ASL:
+        DoASL(address);
+        break;
+    case BCC:
+        DoBCC(address);
+        break;
+    case BCS:
+        DoBCS(address);
+        break;
+    case BEQ:
+        DoBEQ(address);
+        break;
+    case BIT:
+        DoBIT(address);
+        break;
+    case BMI:
+        DoBMI(address);
+        break;
+    case BNE:
+        DoBNE(address);
+        break;
+    case BPL:
+        DoBPL(address);
+        break;
+    case BRK:
+        DoBRK();
+        break;
+    case BVC:
+        DoBVC(address);
+        break;
+    case BVS:
+        DoBVS(address);
+        break;
+    case CLC:
+        DoCLC();
+        break;
+    case CLD:
+        DoCLD();
+        break;
+    case CLI:
+        DoCLI();
+        break;
+    case CLV:
+        DoCLV();
+        break;
+    case CMP:
+        DoCMP(address);
+        break;
+    case CPX:
+        DoCPX(address);
+        break;
+    case CPY:
+        DoCPY(address);
+        break;
+    case DEC:
+        DoDEC(address);
+        break;
+    case DEX:
+        DoDEX();
+        break;
+    case DEY:
+        DoDEY();
+        break;
+    case EOR:
+        DoEOR(address);
+        break;
+    case INC:
+        DoINC(address);
+        break;
+    case INX:
+        DoINX();
+        break;
+    case INY:
+        DoINY();
+        break;
+    case JMP:
+        DoJMP(address);
+        break;
+    case JSR:
+        DoJSR(address);
+        break;
+    case LDA:
+        DoLDA(address);
+        break;
+    case LDX:
+        DoLDX(address);
+        break;
+    case LDY:
+        DoLDY(address);
+        break;
+    case LSR:
+        DoLSR(address);
+        break;
+    case NOP:
+        DoNOP();
+        break;
+    case ORA:
+        DoORA(address);
+        break;
+    case PHA:
+        DoPHA();
+        break;
+    case PHP:
+        DoPHP();
+        break;
+    case PLA:
+        DoPLA();
+        break;
+    case PLP:
+        DoPLP();
+        break;
+    case ROL:
+        DoROL(address);
+        break;
+    case ROR:
+        DoROR(address);
+        break;
+    case RTI:
+        DoRTI();
+        break;
+    case RTS:
+        DoRTS();
+        break;
+    case SBC:
+        DoSBC(address);
+        break;
+    case SEC:
+        DoSEC();
+        break;
+    case SED:
+        DoSED();
+        break;
+    case SEI:
+        DoSEI();
+        break;
+    case STA:
+        DoSTA(address);
+        break;
+    case STX:
+        DoSTX(address);
+        break;
+    case STY:
+        DoSTY(address);
+        break;
+    case TAX:
+        DoTAX();
+        break;
+    case TAY:
+        DoTAY();
+        break;
+    case TSX:
+        DoTSX();
+        break;
+    case TXA:
+        DoTXA();
+        break;
+    case TXS:
+        DoTXS();
+        break;
+    case TYA:
+        DoTYA();
+        break;
+    case STP:
+        throw std::runtime_error("CPU executed STP instruction");
+    default:
+        DoNOP();
+        std::cout << "Unsupported Instruction: " << std::hex << static_cast<uint32_t>(opcode) << std::endl;
+        break;
+    }
+
+    AccumulatorFlag = false;
 
     if (IsLogEnabled()) PrintLog();
 }
@@ -2303,7 +1956,7 @@ void CPU::LogOpcode(uint8_t opcode)
 
 void CPU::LogInstructionName(std::string name)
 {
-    sprintf(Instruction, "%s", name.c_str());
+    sprintf(InstructionStr, "%s", name.c_str());
 }
 
 void CPU::LogAccumulator()
@@ -2397,14 +2050,274 @@ void CPU::PrintLog()
 
     if (LogFile != nullptr)
     {
-        fprintf(LogFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", ProgramCounter, OpCode, AddressingArg1, AddressingArg2, Instruction, Addressing, Registers);
+        fprintf(LogFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", ProgramCounter, OpCode, AddressingArg1, AddressingArg2, InstructionStr, Addressing, Registers);
     }
 
     sprintf(OpCode, "%s", "");
     sprintf(Registers, "%s", "");
     sprintf(Addressing, "%s", "");
-    sprintf(Instruction, "%s", "");
+    sprintf(InstructionStr, "%s", "");
     sprintf(ProgramCounter, "%s", "");
     sprintf(AddressingArg1, "%s", "");
     sprintf(AddressingArg2, "%s", "");
 }
+
+const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
+{{
+    { BRK, IMPL,   false, true  }, // 0x00
+    { ORA, IND_X,  false, true  }, // 0x01
+    { STP, IMPL,   false, false }, // 0x02
+    { SLO, IND_X,  true,  false }, // 0x03
+    { NOP, ZERO,   false, false }, // 0x04
+    { ORA, ZERO,   false, true  }, // 0x05
+    { ASL, ZERO,   true,  true  }, // 0x06
+    { SLO, ZERO,   true,  false }, // 0x07
+    { PHP, IMPL,   false, true  }, // 0x08
+    { ORA, IMM,    false, true  }, // 0x09
+    { ASL, ACC,    true,  true  }, // 0x0A
+    { ANC, IMM,    false, false }, // 0x0B
+    { NOP, ABS,    false, false }, // 0x0C
+    { ORA, ABS,    false, true  }, // 0x0D
+    { ASL, ABS,    true,  true  }, // 0x0E
+    { SLO, ABS,    true,  false }, // 0x0F
+    { BPL, REL,    false, true  }, // 0x10
+    { ORA, IND_Y,  false, true  }, // 0x11
+    { STP, IMPL,   false, false }, // 0x12
+    { SLO, IND_Y,  true,  false }, // 0x13
+    { NOP, ZERO_X, false, false }, // 0x14
+    { ORA, ZERO_X, false, true  }, // 0x15
+    { ASL, ZERO_X, true,  true  }, // 0x16
+    { SLO, ZERO_X, true,  false }, // 0x17
+    { CLC, IMPL,   false, true  }, // 0x18
+    { ORA, ABS_Y,  false, true  }, // 0x19
+    { NOP, IMPL,   false, false }, // 0x1A
+    { SLO, ABS_Y,  true,  false }, // 0x1B
+    { NOP, ABS_X,  false, false }, // 0x1C
+    { ORA, ABS_X,  false, true  }, // 0x1D
+    { ASL, ABS_X,  true,  true  }, // 0x1E
+    { SLO, ABS_X,  true,  false }, // 0x1F
+    { JSR, ABS,    false, true  }, // 0x20
+    { AND, IND_X,  false, true  }, // 0x21
+    { STP, IMPL,   false, false }, // 0x22
+    { RLA, IND_X,  true,  false }, // 0x23
+    { BIT, ZERO,   false, true  }, // 0x24
+    { AND, ZERO,   false, true  }, // 0x25
+    { ROL, ZERO,   true,  true  }, // 0x26
+    { RLA, ZERO,   true,  false }, // 0x27
+    { PLP, IMPL,   false, true  }, // 0x28
+    { AND, IMM,    false, true  }, // 0x29
+    { ROL, ACC,    true,  true  }, // 0x2A
+    { ANC, IMM,    false, false }, // 0x2B
+    { BIT, ABS,    false, true  }, // 0x2C
+    { AND, ABS,    false, true  }, // 0x2D
+    { ROL, ABS,    true,  true  }, // 0x2E
+    { RLA, ABS,    true,  false }, // 0x2F
+    { BMI, REL,    false, true  }, // 0x30
+    { AND, IND_Y,  false, true  }, // 0x31
+    { STP, IMPL,   false, false }, // 0x32
+    { RLA, IND_Y,  true,  false }, // 0x33
+    { NOP, ZERO_X, false, false }, // 0x34
+    { AND, ZERO_X, false, true  }, // 0x35
+    { ROL, ZERO_X, false, true  }, // 0x36
+    { RLA, ZERO_X, true,  false }, // 0x37
+    { SEC, IMPL,   false, true  }, // 0x38
+    { AND, ABS_Y,  false, true  }, // 0x39
+    { NOP, IMPL,   false, false }, // 0x3A
+    { RLA, ABS_Y,  true,  false }, // 0x3B
+    { NOP, ABS_X,  false, false }, // 0x3C
+    { AND, ABS_X,  false, true  }, // 0x3D
+    { ROL, ABS_X,  true,  true  }, // 0x3E
+    { RLA, ABS_X,  true,  false }, // 0x3F
+    { RTI, IMPL,   false, true  }, // 0x40
+    { EOR, IND_X,  false, true  }, // 0x41
+    { STP, IMPL,   false, false }, // 0x42
+    { SRE, IND_X,  true,  false }, // 0x43
+    { NOP, ZERO,   false, false }, // 0x44
+    { EOR, ZERO,   false, true  }, // 0x45
+    { LSR, ZERO,   true,  true  }, // 0x46
+    { SRE, ZERO,   true,  false }, // 0x47
+    { PHA, IMPL,   false, true  }, // 0x48
+    { EOR, IMM,    false, true  }, // 0x49
+    { LSR, ACC,    true,  true  }, // 0x4A
+    { ALR, IMM,    false, false }, // 0x4B
+    { JMP, ABS,    false, true  }, // 0x4C
+    { EOR, ABS,    false, true  }, // 0x4D
+    { LSR, ABS,    true,  true  }, // 0x4E
+    { SRE, ABS,    true,  false }, // 0x4F
+    { BVC, REL,    false, true  }, // 0x50
+    { EOR, IND_Y,  false, true  }, // 0x51
+    { STP, IMPL,   false, false }, // 0x52
+    { SRE, IND_Y,  true,  false }, // 0x53
+    { NOP, ZERO_X, false, false }, // 0x54
+    { EOR, ZERO_X, false, true  }, // 0x55
+    { LSR, ZERO_X, true,  true  }, // 0x56
+    { SRE, ZERO_X, true,  false }, // 0x57
+    { CLI, IMPL,   false, true  }, // 0x58
+    { EOR, ABS_Y,  false, true  }, // 0x59
+    { NOP, IMPL,   false, false }, // 0x5A
+    { SRE, ABS_Y,  true,  false }, // 0x5B
+    { NOP, ABS_X,  false, false }, // 0x5C
+    { EOR, ABS_X,  false, true  }, // 0x5D
+    { LSR, ABS_X,  true,  true  }, // 0x5E
+    { SRE, ABS_X,  true,  false }, // 0x5F
+    { RTS, IMPL,   false, true  }, // 0x60
+    { ADC, IND_X,  false, true  }, // 0x61
+    { STP, IMPL,   false, false }, // 0x62
+    { RRA, IND_X,  true,  false }, // 0x63
+    { NOP, ZERO,   false, false }, // 0x64
+    { ADC, ZERO,   false, true  }, // 0x65
+    { ROR, ZERO,   true,  true  }, // 0x66
+    { RRA, ZERO,   true,  false }, // 0x67
+    { PLA, IMPL,   false, true  }, // 0x68
+    { ADC, IMM,    false, true  }, // 0x69
+    { ROR, ACC,    true,  false }, // 0x6A
+    { ARR, IMM,    false, false }, // 0x6B
+    { JMP, IND,    false, true  }, // 0x6C
+    { ADC, ABS,    false, true  }, // 0x6D
+    { ROR, ABS,    true,  true  }, // 0x6E
+    { RRA, ABS,    true,  false }, // 0x6F
+    { BVS, REL,    false, true  }, // 0x70
+    { ADC, IND_Y,  false, true  }, // 0x71
+    { STP, IMPL,   false, false }, // 0x72
+    { RRA, IND_Y,  true,  false }, // 0x73
+    { NOP, ZERO_X, false, false }, // 0x74
+    { ADC, ZERO_X, false, true  }, // 0x75
+    { ROR, ZERO_X, true,  true  }, // 0x76
+    { RRA, ZERO_X, true,  false }, // 0x77
+    { SEI, IMPL,   false, true  }, // 0x78
+    { ADC, ABS_Y,  false, true  }, // 0x79
+    { NOP, IMPL,   false, false }, // 0x7A
+    { RRA, ABS_Y,  true,  false }, // 0x7B
+    { NOP, ABS_X,  false, false }, // 0x7C
+    { ADC, ABS_X,  false, true  }, // 0x7D
+    { ROR, ABS_X,  true,  true  }, // 0x7E
+    { RRA, ABS_X,  true,  false }, // 0x7F
+    { NOP, IMM,    false, false }, // 0x80
+    { STA, IND_X,  false, true  }, // 0x81
+    { NOP, IMM,    false, false }, // 0x82
+    { SAX, IND_X,  false, false }, // 0x83
+    { STY, ZERO,   false, true  }, // 0x84
+    { STA, ZERO,   false, true  }, // 0x85
+    { STX, ZERO,   false, true  }, // 0x86
+    { SAX, ZERO,   false, false }, // 0x87
+    { DEY, IMPL,   false, true  }, // 0x88
+    { NOP, IMM,    false, false }, // 0x89
+    { TXA, IMPL,   false, true  }, // 0x8A
+    { XAA, IMPL,   false, false }, // 0x8B
+    { STY, ABS,    false, true  }, // 0x8C
+    { STA, ABS,    false, true  }, // 0x8D
+    { STX, ABS,    false, true  }, // 0x8E
+    { SAX, ABS,    false, false }, // 0x8F
+    { BCC, REL,    false, true  }, // 0x90
+    { STA, IND_Y,  false, true  }, // 0x91
+    { STP, IMPL,   false, false }, // 0x92
+    { AHX, IND_Y,  false, true  }, // 0x93
+    { STY, ZERO_X, false, true  }, // 0x94
+    { STA, ZERO_X, false, true  }, // 0x95
+    { STX, ZERO_Y, false, true  }, // 0x96
+    { SAX, ZERO_Y, false, false }, // 0x97
+    { TYA, IMPL,   false, true  }, // 0x98
+    { STA, ABS_Y,  false, true  }, // 0x99
+    { TXS, IMPL,   false, true  }, // 0x9A
+    { TAS, ABS_Y,  false, false }, // 0x9B
+    { SHY, ABS_X,  false, false }, // 0x9C
+    { STA, ABS_X,  false, true  }, // 0x9D
+    { SHX, ABS_Y,  false, false }, // 0x9E
+    { AHS, ABS_Y,  false, false }, // 0x9F
+    { LDY, IMM,    false, true  }, // 0xA0
+    { LDA, IND_X,  false, true  }, // 0xA1
+    { LDX, IMM,    false, true  }, // 0xA2
+    { LAX, IND_X,  false, false }, // 0xA3
+    { LDY, ZERO,   false, true  }, // 0xA4
+    { LDA, ZERO,   false, true  }, // 0xA5
+    { LDX, ZERO,   false, true  }, // 0xA6
+    { LAX, ZERO,   false, false }, // 0xA7
+    { TAY, IMPL,   false, true  }, // 0xA8
+    { LDA, IMM,    false, true  }, // 0xA9
+    { TAX, IMPL,   false, true  }, // 0xAA
+    { LAX, IMM,    false, false }, // 0xAB
+    { LDY, ABS,    false, true  }, // 0xAC
+    { LDA, ABS,    false, true  }, // 0xAD
+    { LDX, ABS,    false, true  }, // 0xAE
+    { LAX, ABS,    false, false }, // 0xAF
+    { BCS, REL,    false, true  }, // 0xB0
+    { LDA, IND_Y,  false, true  }, // 0xB1
+    { STP, IMPL,   false, false }, // 0xB2
+    { LAX, IND_Y,  false, false }, // 0xB3
+    { LDY, ZERO_X, false, true  }, // 0xB4
+    { LDA, ZERO_X, false, true  }, // 0xB5
+    { LDX, ZERO_Y, false, true  }, // 0xB6
+    { LAX, ZERO_Y, false, false }, // 0xB7
+    { CLV, IMPL,   false, true  }, // 0xB8
+    { LDA, ABS_Y,  false, true  }, // 0xB9
+    { TSX, IMPL,   false, true  }, // 0xBA
+    { LAS, ABS_Y,  false, false }, // 0xBB
+    { LDY, ABS_X,  false, true  }, // 0xBC
+    { LDA, ABS_X,  false, true  }, // 0xBD
+    { LDX, ABS_Y,  false, true  }, // 0xBE
+    { LAX, ABS_Y,  false, false }, // 0xBF
+    { CPY, IMM,    false, true  }, // 0xC0
+    { CMP, IND_X,  false, true  }, // 0xC1
+    { NOP, IMM,    false, false }, // 0xC2
+    { DCP, IND_X,  true,  false }, // 0xC3
+    { CPY, ZERO,   false, true  }, // 0xC4
+    { CMP, ZERO,   false, true  }, // 0xC5
+    { DEC, ZERO,   false, true  }, // 0xC6
+    { DCP, ZERO,   true,  false }, // 0xC7
+    { INY, IMPL,   false, true  }, // 0xC8
+    { CMP, IMM,    false, true  }, // 0xC9
+    { DEX, IMPL,   false, true  }, // 0xCA
+    { AXS, IMM,    false, false }, // 0xCB
+    { CPY, ABS,    false, true  }, // 0xCC
+    { CMP, ABS,    false, true  }, // 0xCD
+    { DEC, ABS,    false, true  }, // 0xCE
+    { DCP, ABS,    true,  false }, // 0xCF
+    { BNE, REL,    false, true  }, // 0xD0
+    { CMP, IND_Y,  false, true  }, // 0xD1
+    { STP, IMPL,   false, false }, // 0xD2
+    { DCP, IND_Y,  true,  false }, // 0xD3
+    { NOP, ZERO_X, false, false }, // 0xD4
+    { CMP, ZERO_X, false, true  }, // 0xD5
+    { DEC, ZERO_X, false, true  }, // 0xD6
+    { DCP, ZERO_X, true,  false }, // 0xD7
+    { CLD, IMPL,   false, true  }, // 0xD8
+    { CMP, ABS_Y,  false, true  }, // 0xD9
+    { NOP, IMPL,   false, false }, // 0xDA
+    { DCP, ABS_Y,  true,  false }, // 0xDB
+    { NOP, ABS_X,  false, false }, // 0xDC
+    { CMP, ABS_X,  false, true  }, // 0xDD
+    { DEC, ABS_X,  false, true  }, // 0xDE
+    { DCP, ABS_X,  true,  false }, // 0xDF
+    { CPX, IMM,    false, true  }, // 0xE0
+    { SBC, IND_X,  false, true  }, // 0xE1
+    { NOP, IMM,    false, false }, // 0xE2
+    { ISC, IND_X,  true,  false }, // 0xE3
+    { CPX, ZERO,   false, true  }, // 0xE4
+    { SBC, ZERO,   false, true  }, // 0xE5
+    { INC, ZERO,   false, true  }, // 0xE6
+    { ISC, ZERO,   true,  false }, // 0xE7
+    { INX, IMPL,   false, true  }, // 0xE8
+    { SBC, IMM,    false, true  }, // 0xE9
+    { NOP, IMPL,   false, true  }, // 0xEA
+    { SBC, IMM,    false, false }, // 0xEB
+    { CPX, ABS,    false, true  }, // 0xEC
+    { SBC, ABS,    false, true  }, // 0xED
+    { INC, ABS,    false, true  }, // 0xEE
+    { ISC, ABS,    true,  false }, // 0xEF
+    { BEQ, REL,    false, true  }, // 0xF0
+    { SBC, IND_Y,  false, true  }, // 0xF1
+    { STP, IMPL,   false, false }, // 0xF2
+    { ISC, IND_Y,  true,  false }, // 0xF3
+    { NOP, ZERO_X, false, false }, // 0xF4
+    { SBC, ZERO_X, false, true  }, // 0xF5
+    { INC, ZERO_X, false, true  }, // 0xF6
+    { ISC, ZERO_X, true,  false }, // 0xF7
+    { SED, IMPL,   false, true  }, // 0xF8
+    { SBC, ABS_Y,  false, true  }, // 0xF9
+    { NOP, IMPL,   false, false }, // 0xFA
+    { ISC, ABS_Y,  true,  false }, // 0xFB
+    { NOP, ABS_X,  false, false }, // 0xFC
+    { SBC, ABS_X,  false, true  }, // 0xFD
+    { INC, ABS_X,  false, true  }, // 0xFE
+    { ISC, ABS_X,  true,  false }  // 0xFF
+}};
