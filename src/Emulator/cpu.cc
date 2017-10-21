@@ -1497,7 +1497,7 @@ void CPU::SetLogEnabled(bool enabled)
     EnableLogFlag = enabled;
 }
 
-int CPU::STATE_SIZE = sizeof(uint64_t)+(sizeof(uint8_t)*0x806)+sizeof(uint16_t)+sizeof(int)+sizeof(char);
+const int CPU::STATE_SIZE = sizeof(uint64_t)+(sizeof(uint8_t)*0x806)+sizeof(uint16_t)+sizeof(int)+sizeof(char);
 
 void CPU::SaveState(char* state)
 {
