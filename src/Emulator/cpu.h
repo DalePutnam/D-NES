@@ -123,7 +123,8 @@ private:
 
     enum AddressMode
     {
-        ACC, REL, IMM, IMPL, ZERO, ZERO_X, ZERO_Y, ABS, ABS_X, ABS_Y, IND, IND_X, IND_Y
+        ACCUMULATOR, RELATIVE, IMMEDIATE, IMPLIED, ZEROPAGE, ZEROPAGE_X, ZEROPAGE_Y,
+        ABSOLUTE, ABSOLUTE_X, ABSOLUTE_Y, INDIRECT, INDIRECT_X, INDIRECT_Y
     };
 
     struct InstructionDescriptor

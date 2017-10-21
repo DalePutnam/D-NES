@@ -1696,7 +1696,7 @@ void CPU::Step()
     }
 
     uint8_t opcode = Read(PC++); // Retrieve opcode from memory
-    uint16_t address;
+    
 
     if (IsLogEnabled()) LogOpcode(opcode);
 
@@ -1704,46 +1704,48 @@ void CPU::Step()
     InstructionDescriptor desc = InstructionSet[opcode];
 
     // Execute corresponding addressing mode
+
+    uint16_t address;
     switch (desc.addressMode)
     {
-    case ABS:
+    case ABSOLUTE:
         address = Absolute(desc.instruction == JMP || desc.instruction == JSR);
         break;
-    case ABS_X:
+    case ABSOLUTE_X:
         address = AbsoluteX(desc.isReadModifyWrite);
         break;
-    case ABS_Y:
+    case ABSOLUTE_Y:
         address = AbsoluteY(desc.isReadModifyWrite);
         break;
-    case ACC:
+    case ACCUMULATOR:
         address = Accumulator();
         break;
-    case IMM:
+    case IMMEDIATE:
         address = Immediate();
         break;
-    case IMPL:
+    case IMPLIED:
         Read(PC);
         address = PC;
         break;
-    case IND:
+    case INDIRECT:
         address = Indirect();
         break;
-    case IND_X:
+    case INDIRECT_X:
         address = IndexedIndirect();
         break;
-    case IND_Y:
+    case INDIRECT_Y:
         address = IndirectIndexed(desc.isReadModifyWrite);
         break;
-    case REL:
+    case RELATIVE:
         address = Relative();
         break;
-    case ZERO:
+    case ZEROPAGE:
         address = ZeroPage();
         break;
-    case ZERO_X:
+    case ZEROPAGE_X:
         address = ZeroPageX();
         break;
-    case ZERO_Y:
+    case ZEROPAGE_Y:
         address = ZeroPageY();
         break;
     }
@@ -2064,260 +2066,260 @@ void CPU::PrintLog()
 
 const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
 {{
-    { BRK, IMPL,   false, true  }, // 0x00
-    { ORA, IND_X,  false, true  }, // 0x01
-    { STP, IMPL,   false, false }, // 0x02
-    { SLO, IND_X,  true,  false }, // 0x03
-    { NOP, ZERO,   false, false }, // 0x04
-    { ORA, ZERO,   false, true  }, // 0x05
-    { ASL, ZERO,   true,  true  }, // 0x06
-    { SLO, ZERO,   true,  false }, // 0x07
-    { PHP, IMPL,   false, true  }, // 0x08
-    { ORA, IMM,    false, true  }, // 0x09
-    { ASL, ACC,    true,  true  }, // 0x0A
-    { ANC, IMM,    false, false }, // 0x0B
-    { NOP, ABS,    false, false }, // 0x0C
-    { ORA, ABS,    false, true  }, // 0x0D
-    { ASL, ABS,    true,  true  }, // 0x0E
-    { SLO, ABS,    true,  false }, // 0x0F
-    { BPL, REL,    false, true  }, // 0x10
-    { ORA, IND_Y,  false, true  }, // 0x11
-    { STP, IMPL,   false, false }, // 0x12
-    { SLO, IND_Y,  true,  false }, // 0x13
-    { NOP, ZERO_X, false, false }, // 0x14
-    { ORA, ZERO_X, false, true  }, // 0x15
-    { ASL, ZERO_X, true,  true  }, // 0x16
-    { SLO, ZERO_X, true,  false }, // 0x17
-    { CLC, IMPL,   false, true  }, // 0x18
-    { ORA, ABS_Y,  false, true  }, // 0x19
-    { NOP, IMPL,   false, false }, // 0x1A
-    { SLO, ABS_Y,  true,  false }, // 0x1B
-    { NOP, ABS_X,  false, false }, // 0x1C
-    { ORA, ABS_X,  false, true  }, // 0x1D
-    { ASL, ABS_X,  true,  true  }, // 0x1E
-    { SLO, ABS_X,  true,  false }, // 0x1F
-    { JSR, ABS,    false, true  }, // 0x20
-    { AND, IND_X,  false, true  }, // 0x21
-    { STP, IMPL,   false, false }, // 0x22
-    { RLA, IND_X,  true,  false }, // 0x23
-    { BIT, ZERO,   false, true  }, // 0x24
-    { AND, ZERO,   false, true  }, // 0x25
-    { ROL, ZERO,   true,  true  }, // 0x26
-    { RLA, ZERO,   true,  false }, // 0x27
-    { PLP, IMPL,   false, true  }, // 0x28
-    { AND, IMM,    false, true  }, // 0x29
-    { ROL, ACC,    true,  true  }, // 0x2A
-    { ANC, IMM,    false, false }, // 0x2B
-    { BIT, ABS,    false, true  }, // 0x2C
-    { AND, ABS,    false, true  }, // 0x2D
-    { ROL, ABS,    true,  true  }, // 0x2E
-    { RLA, ABS,    true,  false }, // 0x2F
-    { BMI, REL,    false, true  }, // 0x30
-    { AND, IND_Y,  false, true  }, // 0x31
-    { STP, IMPL,   false, false }, // 0x32
-    { RLA, IND_Y,  true,  false }, // 0x33
-    { NOP, ZERO_X, false, false }, // 0x34
-    { AND, ZERO_X, false, true  }, // 0x35
-    { ROL, ZERO_X, false, true  }, // 0x36
-    { RLA, ZERO_X, true,  false }, // 0x37
-    { SEC, IMPL,   false, true  }, // 0x38
-    { AND, ABS_Y,  false, true  }, // 0x39
-    { NOP, IMPL,   false, false }, // 0x3A
-    { RLA, ABS_Y,  true,  false }, // 0x3B
-    { NOP, ABS_X,  false, false }, // 0x3C
-    { AND, ABS_X,  false, true  }, // 0x3D
-    { ROL, ABS_X,  true,  true  }, // 0x3E
-    { RLA, ABS_X,  true,  false }, // 0x3F
-    { RTI, IMPL,   false, true  }, // 0x40
-    { EOR, IND_X,  false, true  }, // 0x41
-    { STP, IMPL,   false, false }, // 0x42
-    { SRE, IND_X,  true,  false }, // 0x43
-    { NOP, ZERO,   false, false }, // 0x44
-    { EOR, ZERO,   false, true  }, // 0x45
-    { LSR, ZERO,   true,  true  }, // 0x46
-    { SRE, ZERO,   true,  false }, // 0x47
-    { PHA, IMPL,   false, true  }, // 0x48
-    { EOR, IMM,    false, true  }, // 0x49
-    { LSR, ACC,    true,  true  }, // 0x4A
-    { ALR, IMM,    false, false }, // 0x4B
-    { JMP, ABS,    false, true  }, // 0x4C
-    { EOR, ABS,    false, true  }, // 0x4D
-    { LSR, ABS,    true,  true  }, // 0x4E
-    { SRE, ABS,    true,  false }, // 0x4F
-    { BVC, REL,    false, true  }, // 0x50
-    { EOR, IND_Y,  false, true  }, // 0x51
-    { STP, IMPL,   false, false }, // 0x52
-    { SRE, IND_Y,  true,  false }, // 0x53
-    { NOP, ZERO_X, false, false }, // 0x54
-    { EOR, ZERO_X, false, true  }, // 0x55
-    { LSR, ZERO_X, true,  true  }, // 0x56
-    { SRE, ZERO_X, true,  false }, // 0x57
-    { CLI, IMPL,   false, true  }, // 0x58
-    { EOR, ABS_Y,  false, true  }, // 0x59
-    { NOP, IMPL,   false, false }, // 0x5A
-    { SRE, ABS_Y,  true,  false }, // 0x5B
-    { NOP, ABS_X,  false, false }, // 0x5C
-    { EOR, ABS_X,  false, true  }, // 0x5D
-    { LSR, ABS_X,  true,  true  }, // 0x5E
-    { SRE, ABS_X,  true,  false }, // 0x5F
-    { RTS, IMPL,   false, true  }, // 0x60
-    { ADC, IND_X,  false, true  }, // 0x61
-    { STP, IMPL,   false, false }, // 0x62
-    { RRA, IND_X,  true,  false }, // 0x63
-    { NOP, ZERO,   false, false }, // 0x64
-    { ADC, ZERO,   false, true  }, // 0x65
-    { ROR, ZERO,   true,  true  }, // 0x66
-    { RRA, ZERO,   true,  false }, // 0x67
-    { PLA, IMPL,   false, true  }, // 0x68
-    { ADC, IMM,    false, true  }, // 0x69
-    { ROR, ACC,    true,  false }, // 0x6A
-    { ARR, IMM,    false, false }, // 0x6B
-    { JMP, IND,    false, true  }, // 0x6C
-    { ADC, ABS,    false, true  }, // 0x6D
-    { ROR, ABS,    true,  true  }, // 0x6E
-    { RRA, ABS,    true,  false }, // 0x6F
-    { BVS, REL,    false, true  }, // 0x70
-    { ADC, IND_Y,  false, true  }, // 0x71
-    { STP, IMPL,   false, false }, // 0x72
-    { RRA, IND_Y,  true,  false }, // 0x73
-    { NOP, ZERO_X, false, false }, // 0x74
-    { ADC, ZERO_X, false, true  }, // 0x75
-    { ROR, ZERO_X, true,  true  }, // 0x76
-    { RRA, ZERO_X, true,  false }, // 0x77
-    { SEI, IMPL,   false, true  }, // 0x78
-    { ADC, ABS_Y,  false, true  }, // 0x79
-    { NOP, IMPL,   false, false }, // 0x7A
-    { RRA, ABS_Y,  true,  false }, // 0x7B
-    { NOP, ABS_X,  false, false }, // 0x7C
-    { ADC, ABS_X,  false, true  }, // 0x7D
-    { ROR, ABS_X,  true,  true  }, // 0x7E
-    { RRA, ABS_X,  true,  false }, // 0x7F
-    { NOP, IMM,    false, false }, // 0x80
-    { STA, IND_X,  false, true  }, // 0x81
-    { NOP, IMM,    false, false }, // 0x82
-    { SAX, IND_X,  false, false }, // 0x83
-    { STY, ZERO,   false, true  }, // 0x84
-    { STA, ZERO,   false, true  }, // 0x85
-    { STX, ZERO,   false, true  }, // 0x86
-    { SAX, ZERO,   false, false }, // 0x87
-    { DEY, IMPL,   false, true  }, // 0x88
-    { NOP, IMM,    false, false }, // 0x89
-    { TXA, IMPL,   false, true  }, // 0x8A
-    { XAA, IMPL,   false, false }, // 0x8B
-    { STY, ABS,    false, true  }, // 0x8C
-    { STA, ABS,    false, true  }, // 0x8D
-    { STX, ABS,    false, true  }, // 0x8E
-    { SAX, ABS,    false, false }, // 0x8F
-    { BCC, REL,    false, true  }, // 0x90
-    { STA, IND_Y,  false, true  }, // 0x91
-    { STP, IMPL,   false, false }, // 0x92
-    { AHX, IND_Y,  false, true  }, // 0x93
-    { STY, ZERO_X, false, true  }, // 0x94
-    { STA, ZERO_X, false, true  }, // 0x95
-    { STX, ZERO_Y, false, true  }, // 0x96
-    { SAX, ZERO_Y, false, false }, // 0x97
-    { TYA, IMPL,   false, true  }, // 0x98
-    { STA, ABS_Y,  false, true  }, // 0x99
-    { TXS, IMPL,   false, true  }, // 0x9A
-    { TAS, ABS_Y,  false, false }, // 0x9B
-    { SHY, ABS_X,  false, false }, // 0x9C
-    { STA, ABS_X,  false, true  }, // 0x9D
-    { SHX, ABS_Y,  false, false }, // 0x9E
-    { AHS, ABS_Y,  false, false }, // 0x9F
-    { LDY, IMM,    false, true  }, // 0xA0
-    { LDA, IND_X,  false, true  }, // 0xA1
-    { LDX, IMM,    false, true  }, // 0xA2
-    { LAX, IND_X,  false, false }, // 0xA3
-    { LDY, ZERO,   false, true  }, // 0xA4
-    { LDA, ZERO,   false, true  }, // 0xA5
-    { LDX, ZERO,   false, true  }, // 0xA6
-    { LAX, ZERO,   false, false }, // 0xA7
-    { TAY, IMPL,   false, true  }, // 0xA8
-    { LDA, IMM,    false, true  }, // 0xA9
-    { TAX, IMPL,   false, true  }, // 0xAA
-    { LAX, IMM,    false, false }, // 0xAB
-    { LDY, ABS,    false, true  }, // 0xAC
-    { LDA, ABS,    false, true  }, // 0xAD
-    { LDX, ABS,    false, true  }, // 0xAE
-    { LAX, ABS,    false, false }, // 0xAF
-    { BCS, REL,    false, true  }, // 0xB0
-    { LDA, IND_Y,  false, true  }, // 0xB1
-    { STP, IMPL,   false, false }, // 0xB2
-    { LAX, IND_Y,  false, false }, // 0xB3
-    { LDY, ZERO_X, false, true  }, // 0xB4
-    { LDA, ZERO_X, false, true  }, // 0xB5
-    { LDX, ZERO_Y, false, true  }, // 0xB6
-    { LAX, ZERO_Y, false, false }, // 0xB7
-    { CLV, IMPL,   false, true  }, // 0xB8
-    { LDA, ABS_Y,  false, true  }, // 0xB9
-    { TSX, IMPL,   false, true  }, // 0xBA
-    { LAS, ABS_Y,  false, false }, // 0xBB
-    { LDY, ABS_X,  false, true  }, // 0xBC
-    { LDA, ABS_X,  false, true  }, // 0xBD
-    { LDX, ABS_Y,  false, true  }, // 0xBE
-    { LAX, ABS_Y,  false, false }, // 0xBF
-    { CPY, IMM,    false, true  }, // 0xC0
-    { CMP, IND_X,  false, true  }, // 0xC1
-    { NOP, IMM,    false, false }, // 0xC2
-    { DCP, IND_X,  true,  false }, // 0xC3
-    { CPY, ZERO,   false, true  }, // 0xC4
-    { CMP, ZERO,   false, true  }, // 0xC5
-    { DEC, ZERO,   false, true  }, // 0xC6
-    { DCP, ZERO,   true,  false }, // 0xC7
-    { INY, IMPL,   false, true  }, // 0xC8
-    { CMP, IMM,    false, true  }, // 0xC9
-    { DEX, IMPL,   false, true  }, // 0xCA
-    { AXS, IMM,    false, false }, // 0xCB
-    { CPY, ABS,    false, true  }, // 0xCC
-    { CMP, ABS,    false, true  }, // 0xCD
-    { DEC, ABS,    false, true  }, // 0xCE
-    { DCP, ABS,    true,  false }, // 0xCF
-    { BNE, REL,    false, true  }, // 0xD0
-    { CMP, IND_Y,  false, true  }, // 0xD1
-    { STP, IMPL,   false, false }, // 0xD2
-    { DCP, IND_Y,  true,  false }, // 0xD3
-    { NOP, ZERO_X, false, false }, // 0xD4
-    { CMP, ZERO_X, false, true  }, // 0xD5
-    { DEC, ZERO_X, false, true  }, // 0xD6
-    { DCP, ZERO_X, true,  false }, // 0xD7
-    { CLD, IMPL,   false, true  }, // 0xD8
-    { CMP, ABS_Y,  false, true  }, // 0xD9
-    { NOP, IMPL,   false, false }, // 0xDA
-    { DCP, ABS_Y,  true,  false }, // 0xDB
-    { NOP, ABS_X,  false, false }, // 0xDC
-    { CMP, ABS_X,  false, true  }, // 0xDD
-    { DEC, ABS_X,  false, true  }, // 0xDE
-    { DCP, ABS_X,  true,  false }, // 0xDF
-    { CPX, IMM,    false, true  }, // 0xE0
-    { SBC, IND_X,  false, true  }, // 0xE1
-    { NOP, IMM,    false, false }, // 0xE2
-    { ISC, IND_X,  true,  false }, // 0xE3
-    { CPX, ZERO,   false, true  }, // 0xE4
-    { SBC, ZERO,   false, true  }, // 0xE5
-    { INC, ZERO,   false, true  }, // 0xE6
-    { ISC, ZERO,   true,  false }, // 0xE7
-    { INX, IMPL,   false, true  }, // 0xE8
-    { SBC, IMM,    false, true  }, // 0xE9
-    { NOP, IMPL,   false, true  }, // 0xEA
-    { SBC, IMM,    false, false }, // 0xEB
-    { CPX, ABS,    false, true  }, // 0xEC
-    { SBC, ABS,    false, true  }, // 0xED
-    { INC, ABS,    false, true  }, // 0xEE
-    { ISC, ABS,    true,  false }, // 0xEF
-    { BEQ, REL,    false, true  }, // 0xF0
-    { SBC, IND_Y,  false, true  }, // 0xF1
-    { STP, IMPL,   false, false }, // 0xF2
-    { ISC, IND_Y,  true,  false }, // 0xF3
-    { NOP, ZERO_X, false, false }, // 0xF4
-    { SBC, ZERO_X, false, true  }, // 0xF5
-    { INC, ZERO_X, false, true  }, // 0xF6
-    { ISC, ZERO_X, true,  false }, // 0xF7
-    { SED, IMPL,   false, true  }, // 0xF8
-    { SBC, ABS_Y,  false, true  }, // 0xF9
-    { NOP, IMPL,   false, false }, // 0xFA
-    { ISC, ABS_Y,  true,  false }, // 0xFB
-    { NOP, ABS_X,  false, false }, // 0xFC
-    { SBC, ABS_X,  false, true  }, // 0xFD
-    { INC, ABS_X,  false, true  }, // 0xFE
-    { ISC, ABS_X,  true,  false }  // 0xFF
+    { BRK, IMPLIED,     false, true  }, // 0x00
+    { ORA, INDIRECT_X,  false, true  }, // 0x01
+    { STP, IMPLIED,     false, false }, // 0x02
+    { SLO, INDIRECT_X,  true,  false }, // 0x03
+    { NOP, ZEROPAGE,    false, false }, // 0x04
+    { ORA, ZEROPAGE,    false, true  }, // 0x05
+    { ASL, ZEROPAGE,    true,  true  }, // 0x06
+    { SLO, ZEROPAGE,    true,  false }, // 0x07
+    { PHP, IMPLIED,     false, true  }, // 0x08
+    { ORA, IMMEDIATE,   false, true  }, // 0x09
+    { ASL, ACCUMULATOR, true,  true  }, // 0x0A
+    { ANC, IMMEDIATE,   false, false }, // 0x0B
+    { NOP, ABSOLUTE,    false, false }, // 0x0C
+    { ORA, ABSOLUTE,    false, true  }, // 0x0D
+    { ASL, ABSOLUTE,    true,  true  }, // 0x0E
+    { SLO, ABSOLUTE,    true,  false }, // 0x0F
+    { BPL, RELATIVE,    false, true  }, // 0x10
+    { ORA, INDIRECT_Y,  false, true  }, // 0x11
+    { STP, IMPLIED,     false, false }, // 0x12
+    { SLO, INDIRECT_Y,  true,  false }, // 0x13
+    { NOP, ZEROPAGE_X,  false, false }, // 0x14
+    { ORA, ZEROPAGE_X,  false, true  }, // 0x15
+    { ASL, ZEROPAGE_X,  true,  true  }, // 0x16
+    { SLO, ZEROPAGE_X,  true,  false }, // 0x17
+    { CLC, IMPLIED,     false, true  }, // 0x18
+    { ORA, ABSOLUTE_Y,  false, true  }, // 0x19
+    { NOP, IMPLIED,     false, false }, // 0x1A
+    { SLO, ABSOLUTE_Y,  true,  false }, // 0x1B
+    { NOP, ABSOLUTE_X,  false, false }, // 0x1C
+    { ORA, ABSOLUTE_X,  false, true  }, // 0x1D
+    { ASL, ABSOLUTE_X,  true,  true  }, // 0x1E
+    { SLO, ABSOLUTE_X,  true,  false }, // 0x1F
+    { JSR, ABSOLUTE,    false, true  }, // 0x20
+    { AND, INDIRECT_X,  false, true  }, // 0x21
+    { STP, IMPLIED,     false, false }, // 0x22
+    { RLA, INDIRECT_X,  true,  false }, // 0x23
+    { BIT, ZEROPAGE,    false, true  }, // 0x24
+    { AND, ZEROPAGE,    false, true  }, // 0x25
+    { ROL, ZEROPAGE,    true,  true  }, // 0x26
+    { RLA, ZEROPAGE,    true,  false }, // 0x27
+    { PLP, IMPLIED,     false, true  }, // 0x28
+    { AND, IMMEDIATE,   false, true  }, // 0x29
+    { ROL, ACCUMULATOR, true,  true  }, // 0x2A
+    { ANC, IMMEDIATE,   false, false }, // 0x2B
+    { BIT, ABSOLUTE,    false, true  }, // 0x2C
+    { AND, ABSOLUTE,    false, true  }, // 0x2D
+    { ROL, ABSOLUTE,    true,  true  }, // 0x2E
+    { RLA, ABSOLUTE,    true,  false }, // 0x2F
+    { BMI, RELATIVE,    false, true  }, // 0x30
+    { AND, INDIRECT_Y,  false, true  }, // 0x31
+    { STP, IMPLIED,     false, false }, // 0x32
+    { RLA, INDIRECT_Y,  true,  false }, // 0x33
+    { NOP, ZEROPAGE_X,  false, false }, // 0x34
+    { AND, ZEROPAGE_X,  false, true  }, // 0x35
+    { ROL, ZEROPAGE_X,  false, true  }, // 0x36
+    { RLA, ZEROPAGE_X,  true,  false }, // 0x37
+    { SEC, IMPLIED,     false, true  }, // 0x38
+    { AND, ABSOLUTE_Y,  false, true  }, // 0x39
+    { NOP, IMPLIED,     false, false }, // 0x3A
+    { RLA, ABSOLUTE_Y,  true,  false }, // 0x3B
+    { NOP, ABSOLUTE_X,  false, false }, // 0x3C
+    { AND, ABSOLUTE_X,  false, true  }, // 0x3D
+    { ROL, ABSOLUTE_X,  true,  true  }, // 0x3E
+    { RLA, ABSOLUTE_X,  true,  false }, // 0x3F
+    { RTI, IMPLIED,     false, true  }, // 0x40
+    { EOR, INDIRECT_X,  false, true  }, // 0x41
+    { STP, IMPLIED,     false, false }, // 0x42
+    { SRE, INDIRECT_X,  true,  false }, // 0x43
+    { NOP, ZEROPAGE,    false, false }, // 0x44
+    { EOR, ZEROPAGE,    false, true  }, // 0x45
+    { LSR, ZEROPAGE,    true,  true  }, // 0x46
+    { SRE, ZEROPAGE,    true,  false }, // 0x47
+    { PHA, IMPLIED,     false, true  }, // 0x48
+    { EOR, IMMEDIATE,   false, true  }, // 0x49
+    { LSR, ACCUMULATOR, true,  true  }, // 0x4A
+    { ALR, IMMEDIATE,   false, false }, // 0x4B
+    { JMP, ABSOLUTE,    false, true  }, // 0x4C
+    { EOR, ABSOLUTE,    false, true  }, // 0x4D
+    { LSR, ABSOLUTE,    true,  true  }, // 0x4E
+    { SRE, ABSOLUTE,    true,  false }, // 0x4F
+    { BVC, RELATIVE,    false, true  }, // 0x50
+    { EOR, INDIRECT_Y,  false, true  }, // 0x51
+    { STP, IMPLIED,     false, false }, // 0x52
+    { SRE, INDIRECT_Y,  true,  false }, // 0x53
+    { NOP, ZEROPAGE_X,  false, false }, // 0x54
+    { EOR, ZEROPAGE_X,  false, true  }, // 0x55
+    { LSR, ZEROPAGE_X,  true,  true  }, // 0x56
+    { SRE, ZEROPAGE_X,  true,  false }, // 0x57
+    { CLI, IMPLIED,     false, true  }, // 0x58
+    { EOR, ABSOLUTE_Y,  false, true  }, // 0x59
+    { NOP, IMPLIED,     false, false }, // 0x5A
+    { SRE, ABSOLUTE_Y,  true,  false }, // 0x5B
+    { NOP, ABSOLUTE_X,  false, false }, // 0x5C
+    { EOR, ABSOLUTE_X,  false, true  }, // 0x5D
+    { LSR, ABSOLUTE_X,  true,  true  }, // 0x5E
+    { SRE, ABSOLUTE_X,  true,  false }, // 0x5F
+    { RTS, IMPLIED,     false, true  }, // 0x60
+    { ADC, INDIRECT_X,  false, true  }, // 0x61
+    { STP, IMPLIED,     false, false }, // 0x62
+    { RRA, INDIRECT_X,  true,  false }, // 0x63
+    { NOP, ZEROPAGE,    false, false }, // 0x64
+    { ADC, ZEROPAGE,    false, true  }, // 0x65
+    { ROR, ZEROPAGE,    true,  true  }, // 0x66
+    { RRA, ZEROPAGE,    true,  false }, // 0x67
+    { PLA, IMPLIED,     false, true  }, // 0x68
+    { ADC, IMMEDIATE,   false, true  }, // 0x69
+    { ROR, ACCUMULATOR, true,  false }, // 0x6A
+    { ARR, IMMEDIATE,   false, false }, // 0x6B
+    { JMP, INDIRECT,    false, true  }, // 0x6C
+    { ADC, ABSOLUTE,    false, true  }, // 0x6D
+    { ROR, ABSOLUTE,    true,  true  }, // 0x6E
+    { RRA, ABSOLUTE,    true,  false }, // 0x6F
+    { BVS, RELATIVE,    false, true  }, // 0x70
+    { ADC, INDIRECT_Y,  false, true  }, // 0x71
+    { STP, IMPLIED,     false, false }, // 0x72
+    { RRA, INDIRECT_Y,  true,  false }, // 0x73
+    { NOP, ZEROPAGE_X,  false, false }, // 0x74
+    { ADC, ZEROPAGE_X,  false, true  }, // 0x75
+    { ROR, ZEROPAGE_X,  true,  true  }, // 0x76
+    { RRA, ZEROPAGE_X,  true,  false }, // 0x77
+    { SEI, IMPLIED,     false, true  }, // 0x78
+    { ADC, ABSOLUTE_Y,  false, true  }, // 0x79
+    { NOP, IMPLIED,     false, false }, // 0x7A
+    { RRA, ABSOLUTE_Y,  true,  false }, // 0x7B
+    { NOP, ABSOLUTE_X,  false, false }, // 0x7C
+    { ADC, ABSOLUTE_X,  false, true  }, // 0x7D
+    { ROR, ABSOLUTE_X,  true,  true  }, // 0x7E
+    { RRA, ABSOLUTE_X,  true,  false }, // 0x7F
+    { NOP, IMMEDIATE,   false, false }, // 0x80
+    { STA, INDIRECT_X,  false, true  }, // 0x81
+    { NOP, IMMEDIATE,   false, false }, // 0x82
+    { SAX, INDIRECT_X,  false, false }, // 0x83
+    { STY, ZEROPAGE,    false, true  }, // 0x84
+    { STA, ZEROPAGE,    false, true  }, // 0x85
+    { STX, ZEROPAGE,    false, true  }, // 0x86
+    { SAX, ZEROPAGE,    false, false }, // 0x87
+    { DEY, IMPLIED,     false, true  }, // 0x88
+    { NOP, IMMEDIATE,   false, false }, // 0x89
+    { TXA, IMPLIED,     false, true  }, // 0x8A
+    { XAA, IMPLIED,     false, false }, // 0x8B
+    { STY, ABSOLUTE,    false, true  }, // 0x8C
+    { STA, ABSOLUTE,    false, true  }, // 0x8D
+    { STX, ABSOLUTE,    false, true  }, // 0x8E
+    { SAX, ABSOLUTE,    false, false }, // 0x8F
+    { BCC, RELATIVE,    false, true  }, // 0x90
+    { STA, INDIRECT_Y,  false, true  }, // 0x91
+    { STP, IMPLIED,     false, false }, // 0x92
+    { AHX, INDIRECT_Y,  false, true  }, // 0x93
+    { STY, ZEROPAGE_X,  false, true  }, // 0x94
+    { STA, ZEROPAGE_X,  false, true  }, // 0x95
+    { STX, ZEROPAGE_Y,  false, true  }, // 0x96
+    { SAX, ZEROPAGE_Y,  false, false }, // 0x97
+    { TYA, IMPLIED,     false, true  }, // 0x98
+    { STA, ABSOLUTE_Y,  false, true  }, // 0x99
+    { TXS, IMPLIED,     false, true  }, // 0x9A
+    { TAS, ABSOLUTE_Y,  false, false }, // 0x9B
+    { SHY, ABSOLUTE_X,  false, false }, // 0x9C
+    { STA, ABSOLUTE_X,  false, true  }, // 0x9D
+    { SHX, ABSOLUTE_Y,  false, false }, // 0x9E
+    { AHS, ABSOLUTE_Y,  false, false }, // 0x9F
+    { LDY, IMMEDIATE,   false, true  }, // 0xA0
+    { LDA, INDIRECT_X,  false, true  }, // 0xA1
+    { LDX, IMMEDIATE,   false, true  }, // 0xA2
+    { LAX, INDIRECT_X,  false, false }, // 0xA3
+    { LDY, ZEROPAGE,    false, true  }, // 0xA4
+    { LDA, ZEROPAGE,    false, true  }, // 0xA5
+    { LDX, ZEROPAGE,    false, true  }, // 0xA6
+    { LAX, ZEROPAGE,    false, false }, // 0xA7
+    { TAY, IMPLIED,     false, true  }, // 0xA8
+    { LDA, IMMEDIATE,   false, true  }, // 0xA9
+    { TAX, IMPLIED,     false, true  }, // 0xAA
+    { LAX, IMMEDIATE,   false, false }, // 0xAB
+    { LDY, ABSOLUTE,    false, true  }, // 0xAC
+    { LDA, ABSOLUTE,    false, true  }, // 0xAD
+    { LDX, ABSOLUTE,    false, true  }, // 0xAE
+    { LAX, ABSOLUTE,    false, false }, // 0xAF
+    { BCS, RELATIVE,    false, true  }, // 0xB0
+    { LDA, INDIRECT_Y,  false, true  }, // 0xB1
+    { STP, IMPLIED,     false, false }, // 0xB2
+    { LAX, INDIRECT_Y,  false, false }, // 0xB3
+    { LDY, ZEROPAGE_X,  false, true  }, // 0xB4
+    { LDA, ZEROPAGE_X,  false, true  }, // 0xB5
+    { LDX, ZEROPAGE_Y,  false, true  }, // 0xB6
+    { LAX, ZEROPAGE_Y,  false, false }, // 0xB7
+    { CLV, IMPLIED,     false, true  }, // 0xB8
+    { LDA, ABSOLUTE_Y,  false, true  }, // 0xB9
+    { TSX, IMPLIED,     false, true  }, // 0xBA
+    { LAS, ABSOLUTE_Y,  false, false }, // 0xBB
+    { LDY, ABSOLUTE_X,  false, true  }, // 0xBC
+    { LDA, ABSOLUTE_X,  false, true  }, // 0xBD
+    { LDX, ABSOLUTE_Y,  false, true  }, // 0xBE
+    { LAX, ABSOLUTE_Y,  false, false }, // 0xBF
+    { CPY, IMMEDIATE,   false, true  }, // 0xC0
+    { CMP, INDIRECT_X,  false, true  }, // 0xC1
+    { NOP, IMMEDIATE,   false, false }, // 0xC2
+    { DCP, INDIRECT_X,  true,  false }, // 0xC3
+    { CPY, ZEROPAGE,    false, true  }, // 0xC4
+    { CMP, ZEROPAGE,    false, true  }, // 0xC5
+    { DEC, ZEROPAGE,    false, true  }, // 0xC6
+    { DCP, ZEROPAGE,    true,  false }, // 0xC7
+    { INY, IMPLIED,     false, true  }, // 0xC8
+    { CMP, IMMEDIATE,   false, true  }, // 0xC9
+    { DEX, IMPLIED,     false, true  }, // 0xCA
+    { AXS, IMMEDIATE,   false, false }, // 0xCB
+    { CPY, ABSOLUTE,    false, true  }, // 0xCC
+    { CMP, ABSOLUTE,    false, true  }, // 0xCD
+    { DEC, ABSOLUTE,    false, true  }, // 0xCE
+    { DCP, ABSOLUTE,    true,  false }, // 0xCF
+    { BNE, RELATIVE,    false, true  }, // 0xD0
+    { CMP, INDIRECT_Y,  false, true  }, // 0xD1
+    { STP, IMPLIED,     false, false }, // 0xD2
+    { DCP, INDIRECT_Y,  true,  false }, // 0xD3
+    { NOP, ZEROPAGE_X,  false, false }, // 0xD4
+    { CMP, ZEROPAGE_X,  false, true  }, // 0xD5
+    { DEC, ZEROPAGE_X,  false, true  }, // 0xD6
+    { DCP, ZEROPAGE_X,  true,  false }, // 0xD7
+    { CLD, IMPLIED,     false, true  }, // 0xD8
+    { CMP, ABSOLUTE_Y,  false, true  }, // 0xD9
+    { NOP, IMPLIED,     false, false }, // 0xDA
+    { DCP, ABSOLUTE_Y,  true,  false }, // 0xDB
+    { NOP, ABSOLUTE_X,  false, false }, // 0xDC
+    { CMP, ABSOLUTE_X,  false, true  }, // 0xDD
+    { DEC, ABSOLUTE_X,  false, true  }, // 0xDE
+    { DCP, ABSOLUTE_X,  true,  false }, // 0xDF
+    { CPX, IMMEDIATE,   false, true  }, // 0xE0
+    { SBC, INDIRECT_X,  false, true  }, // 0xE1
+    { NOP, IMMEDIATE,   false, false }, // 0xE2
+    { ISC, INDIRECT_X,  true,  false }, // 0xE3
+    { CPX, ZEROPAGE,    false, true  }, // 0xE4
+    { SBC, ZEROPAGE,    false, true  }, // 0xE5
+    { INC, ZEROPAGE,    false, true  }, // 0xE6
+    { ISC, ZEROPAGE,    true,  false }, // 0xE7
+    { INX, IMPLIED,     false, true  }, // 0xE8
+    { SBC, IMMEDIATE,   false, true  }, // 0xE9
+    { NOP, IMPLIED,     false, true  }, // 0xEA
+    { SBC, IMMEDIATE,   false, false }, // 0xEB
+    { CPX, ABSOLUTE,    false, true  }, // 0xEC
+    { SBC, ABSOLUTE,    false, true  }, // 0xED
+    { INC, ABSOLUTE,    false, true  }, // 0xEE
+    { ISC, ABSOLUTE,    true,  false }, // 0xEF
+    { BEQ, RELATIVE,    false, true  }, // 0xF0
+    { SBC, INDIRECT_Y,  false, true  }, // 0xF1
+    { STP, IMPLIED,     false, false }, // 0xF2
+    { ISC, INDIRECT_Y,  true,  false }, // 0xF3
+    { NOP, ZEROPAGE_X,  false, false }, // 0xF4
+    { SBC, ZEROPAGE_X,  false, true  }, // 0xF5
+    { INC, ZEROPAGE_X,  false, true  }, // 0xF6
+    { ISC, ZEROPAGE_X,  true,  false }, // 0xF7
+    { SED, IMPLIED,     false, true  }, // 0xF8
+    { SBC, ABSOLUTE_Y,  false, true  }, // 0xF9
+    { NOP, IMPLIED,     false, false }, // 0xFA
+    { ISC, ABSOLUTE_Y,  true,  false }, // 0xFB
+    { NOP, ABSOLUTE_X,  false, false }, // 0xFC
+    { SBC, ABSOLUTE_X,  false, true  }, // 0xFD
+    { INC, ABSOLUTE_X,  false, true  }, // 0xFE
+    { ISC, ABSOLUTE_X,  true,  false }  // 0xFF
 }};
