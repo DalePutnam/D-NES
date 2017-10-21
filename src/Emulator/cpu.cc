@@ -52,10 +52,6 @@ uint8_t CPU::Read(uint16_t address)
 {
     if (AccumulatorFlag)
     {
-        AccumulatorFlag = false;
-        Read(PC);
-        AccumulatorFlag = true;
-
         return A;
     }
 
@@ -80,7 +76,7 @@ uint8_t CPU::Read(uint16_t address)
         case 2:  value = Ppu->ReadPPUStatus(); break;
         case 4:  value = Ppu->ReadOAMData(); break;
         case 7:  value = Ppu->ReadPPUData(); break;
-        default: value = 0xFF; break;
+        default: value = 0x00; break;
         }
     }
     else if (address >= 0x4000 && address < 0x4018)
@@ -90,7 +86,7 @@ uint8_t CPU::Read(uint16_t address)
         {
         case 0x4015: value = Apu->ReadAPUStatus(); break;
         case 0x4016: value = GetControllerOneShift(); break;
-        default:     value = 0xFF; break;
+        default:     value = 0x00; break;
         }
     }
     else if (address >= 0x6000 && address < 0x10000)
@@ -101,7 +97,7 @@ uint8_t CPU::Read(uint16_t address)
     else
     {
         // All other addresses unassigned
-        value = 0xFF;
+        value = 0x00;
     }
 
     CheckNMI();
@@ -218,6 +214,7 @@ uint16_t CPU::Accumulator()
         LogAccumulator();
     }
 
+    Read(PC);
     AccumulatorFlag = true;
 
     return PC;
@@ -1697,7 +1694,6 @@ void CPU::Step()
 
     uint8_t opcode = Read(PC++); // Retrieve opcode from memory
     
-
     if (IsLogEnabled()) LogOpcode(opcode);
 
     // Decode opcode
@@ -1968,8 +1964,7 @@ void CPU::LogAccumulator()
 
 void CPU::LogRelative(uint8_t value)
 {
-
-    sprintf(Addressing, "$%04X", PC + static_cast<int8_t>(value));
+    sprintf(Addressing, "$%04X", (PC + static_cast<int8_t>(value)) + 1);
     sprintf(AddressingArg1, "%02X", static_cast<uint8_t>(value));
 }
 
@@ -2195,35 +2190,35 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { ROR, ABSOLUTE_X,  true,  true  }, // 0x7E
     { RRA, ABSOLUTE_X,  true,  false }, // 0x7F
     { NOP, IMMEDIATE,   false, false }, // 0x80
-    { STA, INDIRECT_X,  false, true  }, // 0x81
+    { STA, INDIRECT_X,  true,  true  }, // 0x81
     { NOP, IMMEDIATE,   false, false }, // 0x82
     { SAX, INDIRECT_X,  false, false }, // 0x83
-    { STY, ZEROPAGE,    false, true  }, // 0x84
-    { STA, ZEROPAGE,    false, true  }, // 0x85
-    { STX, ZEROPAGE,    false, true  }, // 0x86
+    { STY, ZEROPAGE,    true,  true  }, // 0x84
+    { STA, ZEROPAGE,    true,  true  }, // 0x85
+    { STX, ZEROPAGE,    true,  true  }, // 0x86
     { SAX, ZEROPAGE,    false, false }, // 0x87
     { DEY, IMPLIED,     false, true  }, // 0x88
     { NOP, IMMEDIATE,   false, false }, // 0x89
     { TXA, IMPLIED,     false, true  }, // 0x8A
     { XAA, IMPLIED,     false, false }, // 0x8B
-    { STY, ABSOLUTE,    false, true  }, // 0x8C
-    { STA, ABSOLUTE,    false, true  }, // 0x8D
-    { STX, ABSOLUTE,    false, true  }, // 0x8E
+    { STY, ABSOLUTE,    true,  true  }, // 0x8C
+    { STA, ABSOLUTE,    true,  true  }, // 0x8D
+    { STX, ABSOLUTE,    true,  true  }, // 0x8E
     { SAX, ABSOLUTE,    false, false }, // 0x8F
     { BCC, RELATIVE,    false, true  }, // 0x90
-    { STA, INDIRECT_Y,  false, true  }, // 0x91
+    { STA, INDIRECT_Y,  true,  true  }, // 0x91
     { STP, IMPLIED,     false, false }, // 0x92
     { AHX, INDIRECT_Y,  false, true  }, // 0x93
-    { STY, ZEROPAGE_X,  false, true  }, // 0x94
-    { STA, ZEROPAGE_X,  false, true  }, // 0x95
-    { STX, ZEROPAGE_Y,  false, true  }, // 0x96
+    { STY, ZEROPAGE_X,  true,  true  }, // 0x94
+    { STA, ZEROPAGE_X,  true,  true  }, // 0x95
+    { STX, ZEROPAGE_Y,  true,  true  }, // 0x96
     { SAX, ZEROPAGE_Y,  false, false }, // 0x97
     { TYA, IMPLIED,     false, true  }, // 0x98
-    { STA, ABSOLUTE_Y,  false, true  }, // 0x99
+    { STA, ABSOLUTE_Y,  true,  true  }, // 0x99
     { TXS, IMPLIED,     false, true  }, // 0x9A
     { TAS, ABSOLUTE_Y,  false, false }, // 0x9B
     { SHY, ABSOLUTE_X,  false, false }, // 0x9C
-    { STA, ABSOLUTE_X,  false, true  }, // 0x9D
+    { STA, ABSOLUTE_X,  true,  true  }, // 0x9D
     { SHX, ABSOLUTE_Y,  false, false }, // 0x9E
     { AHS, ABSOLUTE_Y,  false, false }, // 0x9F
     { LDY, IMMEDIATE,   false, true  }, // 0xA0
@@ -2264,7 +2259,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { DCP, INDIRECT_X,  true,  false }, // 0xC3
     { CPY, ZEROPAGE,    false, true  }, // 0xC4
     { CMP, ZEROPAGE,    false, true  }, // 0xC5
-    { DEC, ZEROPAGE,    false, true  }, // 0xC6
+    { DEC, ZEROPAGE,    true,  true  }, // 0xC6
     { DCP, ZEROPAGE,    true,  false }, // 0xC7
     { INY, IMPLIED,     false, true  }, // 0xC8
     { CMP, IMMEDIATE,   false, true  }, // 0xC9
@@ -2272,7 +2267,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { AXS, IMMEDIATE,   false, false }, // 0xCB
     { CPY, ABSOLUTE,    false, true  }, // 0xCC
     { CMP, ABSOLUTE,    false, true  }, // 0xCD
-    { DEC, ABSOLUTE,    false, true  }, // 0xCE
+    { DEC, ABSOLUTE,    true,  true  }, // 0xCE
     { DCP, ABSOLUTE,    true,  false }, // 0xCF
     { BNE, RELATIVE,    false, true  }, // 0xD0
     { CMP, INDIRECT_Y,  false, true  }, // 0xD1
@@ -2280,7 +2275,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { DCP, INDIRECT_Y,  true,  false }, // 0xD3
     { NOP, ZEROPAGE_X,  false, false }, // 0xD4
     { CMP, ZEROPAGE_X,  false, true  }, // 0xD5
-    { DEC, ZEROPAGE_X,  false, true  }, // 0xD6
+    { DEC, ZEROPAGE_X,  true,  true  }, // 0xD6
     { DCP, ZEROPAGE_X,  true,  false }, // 0xD7
     { CLD, IMPLIED,     false, true  }, // 0xD8
     { CMP, ABSOLUTE_Y,  false, true  }, // 0xD9
@@ -2288,7 +2283,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { DCP, ABSOLUTE_Y,  true,  false }, // 0xDB
     { NOP, ABSOLUTE_X,  false, false }, // 0xDC
     { CMP, ABSOLUTE_X,  false, true  }, // 0xDD
-    { DEC, ABSOLUTE_X,  false, true  }, // 0xDE
+    { DEC, ABSOLUTE_X,  true,  true  }, // 0xDE
     { DCP, ABSOLUTE_X,  true,  false }, // 0xDF
     { CPX, IMMEDIATE,   false, true  }, // 0xE0
     { SBC, INDIRECT_X,  false, true  }, // 0xE1
