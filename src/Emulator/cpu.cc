@@ -2400,10 +2400,11 @@ void CPU::PrintLog()
         fprintf(LogFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", ProgramCounter, OpCode, AddressingArg1, AddressingArg2, Instruction, Addressing, Registers);
     }
 
+    sprintf(OpCode, "%s", "");
     sprintf(Registers, "%s", "");
     sprintf(Addressing, "%s", "");
     sprintf(Instruction, "%s", "");
     sprintf(ProgramCounter, "%s", "");
     sprintf(AddressingArg1, "%s", "");
-    sprintf(AddressingArg1, "%s", "");
+    sprintf(AddressingArg2, "%s", "");
 }
