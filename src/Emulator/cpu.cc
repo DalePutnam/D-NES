@@ -14,7 +14,22 @@
 #include "ppu.h"
 #include "apu.h"
 
-uint8_t CPU::DebugRead(uint16_t address)
+#define NEGATIVE 0x80
+#define OVERFLOW 0x40
+#define INTERRUPT 0x20
+#define BREAK 0x10
+#define DECIMAL 0x8
+#define IRQ_INHIBIT 0x4
+#define ZERO 0x2
+#define CARRY 0x1
+#define SET_FLAG(P, FLAG) ((P) |= (FLAG))
+#define CLEAR_FLAG(P, FLAG) ((P) &= ~(FLAG))
+#define TEST_FLAG(P, FLAG) (((P) & (FLAG)) != 0)
+#define TEST_AND_SET_FLAG(P, FLAG, TEST) ((TEST) ? SET_FLAG(P, FLAG) : CLEAR_FLAG(P, FLAG))
+#define IS_NEGATIVE(A) (((A) & NEGATIVE) != 0)
+#define IS_ZERO(A) ((A) == 0)
+
+uint8_t CPU::Peek(uint16_t address)
 {
     // Any address less then 0x2000 is just the
     // Internal Ram mirrored every 0x800 bytes
@@ -201,7 +216,7 @@ uint16_t CPU::Relative()
 {
     if (IsLogEnabled())
     {
-        LogRelative(DebugRead(PC));
+        LogRelative(Peek(PC));
     }
 
     return PC++;
@@ -224,7 +239,7 @@ uint16_t CPU::Immediate()
 {
     if (IsLogEnabled())
     {
-        LogImmediate(DebugRead(PC));
+        LogImmediate(Peek(PC));
     }
 
     return PC++;
@@ -378,7 +393,7 @@ uint16_t CPU::Indirect()
 
     if (IsLogEnabled())
     {
-        uint16_t otherHighByte = DebugRead((highIndirect << 8) + (lowIndirect + 1));
+        uint16_t otherHighByte = Peek((highIndirect << 8) + (lowIndirect + 1));
         uint16_t otherAddress = (otherHighByte << 8) + lowByte;
         LogIndirect(static_cast<uint8_t>(lowIndirect), static_cast<uint8_t>(highIndirect), (highIndirect << 8) + lowIndirect, otherAddress);
     }
@@ -391,7 +406,7 @@ uint16_t CPU::Indirect()
 // used as a zero page address and two bytes are read from
 // this address and the next (with zero page wrap around)
 // to make the final 16-bit address of the operand
-uint16_t CPU::IndexedIndirect()
+uint16_t CPU::IndirectX()
 {
     uint8_t pointer = Read(PC++); // Get pointer
     uint8_t lowIndirect = pointer + X;
@@ -406,7 +421,7 @@ uint16_t CPU::IndexedIndirect()
 
     if (IsLogEnabled())
     {
-        LogIndexedIndirect(pointer, lowIndirect, address);
+        LogIndirectX(pointer, lowIndirect, address);
     }
 
     return address;
@@ -419,7 +434,7 @@ uint16_t CPU::IndexedIndirect()
 // Y register is added to to create the final address of the operand.
 // Should this result in page being crossed, then an additional cycle
 // is added.
-uint16_t CPU::IndirectIndexed(bool isRMW)
+uint16_t CPU::IndirectY(bool isRMW)
 {
     uint16_t pointer = Read(PC++); // Fetch pointer
 
@@ -436,7 +451,7 @@ uint16_t CPU::IndirectIndexed(bool isRMW)
 
     if (IsLogEnabled())
     {
-        LogIndirectIndexed(static_cast<uint8_t>(pointer), initialAddress, finalAddress);
+        LogIndirectY(static_cast<uint8_t>(pointer), initialAddress, finalAddress);
     }
 
     return finalAddress;
@@ -1285,6 +1300,39 @@ void CPU::DoTYA()
     ((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
+void CPU::DoANC(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("AXS");
+
+    uint8_t M = Read(address);
+
+    A = A & M;
+    
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    // Copy negative flag to carry flag
+    TEST_AND_SET_FLAG(P, CARRY, TEST_FLAG(P, NEGATIVE));
+}
+
+void CPU::DoAXS(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("AXS");
+
+    uint8_t M = Read(address);
+    
+    uint8_t result = (X & A) - M;
+    // if X >= M set carry flag
+    TEST_AND_SET_FLAG(P, CARRY, (A >= M));
+    // if X = M set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, (A == M));
+    // set negative flag to bit 7 of result
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
+
+    X = result;
+}
+
 void CPU::CheckNMI()
 {
     if (NmiRaised)
@@ -1608,7 +1656,7 @@ void CPU::Run()
         else
         {
             // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-            PC = (static_cast<uint16_t>(DebugRead(0xFFFD)) << 8) + DebugRead(0xFFFC);
+            PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
             StartupFlag = false;
         }
     }
@@ -1727,10 +1775,10 @@ void CPU::Step()
         address = Indirect();
         break;
     case INDIRECT_X:
-        address = IndexedIndirect();
+        address = IndirectX();
         break;
     case INDIRECT_Y:
-        address = IndirectIndexed(desc.isReadModifyWrite);
+        address = IndirectY(desc.isReadModifyWrite);
         break;
     case RELATIVE:
         address = Relative();
@@ -1917,6 +1965,13 @@ void CPU::Step()
     case TYA:
         DoTYA();
         break;
+    // Unofficial Instructions
+    case ANC:
+        DoANC(address);
+        break;
+    case AXS:
+        DoAXS(address);
+        break;
     case STP:
         throw std::runtime_error("CPU executed STP instruction");
     default:
@@ -1976,20 +2031,20 @@ void CPU::LogImmediate(uint8_t arg1)
 
 void CPU::LogZeroPage(uint8_t address)
 {
-    sprintf(Addressing, "$%02X = %02X", address, DebugRead(address));
+    sprintf(Addressing, "$%02X = %02X", address, Peek(address));
     sprintf(AddressingArg1, "%02X", address);
 }
 
 
 void CPU::LogZeroPageX(uint8_t initialAddress, uint8_t finalAddress)
 {
-    sprintf(Addressing, "$%02X,X @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(Addressing, "$%02X,X @ %02X = %02X", initialAddress, finalAddress, Peek(finalAddress));
     sprintf(AddressingArg1, "%02X", initialAddress);
 }
 
 void CPU::LogZeroPageY(uint8_t initialAddress, uint8_t finalAddress)
 {
-    sprintf(Addressing, "$%02X,Y @ %02X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(Addressing, "$%02X,Y @ %02X = %02X", initialAddress, finalAddress, Peek(finalAddress));
     sprintf(AddressingArg1, "%02X", initialAddress);
 }
 
@@ -1997,7 +2052,7 @@ void CPU::LogAbsolute(uint8_t lowByte, uint8_t highByte, uint16_t address, bool 
 {
     if (!isJump)
     {
-        sprintf(Addressing, "$%04X = %02X", address, DebugRead(address));
+        sprintf(Addressing, "$%04X = %02X", address, Peek(address));
     }
     else
     {
@@ -2010,14 +2065,14 @@ void CPU::LogAbsolute(uint8_t lowByte, uint8_t highByte, uint16_t address, bool 
 
 void CPU::LogAbsoluteX(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(Addressing, "$%04X,X @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(Addressing, "$%04X,X @ %04X = %02X", initialAddress, finalAddress, Peek(finalAddress));
     sprintf(AddressingArg1, "%02X", lowByte);
     sprintf(AddressingArg2, "%02X", highByte);
 }
 
 void CPU::LogAbsoluteY(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(Addressing, "$%04X,Y @ %04X = %02X", initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(Addressing, "$%04X,Y @ %04X = %02X", initialAddress, finalAddress, Peek(finalAddress));
     sprintf(AddressingArg1, "%02X", lowByte);
     sprintf(AddressingArg2, "%02X", highByte);
 }
@@ -2029,15 +2084,15 @@ void CPU::LogIndirect(uint8_t lowIndirect, uint8_t highIndirect, uint16_t indire
     sprintf(AddressingArg2, "%02X", highIndirect);
 }
 
-void CPU::LogIndexedIndirect(uint8_t pointer, uint8_t lowIndirect, uint16_t address)
+void CPU::LogIndirectX(uint8_t pointer, uint8_t lowIndirect, uint16_t address)
 {
-    sprintf(Addressing, "($%02X,X) @ %02X = %04X = %02X", pointer, lowIndirect, address, DebugRead(address));
+    sprintf(Addressing, "($%02X,X) @ %02X = %04X = %02X", pointer, lowIndirect, address, Peek(address));
     sprintf(AddressingArg1, "%02X", pointer);
 }
 
-void CPU::LogIndirectIndexed(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress)
+void CPU::LogIndirectY(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress)
 {
-    sprintf(Addressing, "($%02X),Y = %04X @ %04X = %02X", pointer, initialAddress, finalAddress, DebugRead(finalAddress));
+    sprintf(Addressing, "($%02X),Y = %04X @ %04X = %02X", pointer, initialAddress, finalAddress, Peek(finalAddress));
     sprintf(AddressingArg1, "%02X", pointer);
 }
 
@@ -2220,7 +2275,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { SHY, ABSOLUTE_X,  false, false }, // 0x9C
     { STA, ABSOLUTE_X,  true,  true  }, // 0x9D
     { SHX, ABSOLUTE_Y,  false, false }, // 0x9E
-    { AHS, ABSOLUTE_Y,  false, false }, // 0x9F
+    { AHX, ABSOLUTE_Y,  false, false }, // 0x9F
     { LDY, IMMEDIATE,   false, true  }, // 0xA0
     { LDA, INDIRECT_X,  false, true  }, // 0xA1
     { LDX, IMMEDIATE,   false, true  }, // 0xA2

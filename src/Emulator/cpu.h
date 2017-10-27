@@ -117,8 +117,8 @@ private:
         JSR, LDA, LDX, LDY, LSR, NOP, ORA, PHA, PHP, PLA, PLP, ROL, ROR, RTI,
         RTS, SBC, SEC, SED, SEI, STA, STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
         // Unofficial Instructions
-        AHS, AHX, ALR, ANC, ARR, AXS, DCP, ISC, SLO, LAS, LAX, RLA, RRA,
-        SAX, SHX, SHY, SRE, STP, TAS, XAA
+        AHX, ALR, ANC, ARR, AXS, DCP, ISC, SLO, LAS, LAX, RLA, RRA, SAX, SHX,
+        SHY, SRE, STP, TAS, XAA
     };
 
     enum AddressMode
@@ -140,6 +140,7 @@ private:
     void IncrementClock();
 
     uint8_t Read(uint16_t address);
+    uint8_t Peek(uint16_t address);
     void Write(uint8_t M, uint16_t address);
 
     // Addressing Modes
@@ -153,8 +154,8 @@ private:
     uint16_t AbsoluteX(bool isRMW = false);
     uint16_t AbsoluteY(bool isRMW = false);
     uint16_t Indirect();
-    uint16_t IndexedIndirect();
-    uint16_t IndirectIndexed(bool isRMW = false);
+    uint16_t IndirectX();
+    uint16_t IndirectY(bool isRMW = false);
 
     // Instruction Set
 
@@ -229,6 +230,11 @@ private:
     // Jump
     void DoJMP(uint16_t address); // Jump
 
+    // Unofficial instructions
+    void DoANC(uint16_t address);
+    void DoAXS(uint16_t address);
+
+
     void CheckNMI();
     void HandleNMI(); // Handle non-maskable interrupt
     void CheckIRQ();
@@ -240,7 +246,7 @@ private:
     uint8_t GetControllerOneShift();
 
     // Diagnostics
-    uint8_t DebugRead(uint16_t address);
+    
     bool IsLogEnabled();
     void LogProgramCounter();
     void LogRegisters();
@@ -256,7 +262,7 @@ private:
     void LogAbsoluteX(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress);
     void LogAbsoluteY(uint8_t lowByte, uint8_t highByte, uint16_t initialAddress, uint16_t finalAddress);
     void LogIndirect(uint8_t lowIndirect, uint8_t highIndirect, uint16_t indirect, uint16_t address);
-    void LogIndexedIndirect(uint8_t pointer, uint8_t lowIndirect, uint16_t address);
-    void LogIndirectIndexed(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress);
+    void LogIndirectX(uint8_t pointer, uint8_t lowIndirect, uint16_t address);
+    void LogIndirectY(uint8_t pointer, uint16_t initialAddress, uint16_t finalAddress);
     void PrintLog();
 };
