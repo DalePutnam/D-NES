@@ -1344,7 +1344,6 @@ void CPU::DoARR(uint16_t address)
     A = (A & M);
     A = (A >> 1) | (TEST_FLAG(P, CARRY) << 7);
 
-
     // if Result is 0 set zero flag
     TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
@@ -1353,20 +1352,6 @@ void CPU::DoARR(uint16_t address)
     TEST_AND_SET_FLAG(P, CARRY, (A & 0x40) != 0);
     // Set overflow flag to bit 6 xor bit 5
     TEST_AND_SET_FLAG(P, OVERFLOW, ((A & 0x40) ^ ((A & 0x20) << 1)) != 0);
-}
-
-void CPU::DoLAX(uint16_t address)
-{
-    if (IsLogEnabled()) LogInstructionName("LAX");
-
-    uint8_t M = Read(address);
-
-    A = X = M;
-
-    // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
-    // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
 void CPU::DoAXS(uint16_t address)
@@ -1384,6 +1369,153 @@ void CPU::DoAXS(uint16_t address)
     TEST_AND_SET_FLAG(P, ZERO, (AX == M));
     // Set negative flag if X is negative
     TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(X));
+}
+
+void CPU::DoDCP(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("DCP");
+
+    uint8_t M = Read(address);
+    Write(M, address);
+
+    uint8_t result = M - 1;
+    
+    TEST_AND_SET_FLAG(P, CARRY, (A >= result));
+    TEST_AND_SET_FLAG(P, ZERO, (A == result));
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A - result));
+
+    Write(result, address);
+}
+
+void CPU::DoISC(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("ISC");
+
+    uint8_t M = Read(address);
+    Write(M, address);
+
+    uint8_t firstResult = M + 1;
+    int16_t secondResult = A - firstResult - (1 - TEST_FLAG(P, CARRY));
+
+    // If overflow occurred, clear the carry flag
+    TEST_AND_SET_FLAG(P, CARRY, !(secondResult < 0));
+
+    uint8_t newA = static_cast<uint8_t>(secondResult);
+
+    // if signed overflow occurred set overflow flag
+    TEST_AND_SET_FLAG(P, OVERFLOW, ((A >> 7) != (newA >> 7)) && ((A >> 7) != (firstResult >> 7)));
+
+    A = newA;
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    
+    Write(firstResult, address);
+}
+
+void CPU::DoLAX(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("LAX");
+
+    uint8_t M = Read(address);
+
+    A = X = M;
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+}
+
+void CPU::DoRLA(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("RLA");
+
+    uint8_t M = Read(address);
+    Write(M, address);
+
+    uint8_t result = (M << 1) | TEST_FLAG(P, CARRY);
+    A = A & result;
+
+    TEST_AND_SET_FLAG(P, CARRY, (M & 0x80) != 0);
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+
+    Write(result, address);
+}
+
+void CPU::DoRRA(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("RRA");
+
+    uint8_t M = Read(address);
+    Write(M, address);
+
+    uint8_t firstResult = (M >> 1) | (TEST_FLAG(P, CARRY) << 7);
+
+    TEST_AND_SET_FLAG(P, CARRY, (M & 0x1) != 0);
+
+    int16_t secondResult = A + firstResult + TEST_FLAG(P, CARRY);
+
+    // If overflow occurred, set the carry flag
+    TEST_AND_SET_FLAG(P, CARRY, (secondResult > 0xFF));
+
+    uint8_t newA = static_cast<uint8_t>(secondResult);
+
+    // if signed overflow occurred set overflow flag
+    TEST_AND_SET_FLAG(P, OVERFLOW, ((A >> 7) != (newA >> 7)) && ((newA >> 7) != (firstResult >> 7)));
+
+    A = newA;
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    
+    Write(firstResult, address);
+}
+
+void CPU::DoSAX(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("SAX");
+
+    Write(A & X, address);
+}
+
+void CPU::DoSLO(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("SLO");
+
+    uint8_t M = Read(address);
+    Write(M, address);
+
+    uint8_t result = M << 1;
+    A = A | result;
+
+    TEST_AND_SET_FLAG(P, CARRY, (M & 0x80) != 0);
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+
+    Write(result, address);
+}
+
+void CPU::DoSRE(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("SRE");
+
+    uint8_t M = Read(address);
+    Write(M, address);
+
+    uint8_t result = M >> 1;
+    A = A ^ result;
+
+    TEST_AND_SET_FLAG(P, CARRY, (M & 0x1) != 0);
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+
+    Write(result, address);
 }
 
 void CPU::CheckNMI()
@@ -2031,8 +2163,29 @@ void CPU::Step()
     case AXS:
         DoAXS(address);
         break;
+    case DCP:
+        DoDCP(address);
+        break;
+    case ISC:
+        DoISC(address);
+        break;
     case LAX:
         DoLAX(address);
+        break;
+    case RLA:
+        DoRLA(address);
+        break;
+    case RRA:
+        DoRRA(address);
+        break;
+    case SAX:
+        DoSAX(address);
+        break;
+    case SLO:
+        DoSLO(address);
+        break;
+    case SRE:
+        DoSRE(address);
         break;
     case STP:
         throw std::runtime_error("CPU executed STP instruction");
@@ -2309,11 +2462,11 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { NOP, IMMEDIATE,   false, false }, // 0x80
     { STA, INDIRECT_X,  true,  true  }, // 0x81
     { NOP, IMMEDIATE,   false, false }, // 0x82
-    { SAX, INDIRECT_X,  false, false }, // 0x83
+    { SAX, INDIRECT_X,  true,  false }, // 0x83
     { STY, ZEROPAGE,    true,  true  }, // 0x84
     { STA, ZEROPAGE,    true,  true  }, // 0x85
     { STX, ZEROPAGE,    true,  true  }, // 0x86
-    { SAX, ZEROPAGE,    false, false }, // 0x87
+    { SAX, ZEROPAGE,    true,  false }, // 0x87
     { DEY, IMPLIED,     false, true  }, // 0x88
     { NOP, IMMEDIATE,   false, false }, // 0x89
     { TXA, IMPLIED,     false, true  }, // 0x8A
@@ -2321,7 +2474,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { STY, ABSOLUTE,    true,  true  }, // 0x8C
     { STA, ABSOLUTE,    true,  true  }, // 0x8D
     { STX, ABSOLUTE,    true,  true  }, // 0x8E
-    { SAX, ABSOLUTE,    false, false }, // 0x8F
+    { SAX, ABSOLUTE,    true,  false }, // 0x8F
     { BCC, RELATIVE,    false, true  }, // 0x90
     { STA, INDIRECT_Y,  true,  true  }, // 0x91
     { STP, IMPLIED,     false, false }, // 0x92
@@ -2329,14 +2482,14 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { STY, ZEROPAGE_X,  true,  true  }, // 0x94
     { STA, ZEROPAGE_X,  true,  true  }, // 0x95
     { STX, ZEROPAGE_Y,  true,  true  }, // 0x96
-    { SAX, ZEROPAGE_Y,  false, false }, // 0x97
+    { SAX, ZEROPAGE_Y,  true,  false }, // 0x97
     { TYA, IMPLIED,     false, true  }, // 0x98
     { STA, ABSOLUTE_Y,  true,  true  }, // 0x99
     { TXS, IMPLIED,     false, true  }, // 0x9A
     { TAS, ABSOLUTE_Y,  false, false }, // 0x9B
-    { SHY, ABSOLUTE_X,  false, false }, // 0x9C
+    { SHY, ABSOLUTE_X,  true,  false }, // 0x9C
     { STA, ABSOLUTE_X,  true,  true  }, // 0x9D
-    { SHX, ABSOLUTE_Y,  false, false }, // 0x9E
+    { SHX, ABSOLUTE_Y,  true,  false }, // 0x9E
     { AHX, ABSOLUTE_Y,  false, false }, // 0x9F
     { LDY, IMMEDIATE,   false, true  }, // 0xA0
     { LDA, INDIRECT_X,  false, true  }, // 0xA1

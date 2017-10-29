@@ -235,8 +235,14 @@ private:
     void DoANC(uint16_t address);
     void DoARR(uint16_t address);
     void DoAXS(uint16_t address);
+    void DoDCP(uint16_t address);
+    void DoISC(uint16_t address);
     void DoLAX(uint16_t address);
-
+    void DoRLA(uint16_t address);
+    void DoRRA(uint16_t address);
+    void DoSAX(uint16_t address);
+    void DoSLO(uint16_t address);
+    void DoSRE(uint16_t address);
 
     void CheckNMI();
     void HandleNMI(); // Handle non-maskable interrupt
