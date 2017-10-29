@@ -1300,6 +1300,25 @@ void CPU::DoTYA()
     ((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
+void CPU::DoALR(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("ALR");
+
+    uint8_t M = Read(address);
+
+    A = (A & M);
+
+    // Set carry flag to old bit 0
+    TEST_AND_SET_FLAG(P, CARRY, (A & 0x1) != 0);
+    
+    A >>= 1;
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+}
+
 void CPU::DoANC(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("AXS");
@@ -1316,21 +1335,55 @@ void CPU::DoANC(uint16_t address)
     TEST_AND_SET_FLAG(P, CARRY, TEST_FLAG(P, NEGATIVE));
 }
 
+void CPU::DoARR(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("ARR");
+
+    uint8_t M = Read(address);
+
+    A = (A & M);
+    A = (A >> 1) | (TEST_FLAG(P, CARRY) << 7);
+
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    // Set carry flag to bit 6
+    TEST_AND_SET_FLAG(P, CARRY, (A & 0x40) != 0);
+    // Set overflow flag to bit 6 xor bit 5
+    TEST_AND_SET_FLAG(P, OVERFLOW, ((A & 0x40) ^ ((A & 0x20) << 1)) != 0);
+}
+
+void CPU::DoLAX(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("LAX");
+
+    uint8_t M = Read(address);
+
+    A = X = M;
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+}
+
 void CPU::DoAXS(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("AXS");
 
     uint8_t M = Read(address);
     
-    uint8_t result = (X & A) - M;
-    // if X >= M set carry flag
-    TEST_AND_SET_FLAG(P, CARRY, (A >= M));
-    // if X = M set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, (A == M));
-    // set negative flag to bit 7 of result
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
+    uint8_t AX = (A & X);
+    X = AX - M;
 
-    X = result;
+    // if (A & X) >= M set carry flag
+    TEST_AND_SET_FLAG(P, CARRY, (AX >= M));
+    // if (A & X) = M set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, (AX == M));
+    // Set negative flag if X is negative
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(X));
 }
 
 void CPU::CheckNMI()
@@ -1749,7 +1802,7 @@ void CPU::Step()
 
     // Execute corresponding addressing mode
 
-    uint16_t address;
+    uint16_t address = PC;
     switch (desc.addressMode)
     {
     case ABSOLUTE:
@@ -1966,11 +2019,20 @@ void CPU::Step()
         DoTYA();
         break;
     // Unofficial Instructions
+    case ALR:
+        DoALR(address);
+        break;
     case ANC:
         DoANC(address);
         break;
+    case ARR:
+        DoARR(address);
+        break;
     case AXS:
         DoAXS(address);
+        break;
+    case LAX:
+        DoLAX(address);
         break;
     case STP:
         throw std::runtime_error("CPU executed STP instruction");

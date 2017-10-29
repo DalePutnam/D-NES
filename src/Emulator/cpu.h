@@ -231,8 +231,11 @@ private:
     void DoJMP(uint16_t address); // Jump
 
     // Unofficial instructions
+    void DoALR(uint16_t address);
     void DoANC(uint16_t address);
+    void DoARR(uint16_t address);
     void DoAXS(uint16_t address);
+    void DoLAX(uint16_t address);
 
 
     void CheckNMI();
