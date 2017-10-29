@@ -38,10 +38,10 @@ FE_INCLUDE_DIRS += $(EMU_INCLUDE_DIRS)
 # Build Rules
 ####################################################################
 
-all: CXXFLAGS += -O2
+all: CXXFLAGS += -O3
 all: $(EXEC)
 
-debug: CXXFLAGS += -g
+debug: CXXFLAGS += -Og -g
 debug: $(EXEC)
 
 $(EMU_BUILD_DIR)/%.o: $(EMU_SOURCE_DIR)/%.cc
