@@ -1300,6 +1300,21 @@ void CPU::DoTYA()
     ((A >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
 }
 
+void CPU::DoAHX(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("AHX");
+
+    uint8_t addressHigh = address >> 8;
+    uint8_t result = (A & X & (addressHigh + 1));
+
+    if ((address - Y) < (address & 0xFF00))
+    {
+        address = (address & 0x00FF) | (static_cast<uint16_t>(result) << 8);
+    }
+
+    Write(result, address);
+}
+
 void CPU::DoALR(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("ALR");
@@ -1415,6 +1430,20 @@ void CPU::DoISC(uint16_t address)
     Write(firstResult, address);
 }
 
+void CPU::DoLAS(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("LAS");
+
+    uint8_t M = Read(address);
+    
+    A = (S & M);
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+}
+
 void CPU::DoLAX(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("LAX");
@@ -1484,6 +1513,36 @@ void CPU::DoSAX(uint16_t address)
     Write(A & X, address);
 }
 
+void CPU::DoSHY(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("SHY");
+
+    uint8_t addressHigh = address >> 8;
+    uint8_t result = (Y & (addressHigh + 1));
+
+    if ((address - X) < (address & 0xFF00))
+    {
+        address = (address & 0x00FF) | (static_cast<uint16_t>(result) << 8);
+    }
+
+    Write(result, address);
+}
+
+void CPU::DoSHX(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("SHX");
+
+    uint8_t addressHigh = address >> 8;
+    uint8_t result = (X & (addressHigh + 1));
+
+    if ((address - Y) < (address & 0xFF00))
+    {
+        address = (address & 0x00FF) | (static_cast<uint16_t>(result) << 8);
+    }
+
+    Write(result, address);
+}
+
 void CPU::DoSLO(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("SLO");
@@ -1516,6 +1575,36 @@ void CPU::DoSRE(uint16_t address)
     TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 
     Write(result, address);
+}
+
+void CPU::DoTAS(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("TAS");
+    
+    uint8_t addressHigh = address >> 8;
+    uint8_t result = (A & X & (addressHigh + 1));
+
+    if ((address - Y) < (address & 0xFF00))
+    {
+        address = (address & 0x00FF) | (static_cast<uint16_t>(result) << 8);
+    }
+
+    S = (A & X);
+
+    Write(result, address);
+}
+
+void CPU::DoXAA(uint16_t address)
+{
+    if (IsLogEnabled()) LogInstructionName("XAA");
+
+    uint8_t M = Read(address);
+    A = (A | 0xEE) & X & M;
+
+    // if Result is 0 set zero flag
+    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    // if bit seven is 1 set negative flag
+    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
 void CPU::CheckNMI()
@@ -2151,6 +2240,9 @@ void CPU::Step()
         DoTYA();
         break;
     // Unofficial Instructions
+    case AHX:
+        DoAHX(address);
+        break;
     case ALR:
         DoALR(address);
         break;
@@ -2169,6 +2261,9 @@ void CPU::Step()
     case ISC:
         DoISC(address);
         break;
+    case LAS:
+        DoLAS(address);
+        break;
     case LAX:
         DoLAX(address);
         break;
@@ -2181,18 +2276,26 @@ void CPU::Step()
     case SAX:
         DoSAX(address);
         break;
+    case SHX:
+        DoSHX(address);
+        break;
+    case SHY:
+        DoSHY(address);
+        break;
     case SLO:
         DoSLO(address);
         break;
     case SRE:
         DoSRE(address);
         break;
+    case TAS:
+        DoTAS(address);
+        break;
+    case XAA:
+        DoXAA(address);
+        break;
     case STP:
         throw std::runtime_error("CPU executed STP instruction");
-    default:
-        DoNOP();
-        std::cout << "Unsupported Instruction: " << std::hex << static_cast<uint32_t>(opcode) << std::endl;
-        break;
     }
 
     AccumulatorFlag = false;
@@ -2486,7 +2589,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { TYA, IMPLIED,     false, true  }, // 0x98
     { STA, ABSOLUTE_Y,  true,  true  }, // 0x99
     { TXS, IMPLIED,     false, true  }, // 0x9A
-    { TAS, ABSOLUTE_Y,  false, false }, // 0x9B
+    { TAS, ABSOLUTE_Y,  true,  false }, // 0x9B
     { SHY, ABSOLUTE_X,  true,  false }, // 0x9C
     { STA, ABSOLUTE_X,  true,  true  }, // 0x9D
     { SHX, ABSOLUTE_Y,  true,  false }, // 0x9E

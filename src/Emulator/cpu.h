@@ -231,18 +231,24 @@ private:
     void DoJMP(uint16_t address); // Jump
 
     // Unofficial instructions
+    void DoAHX(uint16_t address);
     void DoALR(uint16_t address);
     void DoANC(uint16_t address);
     void DoARR(uint16_t address);
     void DoAXS(uint16_t address);
     void DoDCP(uint16_t address);
     void DoISC(uint16_t address);
+    void DoLAS(uint16_t address);
     void DoLAX(uint16_t address);
     void DoRLA(uint16_t address);
     void DoRRA(uint16_t address);
     void DoSAX(uint16_t address);
+    void DoSHY(uint16_t address);
+    void DoSHX(uint16_t address);
     void DoSLO(uint16_t address);
     void DoSRE(uint16_t address);
+    void DoTAS(uint16_t address);
+    void DoXAA(uint16_t address);
 
     void CheckNMI();
     void HandleNMI(); // Handle non-maskable interrupt
