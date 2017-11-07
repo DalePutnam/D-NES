@@ -14,6 +14,7 @@
 #include "ppu.h"
 #include "apu.h"
 
+// Processor status flags
 #define NEGATIVE 0x80
 #define OVERFLOW 0x40
 #define INTERRUPT 0x20
@@ -22,12 +23,18 @@
 #define IRQ_INHIBIT 0x4
 #define ZERO 0x2
 #define CARRY 0x1
+
+// Flag operations
 #define SET_FLAG(P, FLAG) ((P) |= (FLAG))
 #define CLEAR_FLAG(P, FLAG) ((P) &= ~(FLAG))
 #define TEST_FLAG(P, FLAG) (((P) & (FLAG)) != 0)
-#define TEST_AND_SET_FLAG(P, FLAG, TEST) ((TEST) ? SET_FLAG(P, FLAG) : CLEAR_FLAG(P, FLAG))
+#define CONDITIONAL_SET_FLAG(P, FLAG, TEST) ((TEST) ? SET_FLAG(P, FLAG) : CLEAR_FLAG(P, FLAG))
+
+// Some common conditions
 #define IS_NEGATIVE(A) (((A) & NEGATIVE) != 0)
 #define IS_ZERO(A) ((A) == 0)
+
+#define STACK_BASE 0x100
 
 uint8_t CPU::Peek(uint16_t address)
 {
@@ -467,21 +474,19 @@ void CPU::DoADC(uint16_t address)
 
     uint8_t M = Read(address);
 
-    uint8_t C = P & 0x01; // get carry flag
-    uint8_t origA = A;
-    int16_t result = A + M + C;
+    uint16_t wideResult = A + M + TEST_FLAG(P, CARRY);
+    uint8_t result = static_cast<uint8_t>(wideResult);
 
     // If overflow occurred, set the carry flag
-    (result > 0xFF) ? P = P | 0x01 : P = P & 0xFE;
-
-    A = static_cast<uint8_t>(result);
-
+    CONDITIONAL_SET_FLAG(P, CARRY, (wideResult > 0xFF));
     // if Result is 0 set zero flag
-    (A == 0) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(result));
     // if bit seven is 1 set negative flag
-    ((A & 0x80) >> 7) == 1 ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
     // if signed overflow occurred set overflow flag
-    ((A >> 7) != (origA >> 7) && (A >> 7) != (M >> 7)) ? P = P | 0x40 : P = P & 0xBF;
+    CONDITIONAL_SET_FLAG(P, OVERFLOW, (result >> 7) != (A >> 7) && (result >> 7) != (M >> 7));
+    
+    A = result;
 }
 
 // Logical And
@@ -496,9 +501,9 @@ void CPU::DoAND(uint16_t address)
     A = A & M;
 
     // if Result is 0 set zero flag
-    (A == 0) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    (A >> 7) == 1 ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
 // Arithmetic Shift Left
@@ -512,17 +517,16 @@ void CPU::DoASL(uint16_t address)
     uint8_t M = Read(address);
     Write(M, address);
 
-    uint8_t origM = M;
-    M = M << 1;
+    uint8_t result = M << 1;
 
-    // Set carry flag to bit 7 of origM
-    (origM >> 7) == 1 ? P = P | 0x01 : P = P & 0xFE;
+    // Set carry flag to bit 7 of M
+    CONDITIONAL_SET_FLAG(P, CARRY, (M & 0x80) != 0);
     // if Result is 0 set zero flag
-    (M == 0) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(result));
     // if bit seven is 1 set negative flag
-    (M >> 7) == 1 ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
 
-    Write(M, address);
+    Write(result, address);
 }
 
 // Common Branch function
@@ -550,7 +554,7 @@ void CPU::DoBCC(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if ((P & 0x01) == 0)
+    if (!TEST_FLAG(P, CARRY))
     {
         DoBranch(offset);
     }
@@ -565,7 +569,7 @@ void CPU::DoBCS(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if ((P & 0x01) == 1)
+    if (TEST_FLAG(P, CARRY))
     {
         DoBranch(offset);
     }
@@ -580,7 +584,7 @@ void CPU::DoBEQ(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if (((P & 0x02) >> 1) == 1)
+    if (TEST_FLAG(P, ZERO))
     {
         DoBranch(offset);
     }
@@ -600,11 +604,11 @@ void CPU::DoBIT(uint16_t address)
     uint8_t result = A & M;
 
     // if Result is 0 set zero flag
-    (result == 0) ? P = P | 0x02 : P = P & 0xFD;
-    // Set overflow flag to bit 6 of M
-    (((M & 0x40) >> 6) == 1) ? P = P | 0x40 : P = P & 0xBF;
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(result));
     // Set negative flag to bit 7 of M
-    (((M & 0x80) >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(M));
+    // Set overflow flag to bit 6 of M
+    CONDITIONAL_SET_FLAG(P, OVERFLOW, (M & 0x40) != 0);
 }
 
 // Branch if Minus
@@ -616,7 +620,7 @@ void CPU::DoBMI(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if (((P & 0x80) >> 7) == 1)
+    if (TEST_FLAG(P, NEGATIVE))
     {
         DoBranch(offset);
     }
@@ -631,7 +635,7 @@ void CPU::DoBNE(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if (((P & 0x02) >> 1) == 0)
+    if (!TEST_FLAG(P, ZERO))
     {
         DoBranch(offset);
     }
@@ -646,7 +650,7 @@ void CPU::DoBPL(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if (((P & 0x80) >> 7) == 0)
+    if (!TEST_FLAG(P, NEGATIVE))
     {
         DoBranch(offset);
     }
@@ -664,14 +668,17 @@ void CPU::DoBRK()
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
 
-    Write(highPC, 0x100 + S);
-    Write(lowPC, 0x100 + (S - 1));
-    Write(P | 0x30, 0x100 + (S - 2));
+    Write(highPC, STACK_BASE + S);
+    Write(lowPC, STACK_BASE + (S - 1));
+    Write(P | INTERRUPT | BREAK, STACK_BASE + (S - 2));
     S -= 3;
 
-    P |= 0x4;
+    SET_FLAG(P, IRQ_INHIBIT);
 
-    PC = Read(0xFFFE) + (static_cast<uint16_t>(Read(0xFFFF)) * 0x100);
+    uint16_t newLowPC = Read(0xFFFE);
+    uint16_t newHighPC = Read(0xFFFF);
+
+    PC = (newHighPC << 8) | newLowPC;
 }
 
 // Branch if Overflow Clear
@@ -683,7 +690,7 @@ void CPU::DoBVC(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if (((P & 0x40) >> 6) == 0)
+    if (!TEST_FLAG(P, OVERFLOW))
     {
         DoBranch(offset);
     }
@@ -698,7 +705,7 @@ void CPU::DoBVS(uint16_t address)
 
     int8_t offset = Read(address);
 
-    if (((P & 0x40) >> 6) == 1)
+    if (TEST_FLAG(P, OVERFLOW))
     {
         DoBranch(offset);
     }
@@ -709,7 +716,7 @@ void CPU::DoCLC()
 {
     if (IsLogEnabled()) LogInstructionName("CLC");
 
-    P = P & 0xFE;
+    CLEAR_FLAG(P, CARRY);
 }
 
 // Clear Decimal Mode
@@ -720,7 +727,7 @@ void CPU::DoCLD()
 {
     if (IsLogEnabled()) LogInstructionName("CLD");
 
-    P = P & 0xF7;
+    CLEAR_FLAG(P, DECIMAL);
 }
 
 // Clear Interrupt Disable
@@ -728,7 +735,7 @@ void CPU::DoCLI()
 {
     if (IsLogEnabled()) LogInstructionName("CLI");
 
-    P = P & 0xFB;
+    CLEAR_FLAG(P, IRQ_INHIBIT);
 }
 
 // Clear Overflow flag
@@ -736,7 +743,7 @@ void CPU::DoCLV()
 {
     if (IsLogEnabled()) LogInstructionName("CLV");
 
-    P = P & 0xBF;
+    CLEAR_FLAG(P, OVERFLOW);
 }
 
 // Compare
@@ -750,12 +757,13 @@ void CPU::DoCMP(uint16_t address)
     uint8_t M = Read(address);
 
     uint8_t result = A - M;
+
     // if A >= M set carry flag
-    (A >= M) ? P = P | 0x01 : P = P & 0xFE;
+    CONDITIONAL_SET_FLAG(P, CARRY, (A >= M));
     // if A = M set zero flag
-    (A == M) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, (A == M));
     // set negative flag to bit 7 of result
-    ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
 }
 
 // Compare X Register
@@ -769,12 +777,13 @@ void CPU::DoCPX(uint16_t address)
     uint8_t M = Read(address);
 
     uint8_t result = X - M;
+
     // if X >= M set carry flag
-    (X >= M) ? P = P | 0x01 : P = P & 0xFE;
+    CONDITIONAL_SET_FLAG(P, CARRY, (X >= M));
     // if X = M set zero flag
-    (X == M) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, (X == M));
     // set negative flag to bit 7 of result
-    ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
 }
 
 // Compare Y Register
@@ -788,12 +797,13 @@ void CPU::DoCPY(uint16_t address)
     uint8_t M = Read(address);
 
     uint8_t result = Y - M;
+
     // if Y >= M set carry flag
-    (Y >= M) ? P = P | 0x01 : P = P & 0xFE;
+    CONDITIONAL_SET_FLAG(P, CARRY, (Y >= M));
     // if Y = M set zero flag
-    (Y == M) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, (Y == M));
     // set negative flag to bit 7 of result
-    ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
 }
 
 // Decrement Memory
@@ -806,10 +816,11 @@ void CPU::DoDEC(uint16_t address)
     Write(M, address);
 
     uint8_t result = M - 1;
+
     // if result is 0 set zero flag
-    (result == 0) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(result));
     // set negative flag to bit 7 of result
-    ((result >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(result));
     
     Write(result, address);
 }
@@ -821,10 +832,11 @@ void CPU::DoDEX()
     if (IsLogEnabled()) LogInstructionName("DEX");
 
     --X;
+
     // if X is 0 set zero flag
-    (X == 0) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(X));
     // set negative flag to bit 7 of X
-    ((X >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(X));
 }
 
 // Decrement X Register
@@ -834,10 +846,11 @@ void CPU::DoDEY()
     if (IsLogEnabled()) LogInstructionName("DEY");
 
     --Y;
+
     // if Y is 0 set zero flag
-    (Y == 0) ? P = P | 0x02 : P = P & 0xFD;
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(Y));
     // set negative flag to bit 7 of Y
-    ((Y >> 7) == 1) ? P = P | 0x80 : P = P & 0x7F;
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(Y));
 }
 
 // Exclusive Or
@@ -1324,14 +1337,14 @@ void CPU::DoALR(uint16_t address)
     A = (A & M);
 
     // Set carry flag to old bit 0
-    TEST_AND_SET_FLAG(P, CARRY, (A & 0x1) != 0);
+    CONDITIONAL_SET_FLAG(P, CARRY, (A & 0x1) != 0);
     
     A >>= 1;
 
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
 void CPU::DoANC(uint16_t address)
@@ -1343,11 +1356,11 @@ void CPU::DoANC(uint16_t address)
     A = A & M;
     
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
     // Copy negative flag to carry flag
-    TEST_AND_SET_FLAG(P, CARRY, TEST_FLAG(P, NEGATIVE));
+    CONDITIONAL_SET_FLAG(P, CARRY, TEST_FLAG(P, NEGATIVE));
 }
 
 void CPU::DoARR(uint16_t address)
@@ -1360,13 +1373,13 @@ void CPU::DoARR(uint16_t address)
     A = (A >> 1) | (TEST_FLAG(P, CARRY) << 7);
 
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
     // Set carry flag to bit 6
-    TEST_AND_SET_FLAG(P, CARRY, (A & 0x40) != 0);
+    CONDITIONAL_SET_FLAG(P, CARRY, (A & 0x40) != 0);
     // Set overflow flag to bit 6 xor bit 5
-    TEST_AND_SET_FLAG(P, OVERFLOW, ((A & 0x40) ^ ((A & 0x20) << 1)) != 0);
+    CONDITIONAL_SET_FLAG(P, OVERFLOW, ((A & 0x40) ^ ((A & 0x20) << 1)) != 0);
 }
 
 void CPU::DoAXS(uint16_t address)
@@ -1379,11 +1392,11 @@ void CPU::DoAXS(uint16_t address)
     X = AX - M;
 
     // if (A & X) >= M set carry flag
-    TEST_AND_SET_FLAG(P, CARRY, (AX >= M));
+    CONDITIONAL_SET_FLAG(P, CARRY, (AX >= M));
     // if (A & X) = M set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, (AX == M));
+    CONDITIONAL_SET_FLAG(P, ZERO, (AX == M));
     // Set negative flag if X is negative
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(X));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(X));
 }
 
 void CPU::DoDCP(uint16_t address)
@@ -1395,9 +1408,9 @@ void CPU::DoDCP(uint16_t address)
 
     uint8_t result = M - 1;
     
-    TEST_AND_SET_FLAG(P, CARRY, (A >= result));
-    TEST_AND_SET_FLAG(P, ZERO, (A == result));
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A - result));
+    CONDITIONAL_SET_FLAG(P, CARRY, (A >= result));
+    CONDITIONAL_SET_FLAG(P, ZERO, (A == result));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A - result));
 
     Write(result, address);
 }
@@ -1413,19 +1426,19 @@ void CPU::DoISC(uint16_t address)
     int16_t secondResult = A - firstResult - (1 - TEST_FLAG(P, CARRY));
 
     // If overflow occurred, clear the carry flag
-    TEST_AND_SET_FLAG(P, CARRY, !(secondResult < 0));
+    CONDITIONAL_SET_FLAG(P, CARRY, !(secondResult < 0));
 
     uint8_t newA = static_cast<uint8_t>(secondResult);
 
     // if signed overflow occurred set overflow flag
-    TEST_AND_SET_FLAG(P, OVERFLOW, ((A >> 7) != (newA >> 7)) && ((A >> 7) != (firstResult >> 7)));
+    CONDITIONAL_SET_FLAG(P, OVERFLOW, ((A >> 7) != (newA >> 7)) && ((A >> 7) != (firstResult >> 7)));
 
     A = newA;
 
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
     
     Write(firstResult, address);
 }
@@ -1439,9 +1452,9 @@ void CPU::DoLAS(uint16_t address)
     A = (S & M);
 
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
 void CPU::DoLAX(uint16_t address)
@@ -1453,9 +1466,9 @@ void CPU::DoLAX(uint16_t address)
     A = X = M;
 
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
 void CPU::DoRLA(uint16_t address)
@@ -1468,9 +1481,9 @@ void CPU::DoRLA(uint16_t address)
     uint8_t result = (M << 1) | TEST_FLAG(P, CARRY);
     A = A & result;
 
-    TEST_AND_SET_FLAG(P, CARRY, (M & 0x80) != 0);
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, CARRY, (M & 0x80) != 0);
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 
     Write(result, address);
 }
@@ -1484,24 +1497,24 @@ void CPU::DoRRA(uint16_t address)
 
     uint8_t firstResult = (M >> 1) | (TEST_FLAG(P, CARRY) << 7);
 
-    TEST_AND_SET_FLAG(P, CARRY, (M & 0x1) != 0);
+    CONDITIONAL_SET_FLAG(P, CARRY, (M & 0x1) != 0);
 
     int16_t secondResult = A + firstResult + TEST_FLAG(P, CARRY);
 
     // If overflow occurred, set the carry flag
-    TEST_AND_SET_FLAG(P, CARRY, (secondResult > 0xFF));
+    CONDITIONAL_SET_FLAG(P, CARRY, (secondResult > 0xFF));
 
     uint8_t newA = static_cast<uint8_t>(secondResult);
 
     // if signed overflow occurred set overflow flag
-    TEST_AND_SET_FLAG(P, OVERFLOW, ((A >> 7) != (newA >> 7)) && ((newA >> 7) != (firstResult >> 7)));
+    CONDITIONAL_SET_FLAG(P, OVERFLOW, ((A >> 7) != (newA >> 7)) && ((newA >> 7) != (firstResult >> 7)));
 
     A = newA;
 
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
     
     Write(firstResult, address);
 }
@@ -1553,9 +1566,9 @@ void CPU::DoSLO(uint16_t address)
     uint8_t result = M << 1;
     A = A | result;
 
-    TEST_AND_SET_FLAG(P, CARRY, (M & 0x80) != 0);
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, CARRY, (M & 0x80) != 0);
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 
     Write(result, address);
 }
@@ -1570,9 +1583,9 @@ void CPU::DoSRE(uint16_t address)
     uint8_t result = M >> 1;
     A = A ^ result;
 
-    TEST_AND_SET_FLAG(P, CARRY, (M & 0x1) != 0);
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, CARRY, (M & 0x1) != 0);
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 
     Write(result, address);
 }
@@ -1602,9 +1615,9 @@ void CPU::DoXAA(uint16_t address)
     A = (A | 0xEE) & X & M;
 
     // if Result is 0 set zero flag
-    TEST_AND_SET_FLAG(P, ZERO, IS_ZERO(A));
+    CONDITIONAL_SET_FLAG(P, ZERO, IS_ZERO(A));
     // if bit seven is 1 set negative flag
-    TEST_AND_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
+    CONDITIONAL_SET_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
 void CPU::CheckNMI()
