@@ -927,25 +927,31 @@ void CPU::DoJMP(uint16_t address)
 }
 
 // Jump to Subroutine
-// Pushes PC onto the stack and then sets PC to M
-// This implementation may produce inaccurate behaviour since
-// in the actual 6502, the last operation of the address fetch doesn't
-// happen until after the rest of JSR has completed, but here
-// it happens before with some fudging to compensate (decrementing PC)
-void CPU::DoJSR(uint16_t address)
+// Pushes PC onto the stack and then sets PC to location specified
+// by next two bytes after the opcode. This instruction does the
+// memory accesses in a different order than the normal absolute
+// addressing mode so these accesses are done hear rather than
+// in their own addressing function.
+void CPU::DoJSR()
 {
-    if (IsLogEnabled()) LogInstructionName("JSR");
-
-    PC--;
-    Read(STACK_BASE + S); // internal operation
-
+    uint8_t newLowPC = Read(PC++);
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
 
+    Read(STACK_BASE + S); // internal operation
     Write(highPC, STACK_BASE + S--);
     Write(lowPC, STACK_BASE + S--);
 
-    PC = address;
+    uint8_t newHighPC = Read(PC);
+
+    PC = newHighPC;
+    PC = (PC << 8) | newLowPC;
+
+    if (IsLogEnabled())
+    {
+        LogInstructionName("JSR");
+        LogAbsolute(newLowPC, newHighPC, PC, true);
+    }
 }
 
 // Load Accumulator
@@ -2047,7 +2053,7 @@ void CPU::Step()
     switch (desc.addressMode)
     {
     case ABSOLUTE:
-        address = Absolute(desc.instruction == JMP || desc.instruction == JSR);
+        address = Absolute(desc.instruction == JMP);
         break;
     case ABSOLUTE_X:
         address = AbsoluteX(desc.isReadModifyWrite);
@@ -2060,10 +2066,6 @@ void CPU::Step()
         break;
     case IMMEDIATE:
         address = Immediate();
-        break;
-    case IMPLIED:
-        Read(PC);
-        address = PC;
         break;
     case INDIRECT:
         address = Indirect();
@@ -2085,6 +2087,10 @@ void CPU::Step()
         break;
     case ZEROPAGE_Y:
         address = ZeroPageY();
+        break;
+    case IMPLIED:
+        Read(PC);
+        address = PC;
         break;
     }
 
@@ -2176,7 +2182,7 @@ void CPU::Step()
         DoJMP(address);
         break;
     case JSR:
-        DoJSR(address);
+        DoJSR();
         break;
     case LDA:
         DoLDA(address);
@@ -2486,7 +2492,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { ORA, ABSOLUTE_X,  false, true  }, // 0x1D
     { ASL, ABSOLUTE_X,  true,  true  }, // 0x1E
     { SLO, ABSOLUTE_X,  true,  false }, // 0x1F
-    { JSR, ABSOLUTE,    false, true  }, // 0x20
+    { JSR, IMPLIED,     false, true  }, // 0x20
     { AND, INDIRECT_X,  false, true  }, // 0x21
     { STP, IMPLIED,     false, false }, // 0x22
     { RLA, INDIRECT_X,  true,  false }, // 0x23

@@ -199,7 +199,7 @@ private:
 
     // Stack Instructions
     void DoBRK(); // Force Interrupt
-    void DoJSR(uint16_t address); // Jump to Subroutine
+    void DoJSR(); // Jump to Subroutine
     void DoPHA(); // Push Accumulator
     void DoPHP(); // Push Processor Status
     void DoPLA(); // Pull Accumulator
