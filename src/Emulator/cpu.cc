@@ -8,7 +8,6 @@
 #include <string>
 #include <cstring>
 #include <iostream>
-#include <iomanip>
 
 #include "cpu.h"
 #include "ppu.h"
@@ -141,24 +140,7 @@ void CPU::Write(uint8_t M, uint16_t address)
     // OAM DMA
     if (address == 0x4014)
     {
-        uint16_t page = M * 0x100;
-
-        if ((Clock - 3) % 6 == 0)
-        {
-            Read(PC);
-        }
-        else
-        {
-            Read(PC);
-            Read(PC);
-        }
-
-        for (int i = 0; i < 0x100; ++i)
-        {
-            uint8_t value = Read(page + i);
-            IncrementClock();
-            Ppu->WriteOAMDATA(value);
-        }
+        DoOamDMA(M);
     }
     else if (address < 0x2000)
     {
@@ -1659,7 +1641,7 @@ void CPU::CheckNMI()
     }
 }
 
-void CPU::HandleNMI()
+void CPU::DoNMI()
 {
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
@@ -1683,13 +1665,13 @@ void CPU::HandleNMI()
 void CPU::CheckIRQ()
 {
     // If IRQ line is high and interrupt inhibit flag is false
-    if (Apu->CheckIRQ() && !(P & 0x4))
+    if (Apu->CheckIRQ() && !TEST_FLAG(P, IRQ_INHIBIT))
     {
         IrqPending = true;
     }
 }
 
-void CPU::HandleIRQ()
+void CPU::DoIRQ()
 {
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
@@ -1708,6 +1690,29 @@ void CPU::HandleIRQ()
     uint16_t newHighPC = Read(0xFFFF);
 
     PC = (newHighPC << 8) | newLowPC;
+}
+
+void CPU::DoOamDMA(uint8_t page)
+{
+    uint16_t address = page * 0x100;
+
+    if ((Clock - 3) % 6 == 0)
+    {
+        Read(PC);
+    }
+    else
+    {
+        Read(PC);
+        Read(PC);
+    }
+
+    for (int i = 0; i < 0x100; ++i)
+    {
+        uint8_t value = Read(address + i);
+        Write(value, 0x2004);
+        //IncrementClock();
+        //Ppu->WriteOAMDATA(value);
+    }
 }
 
 void CPU::SetControllerStrobe(bool strobe)
@@ -2023,13 +2028,13 @@ void CPU::Step()
     if (NmiPending)
     {
         NmiPending = false;
-        HandleNMI();
+        DoNMI();
     }
 
     if (IrqPending)
     {
         IrqPending = false;
-        HandleIRQ();
+        DoIRQ();
     }
 
     if (IsLogEnabled())
@@ -2090,6 +2095,8 @@ void CPU::Step()
         break;
     case IMPLIED:
         Read(PC);
+        address = PC;
+    case STACK:
         address = PC;
         break;
     }
@@ -2492,7 +2499,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { ORA, ABSOLUTE_X,  false, true  }, // 0x1D
     { ASL, ABSOLUTE_X,  true,  true  }, // 0x1E
     { SLO, ABSOLUTE_X,  true,  false }, // 0x1F
-    { JSR, IMPLIED,     false, true  }, // 0x20
+    { JSR, STACK,       false, true  }, // 0x20
     { AND, INDIRECT_X,  false, true  }, // 0x21
     { STP, IMPLIED,     false, false }, // 0x22
     { RLA, INDIRECT_X,  true,  false }, // 0x23

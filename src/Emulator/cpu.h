@@ -124,7 +124,7 @@ private:
     enum AddressMode
     {
         ACCUMULATOR, RELATIVE, IMMEDIATE, IMPLIED, ZEROPAGE, ZEROPAGE_X, ZEROPAGE_Y,
-        ABSOLUTE, ABSOLUTE_X, ABSOLUTE_Y, INDIRECT, INDIRECT_X, INDIRECT_Y
+        ABSOLUTE, ABSOLUTE_X, ABSOLUTE_Y, INDIRECT, INDIRECT_X, INDIRECT_Y, STACK
     };
 
     struct InstructionDescriptor
@@ -251,9 +251,11 @@ private:
     void DoXAA(uint16_t address);
 
     void CheckNMI();
-    void HandleNMI(); // Handle non-maskable interrupt
+    void DoNMI(); // Handle non-maskable interrupt
     void CheckIRQ();
-    void HandleIRQ(); // Handle standard interrupt
+    void DoIRQ(); // Handle standard interrupt
+
+    void DoOamDMA(uint8_t page);
 
     void Step(); // Execute next instruction
 
