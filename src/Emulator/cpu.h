@@ -33,8 +33,6 @@ public:
     void AttachAPU(APU* apu);
     void AttachCart(Cart* cart);
 
-    void SetStalled(bool stalled);
-
     uint64_t GetClock();
 
     void SetControllerOneState(uint8_t state);
@@ -80,6 +78,7 @@ private:
     std::FILE* LogFile;
 
     // Debug Strings
+    bool LogIsOfficial;
     char ProgramCounter[5];
     char InstructionStr[5];
     char OpCode[3];
@@ -100,6 +99,8 @@ private:
 
     bool IrqPending;
     bool AccumulatorFlag;
+
+    uint8_t DmcDmaDelay;
 
     // Registers
     uint16_t PC; // Program Counter
@@ -124,7 +125,7 @@ private:
     enum AddressMode
     {
         ACCUMULATOR, RELATIVE, IMMEDIATE, IMPLIED, ZEROPAGE, ZEROPAGE_X, ZEROPAGE_Y,
-        ABSOLUTE, ABSOLUTE_X, ABSOLUTE_Y, INDIRECT, INDIRECT_X, INDIRECT_Y, STACK
+        ABSOLUTE, ABSOLUTE_X, ABSOLUTE_Y, INDIRECT, INDIRECT_X, INDIRECT_Y
     };
 
     struct InstructionDescriptor
@@ -139,9 +140,9 @@ private:
 
     void IncrementClock();
 
-    uint8_t Read(uint16_t address);
     uint8_t Peek(uint16_t address);
-    void Write(uint8_t M, uint16_t address);
+    uint8_t Read(uint16_t address, bool noDMA = false);
+    void Write(uint8_t M, uint16_t address, bool noDMA = false);
 
     // Addressing Modes
     uint16_t Relative();
@@ -216,7 +217,7 @@ private:
     void DoDEY(); // Decrement Y Register
     void DoINX(); // Increment X Register
     void DoINY(); // Increment Y Register
-    void DoNOP(); // No Operation
+    void DoNOP(uint16_t address); // No Operation
     void DoSEC(); // Set Carry Flag
     void DoSED(); // Set Decimal Flag
     void DoSEI(); // Set Interrupt Disable
@@ -256,6 +257,7 @@ private:
     void DoIRQ(); // Handle standard interrupt
 
     void DoOamDMA(uint8_t page);
+    void DoDmcDMA();
 
     void Step(); // Execute next instruction
 
@@ -268,7 +270,8 @@ private:
     void LogProgramCounter();
     void LogRegisters();
     void LogOpcode(uint8_t opcode);
-    void LogInstructionName(std::string name);
+    void LogOfficial(bool isOfficial);
+    void LogInstructionName(const char* name);
     void LogAccumulator();
     void LogRelative(uint8_t value);
     void LogImmediate(uint8_t value);

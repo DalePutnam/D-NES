@@ -63,13 +63,18 @@ void CPU::IncrementClock()
 
     Apu->Step();
 
+    if (Apu->CheckDmaRequest())
+    {
+        DmcDmaDelay = 4;
+    }
+
     if (PpuRendevous > 0)
     {
         PpuRendevous -= 3;
     }
 }
 
-uint8_t CPU::Read(uint16_t address)
+uint8_t CPU::Read(uint16_t address, bool noDMA)
 {
     if (AccumulatorFlag)
     {
@@ -78,11 +83,19 @@ uint8_t CPU::Read(uint16_t address)
 
     uint8_t value;
 
-    do
-    {
-        IncrementClock();
-    } while (Apu->CheckStalled());
+    IncrementClock();
 
+    while (DmcDmaDelay > 0 && !noDMA)
+    {
+        DmcDmaDelay--;
+
+        IncrementClock();
+
+        if (DmcDmaDelay == 0)
+        {
+            DoDmcDMA();
+        }
+    }
 
     if (address < 0x2000)
     {
@@ -127,7 +140,7 @@ uint8_t CPU::Read(uint16_t address)
     return value;
 }
 
-void CPU::Write(uint8_t M, uint16_t address)
+void CPU::Write(uint8_t M, uint16_t address, bool noDMA)
 {
     if (AccumulatorFlag)
     {
@@ -137,9 +150,23 @@ void CPU::Write(uint8_t M, uint16_t address)
 
     IncrementClock();
 
-    // OAM DMA
-    if (address == 0x4014)
+    if (DmcDmaDelay > 0 && !noDMA)
     {
+        DmcDmaDelay--;
+    }
+
+    // OAM DMA
+    if (address == 0x4014 && !noDMA)
+    {
+        // If DMC DMA was requested this cycle, delay 2 cycles execute the DMA
+        if (DmcDmaDelay > 0)
+        {
+            IncrementClock();
+            IncrementClock();
+            DoDmcDMA();
+            DmcDmaDelay = 0;
+        }
+
         DoOamDMA(M);
     }
     else if (address < 0x2000)
@@ -382,9 +409,7 @@ uint16_t CPU::Indirect()
 
     if (IsLogEnabled())
     {
-        uint16_t otherHighByte = Peek((highIndirect << 8) + (lowIndirect + 1));
-        uint16_t otherAddress = (otherHighByte << 8) + lowByte;
-        LogIndirect(static_cast<uint8_t>(lowIndirect), static_cast<uint8_t>(highIndirect), (highIndirect << 8) + lowIndirect, otherAddress);
+        LogIndirect(static_cast<uint8_t>(lowIndirect), static_cast<uint8_t>(highIndirect), (highIndirect << 8) + lowIndirect, address);
     }
 
     return address;
@@ -643,9 +668,13 @@ void CPU::DoBPL(uint16_t address)
 // address stored at the interrupt vector (0xFFFE and 0xFFFF)
 void CPU::DoBRK()
 {
-    if (IsLogEnabled()) LogInstructionName("BRK");
+    uint8_t value = Read(PC++);
 
-    PC++;
+    if (IsLogEnabled())
+    {
+        LogInstructionName("BRK");
+        LogImmediate(value);
+    }
 
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
@@ -698,6 +727,8 @@ void CPU::DoCLC()
 {
     if (IsLogEnabled()) LogInstructionName("CLC");
 
+    Read(PC);
+
     CLEAR_FLAG(P, CARRY);
 }
 
@@ -709,6 +740,8 @@ void CPU::DoCLD()
 {
     if (IsLogEnabled()) LogInstructionName("CLD");
 
+    Read(PC);
+
     CLEAR_FLAG(P, DECIMAL);
 }
 
@@ -717,6 +750,8 @@ void CPU::DoCLI()
 {
     if (IsLogEnabled()) LogInstructionName("CLI");
 
+    Read(PC);
+
     CLEAR_FLAG(P, IRQ_INHIBIT);
 }
 
@@ -724,6 +759,8 @@ void CPU::DoCLI()
 void CPU::DoCLV()
 {
     if (IsLogEnabled()) LogInstructionName("CLV");
+
+    Read(PC);
 
     CLEAR_FLAG(P, OVERFLOW);
 }
@@ -813,6 +850,8 @@ void CPU::DoDEX()
 {
     if (IsLogEnabled()) LogInstructionName("DEX");
 
+    Read(PC);
+
     --X;
 
     // if X is 0 set zero flag
@@ -826,6 +865,8 @@ void CPU::DoDEX()
 void CPU::DoDEY()
 {
     if (IsLogEnabled()) LogInstructionName("DEY");
+
+    Read(PC);
 
     --Y;
 
@@ -877,6 +918,8 @@ void CPU::DoINX()
 {
     if (IsLogEnabled()) LogInstructionName("INX");
 
+    Read(PC);
+
     ++X;
 
     // if X is 0 set zero flag
@@ -890,6 +933,8 @@ void CPU::DoINX()
 void CPU::DoINY()
 {
     if (IsLogEnabled()) LogInstructionName("INY");
+
+    Read(PC);
 
     ++Y;
 
@@ -1002,9 +1047,11 @@ void CPU::DoLSR(uint16_t address)
 }
 
 // No Operation
-void CPU::DoNOP()
+void CPU::DoNOP(uint16_t address)
 {
     if (IsLogEnabled()) LogInstructionName("NOP");
+
+    Read(address);
 }
 
 // Logical Inclusive Or
@@ -1030,6 +1077,7 @@ void CPU::DoPHA()
 {
     if (IsLogEnabled()) LogInstructionName("PHA");
 
+    Read(PC);
     Write(A, STACK_BASE + S--);
 }
 
@@ -1039,6 +1087,7 @@ void CPU::DoPHP()
 {
     if (IsLogEnabled()) LogInstructionName("PHP");
 
+    Read(PC);
     Write(P | INTERRUPT | BREAK, 0x100 + S--);
 }
 
@@ -1049,6 +1098,7 @@ void CPU::DoPLA()
 {
     if (IsLogEnabled()) LogInstructionName("PLA");
 
+    Read(PC);
     Read(STACK_BASE + S++);
 
     A = Read(STACK_BASE + S);
@@ -1065,6 +1115,7 @@ void CPU::DoPLP()
 {
     if (IsLogEnabled()) LogInstructionName("PLP");
 
+    Read(PC);
     Read(STACK_BASE + S++);
 
     P = Read(STACK_BASE + S);
@@ -1126,6 +1177,7 @@ void CPU::DoRTI()
 {
     if (IsLogEnabled()) LogInstructionName("RTI");
 
+    Read(PC);
     Read(STACK_BASE + S);
 
     P = Read(STACK_BASE + (S + 1));
@@ -1146,6 +1198,7 @@ void CPU::DoRTS()
 {
     if (IsLogEnabled()) LogInstructionName("RTS");
 
+    Read(PC);
     Read(STACK_BASE + S++);
 
     uint16_t lowPC = Read(STACK_BASE + S++);
@@ -1184,6 +1237,8 @@ void CPU::DoSEC()
 {
     if (IsLogEnabled()) LogInstructionName("SEC");
 
+    Read(PC);
+
     SET_FLAG(P, CARRY);
 }
 
@@ -1194,6 +1249,8 @@ void CPU::DoSED()
 {
     if (IsLogEnabled()) LogInstructionName("SED");
 
+    Read(PC);
+
     SET_FLAG(P, DECIMAL);
 }
 
@@ -1201,6 +1258,8 @@ void CPU::DoSED()
 void CPU::DoSEI()
 {
     if (IsLogEnabled()) LogInstructionName("SEI");
+
+    Read(PC);
 
     SET_FLAG(P, IRQ_INHIBIT);
 }
@@ -1240,6 +1299,8 @@ void CPU::DoTAX()
 {
     if (IsLogEnabled()) LogInstructionName("TAX");
 
+    Read(PC);
+
     X = A;
 
     // Set zero flag if X is 0
@@ -1252,6 +1313,8 @@ void CPU::DoTAX()
 void CPU::DoTAY()
 {
     if (IsLogEnabled()) LogInstructionName("TAY");
+
+    Read(PC);
 
     Y = A;
 
@@ -1266,6 +1329,8 @@ void CPU::DoTSX()
 {
     if (IsLogEnabled()) LogInstructionName("TSX");
 
+    Read(PC);
+
     X = S;
 
     // Set zero flag if X is 0
@@ -1278,6 +1343,8 @@ void CPU::DoTSX()
 void CPU::DoTXA()
 {
     if (IsLogEnabled()) LogInstructionName("TXA");
+
+    Read(PC);
 
     A = X;
 
@@ -1292,6 +1359,8 @@ void CPU::DoTXS()
 {
     if (IsLogEnabled()) LogInstructionName("TXS");
 
+    Read(PC);
+
     S = X;
 }
 
@@ -1299,6 +1368,8 @@ void CPU::DoTXS()
 void CPU::DoTYA()
 {
     if (IsLogEnabled()) LogInstructionName("TYA");
+
+    Read(PC);
 
     A = Y;
 
@@ -1696,23 +1767,60 @@ void CPU::DoOamDMA(uint8_t page)
 {
     uint16_t address = page * 0x100;
 
-    if ((Clock - 3) % 6 == 0)
+    if (Clock % 6 == 0)
     {
-        Read(PC);
+        Read(PC, true);
+
+        if (DmcDmaDelay > 0)
+        {
+            IncrementClock();
+            IncrementClock();
+            DoDmcDMA();
+            DmcDmaDelay = 0;
+        }
     }
-    else
+
+    Read(PC, true);
+
+    if (DmcDmaDelay > 0)
     {
-        Read(PC);
-        Read(PC);
+        IncrementClock();
+        IncrementClock();
+        DoDmcDMA();
+        DmcDmaDelay = 0;
     }
 
     for (int i = 0; i < 0x100; ++i)
     {
-        uint8_t value = Read(address + i);
-        Write(value, 0x2004);
-        //IncrementClock();
-        //Ppu->WriteOAMDATA(value);
+        Write(Read(address + i, true), 0x2004, true);
+
+        if (DmcDmaDelay > 0)
+        {
+            if (i == 0xFE)
+            {
+                IncrementClock();
+            }
+            else if (i == 0xFF)
+            {
+                IncrementClock();
+                IncrementClock();
+                IncrementClock();
+            }
+            else
+            {
+                IncrementClock();
+                IncrementClock();
+            }
+            
+            DoDmcDMA();
+            DmcDmaDelay = 0;
+        }
     }
+}
+
+void CPU::DoDmcDMA()
+{
+    Apu->SendDmaByte(Cartridge->PrgRead(Apu->GetDmaAddress() - 0x6000));
 }
 
 void CPU::SetControllerStrobe(bool strobe)
@@ -1755,6 +1863,8 @@ CPU::CPU()
     , NmiPending(false)
     , IrqPending(false)
     , AccumulatorFlag(false)
+    , DmcDmaDelay(0)
+    , PC(0)
     , S(0xFD)
     , P(0x24)
     , A(0)
@@ -1788,11 +1898,6 @@ void CPU::AttachAPU(APU* apu)
 void CPU::AttachCart(Cart* cart)
 {
     Cartridge = cart;
-}
-
-void CPU::SetStalled(bool stalled)
-{
-    //IsStalled = stalled;
 }
 
 bool CPU::IsLogEnabled()
@@ -2052,6 +2157,8 @@ void CPU::Step()
     // Decode opcode
     InstructionDescriptor desc = InstructionSet[opcode];
 
+    if (IsLogEnabled()) LogOfficial(desc.isOfficial);
+
     // Execute corresponding addressing mode
 
     uint16_t address = PC;
@@ -2094,9 +2201,6 @@ void CPU::Step()
         address = ZeroPageY();
         break;
     case IMPLIED:
-        Read(PC);
-        address = PC;
-    case STACK:
         address = PC;
         break;
     }
@@ -2204,7 +2308,7 @@ void CPU::Step()
         DoLSR(address);
         break;
     case NOP:
-        DoNOP();
+        DoNOP(address);
         break;
     case ORA:
         DoORA(address);
@@ -2358,9 +2462,22 @@ void CPU::LogOpcode(uint8_t opcode)
     sprintf(OpCode, "%02X", opcode);
 }
 
-void CPU::LogInstructionName(std::string name)
+void CPU::LogOfficial(bool isOfficial)
 {
-    sprintf(InstructionStr, "%s", name.c_str());
+    LogIsOfficial = isOfficial;
+}
+
+void CPU::LogInstructionName(const char* name)
+{
+    if (LogIsOfficial) 
+    {
+        sprintf(InstructionStr, " %s", name);
+    }
+    else
+    {
+        sprintf(InstructionStr, "*%s", name);
+    }
+    
 }
 
 void CPU::LogAccumulator()
@@ -2453,7 +2570,7 @@ void CPU::PrintLog()
 
     if (LogFile != nullptr)
     {
-        fprintf(LogFile, "%-6s%-3s%-3s%-4s%-4s%-28s%s\n", ProgramCounter, OpCode, AddressingArg1, AddressingArg2, InstructionStr, Addressing, Registers);
+        fprintf(LogFile, "%-6s%-3s%-3s%-3s%-5s%-28s%s\n", ProgramCounter, OpCode, AddressingArg1, AddressingArg2, InstructionStr, Addressing, Registers);
     }
 
     sprintf(OpCode, "%s", "");
@@ -2499,7 +2616,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { ORA, ABSOLUTE_X,  false, true  }, // 0x1D
     { ASL, ABSOLUTE_X,  true,  true  }, // 0x1E
     { SLO, ABSOLUTE_X,  true,  false }, // 0x1F
-    { JSR, STACK,       false, true  }, // 0x20
+    { JSR, IMPLIED,     false, true  }, // 0x20
     { AND, INDIRECT_X,  false, true  }, // 0x21
     { STP, IMPLIED,     false, false }, // 0x22
     { RLA, INDIRECT_X,  true,  false }, // 0x23
@@ -2573,7 +2690,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { RRA, ZEROPAGE,    true,  false }, // 0x67
     { PLA, IMPLIED,     false, true  }, // 0x68
     { ADC, IMMEDIATE,   false, true  }, // 0x69
-    { ROR, ACCUMULATOR, true,  false }, // 0x6A
+    { ROR, ACCUMULATOR, true,  true  }, // 0x6A
     { ARR, IMMEDIATE,   false, false }, // 0x6B
     { JMP, INDIRECT,    false, true  }, // 0x6C
     { ADC, ABSOLUTE,    false, true  }, // 0x6D
@@ -2697,7 +2814,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { ISC, INDIRECT_X,  true,  false }, // 0xE3
     { CPX, ZEROPAGE,    false, true  }, // 0xE4
     { SBC, ZEROPAGE,    false, true  }, // 0xE5
-    { INC, ZEROPAGE,    false, true  }, // 0xE6
+    { INC, ZEROPAGE,    true,  true  }, // 0xE6
     { ISC, ZEROPAGE,    true,  false }, // 0xE7
     { INX, IMPLIED,     false, true  }, // 0xE8
     { SBC, IMMEDIATE,   false, true  }, // 0xE9
@@ -2705,7 +2822,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { SBC, IMMEDIATE,   false, false }, // 0xEB
     { CPX, ABSOLUTE,    false, true  }, // 0xEC
     { SBC, ABSOLUTE,    false, true  }, // 0xED
-    { INC, ABSOLUTE,    false, true  }, // 0xEE
+    { INC, ABSOLUTE,    true,  true  }, // 0xEE
     { ISC, ABSOLUTE,    true,  false }, // 0xEF
     { BEQ, RELATIVE,    false, true  }, // 0xF0
     { SBC, INDIRECT_Y,  false, true  }, // 0xF1
@@ -2713,7 +2830,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { ISC, INDIRECT_Y,  true,  false }, // 0xF3
     { NOP, ZEROPAGE_X,  false, false }, // 0xF4
     { SBC, ZEROPAGE_X,  false, true  }, // 0xF5
-    { INC, ZEROPAGE_X,  false, true  }, // 0xF6
+    { INC, ZEROPAGE_X,  true,  true  }, // 0xF6
     { ISC, ZEROPAGE_X,  true,  false }, // 0xF7
     { SED, IMPLIED,     false, true  }, // 0xF8
     { SBC, ABSOLUTE_Y,  false, true  }, // 0xF9
@@ -2721,6 +2838,6 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { ISC, ABSOLUTE_Y,  true,  false }, // 0xFB
     { NOP, ABSOLUTE_X,  false, false }, // 0xFC
     { SBC, ABSOLUTE_X,  false, true  }, // 0xFD
-    { INC, ABSOLUTE_X,  false, true  }, // 0xFE
+    { INC, ABSOLUTE_X,  true,  true  }, // 0xFE
     { ISC, ABSOLUTE_X,  true,  false }  // 0xFF
 }};

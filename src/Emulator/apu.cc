@@ -723,7 +723,7 @@ void APU::NoiseUnit::LoadState(const char* state)
 
 const uint16_t APU::DmcUnit::TimerPeriods[16] =
 {
-    214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53,  42,  36,  27
+    214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27
 };
 
 APU::DmcUnit::DmcUnit(APU& apu)
@@ -738,12 +738,11 @@ APU::DmcUnit::DmcUnit(APU& apu)
     , SampleBuffer(0)
     , SampleShiftRegister(0)
     , SampleBitsRemaining(8)
-    , MemoryStallCountdown(0)
     , InterruptFlag(false)
     , InterruptEnabledFlag(false)
     , SampleLoopFlag(false)
     , SampleBufferEmptyFlag(true)
-    , InMemoryStall(false)
+    , DmaRequest(false)
     , SilenceFlag(true)
 {}
 
@@ -760,8 +759,7 @@ void APU::DmcUnit::SetEnabled(bool enabled)
 
         if (SampleBufferEmptyFlag)
         {
-            InMemoryStall = true;
-            MemoryStallCountdown = 4;
+            DmaRequest = true;
         }	
     }
 }
@@ -814,11 +812,6 @@ bool APU::DmcUnit::CheckIRQ()
     return InterruptFlag;
 }
 
-bool APU::DmcUnit::CheckStalled()
-{
-    return InMemoryStall;
-}
-
 void APU::DmcUnit::ClockTimer()
 {
     if (Timer == 0)
@@ -864,8 +857,7 @@ void APU::DmcUnit::ClockTimer()
 
             if (SampleBytesRemaining != 0)
             {
-                InMemoryStall = true;
-                MemoryStallCountdown = 4;
+                DmaRequest = true;
             }
         }
     }
@@ -873,54 +865,56 @@ void APU::DmcUnit::ClockTimer()
     --Timer;
 }
 
-void APU::DmcUnit::ClockMemoryReader()
+bool APU::DmcUnit::CheckDmaRequest()
 {
-    if (!InMemoryStall)
+    bool request = DmaRequest;
+    DmaRequest = false;
+
+    return request;
+}
+
+uint16_t APU::DmcUnit::GetDmaAddress()
+{
+    return CurrentAddress;
+}
+
+void APU::DmcUnit::WriteDmaByte(uint8_t byte)
+{
+    SampleBuffer = byte;
+    SampleBufferEmptyFlag = false;
+
+    if (CurrentAddress == 0xFFFF)
     {
-        return;
+        CurrentAddress = 0x8000;
+    }
+    else
+    {
+        ++CurrentAddress;
     }
 
-    --MemoryStallCountdown;
+    --SampleBytesRemaining;
 
-    if (MemoryStallCountdown == 0)
+    if (SampleBytesRemaining == 0)
     {
-        SampleBuffer = Apu.Cartridge->PrgRead(CurrentAddress - 0x6000);
-        SampleBufferEmptyFlag = false;
-
-        if (CurrentAddress == 0xFFFF)
+        if (SampleLoopFlag)
         {
-            CurrentAddress = 0x8000;
+            CurrentAddress = SampleAddress;
+            SampleBytesRemaining = SampleLength;
         }
-        else
+        else if (InterruptEnabledFlag)
         {
-            ++CurrentAddress;
+            InterruptFlag = true;
         }
-
-        --SampleBytesRemaining;
-
-        if (SampleBytesRemaining == 0)
-        {
-            if (SampleLoopFlag)
-            {
-                CurrentAddress = SampleAddress;
-                SampleBytesRemaining = SampleLength;
-            }
-            else if (InterruptEnabledFlag)
-            {
-                InterruptFlag = true;
-            }
-        }
-
-        InMemoryStall = false;
     }
 }
+
 
 APU::DmcUnit::operator float ()
 {
     return OutputLevel;
 }
 
-const int APU::DmcUnit::STATE_SIZE = (sizeof(uint16_t)*5)+(sizeof(uint8_t)*6)+sizeof(char);
+const int APU::DmcUnit::STATE_SIZE = (sizeof(uint16_t)*5)+(sizeof(uint8_t)*5)+sizeof(char);
 
 void APU::DmcUnit::SaveState(char* state)
 {
@@ -953,16 +947,13 @@ void APU::DmcUnit::SaveState(char* state)
 
     memcpy(state, &SampleBitsRemaining, sizeof(uint8_t));
     state += sizeof(uint8_t);
-
-    memcpy(state, &MemoryStallCountdown, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
+    
     char packedBool = 0;
     packedBool |= InterruptFlag << 7;
     packedBool |= InterruptEnabledFlag << 6;
     packedBool |= SampleLoopFlag << 5;
     packedBool |= SampleBufferEmptyFlag << 4;
-    packedBool |= InMemoryStall << 3;
+    packedBool |= DmaRequest << 3;
     packedBool |= SilenceFlag << 2;
 
     memcpy(state, &packedBool, sizeof(char));
@@ -1000,9 +991,6 @@ void APU::DmcUnit::LoadState(const char* state)
     memcpy(&SampleBitsRemaining, state, sizeof(uint8_t));
     state += sizeof(uint8_t);
 
-    memcpy(&MemoryStallCountdown, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
     char packedBool;
     memcpy(&packedBool, state, sizeof(char));
 
@@ -1010,7 +998,7 @@ void APU::DmcUnit::LoadState(const char* state)
     InterruptEnabledFlag = !!(packedBool & 0x40);
     SampleLoopFlag = !!(packedBool & 0x20);
     SampleBufferEmptyFlag = !!(packedBool & 0x10);
-    InMemoryStall = !!(packedBool & 0x8);
+    DmaRequest = !!(packedBool & 0x8);
     SilenceFlag = !!(packedBool & 0x4);
 }
 
@@ -1096,11 +1084,6 @@ void APU::SetTargetFrameRate(uint32_t rate)
 void APU::Step()
 {
     ++Clock;
-
-    if (Dmc.CheckStalled())
-    {
-        Dmc.ClockMemoryReader();
-    }
 
     Triangle.ClockTimer();
 
@@ -1275,9 +1258,19 @@ bool APU::CheckIRQ()
     return FrameInterruptFlag || Dmc.CheckIRQ();
 }
 
-bool APU::CheckStalled()
+bool APU::CheckDmaRequest()
 {
-    return Dmc.CheckStalled();
+    return Dmc.CheckDmaRequest();
+}
+
+uint16_t APU::GetDmaAddress()
+{
+    return Dmc.GetDmaAddress();
+}
+
+void APU::SendDmaByte(uint8_t byte)
+{
+    Dmc.SendDmaByte(byte);
 }
 
 void APU::WritePulseOneRegister(uint8_t reg, uint8_t value)

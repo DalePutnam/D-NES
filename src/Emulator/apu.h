@@ -20,7 +20,9 @@ public:
 
     void Step();
     bool CheckIRQ();
-    bool CheckStalled();
+    bool CheckDmaRequest();
+    uint16_t GetDmaAddress();
+    void WriteDmaByte(uint8_t byte);
 
     void ResetFrameLimiter();
     void SetTargetFrameRate(uint32_t rate);
@@ -189,10 +191,12 @@ private:
         bool GetEnabled();
         void ClearInterrupt();
         bool CheckIRQ();
-        bool CheckStalled();
 
         void ClockTimer();
-        void ClockMemoryReader();
+
+        bool CheckDmaRequest();
+        uint16_t GetDmaAddress();
+        void SendDmaByte(uint8_t byte);
 
         operator float ();
 
@@ -215,12 +219,11 @@ private:
         uint8_t SampleBuffer;
         uint8_t SampleShiftRegister;
         uint8_t SampleBitsRemaining;
-        uint8_t MemoryStallCountdown;
         bool InterruptFlag;
         bool InterruptEnabledFlag;
         bool SampleLoopFlag;
         bool SampleBufferEmptyFlag;
-        bool InMemoryStall;
+        bool DmaRequest;
         bool SilenceFlag;
     };
 
