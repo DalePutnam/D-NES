@@ -1268,9 +1268,9 @@ uint16_t APU::GetDmaAddress()
     return Dmc.GetDmaAddress();
 }
 
-void APU::SendDmaByte(uint8_t byte)
+void APU::WriteDmaByte(uint8_t byte)
 {
-    Dmc.SendDmaByte(byte);
+    Dmc.WriteDmaByte(byte);
 }
 
 void APU::WritePulseOneRegister(uint8_t reg, uint8_t value)

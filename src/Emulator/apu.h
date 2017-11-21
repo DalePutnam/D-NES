@@ -196,7 +196,7 @@ private:
 
         bool CheckDmaRequest();
         uint16_t GetDmaAddress();
-        void SendDmaByte(uint8_t byte);
+        void WriteDmaByte(uint8_t byte);
 
         operator float ();
 

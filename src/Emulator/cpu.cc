@@ -1820,7 +1820,7 @@ void CPU::DoOamDMA(uint8_t page)
 
 void CPU::DoDmcDMA()
 {
-    Apu->SendDmaByte(Cartridge->PrgRead(Apu->GetDmaAddress() - 0x6000));
+    Apu->WriteDmaByte(Cartridge->PrgRead(Apu->GetDmaAddress() - 0x6000));
 }
 
 void CPU::SetControllerStrobe(bool strobe)
