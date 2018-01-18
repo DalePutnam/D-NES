@@ -97,6 +97,7 @@ private:
     bool NmiRaised;
     bool NmiPending;
 
+    bool IrqRaised;
     bool IrqPending;
     bool AccumulatorFlag;
 

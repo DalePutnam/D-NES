@@ -13,6 +13,11 @@
 #include "ppu.h"
 #include "apu.h"
 
+// One of the headers on windows defines OVERFLOW
+#ifdef OVERFLOW
+#undef OVERFLOW
+#endif
+
 // Processor status flags
 #define NEGATIVE 0x80
 #define OVERFLOW 0x40
@@ -81,6 +86,8 @@ uint8_t CPU::Read(uint16_t address, bool noDMA)
         return A;
     }
 
+    IrqPending = IrqRaised;
+
     uint8_t value;
 
     IncrementClock();
@@ -147,6 +154,8 @@ void CPU::Write(uint8_t M, uint16_t address, bool noDMA)
         A = M;
         return;
     }
+
+    IrqPending = IrqRaised;
 
     IncrementClock();
 
@@ -1738,7 +1747,11 @@ void CPU::CheckIRQ()
     // If IRQ line is high and interrupt inhibit flag is false
     if (Apu->CheckIRQ() && !TEST_FLAG(P, IRQ_INHIBIT))
     {
-        IrqPending = true;
+        IrqRaised = true;
+    }
+    else
+    {
+        IrqRaised = false;
     }
 }
 
@@ -1861,6 +1874,7 @@ CPU::CPU()
     , NmiLineStatus(false)
     , NmiRaised(false)
     , NmiPending(false)
+    , IrqRaised(false)
     , IrqPending(false)
     , AccumulatorFlag(false)
     , DmcDmaDelay(0)
@@ -2132,14 +2146,14 @@ void CPU::Step()
 {
     if (NmiPending)
     {
-        NmiPending = false;
         DoNMI();
+        NmiPending = false;
     }
 
     if (IrqPending)
     {
-        IrqPending = false;
         DoIRQ();
+        IrqPending = false;
     }
 
     if (IsLogEnabled())

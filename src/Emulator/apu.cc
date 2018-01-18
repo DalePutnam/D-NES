@@ -1013,10 +1013,10 @@ APU::APU(AudioBackend* aout)
     , PulseOne(true)
     , PulseTwo(false)
     , Dmc(*this)
-    , Clock(0)
+    , Clock(6)
     , SequenceCount(0)
     , SequenceMode(false)
-    , InterruptInhibit(true)
+    , InterruptInhibit(false)
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
@@ -1218,8 +1218,8 @@ void APU::LimitFrameRate()
         // and adjust the cycles per audio sample appropriately
 
         double targetPeriod = TargetFramePeriod;
-        double effectivePeriod = duration_cast<microseconds>(framePeriodEnd - FramePeriodStart).count();
-        EffectiveCpuFrequency = static_cast<double>(TargetCpuFrequency) * (targetPeriod / effectivePeriod);
+        double effectivePeriod = static_cast<double>(duration_cast<microseconds>(framePeriodEnd - FramePeriodStart).count());
+        EffectiveCpuFrequency = static_cast<uint32_t>(static_cast<double>(TargetCpuFrequency) * (targetPeriod / effectivePeriod));
         CyclesPerSample = static_cast<double>(EffectiveCpuFrequency) / AudioBackend::SAMPLE_RATE;
 
         FramePeriodStart = steady_clock::now();
