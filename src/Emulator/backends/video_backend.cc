@@ -1,9 +1,12 @@
 #include <string>
+#include <cassert>
+
 #ifdef __linux
 #include <cairo/cairo-xlib.h>
 #endif
 
 #include "video_backend.h"
+#include "gl\glext.h"
 
 namespace
 {
@@ -24,6 +27,59 @@ std::string ToUpperCase(const std::string& str)
 
     return allcaps;
 }
+
+thread_local PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
+thread_local PFNGLBINDVERTEXARRAYPROC glBindVertexArray;
+thread_local PFNGLGENBUFFERSPROC glGenBuffers;
+thread_local PFNGLBINDBUFFERPROC glBindBuffer;
+thread_local PFNGLBUFFERDATAPROC glBufferData;
+thread_local PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
+thread_local PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
+thread_local PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray;
+thread_local PFNGLCREATESHADERPROC glCreateShader;
+thread_local PFNGLSHADERSOURCEPROC glShaderSource;
+thread_local PFNGLCOMPILESHADERPROC glCompileShader;
+thread_local PFNGLGETSHADERIVPROC glGetShaderiv;
+thread_local PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog;
+thread_local PFNGLCREATEPROGRAMPROC glCreateProgram;
+thread_local PFNGLATTACHSHADERPROC glAttachShader;
+thread_local PFNGLLINKPROGRAMPROC glLinkProgram;
+thread_local PFNGLGETPROGRAMIVPROC glGetProgramiv;
+thread_local PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog;
+thread_local PFNGLDETACHSHADERPROC glDetachShader;
+thread_local PFNGLDELETESHADERPROC glDeleteShader;
+thread_local PFNGLUSEPROGRAMPROC glUseProgram;
+thread_local PFNGLUNIFORM1IPROC glUniform1i;
+thread_local PFNGLUNIFORM2FPROC glUniform2f;
+thread_local PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
+
+void InitializeFunctions() {
+	glGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)wglGetProcAddress("glGenVertexArrays");
+	glBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)wglGetProcAddress("glBindVertexArray");
+	glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
+	glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
+	glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
+	glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
+	glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+	glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glDisableVertexAttribArray");
+	glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
+	glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
+	glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
+	glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
+	glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
+	glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
+	glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
+	glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
+	glGetProgramiv = (PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv");
+	glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)wglGetProcAddress("glGetProgramInfoLog");
+	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
+	glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
+	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
+	glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
+	glUniform2f = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
+	glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
+}
+
 }
 
 VideoBackend::VideoBackend(void* windowHandle)
@@ -33,7 +89,10 @@ VideoBackend::VideoBackend(void* windowHandle)
     , CurrentFps(0)
 {
 #ifdef _WIN32
-    InitGDIObjects(windowHandle);
+	Window = reinterpret_cast<HWND>(windowHandle);
+	FrontBuffer = new uint8_t[256 * 240 * 4];
+	BackBuffer = new uint8_t[256 * 240 * 4];
+	initialized = false;
 #elif defined(__linux)
     InitXWindow(windowHandle);
     InitCairo();
@@ -42,21 +101,22 @@ VideoBackend::VideoBackend(void* windowHandle)
     BackBuffer = new uint8_t[256 * 240 * 4];
 #endif
 
-    RenderThread = std::thread(&VideoBackend::RenderWorker, this);
+    //RenderThread = std::thread(&VideoBackend::RenderWorker, this);
 }
 
 VideoBackend::~VideoBackend()
-{
+{/*
     {
         std::unique_lock<std::mutex> lock(RenderLock);
         StopRendering = true;
         RenderCv.notify_all();
     }
     
-    RenderThread.join();
+    RenderThread.join();*/
 
 #ifdef _WIN32
-    CleanUpGDIObjects();
+	delete[] BackBuffer;
+	delete[] FrontBuffer;
 #elif __linux
     DestroyCairo();
     DestroyXWindow();
@@ -87,11 +147,173 @@ VideoBackend& VideoBackend::operator<<(uint32_t pixel)
     return *this;
 }
 
-void VideoBackend::SetFramePosition(uint32_t x, uint32_t y)
+void VideoBackend::Prepare()
 {
-    std::unique_lock<std::mutex> lock(RenderLock);
+	PIXELFORMATDESCRIPTOR pfd =
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),
+		1,
+		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    //Flags
+		PFD_TYPE_RGBA,        // The kind of framebuffer. RGBA or palette.
+		32,                   // Colordepth of the framebuffer.
+		0, 0, 0, 0, 0, 0,
+		0,
+		0,
+		0,
+		0, 0, 0, 0,
+		24,                   // Number of bits for the depthbuffer
+		8,                    // Number of bits for the stencilbuffer
+		0,                    // Number of Aux buffers in the framebuffer.
+		PFD_MAIN_PLANE,
+		0,
+		0, 0, 0
+	};
 
-    PixelIndex = (1024 * y) + (x * 4);
+	WinDc = GetDC(Window);
+
+	int pf = ChoosePixelFormat(WinDc, &pfd);
+	assert(SetPixelFormat(WinDc, pf, &pfd));
+
+	Oglc = wglCreateContext(WinDc);
+	assert(wglMakeCurrent(WinDc, Oglc));
+
+	InitializeFunctions();
+
+	GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
+
+	static const std::string vertexShaderPrg =
+		"#version 330 core\n\
+		 layout(location = 0) in vec3 vert;\n\
+		 out vec2 uv;\n\
+		 void main() {\n\
+			gl_Position = vec4((vert.x*2.0)-1.0, (vert.y*2.0)-1.0, 1.0, 1.0);\
+			uv = vec2(vert.x, -vert.y);\n\
+	     }\n";
+
+	static const std::string fragmentShaderPrg =
+		"#version 330 core\n\
+		 in vec2 uv;\n\
+		 out vec3 color;\n\
+		 uniform sampler2D sampler;\n\
+		 void main() {\n\
+			color = texture(sampler, uv).rgb;\n\
+		 }\n";
+
+	GLint result = GL_FALSE;
+	int infoLogLength;
+
+	const char* vertexPrgPtr = vertexShaderPrg.c_str();
+	glShaderSource(vertexShaderId, 1, &vertexPrgPtr, NULL);
+	glCompileShader(vertexShaderId);
+
+	glGetShaderiv(vertexShaderId, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(vertexShaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0) {
+		std::vector<char> VertexShaderErrorMessage(infoLogLength + 1);
+		glGetShaderInfoLog(vertexShaderId, infoLogLength, NULL, &VertexShaderErrorMessage[0]);
+		printf("%s\n", &VertexShaderErrorMessage[0]);
+	}
+
+	const char* fragmentPrgPtr = fragmentShaderPrg.c_str();
+	glShaderSource(fragmentShaderId, 1, &fragmentPrgPtr, NULL);
+	glCompileShader(fragmentShaderId);
+
+	glGetShaderiv(fragmentShaderId, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(fragmentShaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0) {
+		std::vector<char> FragmentShaderErrorMessage(infoLogLength + 1);
+		glGetShaderInfoLog(fragmentShaderId, infoLogLength, NULL, &FragmentShaderErrorMessage[0]);
+		printf("%s\n", &FragmentShaderErrorMessage[0]);
+	}
+
+	ProgramId = glCreateProgram();
+	glAttachShader(ProgramId, vertexShaderId);
+	glAttachShader(ProgramId, fragmentShaderId);
+	glLinkProgram(ProgramId);
+
+	glGetProgramiv(ProgramId, GL_LINK_STATUS, &result);
+	glGetProgramiv(ProgramId, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0) {
+		std::vector<char> ProgramErrorMessage(infoLogLength + 1);
+		glGetProgramInfoLog(ProgramId, infoLogLength, NULL, &ProgramErrorMessage[0]);
+		printf("%s\n", &ProgramErrorMessage[0]);
+	}
+
+	glDetachShader(ProgramId, vertexShaderId);
+	glDetachShader(ProgramId, fragmentShaderId);
+
+	glDeleteShader(vertexShaderId);
+	glDeleteShader(fragmentShaderId);
+
+	glGenVertexArrays(1, &VertexArrayId);
+	glBindVertexArray(VertexArrayId);
+
+	static const GLfloat g_vertex_buffer_data[] = {
+		0.0f,  0.0f, 0.0f,
+		0.0f,  1.0f, 0.0f,
+		1.0f,  0.0f, 0.0f,
+		1.0f,  1.0f, 0.0f
+	};
+
+	// Generate 1 buffer, put the resulting identifier in vertexbuffer
+	glGenBuffers(1, &VertexBuffer);
+	// The following commands will talk about our 'vertexbuffer' buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+	// Give our vertices to OpenGL.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+
+	glGenTextures(1, &TextureId);
+	glBindTexture(GL_TEXTURE_2D, TextureId);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+}
+
+void VideoBackend::Finalize()
+{
+	wglMakeCurrent(WinDc, NULL);
+	wglDeleteContext(Oglc);
+}
+
+void VideoBackend::DrawFrame(uint8_t * fb)
+{
+	UpdateSurfaceSize();
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, WindowWidth, WindowHeight);
+
+	glUseProgram(ProgramId);
+
+	glBindTexture(GL_TEXTURE_2D, TextureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, OverscanEnabled ? 224 : 240, 0, GL_BGRA, GL_UNSIGNED_BYTE, OverscanEnabled ? fb + 8192 : fb);
+
+	GLint loc = glGetUniformLocation(ProgramId, "screenSize");
+	glUniform2f(loc, WindowWidth, WindowHeight);
+
+	loc = glGetUniformLocation(ProgramId, "frameSize");
+	glUniform2f(loc, 256, OverscanEnabled ? 224 : 240);
+
+	glUniform1i(TextureId, 0);
+
+	// 1st attribute buffer : vertices
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+	glVertexAttribPointer(
+		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+	);
+
+	// Draw the triangle !
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDisableVertexAttribArray(0);
+
+	SwapBuffers(WinDc);
 }
 
 void VideoBackend::SetOverscanEnabled(bool enabled)
@@ -134,15 +356,18 @@ void VideoBackend::Swap()
     BackBuffer = temp;
 
 #ifdef _WIN32
+	/*
     // Also need to swap bitmaps on Windows
     HBITMAP btemp = FrontBitmap;
     FrontBitmap = BackBitmap;
-    BackBitmap = btemp;
+    BackBitmap = btemp;*/
 #endif
 
     PixelIndex = 0;
 
-    RenderCv.notify_all();
+    //RenderCv.notify_all();
+	UpdateSurfaceSize();
+	DrawFrame();
 }
 
 void VideoBackend::RenderWorker()
@@ -173,12 +398,12 @@ void VideoBackend::UpdateSurfaceSize()
     {
         WindowWidth = newWidth;
         WindowHeight = newHeight;
-
+		/*
         DeleteObject(IntermediateBitmap);
 
         HDC windowDC = GetDC(Window);
         IntermediateBitmap = CreateCompatibleBitmap(windowDC, WindowWidth, WindowHeight);
-        ReleaseDC(Window, windowDC);
+        ReleaseDC(Window, windowDC);*/
     }
 
 #elif defined(__linux)   
@@ -205,50 +430,43 @@ void VideoBackend::UpdateSurfaceSize()
 void VideoBackend::DrawFrame()
 {
 #ifdef _WIN32
-    HDC windowDC = GetDC(Window);
-    HDC initialDC = CreateCompatibleDC(windowDC);
-    HDC intermediateDC = CreateCompatibleDC(windowDC);
+	if (!initialized) {
+		InitOgl();
+	}
 
-    // Pointers to hold default objects from device contexts
-    HGDIOBJ memOldObj;
-    HGDIOBJ intOldObj;
-    HGDIOBJ intOldFont;
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Select fonts and bitmaps into device contexts
-    intOldFont = SelectObject(intermediateDC, Font);
-    intOldObj = SelectObject(intermediateDC, IntermediateBitmap);
-    memOldObj = SelectObject(initialDC, FrontBitmap);
+	glViewport(0, 0, WindowWidth, WindowHeight);
 
-    // First we need to blit to an intermediate device context to stretch the frame
-    if (OverscanEnabled)
-    {
-        StretchBlt(intermediateDC, 0, 0, WindowWidth, WindowHeight, initialDC, 0, 8, 256, 224, SRCCOPY);
-    }
-    else
-    {
-        StretchBlt(intermediateDC, 0, 0, WindowWidth, WindowHeight, initialDC, 0, 0, 256, 240, SRCCOPY);
-    }
+	glUseProgram(ProgramId);
 
-    // Draw fps and messages on the intermediate device context
-    if (ShowingFps)
-    {
-        DrawFps(intermediateDC);
-    }
+	glBindTexture(GL_TEXTURE_2D, TextureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, OverscanEnabled ? 224 : 240, 0, GL_BGRA, GL_UNSIGNED_BYTE, OverscanEnabled ? BackBuffer + 8192 : BackBuffer);
 
-    DrawMessages(intermediateDC);
+	GLint loc = glGetUniformLocation(ProgramId, "screenSize");
+	glUniform2f(loc, WindowWidth, WindowHeight);
 
-    // Copy final frame to the final device context so it will be displayed 
-    BitBlt(windowDC, 0, 0, WindowWidth, WindowHeight, intermediateDC, 0, 0, SRCCOPY);
+	loc = glGetUniformLocation(ProgramId, "frameSize");
+	glUniform2f(loc, 256, OverscanEnabled ? 224 : 240);
 
-    // Select default objects back into their device contexts
-    SelectObject(initialDC, memOldObj);
-    SelectObject(intermediateDC, intOldObj);
-    SelectObject(intermediateDC, intOldFont);
+	glUniform1i(TextureId, 0);
 
-    // Clean Up device contexts
-    DeleteDC(initialDC);
-    DeleteDC(intermediateDC);
-    ReleaseDC(Window, windowDC);
+	// 1st attribute buffer : vertices
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+	glVertexAttribPointer(
+		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+	);
+	// Draw the triangle !
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // Starting from vertex 0; 3 vertices total -> 1 triangle
+	glDisableVertexAttribArray(0);
+
+	SwapBuffers(WinDc);
 #elif defined(__linux)     
     cairo_save(CairoContext);
 
@@ -279,225 +497,310 @@ void VideoBackend::DrawFrame()
 #endif
 }
 
+//#ifdef _WIN32
+//void VideoBackend::DrawFps(HDC dc)
+//#elif defined(__linux)
+//void VideoBackend::DrawFps()
+//#endif
+//{
+//    std::string fps = std::to_string(CurrentFps);
+//#ifdef _WIN32
+//	/*
+//    SetBkMode(dc, TRANSPARENT);
+//    SetTextColor(dc, RGB(255, 255, 255));
+//    HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+//
+//    SIZE textSize;
+//    GetTextExtentPoint32(dc, fps.c_str(), static_cast<int>(fps.length()), &textSize);
+//
+//    RECT rect;
+//    rect.top = 8;
+//    rect.left = WindowWidth - textSize.cx - 8 - (FontMetric.tmInternalLeading*2) + 1;
+//    rect.bottom = 8 + textSize.cy;
+//    rect.right = WindowWidth - 7;
+//
+//    // Draw Backing Rectangle
+//    FillRect(dc, &rect, brush);
+//
+//    rect.top = 8;
+//    rect.left = WindowWidth - textSize.cx - 8 - FontMetric.tmInternalLeading + 1;
+//    rect.bottom = 8 + textSize.cy;
+//    rect.right = WindowWidth - 7;
+//
+//    // Draw FPS text
+//    DrawText(dc, fps.c_str(), static_cast<int>(fps.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+//
+//    DeleteObject(brush);
+//	*/
+//#elif defined(__linux)  
+//    cairo_text_extents_t extents;
+//    cairo_text_extents(CairoContext, fps.c_str(), &extents);
+//    
+//    cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
+//    cairo_rectangle(CairoContext, WindowWidth - extents.x_advance - 11.0, 8.0, extents.x_advance + 4.0, extents.height + 6.0);
+//    cairo_fill(CairoContext);
+//    
+//    cairo_move_to(CairoContext, WindowWidth - extents.x_advance - 9.0, 11.0 + extents.height);
+//    cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
+//    cairo_show_text(CairoContext, fps.c_str());
+//#endif
+//}
+//#ifdef _WIN32
+//void VideoBackend::DrawMessages(HDC dc)
+//#elif defined(__linux)
+//void VideoBackend::DrawMessages()
+//#endif
+//{
+//    if (Messages.empty())
+//    {
+//        return;
+//    }
+//
+//    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+//    std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > remaining;
+//    for (auto& entry : Messages)
+//    {
+//        if (entry.second > now)
+//        {
+//            remaining.push_back(entry);
+//        }
+//    }
+//
+//    Messages.swap(remaining);
+//
+//    // Draw Messages
+//#ifdef _WIN32
+//	/*
+//    SetBkMode(dc, TRANSPARENT);
+//    SetTextColor(dc, RGB(255, 255, 255));
+//    HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+//    
+//    int offsetY = 8;
+//    for (auto& entry : Messages)
+//    {
+//        std::string& message = entry.first;
+//
+//        SIZE textSize;
+//        GetTextExtentPoint32(dc, message.c_str(), static_cast<int>(message.length()), &textSize);
+//
+//        RECT rect;
+//        rect.top = offsetY;
+//        rect.left = 7;
+//        rect.bottom = offsetY + textSize.cy;
+//        rect.right = 7 + textSize.cx + (FontMetric.tmInternalLeading*2) + 1;
+//
+//        // Draw Backing Rectangle
+//        FillRect(dc, &rect, brush);
+//
+//        rect.top = offsetY;
+//        rect.left = 7 + FontMetric.tmInternalLeading;
+//        rect.bottom = offsetY + textSize.cy;
+//        rect.right = 7 + FontMetric.tmInternalLeading + textSize.cx;
+//
+//        // Draw Message Text
+//        DrawText(dc, message.c_str(), static_cast<int>(message.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+//
+//        offsetY += textSize.cy;
+//    }
+//
+//    DeleteObject(brush);
+//	*/
+//#elif defined(__linux)
+//    double offsetY = 8.0;
+//    for (auto& entry : Messages)
+//    {
+//        cairo_text_extents_t extents;
+//        cairo_text_extents(CairoContext, entry.first.c_str(), &extents);
+//
+//        cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
+//        cairo_rectangle(CairoContext, 7.0, offsetY, extents.x_advance + 4.0, extents.height + 6.0);
+//        cairo_fill(CairoContext);
+//
+//        cairo_move_to(CairoContext, 9.0, offsetY + 3.0 - extents.y_bearing);
+//        cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
+//        cairo_show_text(CairoContext, entry.first.c_str());
+//
+//        offsetY += extents.height + 6.0;
+//    }
+//#endif        
+//}
+
 #ifdef _WIN32
-void VideoBackend::DrawFps(HDC dc)
-#elif defined(__linux)
-void VideoBackend::DrawFps()
-#endif
+void VideoBackend::InitOgl()
 {
-    std::string fps = std::to_string(CurrentFps);
-#ifdef _WIN32
-    SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, RGB(255, 255, 255));
-    HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+	PIXELFORMATDESCRIPTOR pfd =
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),
+		1,
+		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    //Flags
+		PFD_TYPE_RGBA,        // The kind of framebuffer. RGBA or palette.
+		32,                   // Colordepth of the framebuffer.
+		0, 0, 0, 0, 0, 0,
+		0,
+		0,
+		0,
+		0, 0, 0, 0,
+		24,                   // Number of bits for the depthbuffer
+		8,                    // Number of bits for the stencilbuffer
+		0,                    // Number of Aux buffers in the framebuffer.
+		PFD_MAIN_PLANE,
+		0,
+		0, 0, 0
+	};
 
-    SIZE textSize;
-    GetTextExtentPoint32(dc, fps.c_str(), static_cast<int>(fps.length()), &textSize);
+	WinDc = GetDC(Window);
 
-    RECT rect;
-    rect.top = 8;
-    rect.left = WindowWidth - textSize.cx - 8 - (FontMetric.tmInternalLeading*2) + 1;
-    rect.bottom = 8 + textSize.cy;
-    rect.right = WindowWidth - 7;
+	int pf = ChoosePixelFormat(WinDc, &pfd);
+	assert(SetPixelFormat(WinDc, pf, &pfd));
 
-    // Draw Backing Rectangle
-    FillRect(dc, &rect, brush);
+	Oglc = wglCreateContext(WinDc);
+	assert(wglMakeCurrent(WinDc, Oglc));
 
-    rect.top = 8;
-    rect.left = WindowWidth - textSize.cx - 8 - FontMetric.tmInternalLeading + 1;
-    rect.bottom = 8 + textSize.cy;
-    rect.right = WindowWidth - 7;
+	std::string text = (char*)glGetString(GL_VERSION);
 
-    // Draw FPS text
-    DrawText(dc, fps.c_str(), static_cast<int>(fps.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+	glGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)wglGetProcAddress("glGenVertexArrays");
+	glBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)wglGetProcAddress("glBindVertexArray");
+	glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
+	glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
+	glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
+	glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
+	glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+	glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glDisableVertexAttribArray");
+	glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
+	glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
+	glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
+	glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
+	glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
+	glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
+	glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
+	glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
+	glGetProgramiv = (PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv");
+	glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)wglGetProcAddress("glGetProgramInfoLog");
+	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
+	glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
+	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
+	glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
+	glUniform2f = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
+	glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
 
-    DeleteObject(brush);
-#elif defined(__linux)  
-    cairo_text_extents_t extents;
-    cairo_text_extents(CairoContext, fps.c_str(), &extents);
-    
-    cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
-    cairo_rectangle(CairoContext, WindowWidth - extents.x_advance - 11.0, 8.0, extents.x_advance + 4.0, extents.height + 6.0);
-    cairo_fill(CairoContext);
-    
-    cairo_move_to(CairoContext, WindowWidth - extents.x_advance - 9.0, 11.0 + extents.height);
-    cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
-    cairo_show_text(CairoContext, fps.c_str());
-#endif
-}
-#ifdef _WIN32
-void VideoBackend::DrawMessages(HDC dc)
-#elif defined(__linux)
-void VideoBackend::DrawMessages()
-#endif
-{
-    if (Messages.empty())
-    {
-        return;
-    }
+	GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
 
-    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-    std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > remaining;
-    for (auto& entry : Messages)
-    {
-        if (entry.second > now)
-        {
-            remaining.push_back(entry);
-        }
-    }
+	static const std::string vertexShaderPrg =
+		"#version 330 core\n\
+		layout(location = 0) in vec3 vert;\n\
+		out vec2 uv;\n\
+		uniform vec2 screenSize;\
+		uniform vec2 frameSize;\
+		void main() {\n\
+			float wRatio = screenSize.x / frameSize.x;\
+			float hRatio = screenSize.y / frameSize.y;\
+			if (wRatio < hRatio) {\n\
+				float height = frameSize.y * wRatio;\n\
+				float hclip = (height / screenSize.y) * 2.0;\n\
+				float ypos = (screenSize.y - height) / 2.0;\n\
+				float yclip = ((ypos / screenSize.y) * 2.0) - 1.0;\n\
+				gl_Position.y = yclip + (hclip * vert.y);\n\
+				gl_Position.x = (vert.x * 2.0) - 1.0;\n\
+			} else if (hRatio <= wRatio) {\n\
+				float width = frameSize.x * hRatio;\n\
+				float wclip = (width / screenSize.x) * 2.0;\n\
+				float xpos = (screenSize.x - width) / 2.0;\n\
+				float xclip = ((xpos / screenSize.x) * 2.0) - 1.0;\n\
+				gl_Position.x = xclip + (wclip * vert.x);\n\
+				gl_Position.y = (vert.y * 2.0) - 1.0;\n\
+			}\n\
+			gl_Position.z = 1.0; \n\
+			gl_Position.w = 1.0; \n\
+			uv.x = vert.x; \
+			uv.y = -vert.y; \
+	}\n";
 
-    Messages.swap(remaining);
+	//uv.x = (vert.x + 1.0) / 2.0; \
+	//uv.y = (vert.y + 1.0) / -2.0; \
+	//gl_Position.xyz = vert; \n\
 
-    // Draw Messages
-#ifdef _WIN32
-    SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, RGB(255, 255, 255));
-    HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
-    
-    int offsetY = 8;
-    for (auto& entry : Messages)
-    {
-        std::string& message = entry.first;
+	static const std::string fragmentShaderPrg =
+		"                                  \
+		#version 330 core\n                \
+		in vec2 uv;\n                      \
+		out vec3 color;\n                  \
+		uniform sampler2D sampler;\n       \
+		void main() {\n                    \
+			color = texture(sampler, uv).rgb;\n\
+		}\n                                \
+		";
 
-        SIZE textSize;
-        GetTextExtentPoint32(dc, message.c_str(), static_cast<int>(message.length()), &textSize);
+	GLint result = GL_FALSE;
+	int infoLogLength;
 
-        RECT rect;
-        rect.top = offsetY;
-        rect.left = 7;
-        rect.bottom = offsetY + textSize.cy;
-        rect.right = 7 + textSize.cx + (FontMetric.tmInternalLeading*2) + 1;
+	const char* vertexPrgPtr = vertexShaderPrg.c_str();
+	glShaderSource(vertexShaderId, 1, &vertexPrgPtr, NULL);
+	glCompileShader(vertexShaderId);
 
-        // Draw Backing Rectangle
-        FillRect(dc, &rect, brush);
+	glGetShaderiv(vertexShaderId, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(vertexShaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0) {
+		std::vector<char> VertexShaderErrorMessage(infoLogLength + 1);
+		glGetShaderInfoLog(vertexShaderId, infoLogLength, NULL, &VertexShaderErrorMessage[0]);
+		printf("%s\n", &VertexShaderErrorMessage[0]);
+	}
 
-        rect.top = offsetY;
-        rect.left = 7 + FontMetric.tmInternalLeading;
-        rect.bottom = offsetY + textSize.cy;
-        rect.right = 7 + FontMetric.tmInternalLeading + textSize.cx;
+	const char* fragmentPrgPtr = fragmentShaderPrg.c_str();
+	glShaderSource(fragmentShaderId, 1, &fragmentPrgPtr, NULL);
+	glCompileShader(fragmentShaderId);
 
-        // Draw Message Text
-        DrawText(dc, message.c_str(), static_cast<int>(message.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+	glGetShaderiv(fragmentShaderId, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(fragmentShaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0) {
+		std::vector<char> FragmentShaderErrorMessage(infoLogLength + 1);
+		glGetShaderInfoLog(fragmentShaderId, infoLogLength, NULL, &FragmentShaderErrorMessage[0]);
+		printf("%s\n", &FragmentShaderErrorMessage[0]);
+	}
 
-        offsetY += textSize.cy;
-    }
+	ProgramId = glCreateProgram();
+	glAttachShader(ProgramId, vertexShaderId);
+	glAttachShader(ProgramId, fragmentShaderId);
+	glLinkProgram(ProgramId);
 
-    DeleteObject(brush);
-#elif defined(__linux)
-    double offsetY = 8.0;
-    for (auto& entry : Messages)
-    {
-        cairo_text_extents_t extents;
-        cairo_text_extents(CairoContext, entry.first.c_str(), &extents);
+	glGetProgramiv(ProgramId, GL_LINK_STATUS, &result);
+	glGetProgramiv(ProgramId, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (infoLogLength > 0) {
+		std::vector<char> ProgramErrorMessage(infoLogLength + 1);
+		glGetProgramInfoLog(ProgramId, infoLogLength, NULL, &ProgramErrorMessage[0]);
+		printf("%s\n", &ProgramErrorMessage[0]);
+	}
 
-        cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
-        cairo_rectangle(CairoContext, 7.0, offsetY, extents.x_advance + 4.0, extents.height + 6.0);
-        cairo_fill(CairoContext);
+	glDetachShader(ProgramId, vertexShaderId);
+	glDetachShader(ProgramId, fragmentShaderId);
 
-        cairo_move_to(CairoContext, 9.0, offsetY + 3.0 - extents.y_bearing);
-        cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
-        cairo_show_text(CairoContext, entry.first.c_str());
+	glDeleteShader(vertexShaderId);
+	glDeleteShader(fragmentShaderId);
 
-        offsetY += extents.height + 6.0;
-    }
-#endif        
-}
+	glGenVertexArrays(1, &VertexArrayId);
+	glBindVertexArray(VertexArrayId);
 
-#ifdef _WIN32
-void VideoBackend::InitGDIObjects(void* handle)
-{
-    std::string error;
-    BITMAPINFOHEADER bmih = { 0 };
-    BITMAPINFO bmi = { 0 };
+	static const GLfloat g_vertex_buffer_data[] = {
+		0.0f, 0.0f, 0.0f,
+		0.0f,  1.0f, 0.0f,
+		 1.0f, 0.0f, 0.0f,
+		 1.0f,  1.0f, 0.0f
+	};
 
-    Window = reinterpret_cast<HWND>(handle);
+	// Generate 1 buffer, put the resulting identifier in vertexbuffer
+	glGenBuffers(1, &VertexBuffer);
+	// The following commands will talk about our 'vertexbuffer' buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+	// Give our vertices to OpenGL.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
-    Font = CreateFont(-20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
-        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, "Consolas");
+	glGenTextures(1, &TextureId);
+	glBindTexture(GL_TEXTURE_2D, TextureId);
 
-    // Failed to find consolas, use closest match
-    if (Font == NULL)
-    {
-        Font = CreateFont(-20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-        // Still failed to find a font, error
-        if (Font == NULL)
-        {
-            error = "Failed to initialize message font";
-            goto FailedExit;
-        }
-    }
-
-    HDC winDC = GetDC(Window);
-
-    if (winDC == NULL)
-    {
-        error = "Failed to get window device context";
-        goto FailedExit;
-    }
-
-    if (!GetTextMetrics(winDC, &FontMetric))
-    {
-        error = "Failed to get font metrics";
-        goto FailedExit;
-    }
-    
-    bmih.biSize = sizeof(BITMAPINFOHEADER);
-    bmih.biWidth = 256;
-    bmih.biHeight = -240;
-    bmih.biPlanes = 1;
-    bmih.biBitCount = 32;
-    bmih.biCompression = BI_RGB;
-
-    bmi.bmiHeader = bmih;
-    bmi.bmiColors->rgbBlue = 0;
-    bmi.bmiColors->rgbGreen = 0;
-    bmi.bmiColors->rgbRed = 0;
-    bmi.bmiColors->rgbReserved = 0;
-
-    void* frontBuffer;
-    void* backBuffer;
-
-    FrontBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &frontBuffer, NULL, 0);
-
-    if (FrontBitmap == NULL)
-    {
-        error = "Failed to create front frame buffer";
-        goto FailedExit;
-    }
-
-    BackBitmap = CreateDIBSection(winDC, &bmi, DIB_RGB_COLORS, &backBuffer, NULL, 0);
-
-    if (BackBitmap == NULL)
-    {
-        error = "Failed to create back frame buffer";
-        goto FailedExit;
-    }
-
-    FrontBuffer = reinterpret_cast<uint8_t*>(frontBuffer);
-    BackBuffer = reinterpret_cast<uint8_t*>(backBuffer);
-
-    ReleaseDC(Window, winDC);
-
-    IntermediateBitmap = NULL;
-
-    return;
-
-FailedExit:
-    DeleteObject(FrontBitmap);
-    DeleteObject(BackBitmap);
-    DeleteObject(Font);
-
-    throw std::runtime_error(error);
-}
-
-void VideoBackend::CleanUpGDIObjects()
-{
-    DeleteObject(IntermediateBitmap);
-    DeleteObject(FrontBitmap);
-    DeleteObject(BackBitmap);
-    DeleteObject(Font);
+	initialized = true;
 }
 #endif
 

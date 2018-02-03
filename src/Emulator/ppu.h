@@ -163,6 +163,9 @@ private:
     uint8_t SpriteAttribute[8];
     int16_t SpriteCounter[8];
 
+	uint32_t FrameBufferIndex;
+	uint32_t FrameBuffer[256 * 240];
+
     bool NtscMode;
     std::atomic<bool> RequestNtscMode;
     float SignalLevels[256 * 8];

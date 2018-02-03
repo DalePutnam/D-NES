@@ -304,8 +304,8 @@ void PPU::RenderNtscLine()
 
         if (VideoOut != nullptr)
         {
-            uint32_t pixel = (red << 16) | (green << 8) | blue;
-            *VideoOut << pixel;
+            uint32_t pixel = (red << 16) | (green << 8) | blue | 0xFF000000;
+			FrameBuffer[FrameBufferIndex++] = pixel;
         }
         
     }
@@ -600,8 +600,7 @@ void PPU::DecodePixel(uint16_t colour)
         {
             if (VideoOut != nullptr)
             {
-                uint32_t pixel = RgbLookupTable[colour];
-                *VideoOut << pixel;
+                FrameBuffer[FrameBufferIndex++] = RgbLookupTable[colour];
             }
         }
     }
@@ -879,6 +878,7 @@ PPU::PPU(VideoBackend* vout)
     , BackgroundAttributeShift1(0)
     , BackgroundAttribute(0)
     , SpriteCount(0)
+	, FrameBufferIndex(0)
     , NtscMode(false)
 {
     memset(NameTable0, 0, sizeof(uint8_t) * 0x400);
@@ -1184,21 +1184,21 @@ void PPU::LoadState(const char* state)
             if (NtscMode)
             {
                 // In NTSC mode all the pixels in a scanline are calculated at the end of that scanline
-                VideoOut->SetFramePosition(0, Line);
+                //VideoOut->SetFramePosition(0, Line);
             }
             else
             {
-                VideoOut->SetFramePosition(Dot - 1, Line);
+                //VideoOut->SetFramePosition(Dot - 1, Line);
             }
         }
         else
         {
-            VideoOut->SetFramePosition(0, Line + 1);
+            //VideoOut->SetFramePosition(0, Line + 1);
         }
     }
     else
     {
-        VideoOut->SetFramePosition(0, 0);
+        //VideoOut->SetFramePosition(0, 0);
     }
     
 }
@@ -1833,10 +1833,14 @@ void PPU::Step(uint64_t cycles)
                 // Check if a change in rendering mode or turbo mode has been requested
                 MaybeChangeModes();
 
-                if (OnFrameComplete && TurboFrameSkip == 0)
-                {
-                    OnFrameComplete();
-                }
+				if (TurboFrameSkip == 0) {
+					VideoOut->DrawFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
+					FrameBufferIndex = 0;
+
+					if (OnFrameComplete) {
+						OnFrameComplete();
+					}
+				}
             }
 
             if (Dot == 340)

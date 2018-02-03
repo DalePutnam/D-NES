@@ -25,6 +25,9 @@
     <Filter Include="Source Files\Backends">
       <UniqueIdentifier>{8f432b86-8435-413e-bdaa-16dac11e8b9d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Backends\gl">
+      <UniqueIdentifier>{6c0b8b7d-4e01-4e74-a7d5-0a23f0c26f94}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h">
@@ -56,6 +59,9 @@
     </ClInclude>
     <ClInclude Include="backends\video_backend.h">
       <Filter>Header Files\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="backends\gl\glext.h">
+      <Filter>Header Files\Backends\gl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

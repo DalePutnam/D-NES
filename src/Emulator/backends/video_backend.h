@@ -7,12 +7,16 @@
 #include <vector>
 #include <condition_variable>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <Windows.h>
 #elif defined(__linux)   
 #include <X11/Xlib.h>
 #include <cairo/cairo.h>
 #endif
+
+#include <gl/GL.h>
+
+struct __vb_impl;
 
 class VideoBackend
 {
@@ -21,7 +25,12 @@ public:
     ~VideoBackend();
     VideoBackend& operator<<(uint32_t pixel);
 
-    void SetFramePosition(uint32_t x, uint32_t y);
+	void Prepare();
+	void Finalize();
+
+	void DrawFrame(uint8_t* fb);
+
+    //void SetFramePosition(uint32_t x, uint32_t y);
     void SetOverscanEnabled(bool enabled);
 
     void ShowFps(bool show);
@@ -56,18 +65,17 @@ private:
     std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
 #ifdef _WIN32
-    void InitGDIObjects(void* handle);
-    void CleanUpGDIObjects();
-
-    void DrawFps(HDC dc);
-    void DrawMessages(HDC dc);
+	void InitOgl();
 
     HWND Window;
-    HFONT Font;
-    TEXTMETRIC FontMetric;
-    HBITMAP IntermediateBitmap;
-    HBITMAP FrontBitmap;
-    HBITMAP BackBitmap;
+	HDC WinDc;
+	HGLRC Oglc;
+
+	GLuint ProgramId;
+	GLuint VertexArrayId;
+	GLuint VertexBuffer;
+	GLuint TextureId;
+	bool initialized;
 #elif defined(__linux)   
     void InitXWindow(void* handle);
     void InitCairo();

@@ -258,8 +258,12 @@ void NES::Run()
 {
     try
     {
+		VideoOut->Prepare();
+
         Apu->ResetFrameLimiter();
         Cpu->Run();
+
+		VideoOut->Finalize();
     }
     catch (std::exception& e)
     {

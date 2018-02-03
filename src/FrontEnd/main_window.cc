@@ -47,6 +47,8 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
 
 void MainWindow::EmulatorFrameCallback()
 {
+	//SetTitle(std::to_string(Nes->GetFrameRate()));
+
     std::unique_lock<std::mutex> lock(PpuViewerMutex);
     
     if (PpuWindow != nullptr)
