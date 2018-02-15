@@ -63,6 +63,9 @@
     <ClInclude Include="backends\gl\glext.h">
       <Filter>Header Files\Backends\gl</Filter>
     </ClInclude>
+    <ClInclude Include="backends\font_small.h">
+      <Filter>Header Files\Backends</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">

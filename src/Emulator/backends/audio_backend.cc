@@ -3,6 +3,9 @@
 
 #include "audio_backend.h"
 
+#if defined(_WIN32)
+#pragma comment(lib, "XAudio2.lib")
+#endif
 
 //**********************************************************************
 // Audio Backend

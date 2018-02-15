@@ -16,21 +16,16 @@
 
 #include <gl/GL.h>
 
-struct __vb_impl;
-
 class VideoBackend
 {
 public:
     VideoBackend(void* windowHandle);
     ~VideoBackend();
-    VideoBackend& operator<<(uint32_t pixel);
 
 	void Prepare();
 	void Finalize();
 
 	void DrawFrame(uint8_t* fb);
-
-    //void SetFramePosition(uint32_t x, uint32_t y);
     void SetOverscanEnabled(bool enabled);
 
     void ShowFps(bool show);
@@ -39,23 +34,13 @@ public:
 
 private:
     void Swap();
-    void RenderWorker();
 
     void UpdateSurfaceSize();
     void DrawFrame();
-
-    std::thread RenderThread;
-    std::mutex RenderLock;
-    std::condition_variable RenderCv;
-
-    uint8_t* FrontBuffer;
-    uint8_t* BackBuffer;
-    uint32_t PixelIndex;
+	void DrawFps(uint32_t fps);
 
     uint32_t WindowWidth;
     uint32_t WindowHeight;
-
-    bool StopRendering;
 
     bool OverscanEnabled;
 
@@ -64,18 +49,17 @@ private:
 
     std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
-#ifdef _WIN32
-	void InitOgl();
+	GLuint FrameProgramId;
+	GLuint FontProgramId;
+	GLuint VertexArrayId;
+	GLuint VertexBuffer;
+	GLuint FrameTextureId;
+	GLuint FontTextureId;
 
+#ifdef _WIN32
     HWND Window;
 	HDC WinDc;
 	HGLRC Oglc;
-
-	GLuint ProgramId;
-	GLuint VertexArrayId;
-	GLuint VertexBuffer;
-	GLuint TextureId;
-	bool initialized;
 #elif defined(__linux)   
     void InitXWindow(void* handle);
     void InitCairo();
