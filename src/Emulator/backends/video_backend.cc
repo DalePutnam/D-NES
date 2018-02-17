@@ -79,35 +79,36 @@ const std::string textFragmentShader =
 		color = texture(sampler, outUV).rgb;
 	})";
 
-PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
-PFNGLBINDVERTEXARRAYPROC glBindVertexArray;
-PFNGLGENBUFFERSPROC glGenBuffers;
-PFNGLBINDBUFFERPROC glBindBuffer;
-PFNGLBUFFERDATAPROC glBufferData;
-PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
-PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
-PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray;
-PFNGLCREATESHADERPROC glCreateShader;
-PFNGLSHADERSOURCEPROC glShaderSource;
-PFNGLCOMPILESHADERPROC glCompileShader;
-PFNGLGETSHADERIVPROC glGetShaderiv;
-PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog;
-PFNGLCREATEPROGRAMPROC glCreateProgram;
-PFNGLATTACHSHADERPROC glAttachShader;
-PFNGLLINKPROGRAMPROC glLinkProgram;
-PFNGLGETPROGRAMIVPROC glGetProgramiv;
-PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog;
-PFNGLDETACHSHADERPROC glDetachShader;
-PFNGLDELETESHADERPROC glDeleteShader;
-PFNGLUSEPROGRAMPROC glUseProgram;
-PFNGLUNIFORM1IPROC glUniform1i;
-PFNGLUNIFORM2FPROC glUniform2f;
-PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
-PFNGLACTIVETEXTUREPROC glActiveTexture;
+thread_local PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
+thread_local PFNGLBINDVERTEXARRAYPROC glBindVertexArray;
+thread_local PFNGLGENBUFFERSPROC glGenBuffers;
+thread_local PFNGLBINDBUFFERPROC glBindBuffer;
+thread_local PFNGLBUFFERDATAPROC glBufferData;
+thread_local PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
+thread_local PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
+thread_local PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray;
+thread_local PFNGLCREATESHADERPROC glCreateShader;
+thread_local PFNGLSHADERSOURCEPROC glShaderSource;
+thread_local PFNGLCOMPILESHADERPROC glCompileShader;
+thread_local PFNGLGETSHADERIVPROC glGetShaderiv;
+thread_local PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog;
+thread_local PFNGLCREATEPROGRAMPROC glCreateProgram;
+thread_local PFNGLATTACHSHADERPROC glAttachShader;
+thread_local PFNGLLINKPROGRAMPROC glLinkProgram;
+thread_local PFNGLGETPROGRAMIVPROC glGetProgramiv;
+thread_local PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog;
+thread_local PFNGLDETACHSHADERPROC glDetachShader;
+thread_local PFNGLDELETESHADERPROC glDeleteShader;
+thread_local PFNGLUSEPROGRAMPROC glUseProgram;
+thread_local PFNGLUNIFORM1IPROC glUniform1i;
+thread_local PFNGLUNIFORM2FPROC glUniform2f;
+thread_local PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
+thread_local PFNGLACTIVETEXTUREPROC glActiveTexture;
 
-std::unique_ptr<std::string> compileErrorMessage = std::make_unique<std::string>();
+thread_local std::unique_ptr<std::string> compileErrorMessage = std::make_unique<std::string>();
 
-void InitializeFunctions() {
+void InitializeFunctions()
+{
 	glGenVertexArrays = reinterpret_cast<PFNGLGENVERTEXARRAYSPROC>(LOAD_OGL_FUNC("glGenVertexArrays"));
 	glBindVertexArray = reinterpret_cast<PFNGLBINDVERTEXARRAYPROC>(LOAD_OGL_FUNC("glBindVertexArray"));
 	glGenBuffers = reinterpret_cast<PFNGLGENBUFFERSPROC>(LOAD_OGL_FUNC("glGenBuffers"));
@@ -214,7 +215,6 @@ GLint CompileShaders(const std::string& vertexShader, const std::string& fragmen
 
 	return GL_TRUE;
 }
-
 }
 
 VideoBackend::VideoBackend(void* windowHandle)
