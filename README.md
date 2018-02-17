@@ -10,12 +10,14 @@ Input: Very simple implementation. No ability to remap inputs. One controller on
 ## Build Instructions
 ### Windows
 
-Requirements: Visual Studio 2015 (or 2017 with the 2015 build tools installed)
+Requirements: Visual Studio 2017
 
 1. Clone the repository to the location of your choice.
-2. Download wxWidgets-3.1.0 and extract it to D-NES/ext. Name it simply `wxWidgets`.
-3. Open D-NES.sln and build either the x64 or Win32 configurations. The first compile will take ~5 minutes since wxWidgets needs to be built.
-4. Done. You can now begin working on the emulator.
+2. Download wxWidgets 3.0.3 and extract it to a directory of your choice.
+3. Open wx_vc12.sln in build/msw in the wxWidgets directory with Visual Studio 2017 and upgrade the solution.
+3. Build the x64 Debug and Release (non-DLL) wxWidgets configurations.
+4. Add an environment variable called WXWIDGETS_ROOT that points to root of the wxWidgets directory.
+5. Open D-NES.sln and build the solution.
 
 ### Linux
 
@@ -27,4 +29,4 @@ Requirements: Visual Studio 2015 (or 2017 with the 2015 build tools installed)
 
 ### OSX
 
-No support for OSX at this time and possibly any time in the future as I do not own a Mac.
+No support for OSX.
