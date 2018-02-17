@@ -1,58 +1,37 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FrontEnd", "src\FrontEnd\FrontEnd.vcxproj", "{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}"
 	ProjectSection(ProjectDependencies) = postProject
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722} = {283A515E-96DA-41E6-AB1C-B92FEF09D722}
 		{2F61AB97-7292-4A8C-B249-2773318D46A8} = {2F61AB97-7292-4A8C-B249-2773318D46A8}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Emulator", "src\Emulator\Emulator.vcxproj", "{2F61AB97-7292-4A8C-B249-2773318D46A8}"
-	ProjectSection(ProjectDependencies) = postProject
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722} = {283A515E-96DA-41E6-AB1C-B92FEF09D722}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "_externals", "ext\_externals.vcxproj", "{283A515E-96DA-41E6-AB1C-B92FEF09D722}"
 EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
-		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Debug|Win32.ActiveCfg = Debug|Win32
-		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Debug|Win32.Build.0 = Debug|Win32
 		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Debug|x64.ActiveCfg = Debug|x64
 		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Debug|x64.Build.0 = Debug|x64
-		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Release|Win32.ActiveCfg = Release|Win32
-		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Release|Win32.Build.0 = Release|Win32
-		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Release|x64.ActiveCfg = Release|x64
-		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Release|x64.Build.0 = Release|x64
-		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Debug|Win32.ActiveCfg = Debug|Win32
-		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Debug|Win32.Build.0 = Debug|Win32
+		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Release|x64.ActiveCfg = Debug|x64
+		{68DB4092-66FA-44C1-8DE4-4FD81DCF3380}.Release|x64.Build.0 = Debug|x64
 		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Debug|x64.ActiveCfg = Debug|x64
 		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Debug|x64.Build.0 = Debug|x64
-		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Release|Win32.ActiveCfg = Release|Win32
-		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Release|Win32.Build.0 = Release|Win32
-		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Release|x64.ActiveCfg = Release|x64
-		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Release|x64.Build.0 = Release|x64
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Debug|Win32.ActiveCfg = Debug|Win32
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Debug|Win32.Build.0 = Debug|Win32
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Debug|x64.ActiveCfg = Debug|x64
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Debug|x64.Build.0 = Debug|x64
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Release|Win32.ActiveCfg = Release|Win32
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Release|Win32.Build.0 = Release|Win32
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Release|x64.ActiveCfg = Release|x64
-		{283A515E-96DA-41E6-AB1C-B92FEF09D722}.Release|x64.Build.0 = Release|x64
+		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Release|x64.ActiveCfg = Debug|x64
+		{2F61AB97-7292-4A8C-B249-2773318D46A8}.Release|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1E5D2185-CDD5-4E52-9D01-2769696F444C}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
