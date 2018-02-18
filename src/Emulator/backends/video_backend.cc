@@ -284,14 +284,14 @@ void VideoBackend::Prepare()
 		throw std::runtime_error(*compileErrorMessage);
 	}
 
-	if (!CompileShaders(textVertexShader, textFragmentShader, &FontProgramId))
+	if (!CompileShaders(textVertexShader, textFragmentShader, &TextProgramId))
 	{
 		Finalize();
 		throw std::runtime_error(*compileErrorMessage);
 	}
 
-	glGenVertexArrays(1, &VertexArrayId);
-	glBindVertexArray(VertexArrayId);
+	glGenVertexArrays(1, &FrameVertexArrayId);
+	glBindVertexArray(FrameVertexArrayId);
 
 	static const GLfloat g_vertex_buffer_data[] = {
 		0.0f,  0.0f, 0.0f,
@@ -301,9 +301,9 @@ void VideoBackend::Prepare()
 	};
 
 	// Generate 1 buffer, put the resulting identifier in vertexbuffer
-	glGenBuffers(1, &VertexBuffer);
+	glGenBuffers(1, &FrameVertexBuffer);
 	// The following commands will talk about our 'vertexbuffer' buffer
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, FrameVertexBuffer);
 	// Give our vertices to OpenGL.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
@@ -313,13 +313,16 @@ void VideoBackend::Prepare()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	glGenTextures(1, &FontTextureId);
-	glBindTexture(GL_TEXTURE_2D, FontTextureId);
+	glGenTextures(1, &TextTextureId);
+	glBindTexture(GL_TEXTURE_2D, TextTextureId);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 128, 0, GL_BGR, GL_UNSIGNED_BYTE, fontBitmap);
+
+	glGenBuffers(1, &TextVertexBuffer);
+	glGenBuffers(1, &TextUVBuffer);
 }
 
 void VideoBackend::Finalize()
@@ -359,7 +362,7 @@ void VideoBackend::DrawFrame(uint8_t * fb)
 
 	// 1st attribute buffer : vertices
 	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, FrameVertexBuffer);
 	glVertexAttribPointer(
 		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
 		3,                  // size
@@ -378,26 +381,67 @@ void VideoBackend::DrawFrame(uint8_t * fb)
 		DrawFps(currentFps);
 	}
 
+	DrawMessages();
+
 	SwapBuffers(WinDc);
 }
 
 void VideoBackend::DrawFps(uint32_t fps)
 {
+	std::string fpsStr = std::to_string(fps);
+
+	uint32_t xPos = WindowWidth - 12 - fpsStr.length() * fontBitmapCellWidth;
+	uint32_t yPos = WindowHeight - 12 - fontBitmapCellHeight;
+
+	DrawText(fpsStr, xPos, yPos);
+}
+
+void VideoBackend::DrawMessages()
+{
+    if (Messages.empty())
+    {
+        return;
+    }
+
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > remaining;
+    for (auto& entry : Messages)
+    {
+        if (entry.second > now)
+        {
+            remaining.push_back(entry);
+        }
+    }
+
+    Messages.swap(remaining);
+
+	uint32_t xPos = 12;
+	uint32_t yPos = WindowHeight - 12 - fontBitmapCellHeight;
+
+    for (auto& entry : Messages)
+    {
+        const std::string& message = entry.first;
+        DrawText(message, xPos, yPos);
+
+		yPos -= fontBitmapCellHeight;
+    }
+}
+
+void VideoBackend::DrawText(const std::string & text, uint32_t xPos, uint32_t yPos)
+{
 	static constexpr float uvWidth = static_cast<float>(fontBitmapCellWidth) / static_cast<float>(fontBitmapWidth);
 	static constexpr float uvHeight = static_cast<float>(fontBitmapCellHeight) / static_cast<float>(fontBitmapHeight);
-
-	std::string fpsStr = std::to_string(fps);
 
 	std::vector<float> vertices;
 	std::vector<float> uvs;
 
-	vertices.reserve(fpsStr.length() * 12);
-	uvs.reserve(fpsStr.length() * 12);
+	vertices.reserve(text.length() * 12);
+	uvs.reserve(text.length() * 12);
 
-	float x = WindowWidth - 12 - fpsStr.length() * fontBitmapCellWidth;
-	float y = WindowHeight - 12 - fontBitmapCellHeight;
+	float x = xPos;
+	float y = yPos;
 
-	for (uint32_t i = 0; i < fpsStr.length(); ++i)
+	for (uint32_t i = 0; i < text.length(); ++i)
 	{
 		float upLeftX = x + i * fontBitmapCellWidth;
 		float upLeftY = y + fontBitmapCellHeight;
@@ -422,7 +466,7 @@ void VideoBackend::DrawFps(uint32_t fps)
 		vertices.push_back(downLeftX);
 		vertices.push_back(downLeftY);
 
-		char character = fpsStr[i];
+		char character = text[i];
 		uint32_t index = character - 32;
 
 		uint32_t col = index % 36;
@@ -455,22 +499,17 @@ void VideoBackend::DrawFps(uint32_t fps)
 		uvs.push_back(uvDownLeftY);
 	}
 
-	// Shouldn't create new buffer objects each time
-	GLuint vertexBuffer, uvBuffer;
-
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, TextVertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*vertices.size(), vertices.data(), GL_STATIC_DRAW);
 
-	glGenBuffers(1, &uvBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, TextUVBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*uvs.size(), uvs.data(), GL_STATIC_DRAW);
 
-	glUseProgram(FontProgramId);
+	glUseProgram(TextProgramId);
 
 	// 1st attribute buffer : vertices
 	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, TextVertexBuffer);
 	glVertexAttribPointer(
 		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
 		2,                  // size
@@ -482,7 +521,7 @@ void VideoBackend::DrawFps(uint32_t fps)
 
 	// 1st attribute buffer : vertices
 	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, TextUVBuffer);
 	glVertexAttribPointer(
 		1,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
 		2,                  // size
@@ -492,13 +531,12 @@ void VideoBackend::DrawFps(uint32_t fps)
 		(void*)0            // array buffer offset
 	);
 
-	GLint loc = glGetUniformLocation(FontProgramId, "screenSize");
+	GLint loc = glGetUniformLocation(TextProgramId, "screenSize");
 	glUniform2f(loc, static_cast<float>(WindowWidth), static_cast<float>(WindowHeight));
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, FontTextureId);
-	//loc = glGetUniformLocation(FontProgramId, "sampler");
-	glUniform1i(FontTextureId, 0);
+	glBindTexture(GL_TEXTURE_2D, TextTextureId);
+	glUniform1i(TextTextureId, 0);
 
 	glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 2);
 

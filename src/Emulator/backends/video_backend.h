@@ -9,6 +9,7 @@
 
 #if defined(_WIN32)
 #include <Windows.h>
+#undef DrawText
 #elif defined(__linux)   
 #include <X11/Xlib.h>
 #include <cairo/cairo.h>
@@ -38,6 +39,8 @@ private:
     void UpdateSurfaceSize();
     void DrawFrame();
 	void DrawFps(uint32_t fps);
+	void DrawMessages();
+	void DrawText(const std::string& text, uint32_t xPos, uint32_t yPos);
 
     uint32_t WindowWidth;
     uint32_t WindowHeight;
@@ -50,11 +53,13 @@ private:
     std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
 	GLuint FrameProgramId;
-	GLuint FontProgramId;
-	GLuint VertexArrayId;
-	GLuint VertexBuffer;
+	GLuint FrameVertexArrayId;
+	GLuint FrameVertexBuffer;
 	GLuint FrameTextureId;
-	GLuint FontTextureId;
+	GLuint TextProgramId;
+	GLuint TextTextureId;
+	GLuint TextVertexBuffer;
+	GLuint TextUVBuffer;
 
 #ifdef _WIN32
     HWND Window;
