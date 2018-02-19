@@ -40,9 +40,30 @@ const std::string frameVertexShader =
 	R"(#version 330 core
 	layout(location = 0) in vec3 vert;
 	out vec2 uv;
+	uniform vec2 screenSize;
+	uniform vec2 frameSize;
 	void main() {
-		gl_Position = vec4((vert.x*2.0)-1.0, (vert.y*2.0)-1.0, 1.0, 1.0);
-		uv = vec2(vert.x, -vert.y);
+		float wRatio = screenSize.x / frameSize.x;
+		float hRatio = screenSize.y / frameSize.y;
+		if (wRatio < hRatio) {
+			float height = frameSize.y * wRatio;
+			float hclip = (height / screenSize.y) * 2.0;
+			float ypos = (screenSize.y - height) / 2.0;
+			float yclip = ((ypos / screenSize.y) * 2.0) - 1.0;
+			gl_Position.y = yclip + (hclip * vert.y);
+			gl_Position.x = (vert.x * 2.0) - 1.0;
+		} else if (hRatio <= wRatio) {
+			float width = frameSize.x * hRatio;
+			float wclip = (width / screenSize.x) * 2.0;
+			float xpos = (screenSize.x - width) / 2.0;
+			float xclip = ((xpos / screenSize.x) * 2.0) - 1.0;
+			gl_Position.x = xclip + (wclip * vert.x);
+			gl_Position.y = (vert.y * 2.0) - 1.0;
+		}
+		gl_Position.z = 1.0; 
+		gl_Position.w = 1.0; 
+		uv.x = vert.x; 
+		uv.y = -vert.y; 
 	})";
 
 const std::string frameFragmentShader =
@@ -58,7 +79,7 @@ const std::string textVertexShader =
 	R"(#version 330 core
 	layout(location = 0) in vec2 inVertex;
 	layout(location = 1) in vec2 inUV;
-	out vec2 outUV;
+	out vec2 uv;
 
 	uniform vec2 screenSize;
 	void main() {
@@ -67,16 +88,16 @@ const std::string textVertexShader =
 		clipSpace /= halfScreen;
 		gl_Position = vec4(clipSpace, 0, 1);
 
-		outUV = inUV;
+		uv = inUV;
 	})";
 
 const std::string textFragmentShader =
 	R"(#version 330 core
-	in vec2 outUV;
+	in vec2 uv;
 	out vec3 color;
 	uniform sampler2D sampler;
 	void main() {
-		color = texture(sampler, outUV).rgb;
+		color = texture(sampler, uv).rgb;
 	})";
 
 thread_local PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
@@ -239,8 +260,6 @@ VideoBackend::~VideoBackend()
     DestroyCairo();
     DestroyXWindow();
 #endif
-
-    
 }
 
 void VideoBackend::Prepare()
@@ -350,27 +369,19 @@ void VideoBackend::DrawFrame(uint8_t * fb)
 
 	glBindTexture(GL_TEXTURE_2D, FrameTextureId);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, overscanEnabled ? 224 : 240, 0, GL_BGRA, GL_UNSIGNED_BYTE, overscanEnabled ? fb + 8192 : fb);
-	/*
-	GLint loc = glGetUniformLocation(ProgramId, "screenSize");
+
+	GLint loc = glGetUniformLocation(FrameProgramId, "screenSize");
 	glUniform2f(loc, static_cast<float>(WindowWidth), static_cast<float>(WindowHeight));
 
-	loc = glGetUniformLocation(ProgramId, "frameSize");
+	loc = glGetUniformLocation(FrameProgramId, "frameSize");
 	glUniform2f(loc, 256, overscanEnabled ? 224.f : 240.f);
-	*/
 
 	glUniform1i(FrameTextureId, 0);
 
 	// 1st attribute buffer : vertices
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, FrameVertexBuffer);
-	glVertexAttribPointer(
-		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-		3,                  // size
-		GL_FLOAT,           // type
-		GL_FALSE,           // normalized?
-		0,                  // stride
-		(void*)0            // array buffer offset
-	);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 	// Draw the triangle !
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -383,7 +394,7 @@ void VideoBackend::DrawFrame(uint8_t * fb)
 
 	DrawMessages();
 
-	SwapBuffers(WinDc);
+	Swap();
 }
 
 void VideoBackend::DrawFps(uint32_t fps)
@@ -398,6 +409,8 @@ void VideoBackend::DrawFps(uint32_t fps)
 
 void VideoBackend::DrawMessages()
 {
+	std::unique_lock<std::mutex> lock(MessageMutex);
+
     if (Messages.empty())
     {
         return;
@@ -510,26 +523,12 @@ void VideoBackend::DrawText(const std::string & text, uint32_t xPos, uint32_t yP
 	// 1st attribute buffer : vertices
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, TextVertexBuffer);
-	glVertexAttribPointer(
-		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-		2,                  // size
-		GL_FLOAT,           // type
-		GL_FALSE,           // normalized?
-		0,                  // stride
-		(void*)0            // array buffer offset
-	);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
-	// 1st attribute buffer : vertices
+	// 1st attribute buffer : UVs
 	glEnableVertexAttribArray(1);
 	glBindBuffer(GL_ARRAY_BUFFER, TextUVBuffer);
-	glVertexAttribPointer(
-		1,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-		2,                  // size
-		GL_FLOAT,           // type
-		GL_FALSE,           // normalized?
-		0,                  // stride
-		(void*)0            // array buffer offset
-	);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 	GLint loc = glGetUniformLocation(TextProgramId, "screenSize");
 	glUniform2f(loc, static_cast<float>(WindowWidth), static_cast<float>(WindowHeight));
@@ -563,13 +562,18 @@ void VideoBackend::ShowMessage(const std::string& message, uint32_t duration)
 {
     using namespace std::chrono;
 
+	std::unique_lock<std::mutex> lock(MessageMutex);
+
     steady_clock::time_point expires = steady_clock::now() + seconds(duration);
     Messages.push_back(std::make_pair(ToUpperCase(message), expires));
 }
 
 void VideoBackend::Swap()
 {
-	UpdateSurfaceSize();
+#if defined(_WIN32)
+	SwapBuffers(WinDc);
+#elif defined(__linux)
+#endif
 }
 
 void VideoBackend::UpdateSurfaceSize()
@@ -608,165 +612,37 @@ void VideoBackend::UpdateSurfaceSize()
 #endif
 }
 
-void VideoBackend::DrawFrame()
-{
-#ifdef _WIN32
-#elif defined(__linux)     
-    cairo_save(CairoContext);
-
-    cairo_surface_t* frame;
-    if (OverscanEnabled)
-    {
-        frame = cairo_image_surface_create_for_data(FrontBuffer + (256*8*4), CAIRO_FORMAT_ARGB32, 256, 224, 1024);
-        cairo_scale(CairoContext, WindowWidth / 256.0, WindowHeight / 224.0);
-    }
-    else
-    {
-        frame = cairo_image_surface_create_for_data(FrontBuffer, CAIRO_FORMAT_ARGB32, 256, 240, 1024);
-        cairo_scale(CairoContext, WindowWidth / 256.0, WindowHeight / 240.0);
-    }
-
-    cairo_set_source_surface(CairoContext, frame, 0, 0);
-    cairo_pattern_set_filter(cairo_get_source(CairoContext), CAIRO_FILTER_NEAREST);
-    cairo_paint(CairoContext);
-    cairo_surface_destroy(frame);
-    cairo_restore(CairoContext);
-
-    if (ShowingFps)
-    {
-        DrawFps();
-    }
-
-    DrawMessages();
-#endif
-}
-
-//#ifdef _WIN32
-//void VideoBackend::DrawFps(HDC dc)
-//#elif defined(__linux)
-//void VideoBackend::DrawFps()
-//#endif
+//void VideoBackend::DrawFrame()
 //{
-//    std::string fps = std::to_string(CurrentFps);
 //#ifdef _WIN32
-//	/*
-//    SetBkMode(dc, TRANSPARENT);
-//    SetTextColor(dc, RGB(255, 255, 255));
-//    HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+//#elif defined(__linux)     
+//    cairo_save(CairoContext);
 //
-//    SIZE textSize;
-//    GetTextExtentPoint32(dc, fps.c_str(), static_cast<int>(fps.length()), &textSize);
+//    cairo_surface_t* frame;
+//    if (OverscanEnabled)
+//    {
+//        frame = cairo_image_surface_create_for_data(FrontBuffer + (256*8*4), CAIRO_FORMAT_ARGB32, 256, 224, 1024);
+//        cairo_scale(CairoContext, WindowWidth / 256.0, WindowHeight / 224.0);
+//    }
+//    else
+//    {
+//        frame = cairo_image_surface_create_for_data(FrontBuffer, CAIRO_FORMAT_ARGB32, 256, 240, 1024);
+//        cairo_scale(CairoContext, WindowWidth / 256.0, WindowHeight / 240.0);
+//    }
 //
-//    RECT rect;
-//    rect.top = 8;
-//    rect.left = WindowWidth - textSize.cx - 8 - (FontMetric.tmInternalLeading*2) + 1;
-//    rect.bottom = 8 + textSize.cy;
-//    rect.right = WindowWidth - 7;
+//    cairo_set_source_surface(CairoContext, frame, 0, 0);
+//    cairo_pattern_set_filter(cairo_get_source(CairoContext), CAIRO_FILTER_NEAREST);
+//    cairo_paint(CairoContext);
+//    cairo_surface_destroy(frame);
+//    cairo_restore(CairoContext);
 //
-//    // Draw Backing Rectangle
-//    FillRect(dc, &rect, brush);
+//    if (ShowingFps)
+//    {
+//        DrawFps();
+//    }
 //
-//    rect.top = 8;
-//    rect.left = WindowWidth - textSize.cx - 8 - FontMetric.tmInternalLeading + 1;
-//    rect.bottom = 8 + textSize.cy;
-//    rect.right = WindowWidth - 7;
-//
-//    // Draw FPS text
-//    DrawText(dc, fps.c_str(), static_cast<int>(fps.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-//
-//    DeleteObject(brush);
-//	*/
-//#elif defined(__linux)  
-//    cairo_text_extents_t extents;
-//    cairo_text_extents(CairoContext, fps.c_str(), &extents);
-//    
-//    cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
-//    cairo_rectangle(CairoContext, WindowWidth - extents.x_advance - 11.0, 8.0, extents.x_advance + 4.0, extents.height + 6.0);
-//    cairo_fill(CairoContext);
-//    
-//    cairo_move_to(CairoContext, WindowWidth - extents.x_advance - 9.0, 11.0 + extents.height);
-//    cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
-//    cairo_show_text(CairoContext, fps.c_str());
+//    DrawMessages();
 //#endif
-//}
-//#ifdef _WIN32
-//void VideoBackend::DrawMessages(HDC dc)
-//#elif defined(__linux)
-//void VideoBackend::DrawMessages()
-//#endif
-//{
-//    if (Messages.empty())
-//    {
-//        return;
-//    }
-//
-//    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-//    std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > remaining;
-//    for (auto& entry : Messages)
-//    {
-//        if (entry.second > now)
-//        {
-//            remaining.push_back(entry);
-//        }
-//    }
-//
-//    Messages.swap(remaining);
-//
-//    // Draw Messages
-//#ifdef _WIN32
-//	/*
-//    SetBkMode(dc, TRANSPARENT);
-//    SetTextColor(dc, RGB(255, 255, 255));
-//    HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
-//    
-//    int offsetY = 8;
-//    for (auto& entry : Messages)
-//    {
-//        std::string& message = entry.first;
-//
-//        SIZE textSize;
-//        GetTextExtentPoint32(dc, message.c_str(), static_cast<int>(message.length()), &textSize);
-//
-//        RECT rect;
-//        rect.top = offsetY;
-//        rect.left = 7;
-//        rect.bottom = offsetY + textSize.cy;
-//        rect.right = 7 + textSize.cx + (FontMetric.tmInternalLeading*2) + 1;
-//
-//        // Draw Backing Rectangle
-//        FillRect(dc, &rect, brush);
-//
-//        rect.top = offsetY;
-//        rect.left = 7 + FontMetric.tmInternalLeading;
-//        rect.bottom = offsetY + textSize.cy;
-//        rect.right = 7 + FontMetric.tmInternalLeading + textSize.cx;
-//
-//        // Draw Message Text
-//        DrawText(dc, message.c_str(), static_cast<int>(message.length()), &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-//
-//        offsetY += textSize.cy;
-//    }
-//
-//    DeleteObject(brush);
-//	*/
-//#elif defined(__linux)
-//    double offsetY = 8.0;
-//    for (auto& entry : Messages)
-//    {
-//        cairo_text_extents_t extents;
-//        cairo_text_extents(CairoContext, entry.first.c_str(), &extents);
-//
-//        cairo_set_source_rgb(CairoContext, 0.0, 0.0, 0.0);
-//        cairo_rectangle(CairoContext, 7.0, offsetY, extents.x_advance + 4.0, extents.height + 6.0);
-//        cairo_fill(CairoContext);
-//
-//        cairo_move_to(CairoContext, 9.0, offsetY + 3.0 - extents.y_bearing);
-//        cairo_set_source_rgb(CairoContext, 1.0, 1.0, 1.0);
-//        cairo_show_text(CairoContext, entry.first.c_str());
-//
-//        offsetY += extents.height + 6.0;
-//    }
-//#endif        
 //}
 
 #ifdef __linux

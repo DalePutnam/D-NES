@@ -1,11 +1,9 @@
 /* Experimental Video Backend */
 #pragma once
 
-#include <thread>
 #include <mutex>
 #include <chrono>
 #include <vector>
-#include <condition_variable>
 
 #if defined(_WIN32)
 #include <Windows.h>
@@ -34,22 +32,20 @@ public:
     void ShowMessage(const std::string& message, uint32_t duration);
 
 private:
-    void Swap();
-
-    void UpdateSurfaceSize();
-    void DrawFrame();
 	void DrawFps(uint32_t fps);
 	void DrawMessages();
 	void DrawText(const std::string& text, uint32_t xPos, uint32_t yPos);
 
+	void Swap();
+	void UpdateSurfaceSize();
+
+	bool OverscanEnabled;
+	bool ShowingFps;
     uint32_t WindowWidth;
     uint32_t WindowHeight;
-
-    bool OverscanEnabled;
-
     uint32_t CurrentFps;
-    bool ShowingFps;
 
+	std::mutex MessageMutex;
     std::vector<std::pair<std::string, std::chrono::steady_clock::time_point> > Messages;
 
 	GLuint FrameProgramId;
