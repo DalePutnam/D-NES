@@ -162,8 +162,8 @@
   <ItemGroup>
     <ClInclude Include="apu.h" />
     <ClInclude Include="backends\audio_backend.h" />
-    <ClInclude Include="backends\font_small.h" />
-    <ClInclude Include="backends\gl\glext.h" />
+    <ClInclude Include="backends\utils\font.h" />
+    <ClInclude Include="backends\utils\glext.h" />
     <ClInclude Include="backends\video_backend.h" />
     <ClInclude Include="cart.h" />
     <ClInclude Include="cpu.h" />

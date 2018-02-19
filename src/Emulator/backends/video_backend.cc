@@ -6,8 +6,8 @@
 #endif
 
 #include "video_backend.h"
-#include "gl\glext.h"
-#include "font_small.h"
+#include "utils\glext.h"
+#include "utils\font.h"
 
 #if defined(_WIN32)
 #pragma comment(lib, "opengl32.lib")
