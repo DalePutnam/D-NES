@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -Wall -MMD
+CXXFLAGS = -std=c++14 -Wall -MMD
 
 SOURCE_DIR = src
 BUILD_DIR = bld
@@ -58,7 +58,7 @@ $(FE_BUILD_DIR)/%.o: $(FE_SOURCE_DIR)/%.cc
 
 $(EXEC): $(OBJECTS)
 	@echo 'Building Target: $@'
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) -lasound -lX11 `wx-config --libs` `pkg-config --libs gtk+-3.0` 
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) -lasound -lX11 -lGL `wx-config --libs` `pkg-config --libs gtk+-3.0` 
 	@echo ''
 
 .PHONY: clean deep-clean

@@ -1,23 +1,24 @@
 #include <string>
 #include <cassert>
-
-#ifdef __linux
-#include <cairo/cairo-xlib.h>
-#endif
+#include <memory>
 
 #include "video_backend.h"
-#include "utils\glext.h"
-#include "utils\font.h"
+#include "glext.h"
+#include "font.h"
 
 #if defined(_WIN32)
 #pragma comment(lib, "opengl32.lib")
 #define LOAD_OGL_FUNC(name) wglGetProcAddress(name)
 #elif defined(__linux)
-#define LOAD_OGL_FUNC(name) glXGetProcAddress(name)
+#define LOAD_OGL_FUNC(name) glXGetProcAddress(reinterpret_cast<const GLubyte*>(name))
 #endif
 
 namespace
 {
+static constexpr int32_t FRAME_WIDTH = 256;
+static constexpr int32_t FRAME_HEIGHT = 240;
+static constexpr int32_t NUM_OVERSCAN_LINES = 16;
+
 std::string ToUpperCase(const std::string& str)
 {
 	std::string allcaps;
@@ -124,7 +125,6 @@ thread_local PFNGLUSEPROGRAMPROC glUseProgram;
 thread_local PFNGLUNIFORM1IPROC glUniform1i;
 thread_local PFNGLUNIFORM2FPROC glUniform2f;
 thread_local PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
-thread_local PFNGLACTIVETEXTUREPROC glActiveTexture;
 
 thread_local std::unique_ptr<std::string> compileErrorMessage = std::make_unique<std::string>();
 
@@ -154,7 +154,6 @@ void InitializeFunctions()
 	glUniform1i = reinterpret_cast<PFNGLUNIFORM1IPROC>(LOAD_OGL_FUNC("glUniform1i"));
 	glUniform2f = reinterpret_cast<PFNGLUNIFORM2FPROC>(LOAD_OGL_FUNC("glUniform2f"));
 	glGetUniformLocation = reinterpret_cast<PFNGLGETUNIFORMLOCATIONPROC>(LOAD_OGL_FUNC("glGetUniformLocation"));
-	glActiveTexture = reinterpret_cast<PFNGLACTIVETEXTUREPROC>(LOAD_OGL_FUNC("glActiveTexture"));
 }
 
 GLint CompileShaders(const std::string& vertexShader, const std::string& fragmentShader, GLuint* programId)
@@ -242,23 +241,58 @@ VideoBackend::VideoBackend(void* windowHandle)
     : OverscanEnabled(true)
     , CurrentFps(0)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
 	Window = reinterpret_cast<HWND>(windowHandle);
 #elif defined(__linux)
-    InitXWindow(windowHandle);
-    InitCairo();
+    ParentWindowHandle = reinterpret_cast<Window>(windowHandle);
+    DisplayPtr = XOpenDisplay(nullptr);
 
-    FrontBuffer = new uint8_t[256 * 240 * 4];
-    BackBuffer = new uint8_t[256 * 240 * 4];
+    if (DisplayPtr == nullptr)
+    {
+        throw std::runtime_error("Failed to connect to X11 Display");
+    }
+
+    XWindowAttributes attributes;
+    if (XGetWindowAttributes(DisplayPtr, ParentWindowHandle, &attributes) == 0)
+    {
+        XCloseDisplay(DisplayPtr);
+        throw std::runtime_error("Failed to retrieve X11 window attributes");
+    }
+
+    WindowWidth = attributes.width;
+    WindowHeight = attributes.height;
+
+	GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
+
+	XVisualInfoPtr = glXChooseVisual(DisplayPtr, 0, att);
+	if (XVisualInfoPtr == nullptr) {
+		XCloseDisplay(DisplayPtr);
+		throw std::runtime_error("Failed to choose GLX visual settings");
+	}
+
+	Colormap colorMap = XCreateColormap(DisplayPtr, ParentWindowHandle, XVisualInfoPtr->visual, AllocNone);
+
+	XSetWindowAttributes setWindowAttributes;
+	setWindowAttributes.colormap = colorMap;
+	setWindowAttributes.event_mask = ExposureMask | KeyPressMask;
+
+	WindowHandle = XCreateWindow(DisplayPtr, ParentWindowHandle, 0, 0, WindowWidth, WindowHeight, 0, XVisualInfoPtr->depth,
+							InputOutput, XVisualInfoPtr->visual, CWColormap | CWEventMask, &setWindowAttributes);
+
+    if (XMapWindow(DisplayPtr, WindowHandle) == 0)
+    {
+        XDestroyWindow(DisplayPtr, WindowHandle);
+        XCloseDisplay(DisplayPtr);
+        throw std::runtime_error("Failed to map X11 window");
+    }
 #endif
 }
 
 VideoBackend::~VideoBackend()
 {
-#ifdef _WIN32
-#elif __linux
-    DestroyCairo();
-    DestroyXWindow();
+#if defined(__linux)
+    XDestroyWindow(DisplayPtr, WindowHandle);
+    XCloseDisplay(DisplayPtr);
 #endif
 }
 
@@ -285,14 +319,22 @@ void VideoBackend::Prepare()
 		0, 0, 0
 	};
 
-	WinDc = GetDC(Window);
+	WindowDc = GetDC(Window);
 
-	int pf = ChoosePixelFormat(WinDc, &pfd);
-	assert(SetPixelFormat(WinDc, pf, &pfd));
+	int pf = ChoosePixelFormat(WindowDc, &pfd);
+	assert(SetPixelFormat(WindowDc, pf, &pfd));
 
-	Oglc = wglCreateContext(WinDc);
-	assert(wglMakeCurrent(WinDc, Oglc));
+	OglContext = wglCreateContext(WindowDc);
+	assert(wglMakeCurrent(WindowDc, OglContext));
 #elif defined(__linux)
+	OglContext = glXCreateContext(DisplayPtr, XVisualInfoPtr, NULL, GL_TRUE);
+	if (OglContext == NULL) {
+		throw std::runtime_error("Failed to create GLX context");
+	}
+
+	if (!glXMakeCurrent(DisplayPtr, WindowHandle, OglContext)) {
+		throw std::runtime_error("Failed to make GLX context current");
+	}
 #endif
 
 	InitializeFunctions();
@@ -347,13 +389,15 @@ void VideoBackend::Prepare()
 void VideoBackend::Finalize()
 {
 #if defined(_WIN32)
-	wglMakeCurrent(WinDc, NULL);
-	wglDeleteContext(Oglc);
+	wglMakeCurrent(WindowDc, NULL);
+	wglDeleteContext(OglContext);
 #elif defined(__linux)
+	glXMakeCurrent(DisplayPtr, None, NULL);
+	glXDestroyContext(DisplayPtr, OglContext);
 #endif
 }
 
-void VideoBackend::DrawFrame(uint8_t * fb)
+void VideoBackend::DrawFrame(uint8_t* fb)
 {
 	bool overscanEnabled = OverscanEnabled;
 	bool showingFps = ShowingFps;
@@ -362,19 +406,29 @@ void VideoBackend::DrawFrame(uint8_t * fb)
 	UpdateSurfaceSize();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	glViewport(0, 0, WindowWidth, WindowHeight);
 
 	glUseProgram(FrameProgramId);
 
 	glBindTexture(GL_TEXTURE_2D, FrameTextureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, overscanEnabled ? 224 : 240, 0, GL_BGRA, GL_UNSIGNED_BYTE, overscanEnabled ? fb + 8192 : fb);
 
 	GLint loc = glGetUniformLocation(FrameProgramId, "screenSize");
 	glUniform2f(loc, static_cast<float>(WindowWidth), static_cast<float>(WindowHeight));
 
 	loc = glGetUniformLocation(FrameProgramId, "frameSize");
-	glUniform2f(loc, 256, overscanEnabled ? 224.f : 240.f);
+
+	if (overscanEnabled)
+	{
+		fb = fb + (FRAME_WIDTH * (NUM_OVERSCAN_LINES / 2) * 4);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FRAME_WIDTH, FRAME_HEIGHT - NUM_OVERSCAN_LINES, 0, GL_BGRA, GL_UNSIGNED_BYTE, fb);
+		glUniform2f(loc, FRAME_WIDTH, FRAME_HEIGHT - NUM_OVERSCAN_LINES);
+	}
+	else
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, fb);
+		glUniform2f(loc, FRAME_WIDTH, FRAME_HEIGHT);
+	}
 
 	glUniform1i(FrameTextureId, 0);
 
@@ -533,7 +587,6 @@ void VideoBackend::DrawText(const std::string & text, uint32_t xPos, uint32_t yP
 	GLint loc = glGetUniformLocation(TextProgramId, "screenSize");
 	glUniform2f(loc, static_cast<float>(WindowWidth), static_cast<float>(WindowHeight));
 
-	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextTextureId);
 	glUniform1i(TextTextureId, 0);
 
@@ -571,8 +624,9 @@ void VideoBackend::ShowMessage(const std::string& message, uint32_t duration)
 void VideoBackend::Swap()
 {
 #if defined(_WIN32)
-	SwapBuffers(WinDc);
+	SwapBuffers(WindowDc);
 #elif defined(__linux)
+	glXSwapBuffers(DisplayPtr, WindowHandle);
 #endif
 }
 
@@ -590,10 +644,9 @@ void VideoBackend::UpdateSurfaceSize()
         WindowWidth = newWidth;
         WindowHeight = newHeight;
     }
-
 #elif defined(__linux)   
     XWindowAttributes attributes;
-    if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
+    if (XGetWindowAttributes(DisplayPtr, ParentWindowHandle, &attributes) == 0)
     {
         return;
     }
@@ -606,120 +659,7 @@ void VideoBackend::UpdateSurfaceSize()
         WindowWidth = attributes.width;
         WindowHeight = attributes.height;
 
-        XResizeWindow(XDisplay, XWindow, WindowWidth, WindowHeight);
-        cairo_xlib_surface_set_size(CairoXSurface, WindowWidth, WindowHeight);
+        XResizeWindow(DisplayPtr, WindowHandle, WindowWidth, WindowHeight);
     }
 #endif
 }
-
-//void VideoBackend::DrawFrame()
-//{
-//#ifdef _WIN32
-//#elif defined(__linux)     
-//    cairo_save(CairoContext);
-//
-//    cairo_surface_t* frame;
-//    if (OverscanEnabled)
-//    {
-//        frame = cairo_image_surface_create_for_data(FrontBuffer + (256*8*4), CAIRO_FORMAT_ARGB32, 256, 224, 1024);
-//        cairo_scale(CairoContext, WindowWidth / 256.0, WindowHeight / 224.0);
-//    }
-//    else
-//    {
-//        frame = cairo_image_surface_create_for_data(FrontBuffer, CAIRO_FORMAT_ARGB32, 256, 240, 1024);
-//        cairo_scale(CairoContext, WindowWidth / 256.0, WindowHeight / 240.0);
-//    }
-//
-//    cairo_set_source_surface(CairoContext, frame, 0, 0);
-//    cairo_pattern_set_filter(cairo_get_source(CairoContext), CAIRO_FILTER_NEAREST);
-//    cairo_paint(CairoContext);
-//    cairo_surface_destroy(frame);
-//    cairo_restore(CairoContext);
-//
-//    if (ShowingFps)
-//    {
-//        DrawFps();
-//    }
-//
-//    DrawMessages();
-//#endif
-//}
-
-#ifdef __linux
-void VideoBackend::InitXWindow(void* handle)
-{
-    XParentWindow = reinterpret_cast<Window>(handle);
-    XDisplay = XOpenDisplay(nullptr);
-
-    if (XDisplay == nullptr)
-    {
-        throw std::runtime_error("Failed to connect to X11 Display");
-    }
-
-    XWindowAttributes attributes;
-    if (XGetWindowAttributes(XDisplay, XParentWindow, &attributes) == 0)
-    {
-        XCloseDisplay(XDisplay);
-        throw std::runtime_error("Failed to retrieve X11 window attributes");
-    }
-
-    WindowWidth = attributes.width;
-    WindowHeight = attributes.height;
-
-    XWindow = XCreateSimpleWindow(XDisplay, XParentWindow, 0, 0, WindowWidth, WindowHeight, 0, 0, 0);
-
-    if (XMapWindow(XDisplay, XWindow) == 0)
-    {
-        XDestroyWindow(XDisplay, XWindow);
-        XCloseDisplay(XDisplay);
-        throw std::runtime_error("Failed to map X11 window");
-    }
-
-    XSync(XDisplay, false);
-}
-
-void VideoBackend::InitCairo()
-{
-    XWindowAttributes attributes;
-    if (XGetWindowAttributes(XDisplay, XWindow, &attributes) == 0)
-    {
-        XDestroyWindow(XDisplay, XWindow);
-        XCloseDisplay(XDisplay);
-        throw std::runtime_error("Failed to retrieve X11 window attributes");
-    }
-
-    CairoXSurface = cairo_xlib_surface_create(XDisplay, XWindow, attributes.visual, attributes.width, attributes.height);
-
-    if (CairoXSurface == nullptr)
-    {
-        XDestroyWindow(XDisplay, XWindow);
-        XCloseDisplay(XDisplay);
-        throw std::runtime_error("Failed to initialize cairo surface");
-    }
-
-    CairoContext = cairo_create(CairoXSurface);
-
-    if (CairoContext == nullptr)
-    {
-        cairo_surface_destroy(CairoXSurface);
-        XDestroyWindow(XDisplay, XWindow);
-        XCloseDisplay(XDisplay);
-        throw std::runtime_error("Failed to initialize cairo context");
-    }
-
-    cairo_select_font_face(CairoContext, "monospace", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(CairoContext, 18.0);
-}
-
-void VideoBackend::DestroyXWindow()
-{
-    XDestroyWindow(XDisplay, XWindow);
-    XCloseDisplay(XDisplay);
-}
-
-void VideoBackend::DestroyCairo()
-{
-    cairo_destroy(CairoContext);
-    cairo_surface_destroy(CairoXSurface);
-}
-#endif

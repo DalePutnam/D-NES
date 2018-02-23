@@ -1,4 +1,3 @@
-/* Experimental Video Backend */
 #pragma once
 
 #include <mutex>
@@ -7,13 +6,12 @@
 
 #if defined(_WIN32)
 #include <Windows.h>
+#include <gl/GL.h>
 #undef DrawText
 #elif defined(__linux)   
 #include <X11/Xlib.h>
-#include <cairo/cairo.h>
+#include <GL/glx.h>
 #endif
-
-#include <gl/GL.h>
 
 class VideoBackend
 {
@@ -59,22 +57,13 @@ private:
 
 #ifdef _WIN32
     HWND Window;
-	HDC WinDc;
-	HGLRC Oglc;
+	HDC WindowDc;
+	HGLRC OglContext;
 #elif defined(__linux)   
-    void InitXWindow(void* handle);
-    void InitCairo();
-    void DestroyXWindow();
-    void DestroyCairo();
-
-    void DrawFps();
-    void DrawMessages();
-
-    Display* XDisplay;
-    Window XParentWindow;
-    Window XWindow;
-
-    cairo_t* CairoContext;
-    cairo_surface_t* CairoXSurface;
+    Display* DisplayPtr;
+    Window ParentWindowHandle;
+    Window WindowHandle;
+    XVisualInfo* XVisualInfoPtr;
+    GLXContext OglContext;
 #endif
 };
