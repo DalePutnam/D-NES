@@ -322,10 +322,26 @@ void VideoBackend::Prepare()
 	WindowDc = GetDC(Window);
 
 	int pf = ChoosePixelFormat(WindowDc, &pfd);
-	assert(SetPixelFormat(WindowDc, pf, &pfd));
+	if (pf == 0)
+	{
+		throw std::runtime_error("Unable to create pixel format");
+	}
+
+	if (!SetPixelFormat(WindowDc, pf, &pfd))
+	{
+		throw std::runtime_error("Unable to set new pixel format");
+	}
 
 	OglContext = wglCreateContext(WindowDc);
-	assert(wglMakeCurrent(WindowDc, OglContext));
+	if (OglContext == NULL)
+	{
+		throw std::runtime_error("Failed to create OpenGL context");
+	}
+
+	if (!wglMakeCurrent(WindowDc, OglContext))
+	{
+		throw std::runtime_error("Failed to make OpenGL context current");
+	}
 #elif defined(__linux)
 	OglContext = glXCreateContext(DisplayPtr, XVisualInfoPtr, NULL, GL_TRUE);
 	if (OglContext == NULL) {
@@ -422,12 +438,12 @@ void VideoBackend::DrawFrame(uint8_t* fb)
 		fb = fb + (FRAME_WIDTH * (NUM_OVERSCAN_LINES / 2) * 4);
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FRAME_WIDTH, FRAME_HEIGHT - NUM_OVERSCAN_LINES, 0, GL_BGRA, GL_UNSIGNED_BYTE, fb);
-		glUniform2f(loc, FRAME_WIDTH, FRAME_HEIGHT - NUM_OVERSCAN_LINES);
+		glUniform2f(loc, static_cast<float>(FRAME_WIDTH), static_cast<float>(FRAME_HEIGHT - NUM_OVERSCAN_LINES));
 	}
 	else
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, FRAME_WIDTH, FRAME_HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, fb);
-		glUniform2f(loc, FRAME_WIDTH, FRAME_HEIGHT);
+		glUniform2f(loc, static_cast<float>(FRAME_WIDTH), static_cast<float>(FRAME_HEIGHT));
 	}
 
 	glUniform1i(FrameTextureId, 0);
@@ -455,7 +471,7 @@ void VideoBackend::DrawFps(uint32_t fps)
 {
 	std::string fpsStr = std::to_string(fps);
 
-	uint32_t xPos = WindowWidth - 12 - fpsStr.length() * fontBitmapCellWidth;
+	uint32_t xPos = WindowWidth - 12 - static_cast<uint32_t>(fpsStr.length()) * fontBitmapCellWidth;
 	uint32_t yPos = WindowHeight - 12 - fontBitmapCellHeight;
 
 	DrawText(fpsStr, xPos, yPos);
@@ -505,8 +521,8 @@ void VideoBackend::DrawText(const std::string & text, uint32_t xPos, uint32_t yP
 	vertices.reserve(text.length() * 12);
 	uvs.reserve(text.length() * 12);
 
-	float x = xPos;
-	float y = yPos;
+	float x = static_cast<float>(xPos);
+	float y = static_cast<float>(yPos);
 
 	for (uint32_t i = 0; i < text.length(); ++i)
 	{
@@ -590,7 +606,7 @@ void VideoBackend::DrawText(const std::string & text, uint32_t xPos, uint32_t yP
 	glBindTexture(GL_TEXTURE_2D, TextTextureId);
 	glUniform1i(TextTextureId, 0);
 
-	glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 2);
+	glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size() / 2));
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
