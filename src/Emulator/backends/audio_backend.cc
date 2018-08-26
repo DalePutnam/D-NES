@@ -1,5 +1,6 @@
 #include <cmath>
 #include <iostream>
+#include <string>
 
 #include "audio_backend.h"
 
@@ -11,18 +12,24 @@
 // Audio Backend
 //**********************************************************************
 
+namespace
+{
+constexpr uint32_t DEFAULT_SAMPLE_RATE = 44100;
+}
+
 AudioBackend::AudioBackend()
     : Enabled(true)
     , FiltersEnabled(false)
-    , HighPass90Hz(SAMPLE_RATE, 90.0f, 1.0f, false)
-    , HighPass440Hz(SAMPLE_RATE, 440.0f, 1.0f, false)
-    , LowPass14KHz(SAMPLE_RATE, 14000.0f, 1.0f, true)
 {
 #ifdef _WIN32
-    InitializeXAudio2();
+    InitializeXAudio2(DEFAULT_SAMPLE_RATE);
 #elif __linux
     InitializeAlsa();
 #endif
+
+	HighPass90Hz = std::unique_ptr<Filter>(new Filter(GetSampleRate(), 90.0f, 1.0f, false));
+	HighPass440Hz = std::unique_ptr<Filter>(new Filter(GetSampleRate(), 440.0f, 1.0f, false));
+	LowPass14KHz = std::unique_ptr<Filter>(new Filter(GetSampleRate(), 14000.0f, 1.0f, true));
 }
 
 AudioBackend::~AudioBackend()
@@ -34,14 +41,23 @@ AudioBackend::~AudioBackend()
 #endif
 }
 
-void AudioBackend::Flush()
+void AudioBackend::Reset()
 {
     std::unique_lock<std::mutex> lock(Mutex);
 
 #ifdef _WIN32
-    FlushXAudio2();
+    ResetXAudio2();
 #elif defined(__linux)
     FlushAlsa();
+#endif
+}
+
+void AudioBackend::Flush()
+{
+	std::unique_lock<std::mutex> lock(Mutex);
+
+#ifdef _WIN32
+	FlushXAudio2Samples();
 #endif
 }
 
@@ -64,15 +80,20 @@ void AudioBackend::SetFiltersEnabled(bool enabled)
 
     if (enabled && !FiltersEnabled)
     {
-        HighPass90Hz.Reset();
-        HighPass440Hz.Reset();
-        LowPass14KHz.Reset();
+        HighPass90Hz->Reset();
+        HighPass440Hz->Reset();
+        LowPass14KHz->Reset();
     }
 
     FiltersEnabled = enabled;
 }
 
-void AudioBackend::operator<<(float sample)
+int AudioBackend::GetSampleRate()
+{
+	return SampleRate;
+}
+
+AudioBackend& AudioBackend::operator<<(float sample)
 {
     std::unique_lock<std::mutex> lock(Mutex);
 
@@ -80,7 +101,7 @@ void AudioBackend::operator<<(float sample)
     {
         if (FiltersEnabled)
         {
-            sample = LowPass14KHz(HighPass440Hz(HighPass90Hz(sample)));
+            sample = (*LowPass14KHz)((*HighPass440Hz)((*HighPass90Hz)(sample)));
         }
 
 #ifdef _WIN32
@@ -89,37 +110,63 @@ void AudioBackend::operator<<(float sample)
         ProcessSampleAlsa(sample);
 #endif
     }
+
+	return *this;
 }
 
 #ifdef _WIN32
-void AudioBackend::InitializeXAudio2()
+class VoiceCallback : public IXAudio2VoiceCallback
+{
+public:
+	VoiceCallback() {}
+
+	void OnStreamEnd() { }
+
+	//Unused methods are stubs
+	void OnVoiceProcessingPassEnd() { }
+	void OnVoiceProcessingPassStart(UINT32 SamplesRequired) { }
+	void OnBufferEnd(void * pBufferContext) { }
+	void OnBufferStart(void * pBufferContext) { }
+	void OnLoopEnd(void * pBufferContext) { }
+	void OnVoiceError(void * pBufferContext, HRESULT Error) { }
+};
+
+namespace
+{
+constexpr int BUFFER_SIZE = 147;
+}
+
+void AudioBackend::InitializeXAudio2(int requestedSampleRate)
 {
     XAudio2Instance = nullptr;
     XAudio2MasteringVoice = nullptr;
     XAudio2SourceVoice = nullptr;
     BufferIndex = 0;
     CurrentBuffer = 0;
+	SampleRate = requestedSampleRate;
+	NumOutputBuffers = (SampleRate / BUFFER_SIZE) * 2;
 
     WAVEFORMATEX WaveFormat = { 0 };
     WaveFormat.nChannels = 1;
-    WaveFormat.nSamplesPerSec = SAMPLE_RATE;
+	WaveFormat.nSamplesPerSec = SampleRate;
     WaveFormat.wBitsPerSample = sizeof(float) * 8;
-    WaveFormat.nAvgBytesPerSec = SAMPLE_RATE * sizeof(float);
-    WaveFormat.nBlockAlign = sizeof(float);
+    WaveFormat.nAvgBytesPerSec = SampleRate * sizeof(float);
+	WaveFormat.nBlockAlign = sizeof(float);
     WaveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
 
     HRESULT hr;
-    hr = XAudio2Create(&XAudio2Instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    hr = XAudio2Create(&XAudio2Instance);
     if (FAILED(hr)) goto FailedExit;
 
-    hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice);
+    hr = XAudio2Instance->CreateMasteringVoice(&XAudio2MasteringVoice, 1, SampleRate);
     if (FAILED(hr)) goto FailedExit;
 
-    hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat);
+	XAudio2VoiceCallback = new VoiceCallback();
+    hr = XAudio2Instance->CreateSourceVoice(&XAudio2SourceVoice, &WaveFormat, 0, XAUDIO2_DEFAULT_FREQ_RATIO, XAudio2VoiceCallback);
     if (FAILED(hr)) goto FailedExit;
 
-    OutputBuffers = new float*[NUM_BUFFERS];
-    for (size_t i = 0; i < NUM_BUFFERS; ++i)
+    OutputBuffers = new float*[NumOutputBuffers];
+    for (size_t i = 0; i < NumOutputBuffers; ++i)
     {
         OutputBuffers[i] = new float[BUFFER_SIZE];
     }
@@ -143,14 +190,16 @@ void AudioBackend::CleanUpXAudio2()
     XAudio2MasteringVoice->DestroyVoice();
     XAudio2Instance->Release();
 
-    for (size_t i = 0; i < NUM_BUFFERS; ++i)
+    for (size_t i = 0; i < NumOutputBuffers; ++i)
     {
         delete[] OutputBuffers[i];
     }
     delete[] OutputBuffers;
+
+	delete XAudio2VoiceCallback;
 }
 
-void AudioBackend::FlushXAudio2()
+void AudioBackend::ResetXAudio2()
 {
     XAudio2SourceVoice->Stop(0);
     XAudio2SourceVoice->FlushSourceBuffers();
@@ -159,8 +208,28 @@ void AudioBackend::FlushXAudio2()
     BufferIndex = 0;
 }
 
+void AudioBackend::FlushXAudio2Samples()
+{
+	XAUDIO2_VOICE_STATE state;
+	XAudio2SourceVoice->GetState(&state);
+	OutputDebugString(std::to_string(state.BuffersQueued).c_str());
+	OutputDebugString("\n");
+
+	float* Buffer = OutputBuffers[CurrentBuffer];
+
+	XAUDIO2_BUFFER XAudio2Buffer = { 0 };
+	XAudio2Buffer.AudioBytes = BufferIndex * sizeof(float);
+	XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
+	XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
+
+	CurrentBuffer = (CurrentBuffer + 1) % NumOutputBuffers;
+	BufferIndex = 0;
+}
+
 void AudioBackend::SetEnabledXAudio2(bool enabled)
 {
+	return;
+
     if (!enabled && Enabled)
     {
         XAudio2SourceVoice->Stop(0);
@@ -181,13 +250,7 @@ void AudioBackend::ProcessSampleXAudio2(float sample)
 
     if (BufferIndex == BUFFER_SIZE)
     {
-        XAUDIO2_BUFFER XAudio2Buffer = { 0 };
-        XAudio2Buffer.AudioBytes = BUFFER_SIZE * sizeof(float);
-        XAudio2Buffer.pAudioData = reinterpret_cast<BYTE*>(Buffer);
-        XAudio2SourceVoice->SubmitSourceBuffer(&XAudio2Buffer);
-
-        CurrentBuffer = (CurrentBuffer + 1) % NUM_BUFFERS;
-        BufferIndex = 0;
+		FlushXAudio2Samples();
     }
 }
 

@@ -15,12 +15,14 @@ public:
     AudioBackend();
     ~AudioBackend();
     
-    void Flush();
+    void Reset();
+	void Flush();
     void SetEnabled(bool enabled);
     void SetFiltersEnabled(bool enabled);
-    void operator<<(float sample);
+	int GetSampleRate();
 
-    static constexpr uint32_t SAMPLE_RATE = 44100;
+    AudioBackend& operator<<(float sample);
+
 private:
     // Butterworth filter implementation shamelessly stolen from
     // http://stackoverflow.com/questions/8079526/lowpass-and-high-pass-filter-in-c-sharp
@@ -41,11 +43,13 @@ private:
 
     bool Enabled;
     bool FiltersEnabled;
+	int SampleRate;
 
 #ifdef _WIN32
-    void InitializeXAudio2();
+    void InitializeXAudio2(int requestedSampleRate);
     void CleanUpXAudio2();
-    void FlushXAudio2();
+    void ResetXAudio2();
+	void FlushXAudio2Samples();
     void SetEnabledXAudio2(bool enabled);
     void ProcessSampleXAudio2(float sample);
     IXAudio2* XAudio2Instance;
@@ -54,9 +58,8 @@ private:
     uint32_t BufferIndex;
     uint32_t CurrentBuffer;
     float** OutputBuffers;
-
-    static constexpr uint32_t BUFFER_SIZE = 147;
-    static constexpr uint32_t NUM_BUFFERS = SAMPLE_RATE / BUFFER_SIZE;
+	int NumOutputBuffers;
+	IXAudio2VoiceCallback* XAudio2VoiceCallback;
 #elif __linux
     void InitializeAlsa();
     void CleanUpAlsa();
@@ -72,7 +75,7 @@ private:
     static constexpr uint32_t MIN_FRAME_SIZE = 256;
 #endif
 
-    Filter HighPass90Hz;
-    Filter HighPass440Hz;
-    Filter LowPass14KHz;
+    std::unique_ptr<Filter> HighPass90Hz;
+	std::unique_ptr<Filter> HighPass440Hz;
+	std::unique_ptr<Filter> LowPass14KHz;
 };

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <queue>
 #include <cstdint>
 
 
@@ -61,9 +62,6 @@ public:
 private:
     static const uint8_t LengthCounterLookupTable[32];
 
-    void MixSample();
-    void LimitFrameRate();
-
     class PulseUnit
     {
     public:
@@ -80,6 +78,7 @@ private:
         void ClockLengthCounter();
 
         operator float ();
+		uint8_t GetLevel();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -124,6 +123,7 @@ private:
         void ClockLengthCounter();
 
         operator float ();
+		uint8_t GetLevel();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -158,6 +158,7 @@ private:
         void ClockLengthCounter();
 
         operator float ();
+		uint8_t GetLevel();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -199,6 +200,7 @@ private:
         void WriteDmaByte(uint8_t byte);
 
         operator float ();
+		uint8_t GetLevel();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -227,6 +229,40 @@ private:
         bool SilenceFlag;
     };
 
+	class MixerUnit
+	{
+	public:
+		MixerUnit(APU& apu);
+
+		void Clock();
+		void Reset();
+		void SetTargetFrameRate(uint32_t rate);
+
+	private:
+		void GenerateSample();
+		void LimitFrameRate();
+
+		APU& Apu;
+
+		uint32_t PulseOneAccumulator;
+		uint32_t PulseTwoAccumulator;
+		uint32_t TriangleAccumulator;
+		uint32_t NoiseAccumulator;
+		uint32_t DmcAccumulator;
+
+		uint32_t CyclesPerSample;
+		uint32_t CycleRemainder;
+		uint32_t CycleCount;
+		uint32_t ExtraCycle;
+		uint32_t ExtraCount;
+		uint32_t TargetFramePeriod;
+		uint32_t TargetCpuFrequency;
+		uint32_t EffectiveCpuFrequency;
+		uint32_t SamplesPerFrame;
+		uint32_t FrameSampleCount;
+		std::chrono::steady_clock::time_point FramePeriodStart;
+	};
+
     CPU* Cpu;
     Cart* Cartridge;
     AudioBackend* AudioOut;
@@ -236,25 +272,17 @@ private:
     TriangleUnit Triangle;
     NoiseUnit Noise;
     DmcUnit Dmc;
+	MixerUnit Mixer;
 
     uint64_t Clock;
     uint32_t SequenceCount;
 
-    bool SequenceMode; // True: 5-step sequence, False: 4-step sequence
+    bool LongSequenceFlag; // True: 5-step sequence, False: 4-step sequence
     bool InterruptInhibit;
     bool FrameInterruptFlag;
     bool FrameResetFlag;
     uint8_t FrameResetCountdown;
 
-    // Frame limiter fields
-    double CyclesPerSample;
-    double CyclesToNextSample;
-    uint32_t TargetFramePeriod;
-    uint32_t TargetCpuFrequency;
-    uint32_t EffectiveCpuFrequency;
-    uint32_t SamplesPerFrame;
-    uint32_t FrameSampleCount;
-    std::chrono::steady_clock::time_point FramePeriodStart;
     std::atomic<bool> TurboModeEnabled;
 
     // Volume Controls

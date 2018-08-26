@@ -125,6 +125,7 @@ thread_local PFNGLUSEPROGRAMPROC glUseProgram;
 thread_local PFNGLUNIFORM1IPROC glUniform1i;
 thread_local PFNGLUNIFORM2FPROC glUniform2f;
 thread_local PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
+thread_local void(*wglSwapIntervalEXT)(int);
 
 thread_local std::unique_ptr<std::string> compileErrorMessage = std::make_unique<std::string>();
 
@@ -154,6 +155,7 @@ void InitializeFunctions()
 	glUniform1i = reinterpret_cast<PFNGLUNIFORM1IPROC>(LOAD_OGL_FUNC("glUniform1i"));
 	glUniform2f = reinterpret_cast<PFNGLUNIFORM2FPROC>(LOAD_OGL_FUNC("glUniform2f"));
 	glGetUniformLocation = reinterpret_cast<PFNGLGETUNIFORMLOCATIONPROC>(LOAD_OGL_FUNC("glGetUniformLocation"));
+	wglSwapIntervalEXT = reinterpret_cast<void(*)(int)>(LOAD_OGL_FUNC("wglSwapIntervalEXT"));
 }
 
 GLint CompileShaders(const std::string& vertexShader, const std::string& fragmentShader, GLuint* programId)
@@ -354,6 +356,8 @@ void VideoBackend::Prepare()
 #endif
 
 	InitializeFunctions();
+
+	wglSwapIntervalEXT(0);
 
 	if (!CompileShaders(frameVertexShader, frameFragmentShader, &FrameProgramId))
 	{
