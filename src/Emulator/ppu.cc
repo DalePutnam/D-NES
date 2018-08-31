@@ -1834,7 +1834,7 @@ void PPU::Step(uint64_t cycles)
                 MaybeChangeModes();
 
 				if (TurboFrameSkip == 0) {
-					VideoOut->DrawFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
+					VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
 					FrameBufferIndex = 0;
 
 					if (OnFrameComplete) {

@@ -6,7 +6,8 @@
 
 #include "apu.h"
 #include "cpu.h"
-#include "audio_backend.h"
+#include "backends/video_backend.h"
+#include "audio/audio_stream.h"
 
 namespace
 {
@@ -203,11 +204,6 @@ void APU::PulseUnit::ClockLengthCounter()
     {
         --LengthCounter;
     }
-}
-
-APU::PulseUnit::operator float ()
-{
-	return GetLevel();
 }
 
 uint8_t APU::PulseUnit::GetLevel()
@@ -640,11 +636,6 @@ void APU::NoiseUnit::ClockLengthCounter()
     }
 }
 
-APU::NoiseUnit::operator float ()
-{
-	return GetLevel();
-}
-
 uint8_t APU::NoiseUnit::GetLevel()
 {
 	if (LengthCounter != 0 && !(LinearFeedbackShiftRegister & 0x0001))
@@ -923,12 +914,6 @@ void APU::DmcUnit::WriteDmaByte(uint8_t byte)
     }
 }
 
-
-APU::DmcUnit::operator float ()
-{
-	return GetLevel();;
-}
-
 uint8_t APU::DmcUnit::GetLevel()
 {
 	return OutputLevel;
@@ -1028,6 +1013,8 @@ void APU::DmcUnit::LoadState(const char* state)
 
 APU::MixerUnit::MixerUnit(APU& apu)
 	: Apu(apu)
+	, TurboModeEnabled(false)
+	, AudioEnabled(true)
 	, PulseOneAccumulator(0)
 	, PulseTwoAccumulator(0)
 	, TriangleAccumulator(0)
@@ -1040,12 +1027,11 @@ APU::MixerUnit::MixerUnit(APU& apu)
 	, ExtraCount(0)
 	, TargetFramePeriod(0)
 	, TargetCpuFrequency(0)
-	, EffectiveCpuFrequency(0)
 	, SamplesPerFrame(0)
 	, FrameSampleCount(0)
 	, FramePeriodStart(std::chrono::steady_clock::now())
 {
-	SetTargetFrameRate(50);
+	SetTargetFrameRate(60);
 }
 
 void APU::MixerUnit::Clock()
@@ -1068,12 +1054,36 @@ void APU::MixerUnit::Clock()
 		}
 		else
 		{
-			GenerateSample();
+			if (AudioEnabled && !TurboModeEnabled)
+			{
+				GenerateSample();
+			}
+
+			CycleCount = 0;
+
+			FrameSampleCount++;
+			if (FrameSampleCount >= SamplesPerFrame)
+			{
+				LimitFrameRate();
+				FrameSampleCount = 0;
+			}
 		}
 	}
 	else if (CycleCount > CyclesPerSample)
 	{
-		GenerateSample();
+		if (AudioEnabled && !TurboModeEnabled)
+		{
+			GenerateSample();
+		}
+
+		CycleCount = 0;
+
+		FrameSampleCount++;
+		if (FrameSampleCount >= SamplesPerFrame)
+		{
+			LimitFrameRate();
+			FrameSampleCount = 0;
+		}
 	}
 }
 
@@ -1091,7 +1101,6 @@ void APU::MixerUnit::GenerateSample()
 	noiseLevel *= Apu.NoiseVolume;
 	dmcLevel *= Apu.DmcVolume;
 
-	CycleCount = 0;
 	PulseOneAccumulator = 0;
 	PulseTwoAccumulator = 0;
 	TriangleAccumulator = 0;
@@ -1112,23 +1121,25 @@ void APU::MixerUnit::GenerateSample()
 	}
 
 	// Send final sample to the backend
-	*(Apu.AudioOut) << (((pulse + tndOut) * Apu.MasterVolume) * 2.0f) - 1.0f;
+	float finalSample = (((pulse + tndOut) * Apu.MasterVolume) * 2.0f) - 1.0f;
+	Apu.AudioOut->SubmitSample(finalSample);
+}
 
-	FrameSampleCount++;
-
-	if (FrameSampleCount >= SamplesPerFrame)
-	{
-		LimitFrameRate();
-		FrameSampleCount = 0;
-	}
+void APU::MixerUnit::ResetFrameTimer()
+{
+	FramePeriodStart = std::chrono::steady_clock::now();
 }
 
 void APU::MixerUnit::Reset()
 {
-	FramePeriodStart = std::chrono::steady_clock::now();
 	CycleCount = 0;
+	ExtraCount = 0;
 	FrameSampleCount = 0;
-	Apu.AudioOut->Reset();
+	PulseOneAccumulator = 0;
+	PulseTwoAccumulator = 0;
+	TriangleAccumulator = 0;
+	NoiseAccumulator = 0;
+	DmcAccumulator = 0;
 }
 
 void APU::MixerUnit::SetTargetFrameRate(uint32_t rate)
@@ -1137,24 +1148,20 @@ void APU::MixerUnit::SetTargetFrameRate(uint32_t rate)
 	rate = clamp(rate, 20U, 240U);
 	TargetFramePeriod = 1000000 / rate;
 
-	ExtraCycle = 0;
-
 	// Special case for 60 fps to avoid any floating point weirdness
 	if (rate == 60)
 	{
 		TargetCpuFrequency = CPU::NTSC_FREQUENCY;
 		CyclesPerSample = CPU::NTSC_FREQUENCY / Apu.AudioOut->GetSampleRate();
-		CycleRemainder = (CPU::NTSC_FREQUENCY % Apu.AudioOut->GetSampleRate());
+		CycleRemainder = CPU::NTSC_FREQUENCY % Apu.AudioOut->GetSampleRate();
 		SamplesPerFrame = Apu.AudioOut->GetSampleRate() / rate;
-		EffectiveCpuFrequency = TargetCpuFrequency;
 	}
 	else
 	{
-		TargetCpuFrequency = static_cast<double>(CPU::NTSC_FREQUENCY) * (static_cast<double>(rate) / 60.0);
+		TargetCpuFrequency = static_cast<uint32_t>(static_cast<double>(CPU::NTSC_FREQUENCY) * (static_cast<double>(rate) / 60.0));
 		CyclesPerSample = TargetCpuFrequency / Apu.AudioOut->GetSampleRate();
 		CycleRemainder = TargetCpuFrequency % Apu.AudioOut->GetSampleRate();
 		SamplesPerFrame = Apu.AudioOut->GetSampleRate() / rate;
-		EffectiveCpuFrequency = TargetCpuFrequency;
 	}
 
 	Reset();
@@ -1164,51 +1171,59 @@ void APU::MixerUnit::LimitFrameRate()
 {
 	using namespace std::chrono;
 
-	steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(TargetFramePeriod);
+	Apu.VideoOut->SwapFrameBuffers();
 
-	if (framePeriodEnd < steady_clock::now())
+	if (Apu.TurboModeEnabled != TurboModeEnabled)
 	{
-		// If last frame lasted longer than the target frame period calculate the effective cpu frequency
-		// and adjust the cycles per audio sample appropriately
+		TurboModeEnabled = Apu.TurboModeEnabled;
 
-		double targetPeriod = TargetFramePeriod;
-		double effectivePeriod = static_cast<double>(duration_cast<microseconds>(framePeriodEnd - FramePeriodStart).count());
-		EffectiveCpuFrequency = static_cast<uint32_t>(static_cast<double>(TargetCpuFrequency) * (targetPeriod / effectivePeriod));
-		CyclesPerSample = EffectiveCpuFrequency / Apu.AudioOut->GetSampleRate();
-		CycleRemainder = (EffectiveCpuFrequency % Apu.AudioOut->GetSampleRate());
-
-		FramePeriodStart = steady_clock::now();
-	}
-	else
-	{
-		if (EffectiveCpuFrequency != TargetCpuFrequency)
+		if (!TurboModeEnabled)
 		{
-			// If we've returned to normal speed after some slow frames reset the cycles per audio sample
-			EffectiveCpuFrequency = TargetCpuFrequency;
-			CyclesPerSample = TargetCpuFrequency / Apu.AudioOut->GetSampleRate();
-			CycleRemainder = TargetCpuFrequency % Apu.AudioOut->GetSampleRate();
-			Apu.AudioOut->Reset();
+			Reset();
+		}
+	}
+
+	if (Apu.AudioEnabled != AudioEnabled)
+	{
+		AudioEnabled = Apu.AudioEnabled;
+
+		if (AudioEnabled && !TurboModeEnabled)
+		{
+			Reset();
+		}
+	}
+
+	if (AudioEnabled && Apu.AudioOut->GetNumPendingSamples() != 0)
+	{
+		Apu.AudioOut->Flush();
+	}
+
+	if (!TurboModeEnabled)
+	{
+		steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(TargetFramePeriod);
+
+		if (framePeriodEnd < steady_clock::now())
+		{
+			FramePeriodStart = steady_clock::now();
 		}
 		else
 		{
-			//Apu.AudioOut->Flush();
-		}
+			// Calculate time to wait
+			FramePeriodStart = framePeriodEnd;
+			microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
 
-		// Calculate time to wait
-		FramePeriodStart = framePeriodEnd;
-		microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+			// Sleep in 1ms periods
+			while (span.count() > 1000)
+			{
+				std::this_thread::sleep_for(microseconds(1000));
+				span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+			}
 
-		// Sleep in 1ms periods
-		while (span.count() > 1000)
-		{
-			std::this_thread::sleep_for(microseconds(1000));
-			span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
-		}
-
-		// Busy wait for last 1ms
-		while (span.count() > 0)
-		{
-			span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+			// Busy wait for last 1ms
+			while (span.count() > 0)
+			{
+				span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
+			}
 		}
 	}
 }
@@ -1217,10 +1232,11 @@ void APU::MixerUnit::LimitFrameRate()
 // APU Main Unit
 //**********************************************************************
 
-APU::APU(AudioBackend* aout)
+APU::APU(AudioStream* aout, VideoBackend* vb)
 	: Cpu(nullptr)
 	, Cartridge(nullptr)
 	, AudioOut(aout)
+	, VideoOut(vb)
 	, PulseOne(true)
 	, PulseTwo(false)
 	, Dmc(*this)
@@ -1233,6 +1249,7 @@ APU::APU(AudioBackend* aout)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
     , TurboModeEnabled(false)
+	, AudioEnabled(true)
     , MasterVolume(1.0f)
     , PulseOneVolume(1.0f)
     , PulseTwoVolume(1.0f)
@@ -1256,9 +1273,9 @@ void APU::AttachCart(Cart* cart)
     this->Cartridge = cart;
 }
 
-void APU::ResetFrameLimiter()
+void APU::ResetFrameTimer()
 {
-	Mixer.Reset();
+	Mixer.ResetFrameTimer();
 }
 
 void APU::SetTargetFrameRate(uint32_t rate)
@@ -1453,17 +1470,12 @@ void APU::WriteAPUFrameCounter(uint8_t value)
 
 void APU::SetTurboModeEnabled(bool enabled)
 {
-    if (TurboModeEnabled && !enabled)
-    {
-        ResetFrameLimiter();
-    }
-
     TurboModeEnabled = enabled;
 }
 
 void APU::SetAudioEnabled(bool enabled)
 {
-    AudioOut->SetEnabled(enabled);
+	AudioEnabled = enabled;
 }
 
 void APU::SetMasterVolume(float volume)
@@ -1478,7 +1490,7 @@ float APU::GetMasterVolume()
 
 void APU::SetFiltersEnabled(bool enabled)
 {
-    AudioOut->SetFiltersEnabled(enabled);
+    //AudioOut->SetFiltersEnabled(enabled);
 }
 
 void APU::SetPulseOneVolume(float volume)

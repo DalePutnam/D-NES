@@ -3,6 +3,7 @@
 #include <mutex>
 #include <chrono>
 #include <vector>
+#include <atomic>
 
 #if defined(_WIN32)
 #include <Windows.h>
@@ -22,23 +23,24 @@ public:
 	void Prepare();
 	void Finalize();
 
-	void DrawFrame(uint8_t* fb);
-    void SetOverscanEnabled(bool enabled);
-
+	void SubmitFrame(uint8_t* fb);
+	void SwapFrameBuffers();
+    
     void ShowFps(bool show);
     void SetFps(uint32_t fps);
     void ShowMessage(const std::string& message, uint32_t duration);
+	void SetOverscanEnabled(bool enabled);
 
 private:
 	void DrawFps(uint32_t fps);
 	void DrawMessages();
 	void DrawText(const std::string& text, uint32_t xPos, uint32_t yPos);
-
-	void Swap();
 	void UpdateSurfaceSize();
 
-	bool OverscanEnabled;
-	bool ShowingFps;
+	bool FrameOutOfDate;
+
+	std::atomic<bool> OverscanEnabled;
+	std::atomic<bool> ShowingFps;
     uint32_t WindowWidth;
     uint32_t WindowHeight;
     uint32_t CurrentFps;

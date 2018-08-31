@@ -28,6 +28,12 @@
     <Filter Include="Header Files\Backends\utils">
       <UniqueIdentifier>{5586432f-f116-4536-af71-31877839493d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Audio">
+      <UniqueIdentifier>{767bdb0c-824a-4b65-a8bc-38b4737f79c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Audio">
+      <UniqueIdentifier>{7121b7e0-5567-47dc-84aa-ae78a8caffb0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h">
@@ -54,9 +60,6 @@
     <ClInclude Include="cart.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="backends\audio_backend.h">
-      <Filter>Header Files\Backends</Filter>
-    </ClInclude>
     <ClInclude Include="backends\video_backend.h">
       <Filter>Header Files\Backends</Filter>
     </ClInclude>
@@ -65,6 +68,15 @@
     </ClInclude>
     <ClInclude Include="backends\utils\glext.h">
       <Filter>Header Files\Backends\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\audio_stream.h">
+      <Filter>Header Files\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\iaudio_backend.h">
+      <Filter>Header Files\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\xaudio2\xaudio2_backend.h">
+      <Filter>Header Files\Audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -92,11 +104,14 @@
     <ClCompile Include="cart.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="backends\audio_backend.cc">
-      <Filter>Source Files\Backends</Filter>
-    </ClCompile>
     <ClCompile Include="backends\video_backend.cc">
       <Filter>Source Files\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\audio_stream.cc">
+      <Filter>Source Files\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\xaudio2_backend.cc">
+      <Filter>Source Files\Audio</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

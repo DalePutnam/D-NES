@@ -5,15 +5,16 @@
 #include <queue>
 #include <cstdint>
 
-
+class NES;
 class CPU;
 class Cart;
-class AudioBackend;
+class AudioStream;
+class VideoBackend;
 
 class APU
 {
 public:
-    APU(AudioBackend* aout);
+	APU(AudioStream* aout, VideoBackend* vb);
     ~APU();
 
     void AttachCPU(CPU* cpu);
@@ -25,7 +26,7 @@ public:
     uint16_t GetDmaAddress();
     void WriteDmaByte(uint8_t byte);
 
-    void ResetFrameLimiter();
+    void ResetFrameTimer();
     void SetTargetFrameRate(uint32_t rate);
 
     void WritePulseOneRegister(uint8_t reg, uint8_t value);
@@ -71,14 +72,12 @@ private:
         void SetEnabled(bool enabled);
         bool GetEnabled();
         uint8_t GetLengthCounter();
+		uint8_t GetLevel();
 
         void ClockTimer();
         void ClockSweep();
         void ClockEnvelope();
         void ClockLengthCounter();
-
-        operator float ();
-		uint8_t GetLevel();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -152,13 +151,11 @@ private:
         void SetEnabled(bool enabled);
         bool GetEnabled();
         uint8_t GetLengthCounter();
+		uint8_t GetLevel();
 
         void ClockTimer();
         void ClockEnvelope();
         void ClockLengthCounter();
-
-        operator float ();
-		uint8_t GetLevel();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -188,19 +185,17 @@ private:
 
         void WriteRegister(uint8_t reg, uint8_t value);
         void SetEnabled(bool enabled);
-        uint16_t GetSampleBytesRemaining();
         bool GetEnabled();
-        void ClearInterrupt();
-        bool CheckIRQ();
+		uint16_t GetSampleBytesRemaining();
+		uint8_t GetLevel();
 
         void ClockTimer();
 
+		void ClearInterrupt();
+		bool CheckIRQ();
         bool CheckDmaRequest();
         uint16_t GetDmaAddress();
         void WriteDmaByte(uint8_t byte);
-
-        operator float ();
-		uint8_t GetLevel();
 
         static const int STATE_SIZE;
         void SaveState(char* state);
@@ -235,14 +230,18 @@ private:
 		MixerUnit(APU& apu);
 
 		void Clock();
-		void Reset();
+		void ResetFrameTimer();
 		void SetTargetFrameRate(uint32_t rate);
 
 	private:
+		void Reset();
 		void GenerateSample();
 		void LimitFrameRate();
 
 		APU& Apu;
+
+		bool TurboModeEnabled;
+		bool AudioEnabled;
 
 		uint32_t PulseOneAccumulator;
 		uint32_t PulseTwoAccumulator;
@@ -257,7 +256,6 @@ private:
 		uint32_t ExtraCount;
 		uint32_t TargetFramePeriod;
 		uint32_t TargetCpuFrequency;
-		uint32_t EffectiveCpuFrequency;
 		uint32_t SamplesPerFrame;
 		uint32_t FrameSampleCount;
 		std::chrono::steady_clock::time_point FramePeriodStart;
@@ -265,7 +263,8 @@ private:
 
     CPU* Cpu;
     Cart* Cartridge;
-    AudioBackend* AudioOut;
+    AudioStream* AudioOut;
+	VideoBackend* VideoOut;
 
     PulseUnit PulseOne;
     PulseUnit PulseTwo;
@@ -284,6 +283,7 @@ private:
     uint8_t FrameResetCountdown;
 
     std::atomic<bool> TurboModeEnabled;
+	std::atomic<bool> AudioEnabled;
 
     // Volume Controls
     std::atomic<float> MasterVolume;

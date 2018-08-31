@@ -14,7 +14,7 @@
 #include "ppu.h"
 #include "cart.h"
 #include "video_backend.h"
-#include "audio_backend.h"
+#include "audio/audio_stream.h"
 
 NES::NES(const NesParams& params)
     : Apu(nullptr)
@@ -31,11 +31,11 @@ NES::NES(const NesParams& params)
             VideoOut = new VideoBackend(params.WindowHandle);
         }
 
-        AudioOut = new AudioBackend();
+        AudioOut = new AudioStream();
         
         Cpu = new CPU;
         Ppu = new PPU(VideoOut); // Will be nullptr in HeadlessMode
-        Apu = new APU(AudioOut);
+        Apu = new APU(AudioOut, VideoOut);
         Cartridge = new Cart(params.RomPath, params.SavePath);
     }
     catch (std::runtime_error& e)
@@ -260,7 +260,7 @@ void NES::Run()
     {
 		VideoOut->Prepare();
 
-        Apu->ResetFrameLimiter();
+        Apu->ResetFrameTimer();
         Cpu->Run();
 
 		VideoOut->Finalize();

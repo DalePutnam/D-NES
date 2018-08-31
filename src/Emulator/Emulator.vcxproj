@@ -161,7 +161,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="apu.h" />
-    <ClInclude Include="backends\audio_backend.h" />
+    <ClInclude Include="audio\iaudio_backend.h" />
+    <ClInclude Include="audio\audio_stream.h" />
+    <ClInclude Include="audio\xaudio2\xaudio2_backend.h" />
     <ClInclude Include="backends\utils\font.h" />
     <ClInclude Include="backends\utils\glext.h" />
     <ClInclude Include="backends\video_backend.h" />
@@ -175,7 +177,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="apu.cc" />
-    <ClCompile Include="backends\audio_backend.cc" />
+    <ClCompile Include="audio\audio_stream.cc" />
+    <ClCompile Include="audio\xaudio2_backend.cc" />
     <ClCompile Include="backends\video_backend.cc" />
     <ClCompile Include="cart.cc" />
     <ClCompile Include="cpu.cc" />

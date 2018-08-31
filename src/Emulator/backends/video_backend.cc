@@ -125,7 +125,6 @@ thread_local PFNGLUSEPROGRAMPROC glUseProgram;
 thread_local PFNGLUNIFORM1IPROC glUniform1i;
 thread_local PFNGLUNIFORM2FPROC glUniform2f;
 thread_local PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
-thread_local void(*wglSwapIntervalEXT)(int);
 
 thread_local std::unique_ptr<std::string> compileErrorMessage = std::make_unique<std::string>();
 
@@ -155,7 +154,6 @@ void InitializeFunctions()
 	glUniform1i = reinterpret_cast<PFNGLUNIFORM1IPROC>(LOAD_OGL_FUNC("glUniform1i"));
 	glUniform2f = reinterpret_cast<PFNGLUNIFORM2FPROC>(LOAD_OGL_FUNC("glUniform2f"));
 	glGetUniformLocation = reinterpret_cast<PFNGLGETUNIFORMLOCATIONPROC>(LOAD_OGL_FUNC("glGetUniformLocation"));
-	wglSwapIntervalEXT = reinterpret_cast<void(*)(int)>(LOAD_OGL_FUNC("wglSwapIntervalEXT"));
 }
 
 GLint CompileShaders(const std::string& vertexShader, const std::string& fragmentShader, GLuint* programId)
@@ -240,7 +238,8 @@ GLint CompileShaders(const std::string& vertexShader, const std::string& fragmen
 }
 
 VideoBackend::VideoBackend(void* windowHandle)
-    : OverscanEnabled(true)
+    : FrameOutOfDate(false)
+	, OverscanEnabled(true)
     , CurrentFps(0)
 {
 #if defined(_WIN32)
@@ -296,6 +295,7 @@ VideoBackend::~VideoBackend()
     XDestroyWindow(DisplayPtr, WindowHandle);
     XCloseDisplay(DisplayPtr);
 #endif
+
 }
 
 void VideoBackend::Prepare()
@@ -357,8 +357,6 @@ void VideoBackend::Prepare()
 
 	InitializeFunctions();
 
-	wglSwapIntervalEXT(0);
-
 	if (!CompileShaders(frameVertexShader, frameFragmentShader, &FrameProgramId))
 	{
 		Finalize();
@@ -417,7 +415,7 @@ void VideoBackend::Finalize()
 #endif
 }
 
-void VideoBackend::DrawFrame(uint8_t* fb)
+void VideoBackend::SubmitFrame(uint8_t* fb)
 {
 	bool overscanEnabled = OverscanEnabled;
 	bool showingFps = ShowingFps;
@@ -468,7 +466,7 @@ void VideoBackend::DrawFrame(uint8_t* fb)
 
 	DrawMessages();
 
-	Swap();
+	FrameOutOfDate = true;
 }
 
 void VideoBackend::DrawFps(uint32_t fps)
@@ -641,13 +639,18 @@ void VideoBackend::ShowMessage(const std::string& message, uint32_t duration)
     Messages.push_back(std::make_pair(ToUpperCase(message), expires));
 }
 
-void VideoBackend::Swap()
+void VideoBackend::SwapFrameBuffers()
 {
+	if (FrameOutOfDate)
+	{
 #if defined(_WIN32)
-	SwapBuffers(WindowDc);
+		SwapBuffers(WindowDc);
 #elif defined(__linux)
-	glXSwapBuffers(DisplayPtr, WindowHandle);
+		glXSwapBuffers(DisplayPtr, WindowHandle);
 #endif
+
+		FrameOutOfDate = false;
+	}
 }
 
 void VideoBackend::UpdateSurfaceSize()
