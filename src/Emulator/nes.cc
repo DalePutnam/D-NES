@@ -13,7 +13,7 @@
 #include "apu.h"
 #include "ppu.h"
 #include "cart.h"
-#include "video_backend.h"
+#include "video/video_backend.h"
 #include "audio/audio_stream.h"
 
 NES::NES(const NesParams& params)

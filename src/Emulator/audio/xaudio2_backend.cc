@@ -1,5 +1,6 @@
-#include <string>
 #include "xaudio2_backend.h"
+
+#include <string>
 
 #pragma comment(lib, "XAudio2.lib")
 
@@ -58,7 +59,7 @@ FailedExit:
 	if (_xaudio2SourceVoice) _xaudio2SourceVoice->DestroyVoice();
 	if (_xaudio2MasteringVoice) _xaudio2MasteringVoice->DestroyVoice();
 	if (_xaudio2Instance) _xaudio2Instance->Release();
-	//throw std::runtime_error("APU: Failed to initialize XAudio2");
+	throw std::runtime_error("APU: Failed to initialize XAudio2");
 	return false;
 }
 

@@ -6,7 +6,7 @@
 
 #include "apu.h"
 #include "cpu.h"
-#include "backends/video_backend.h"
+#include "video/video_backend.h"
 #include "audio/audio_stream.h"
 
 namespace

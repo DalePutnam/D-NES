@@ -163,10 +163,7 @@
     <ClInclude Include="apu.h" />
     <ClInclude Include="audio\iaudio_backend.h" />
     <ClInclude Include="audio\audio_stream.h" />
-    <ClInclude Include="audio\xaudio2\xaudio2_backend.h" />
-    <ClInclude Include="backends\utils\font.h" />
-    <ClInclude Include="backends\utils\glext.h" />
-    <ClInclude Include="backends\video_backend.h" />
+    <ClInclude Include="audio\xaudio2_backend.h" />
     <ClInclude Include="cart.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="mappers\mapper_base.h" />
@@ -174,12 +171,16 @@
     <ClInclude Include="mappers\sxrom.h" />
     <ClInclude Include="nes.h" />
     <ClInclude Include="ppu.h" />
+    <ClInclude Include="video\osd_font.h" />
+    <ClInclude Include="video\gl_util.h" />
+    <ClInclude Include="video\igl_platform.h" />
+    <ClInclude Include="video\video_backend.h" />
+    <ClInclude Include="video\wgl_platform.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="apu.cc" />
     <ClCompile Include="audio\audio_stream.cc" />
     <ClCompile Include="audio\xaudio2_backend.cc" />
-    <ClCompile Include="backends\video_backend.cc" />
     <ClCompile Include="cart.cc" />
     <ClCompile Include="cpu.cc" />
     <ClCompile Include="mappers\mapper_base.cc" />
@@ -187,6 +188,10 @@
     <ClCompile Include="mappers\sxrom.cc" />
     <ClCompile Include="nes.cc" />
     <ClCompile Include="ppu.cc" />
+    <ClCompile Include="video\igl_platform.cc" />
+    <ClCompile Include="video\video_backend.cc" />
+    <ClCompile Include="video\gl_util.cc" />
+    <ClCompile Include="video\wgl_platform.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

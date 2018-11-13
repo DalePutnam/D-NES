@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cstdint>
+
 class IAudioBackend
 {
 public:
-	virtual ~IAudioBackend() {};
+	virtual ~IAudioBackend() {}
 
 	virtual bool Initialize(int sampleRate) = 0;
 	virtual void CleanUp() = 0;

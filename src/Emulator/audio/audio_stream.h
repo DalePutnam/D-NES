@@ -18,7 +18,7 @@ public:
 	uint32_t GetSampleRate();
 
 	static const int DEFAULT_SAMPLE_RATE;
+
 private:
-	uint32_t _sampleRate;
 	std::unique_ptr<IAudioBackend> _backend;
 };

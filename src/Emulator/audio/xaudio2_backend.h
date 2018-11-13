@@ -1,11 +1,11 @@
 #pragma once
 
+#include "iaudio_backend.h"
+
 #include <cstdint>
 #include <mutex>
 #include <condition_variable>
 #include <xaudio2.h>
-
-#include "iaudio_backend.h"
 
 class XAudio2Backend : public IAudioBackend
 {

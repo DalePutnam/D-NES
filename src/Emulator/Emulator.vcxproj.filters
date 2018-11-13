@@ -19,20 +19,17 @@
     <Filter Include="Source Files\Mappers">
       <UniqueIdentifier>{5f44222b-4992-43d8-b028-cd22ac026d36}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Backends">
-      <UniqueIdentifier>{9a385fc7-3c07-46f3-a3a2-db1867257c34}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Backends">
-      <UniqueIdentifier>{8f432b86-8435-413e-bdaa-16dac11e8b9d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Backends\utils">
-      <UniqueIdentifier>{5586432f-f116-4536-af71-31877839493d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Audio">
       <UniqueIdentifier>{767bdb0c-824a-4b65-a8bc-38b4737f79c1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Audio">
       <UniqueIdentifier>{7121b7e0-5567-47dc-84aa-ae78a8caffb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Video">
+      <UniqueIdentifier>{c0f70c55-dc8a-4e50-ae02-0764cb0c8184}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Video">
+      <UniqueIdentifier>{cacbe0b7-1d27-4c08-9100-7501d180c912}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -60,23 +57,29 @@
     <ClInclude Include="cart.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="backends\video_backend.h">
-      <Filter>Header Files\Backends</Filter>
-    </ClInclude>
-    <ClInclude Include="backends\utils\font.h">
-      <Filter>Header Files\Backends\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="backends\utils\glext.h">
-      <Filter>Header Files\Backends\utils</Filter>
-    </ClInclude>
     <ClInclude Include="audio\audio_stream.h">
       <Filter>Header Files\Audio</Filter>
     </ClInclude>
     <ClInclude Include="audio\iaudio_backend.h">
       <Filter>Header Files\Audio</Filter>
     </ClInclude>
-    <ClInclude Include="audio\xaudio2\xaudio2_backend.h">
+    <ClInclude Include="audio\xaudio2_backend.h">
       <Filter>Header Files\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="video\gl_util.h">
+      <Filter>Header Files\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="video\video_backend.h">
+      <Filter>Header Files\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="video\wgl_platform.h">
+      <Filter>Header Files\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="video\igl_platform.h">
+      <Filter>Header Files\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="video\osd_font.h">
+      <Filter>Header Files\Video</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -104,14 +107,23 @@
     <ClCompile Include="cart.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="backends\video_backend.cc">
-      <Filter>Source Files\Backends</Filter>
-    </ClCompile>
     <ClCompile Include="audio\audio_stream.cc">
       <Filter>Source Files\Audio</Filter>
     </ClCompile>
     <ClCompile Include="audio\xaudio2_backend.cc">
       <Filter>Source Files\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="video\gl_util.cc">
+      <Filter>Source Files\Video</Filter>
+    </ClCompile>
+    <ClCompile Include="video\video_backend.cc">
+      <Filter>Source Files\Video</Filter>
+    </ClCompile>
+    <ClCompile Include="video\wgl_platform.cc">
+      <Filter>Source Files\Video</Filter>
+    </ClCompile>
+    <ClCompile Include="video\igl_platform.cc">
+      <Filter>Source Files\Video</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

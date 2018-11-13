@@ -11,7 +11,7 @@
 #include "ppu.h"
 #include "cpu.h"
 #include "apu.h"
-#include "video_backend.h"
+#include "video/video_backend.h"
 
 const uint32_t PPU::RgbLookupTable[64] =
 {
