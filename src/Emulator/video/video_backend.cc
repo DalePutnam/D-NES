@@ -10,12 +10,11 @@ static constexpr int32_t NUM_OVERSCAN_LINES = 16;
 
 const std::string frameVertexShader =
 R"(
-#version 330 core
-layout(location = 0) in vec3 vert;
-out vec2 uv;
+#version 110
+attribute vec3 vert;
+varying vec2 uv;
 uniform vec2 screenSize;
 uniform vec2 frameSize;
-
 void main() {
 	float wRatio = screenSize.x / frameSize.x;
 	float hRatio = screenSize.y / frameSize.y;
@@ -37,46 +36,46 @@ void main() {
 	gl_Position.z = 1.0; 
 	gl_Position.w = 1.0; 
 	uv.x = vert.x; 
-	uv.y = -vert.y; 
+	uv.y = -vert.y;
 }
 )";
 
 const std::string frameFragmentShader =
 R"(
-#version 330 core
-in vec2 uv;
-out vec3 color;
+#version 110
+varying vec2 uv;
 uniform sampler2D sampler;
 void main() {
-	color = texture(sampler, uv).rgb;
+	vec4 color = texture2D(sampler, uv);
+	gl_FragColor = color;
 }
 )";
 
 const std::string textVertexShader =
 R"(
-#version 330 core
-layout(location = 0) in vec2 inVertex;
-layout(location = 1) in vec2 inUV;
-out vec2 uv;
-
+#version 110
+attribute vec2 inVertex;
+attribute vec2 inUV;
+varying vec2 uv;
 uniform vec2 screenSize;
 void main() {
-	vec2 halfScreen = screenSize / 2;
+	vec2 halfScreen = screenSize / 2.0;
 	vec2 clipSpace = inVertex - halfScreen;
 	clipSpace /= halfScreen;
-	gl_Position = vec4(clipSpace, 0, 1);
+	gl_Position = vec4(clipSpace, 0.0, 1.0);
 
 	uv = inUV;
 }
 )";
 
 const std::string textFragmentShader =
-R"(#version 330 core
-in vec2 uv;
-out vec3 color;
+R"(
+#version 110
+varying vec2 uv;
 uniform sampler2D sampler;
 void main() {
-	color = texture(sampler, uv).rgb;
+	vec4 color = texture2D(sampler, uv);
+	gl_FragColor = color;
 }
 )";
 
