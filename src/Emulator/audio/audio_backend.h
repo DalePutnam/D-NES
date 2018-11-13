@@ -3,13 +3,13 @@
 #include <memory>
 #include <atomic>
 
-class IAudioBackend;
+class IAudioPlatform;
 
-class AudioStream
+class AudioBackend
 {
 public:
-	AudioStream(uint32_t sampleRate = DEFAULT_SAMPLE_RATE);
-	~AudioStream();
+	AudioBackend(uint32_t sampleRate = DEFAULT_SAMPLE_RATE);
+	~AudioBackend();
 
 	void Reset();
 	void Flush();
@@ -20,5 +20,5 @@ public:
 	static const int DEFAULT_SAMPLE_RATE;
 
 private:
-	std::unique_ptr<IAudioBackend> _backend;
+	std::unique_ptr<IAudioPlatform> _backend;
 };

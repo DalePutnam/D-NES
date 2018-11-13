@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
-class IAudioBackend
+class IAudioPlatform
 {
 public:
-	virtual ~IAudioBackend() {}
+	static std::unique_ptr<IAudioPlatform> CreateAudioPlatform();
 
 	virtual bool Initialize(int sampleRate) = 0;
 	virtual void CleanUp() = 0;

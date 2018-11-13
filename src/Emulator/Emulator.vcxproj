@@ -161,9 +161,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="apu.h" />
-    <ClInclude Include="audio\iaudio_backend.h" />
-    <ClInclude Include="audio\audio_stream.h" />
-    <ClInclude Include="audio\xaudio2_backend.h" />
+    <ClInclude Include="audio\iaudio_platform.h" />
+    <ClInclude Include="audio\audio_backend.h" />
+    <ClInclude Include="audio\xaudio2_platform.h" />
     <ClInclude Include="cart.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="mappers\mapper_base.h" />
@@ -179,8 +179,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="apu.cc" />
-    <ClCompile Include="audio\audio_stream.cc" />
-    <ClCompile Include="audio\xaudio2_backend.cc" />
+    <ClCompile Include="audio\audio_backend.cc" />
+    <ClCompile Include="audio\iaudio_platform.cc" />
+    <ClCompile Include="audio\xaudio2_platform.cc" />
     <ClCompile Include="cart.cc" />
     <ClCompile Include="cpu.cc" />
     <ClCompile Include="mappers\mapper_base.cc" />

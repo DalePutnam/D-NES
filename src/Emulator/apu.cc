@@ -7,7 +7,7 @@
 #include "apu.h"
 #include "cpu.h"
 #include "video/video_backend.h"
-#include "audio/audio_stream.h"
+#include "audio/audio_backend.h"
 
 namespace
 {
@@ -1232,7 +1232,7 @@ void APU::MixerUnit::LimitFrameRate()
 // APU Main Unit
 //**********************************************************************
 
-APU::APU(AudioStream* aout, VideoBackend* vb)
+APU::APU(AudioBackend* aout, VideoBackend* vb)
 	: Cpu(nullptr)
 	, Cartridge(nullptr)
 	, AudioOut(aout)

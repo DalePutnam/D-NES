@@ -2,9 +2,9 @@
 
 #include <stdexcept>
 
-WGLPlatform::WGLPlatform(void * windowHandle)
+void WGLPlatform::InitializeWindow(void* windowHandle)
 {
-	Window = reinterpret_cast<HWND>(windowHandle);
+	_window = reinterpret_cast<HWND>(windowHandle);
 }
 
 void WGLPlatform::InitializeContext()
@@ -29,26 +29,26 @@ void WGLPlatform::InitializeContext()
 		0, 0, 0
 	};
 
-	WindowDc = GetDC(Window);
+	_windowDc = GetDC(_window);
 
-	int pf = ChoosePixelFormat(WindowDc, &pfd);
+	int pf = ChoosePixelFormat(_windowDc, &pfd);
 	if (pf == 0)
 	{
 		throw std::runtime_error("Unable to create pixel format");
 	}
 
-	if (!SetPixelFormat(WindowDc, pf, &pfd))
+	if (!SetPixelFormat(_windowDc, pf, &pfd))
 	{
 		throw std::runtime_error("Unable to set new pixel format");
 	}
 
-	OglContext = wglCreateContext(WindowDc);
-	if (OglContext == NULL)
+	_oglContext = wglCreateContext(_windowDc);
+	if (_oglContext == NULL)
 	{
 		throw std::runtime_error("Failed to create OpenGL context");
 	}
 
-	if (!wglMakeCurrent(WindowDc, OglContext))
+	if (!wglMakeCurrent(_windowDc, _oglContext))
 	{
 		throw std::runtime_error("Failed to make OpenGL context current");
 	}
@@ -56,19 +56,19 @@ void WGLPlatform::InitializeContext()
 
 void WGLPlatform::DestroyContext()
 {
-	wglMakeCurrent(WindowDc, NULL);
-	wglDeleteContext(OglContext);
+	wglMakeCurrent(_windowDc, NULL);
+	wglDeleteContext(_oglContext);
 }
 
 void WGLPlatform::SwapBuffers()
 {
-	::SwapBuffers(WindowDc);
+	::SwapBuffers(_windowDc);
 }
 
 void WGLPlatform::UpdateSurfaceSize(uint32_t* width, uint32_t* height)
 {
 	RECT rect;
-	GetWindowRect(Window, &rect);
+	GetWindowRect(_window, &rect);
 
 	uint32_t newWidth = rect.right - rect.left;
 	uint32_t newHeight = rect.bottom - rect.top;

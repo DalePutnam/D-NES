@@ -57,15 +57,6 @@
     <ClInclude Include="cart.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="audio\audio_stream.h">
-      <Filter>Header Files\Audio</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\iaudio_backend.h">
-      <Filter>Header Files\Audio</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\xaudio2_backend.h">
-      <Filter>Header Files\Audio</Filter>
-    </ClInclude>
     <ClInclude Include="video\gl_util.h">
       <Filter>Header Files\Video</Filter>
     </ClInclude>
@@ -80,6 +71,15 @@
     </ClInclude>
     <ClInclude Include="video\osd_font.h">
       <Filter>Header Files\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\iaudio_platform.h">
+      <Filter>Header Files\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\xaudio2_platform.h">
+      <Filter>Header Files\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\audio_backend.h">
+      <Filter>Header Files\Audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -107,12 +107,6 @@
     <ClCompile Include="cart.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="audio\audio_stream.cc">
-      <Filter>Source Files\Audio</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\xaudio2_backend.cc">
-      <Filter>Source Files\Audio</Filter>
-    </ClCompile>
     <ClCompile Include="video\gl_util.cc">
       <Filter>Source Files\Video</Filter>
     </ClCompile>
@@ -124,6 +118,15 @@
     </ClCompile>
     <ClCompile Include="video\igl_platform.cc">
       <Filter>Source Files\Video</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\audio_backend.cc">
+      <Filter>Source Files\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\xaudio2_platform.cc">
+      <Filter>Source Files\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\iaudio_platform.cc">
+      <Filter>Source Files\Audio</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

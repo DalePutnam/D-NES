@@ -176,7 +176,8 @@ void compileShaders(const std::string& vertexShader, const std::string& fragment
 
 VideoBackend::VideoBackend(void* windowHandle)
 {
-	_glPlatform = IGLPlatform::CreateGLPlatform(windowHandle);
+	_glPlatform = IGLPlatform::CreateGLPlatform();
+	_glPlatform->InitializeWindow(windowHandle);
 }
 
 VideoBackend::~VideoBackend()

@@ -1,10 +1,10 @@
-#include "xaudio2_backend.h"
+#include "xaudio2_platform.h"
 
 #include <string>
 
 #pragma comment(lib, "XAudio2.lib")
 
-XAudio2Backend::XAudio2Backend()
+XAudio2Platform::XAudio2Platform()
 	: _xaudio2Instance(nullptr)
 	, _xaudio2MasteringVoice(nullptr)
 	, _xaudio2SourceVoice(nullptr)
@@ -16,7 +16,7 @@ XAudio2Backend::XAudio2Backend()
 	, _outputBuffers(nullptr)
 {}
 
-bool XAudio2Backend::Initialize(int sampleRate)
+bool XAudio2Platform::Initialize(int sampleRate)
 {
 	_xaudio2Instance = nullptr;
 	_xaudio2MasteringVoice = nullptr;
@@ -63,7 +63,7 @@ FailedExit:
 	return false;
 }
 
-void XAudio2Backend::CleanUp()
+void XAudio2Platform::CleanUp()
 {
 	_xaudio2SourceVoice->Stop();
 	_xaudio2SourceVoice->FlushSourceBuffers();
@@ -78,7 +78,7 @@ void XAudio2Backend::CleanUp()
 	delete[] _outputBuffers;
 }
 
-void XAudio2Backend::Reset()
+void XAudio2Platform::Reset()
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -89,21 +89,21 @@ void XAudio2Backend::Reset()
 	_currentBufferOffset = 0;
 }
 
-void XAudio2Backend::Flush()
+void XAudio2Platform::Flush()
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
 	PrivateFlush();
 }
 
- uint32_t XAudio2Backend::GetNumPendingSamples()
+ uint32_t XAudio2Platform::GetNumPendingSamples()
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
 	return _currentBufferOffset;
 }
 
-void XAudio2Backend::SubmitSample(float sample)
+void XAudio2Platform::SubmitSample(float sample)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -116,12 +116,12 @@ void XAudio2Backend::SubmitSample(float sample)
 	}
 }
 
-uint32_t XAudio2Backend::GetSampleRate()
+uint32_t XAudio2Platform::GetSampleRate()
 {
 	return _sampleRate;
 }
 
-void XAudio2Backend::PrivateFlush()
+void XAudio2Platform::PrivateFlush()
 {
 	float* Buffer = _outputBuffers[_currentBuffer];
 

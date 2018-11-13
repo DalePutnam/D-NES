@@ -6,15 +6,14 @@
 class WGLPlatform : public IGLPlatform
 {
 public:
-	WGLPlatform(void* windowHandle);
-
+	virtual void InitializeWindow(void* windowHandle) override;
 	virtual void InitializeContext() override;
 	virtual void DestroyContext() override;
 	virtual void SwapBuffers() override;
 	virtual void UpdateSurfaceSize(uint32_t* width, uint32_t* height) override;
 
 private:
-	HWND Window;
-	HDC WindowDc;
-	HGLRC OglContext;
+	HWND _window;
+	HDC _windowDc;
+	HGLRC _oglContext;
 };

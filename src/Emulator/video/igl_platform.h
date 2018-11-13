@@ -1,13 +1,14 @@
 #pragma once
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 
 class IGLPlatform
 {
 public:
-	static std::unique_ptr<IGLPlatform> CreateGLPlatform(void* windowHandle);
+	static std::unique_ptr<IGLPlatform> CreateGLPlatform();
 
+	virtual void InitializeWindow(void* windowHandle) = 0;
 	virtual void InitializeContext() = 0;
 	virtual void DestroyContext() = 0;
 	virtual void SwapBuffers() = 0;

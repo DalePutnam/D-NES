@@ -14,7 +14,7 @@
 #include "ppu.h"
 #include "cart.h"
 #include "video/video_backend.h"
-#include "audio/audio_stream.h"
+#include "audio/audio_backend.h"
 
 NES::NES(const NesParams& params)
     : Apu(nullptr)
@@ -31,7 +31,7 @@ NES::NES(const NesParams& params)
             VideoOut = new VideoBackend(params.WindowHandle);
         }
 
-        AudioOut = new AudioStream();
+        AudioOut = new AudioBackend();
         
         Cpu = new CPU;
         Ppu = new PPU(VideoOut); // Will be nullptr in HeadlessMode

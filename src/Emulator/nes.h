@@ -64,7 +64,7 @@ class APU;
 class PPU;
 class Cart;
 class VideoBackend;
-class AudioStream;
+class AudioBackend;
 
 class NES
 {
@@ -153,7 +153,7 @@ private:
     PPU* Ppu;
     Cart* Cartridge;
     VideoBackend* VideoOut;
-    AudioStream* AudioOut;
+    AudioBackend* AudioOut;
 
     std::function<void(std::string)> OnError;
 };

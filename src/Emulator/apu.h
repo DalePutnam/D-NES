@@ -8,13 +8,13 @@
 class NES;
 class CPU;
 class Cart;
-class AudioStream;
+class AudioBackend;
 class VideoBackend;
 
 class APU
 {
 public:
-	APU(AudioStream* aout, VideoBackend* vb);
+	APU(AudioBackend* aout, VideoBackend* vb);
     ~APU();
 
     void AttachCPU(CPU* cpu);
@@ -263,7 +263,7 @@ private:
 
     CPU* Cpu;
     Cart* Cartridge;
-    AudioStream* AudioOut;
+    AudioBackend* AudioOut;
 	VideoBackend* VideoOut;
 
     PulseUnit PulseOne;

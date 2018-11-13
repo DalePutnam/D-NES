@@ -1,17 +1,17 @@
 #pragma once
 
-#include "iaudio_backend.h"
+#include "iaudio_platform.h"
 
 #include <cstdint>
 #include <mutex>
 #include <condition_variable>
 #include <xaudio2.h>
 
-class XAudio2Backend : public IAudioBackend
+class XAudio2Platform : public IAudioPlatform
 {
 public:
-	XAudio2Backend();
-	virtual ~XAudio2Backend() {};
+	XAudio2Platform();
+	virtual ~XAudio2Platform() {};
 
 	virtual bool Initialize(int sampleRate) override;
 	virtual void CleanUp() override;

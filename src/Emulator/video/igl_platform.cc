@@ -6,10 +6,10 @@
 #endif
 
 
-std::unique_ptr<IGLPlatform> IGLPlatform::CreateGLPlatform(void* windowHandle)
+std::unique_ptr<IGLPlatform> IGLPlatform::CreateGLPlatform()
 {
 #if defined(_WIN32)
-	return std::unique_ptr<IGLPlatform>(new WGLPlatform(windowHandle));
+	return std::unique_ptr<IGLPlatform>(new WGLPlatform());
 #elif defined(__linux)
 #endif
 }
