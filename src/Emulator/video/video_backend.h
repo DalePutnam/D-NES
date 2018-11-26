@@ -4,6 +4,7 @@
 #include <string>
 #include <mutex>
 #include <vector>
+#include <memory>
 
 #include "gl_util.h"
 

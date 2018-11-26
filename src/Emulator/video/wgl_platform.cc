@@ -1,5 +1,6 @@
-#include "wgl_platform.h"
+#if defined(_WIN32)
 
+#include "wgl_platform.h"
 #include <stdexcept>
 
 void WGLPlatform::InitializeWindow(void* windowHandle)
@@ -79,3 +80,5 @@ void WGLPlatform::UpdateSurfaceSize(uint32_t* width, uint32_t* height)
 		*height = newHeight;
 	}
 }
+
+#endif

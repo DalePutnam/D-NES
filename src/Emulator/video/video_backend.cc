@@ -181,6 +181,7 @@ VideoBackend::VideoBackend(void* windowHandle)
 
 VideoBackend::~VideoBackend()
 {
+	_glPlatform->DestroyWindow();
 }
 
 void VideoBackend::Prepare()

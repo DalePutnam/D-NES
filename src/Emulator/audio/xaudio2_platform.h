@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(_WIN32)
+
 #include "iaudio_platform.h"
 
 #include <cstdint>
@@ -37,3 +39,5 @@ private:
 
 	std::mutex _mutex;
 };
+
+#endif

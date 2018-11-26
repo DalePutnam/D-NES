@@ -1,5 +1,6 @@
-#include "xaudio2_platform.h"
+#if defined(_WIN32)
 
+#include "xaudio2_platform.h"
 #include <string>
 
 #pragma comment(lib, "XAudio2.lib")
@@ -133,3 +134,5 @@ void XAudio2Platform::PrivateFlush()
 	_currentBuffer = (_currentBuffer + 1) % _numOutputBuffers;
 	_currentBufferOffset = 0;
 }
+
+#endif

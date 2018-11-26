@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(_WIN32)
+
 #include "igl_platform.h"
 #include "gl_util.h"
 
@@ -17,3 +19,5 @@ private:
 	HDC _windowDc;
 	HGLRC _oglContext;
 };
+
+#endif
