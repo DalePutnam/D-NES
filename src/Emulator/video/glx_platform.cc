@@ -19,9 +19,6 @@ void GLXPlatform::InitializeWindow(void* windowHandle)
         throw std::runtime_error("Failed to retrieve X11 window attributes");
     }
 
-    _windowWidth = attributes.width;
-    _windowHeight = attributes.height;
-
 	GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
 
 	_xVisualInfo = glXChooseVisual(_display, 0, att);
@@ -36,7 +33,7 @@ void GLXPlatform::InitializeWindow(void* windowHandle)
 	setWindowAttributes.colormap = colorMap;
 	setWindowAttributes.event_mask = ExposureMask | KeyPressMask;
 
-	_windowHandle = XCreateWindow(_display, _parentWindowHandle, 0, 0, _windowWidth, _windowHeight, 0, _xVisualInfo->depth,
+	_windowHandle = XCreateWindow(_display, _parentWindowHandle, 0, 0, attributes.width, attributes.height, 0, _xVisualInfo->depth,
 							InputOutput, _xVisualInfo->visual, CWColormap | CWEventMask, &setWindowAttributes);
 
     if (XMapWindow(_display, _windowHandle) == 0)
@@ -87,12 +84,12 @@ void GLXPlatform::UpdateSurfaceSize(uint32_t* width, uint32_t* height)
     uint32_t newWidth = static_cast<uint32_t>(attributes.width);
     uint32_t newHeight = static_cast<uint32_t>(attributes.height);
 
-    if (_windowWidth != newWidth || _windowHeight != newHeight)
+    if (*width != newWidth || *height != newHeight)
     {
-        _windowWidth = attributes.width;
-        _windowHeight = attributes.height;
+        *width = attributes.width;
+        *height = attributes.height;
 
-        XResizeWindow(_display, _windowHandle, _windowWidth, _windowHeight);
+        XResizeWindow(_display, _windowHandle, *width, *height);
     }
 }
 

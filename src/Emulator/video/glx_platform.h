@@ -21,8 +21,6 @@ private:
     Window _windowHandle;
     XVisualInfo* _xVisualInfo;
     GLXContext _oglContext;
-    uint32_t _windowHeight;
-    uint32_t _windowWidth;
 };
 
 #endif
