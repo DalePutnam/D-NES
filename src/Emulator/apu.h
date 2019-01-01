@@ -117,8 +117,6 @@ private:
         void ClockTimer();
         void ClockLinearCounter();
         void ClockLengthCounter();
-
-        operator float ();
 		uint8_t GetLevel();
 
         static const int STATE_SIZE;

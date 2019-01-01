@@ -433,11 +433,6 @@ void APU::TriangleUnit::ClockLengthCounter()
     }
 }
 
-APU::TriangleUnit::operator float ()
-{
-	return GetLevel();
-}
-
 uint8_t APU::TriangleUnit::GetLevel()
 {
 	return Sequence[SequenceCount];
