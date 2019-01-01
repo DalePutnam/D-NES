@@ -55,6 +55,11 @@ void WGLPlatform::InitializeContext()
 	}
 }
 
+void WGLPlatform::DestroyWindow()
+{
+
+}
+
 void WGLPlatform::DestroyContext()
 {
 	wglMakeCurrent(_windowDc, NULL);

@@ -18,26 +18,30 @@ public:
 	virtual bool Initialize(uint32_t sampleRate) override;
 	virtual void CleanUp() override;
 	virtual void Reset() override;
-	virtual void Flush() override;
 	virtual uint32_t GetNumPendingSamples() override;
 	virtual void SubmitSample(float sample) override;
 	virtual uint32_t GetSampleRate() override;
 
 private:
-	void PrivateFlush();
+	class VoiceCallback;
 
 	IXAudio2* _xaudio2Instance;
 	IXAudio2MasteringVoice* _xaudio2MasteringVoice;
 	IXAudio2SourceVoice* _xaudio2SourceVoice;
+	VoiceCallback* _voiceCallback;
 
-	int _sampleRate;
-	int _currentBuffer;
-	int _currentBufferOffset;
-	int _numOutputBuffers;
-	int _bufferSize;
+	uint32_t _sampleRate;
+	uint32_t _currentBufferOffset;
+	uint32_t _numOutputBuffers;
+	uint32_t _bufferSize;
+
+	uint32_t _writeIndex;
+	uint32_t _readIndex;
+	bool _overlapped;
 	float** _outputBuffers;
 
 	std::mutex _mutex;
+	std::condition_variable _cv;
 };
 
 #endif
