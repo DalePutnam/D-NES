@@ -19,11 +19,6 @@ void AudioBackend::Reset()
 	_backend->Reset();
 }
 
-void AudioBackend::Flush()
-{
-	_backend->Flush();
-}
-
 uint32_t AudioBackend::GetNumPendingSamples()
 {
 	return _backend->GetNumPendingSamples();

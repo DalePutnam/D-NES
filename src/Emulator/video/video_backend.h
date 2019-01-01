@@ -24,7 +24,6 @@ public:
 	void Finalize();
 
 	void SubmitFrame(uint8_t* fb);
-	void SwapFrameBuffers();
 
 	void SetFps(uint32_t fps);
 	void ShowFps(bool show);
@@ -36,8 +35,8 @@ private:
 	void DrawMessages();
 	void DrawText(const std::string& text, uint32_t xPos, uint32_t yPos);
 	void UpdateSurfaceSize();
-
-	bool _frameOutOfDate;
+	void SwapFrameBuffers();
+	
 	bool _overscanEnabled;
 	bool _showingFps;
 	uint32_t _windowWidth;

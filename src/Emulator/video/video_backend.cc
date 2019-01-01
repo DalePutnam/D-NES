@@ -292,7 +292,7 @@ void VideoBackend::SubmitFrame(uint8_t * fb)
 
 	DrawMessages();
 
-	_frameOutOfDate = true;
+	SwapFrameBuffers();
 }
 
 void VideoBackend::SwapFrameBuffers()

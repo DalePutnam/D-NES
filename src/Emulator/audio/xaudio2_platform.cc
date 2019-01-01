@@ -17,7 +17,7 @@ XAudio2Platform::XAudio2Platform()
 	, _outputBuffers(nullptr)
 {}
 
-bool XAudio2Platform::Initialize(int sampleRate)
+bool XAudio2Platform::Initialize(uint32_t sampleRate)
 {
 	_xaudio2Instance = nullptr;
 	_xaudio2MasteringVoice = nullptr;

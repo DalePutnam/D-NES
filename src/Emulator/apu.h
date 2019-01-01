@@ -1,8 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <chrono>
-#include <queue>
 #include <cstdint>
 
 class NES;
@@ -26,7 +24,6 @@ public:
     uint16_t GetDmaAddress();
     void WriteDmaByte(uint8_t byte);
 
-    void ResetFrameTimer();
     void SetTargetFrameRate(uint32_t rate);
 
     void WritePulseOneRegister(uint8_t reg, uint8_t value);
@@ -230,13 +227,12 @@ private:
 		MixerUnit(APU& apu);
 
 		void Clock();
-		void ResetFrameTimer();
 		void SetTargetFrameRate(uint32_t rate);
 
 	private:
 		void Reset();
 		void GenerateSample();
-		void LimitFrameRate();
+		void UpdateMode();
 
 		APU& Apu;
 
@@ -258,7 +254,6 @@ private:
 		uint32_t TargetCpuFrequency;
 		uint32_t SamplesPerFrame;
 		uint32_t FrameSampleCount;
-		std::chrono::steady_clock::time_point FramePeriodStart;
 	};
 
     CPU* Cpu;

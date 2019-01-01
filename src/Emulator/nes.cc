@@ -260,7 +260,6 @@ void NES::Run()
     {
 		VideoOut->Prepare();
 
-        Apu->ResetFrameTimer();
         Cpu->Run();
 
 		VideoOut->Finalize();

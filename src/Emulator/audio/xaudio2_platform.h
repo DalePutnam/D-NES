@@ -15,7 +15,7 @@ public:
 	XAudio2Platform();
 	virtual ~XAudio2Platform() {};
 
-	virtual bool Initialize(int sampleRate) override;
+	virtual bool Initialize(uint32_t sampleRate) override;
 	virtual void CleanUp() override;
 	virtual void Reset() override;
 	virtual void Flush() override;

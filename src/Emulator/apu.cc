@@ -1,8 +1,6 @@
 #include <exception>
 #include <cstring>
 #include <cmath>
-#include <iostream>
-#include <thread>
 
 #include "apu.h"
 #include "cpu.h"
@@ -1029,7 +1027,6 @@ APU::MixerUnit::MixerUnit(APU& apu)
 	, TargetCpuFrequency(0)
 	, SamplesPerFrame(0)
 	, FrameSampleCount(0)
-	, FramePeriodStart(std::chrono::steady_clock::now())
 {
 	SetTargetFrameRate(60);
 }
@@ -1064,7 +1061,7 @@ void APU::MixerUnit::Clock()
 			FrameSampleCount++;
 			if (FrameSampleCount >= SamplesPerFrame)
 			{
-				LimitFrameRate();
+				UpdateMode();
 				FrameSampleCount = 0;
 			}
 		}
@@ -1081,7 +1078,7 @@ void APU::MixerUnit::Clock()
 		FrameSampleCount++;
 		if (FrameSampleCount >= SamplesPerFrame)
 		{
-			LimitFrameRate();
+			UpdateMode();
 			FrameSampleCount = 0;
 		}
 	}
@@ -1125,11 +1122,6 @@ void APU::MixerUnit::GenerateSample()
 	Apu.AudioOut->SubmitSample(finalSample);
 }
 
-void APU::MixerUnit::ResetFrameTimer()
-{
-	FramePeriodStart = std::chrono::steady_clock::now();
-}
-
 void APU::MixerUnit::Reset()
 {
 	CycleCount = 0;
@@ -1140,6 +1132,8 @@ void APU::MixerUnit::Reset()
 	TriangleAccumulator = 0;
 	NoiseAccumulator = 0;
 	DmcAccumulator = 0;
+
+    Apu.AudioOut->Reset();
 }
 
 void APU::MixerUnit::SetTargetFrameRate(uint32_t rate)
@@ -1167,12 +1161,8 @@ void APU::MixerUnit::SetTargetFrameRate(uint32_t rate)
 	Reset();
 }
 
-void APU::MixerUnit::LimitFrameRate()
+void APU::MixerUnit::UpdateMode()
 {
-	using namespace std::chrono;
-
-	Apu.VideoOut->SwapFrameBuffers();
-
 	if (Apu.TurboModeEnabled != TurboModeEnabled)
 	{
 		TurboModeEnabled = Apu.TurboModeEnabled;
@@ -1190,40 +1180,6 @@ void APU::MixerUnit::LimitFrameRate()
 		if (AudioEnabled && !TurboModeEnabled)
 		{
 			Reset();
-		}
-	}
-
-	if (AudioEnabled && Apu.AudioOut->GetNumPendingSamples() != 0)
-	{
-		Apu.AudioOut->Flush();
-	}
-
-	if (!TurboModeEnabled)
-	{
-		steady_clock::time_point framePeriodEnd = FramePeriodStart + microseconds(TargetFramePeriod);
-
-		if (framePeriodEnd < steady_clock::now())
-		{
-			FramePeriodStart = steady_clock::now();
-		}
-		else
-		{
-			// Calculate time to wait
-			FramePeriodStart = framePeriodEnd;
-			microseconds span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
-
-			// Sleep in 1ms periods
-			while (span.count() > 1000)
-			{
-				std::this_thread::sleep_for(microseconds(1000));
-				span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
-			}
-
-			// Busy wait for last 1ms
-			while (span.count() > 0)
-			{
-				span = duration_cast<microseconds>(framePeriodEnd - steady_clock::now());
-			}
 		}
 	}
 }
@@ -1271,11 +1227,6 @@ void APU::AttachCPU(CPU* cpu)
 void APU::AttachCart(Cart* cart)
 {
     this->Cartridge = cart;
-}
-
-void APU::ResetFrameTimer()
-{
-	Mixer.ResetFrameTimer();
 }
 
 void APU::SetTargetFrameRate(uint32_t rate)

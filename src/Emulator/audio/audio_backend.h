@@ -12,7 +12,6 @@ public:
 	~AudioBackend();
 
 	void Reset();
-	void Flush();
 	uint32_t GetNumPendingSamples();
 	void SubmitSample(float sample);
 	uint32_t GetSampleRate();
