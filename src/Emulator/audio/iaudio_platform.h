@@ -14,4 +14,6 @@ public:
 	virtual uint32_t GetNumPendingSamples() = 0;
 	virtual void SubmitSample(float sample) = 0;
 	virtual uint32_t GetSampleRate() = 0;
+
+	virtual ~IAudioPlatform() {}
 };

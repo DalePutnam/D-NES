@@ -14,4 +14,6 @@ public:
 	virtual void DestroyContext() = 0;
 	virtual void SwapBuffers() = 0;
 	virtual void UpdateSurfaceSize(uint32_t* width, uint32_t* height) = 0;
+
+	virtual ~IGLPlatform() {}
 };
