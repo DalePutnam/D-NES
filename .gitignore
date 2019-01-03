@@ -12,7 +12,9 @@ src/FrontEnd/FrontEnd.vcxproj.user
 
 # Linux
 D-NES
-bld
+build
+debug
+release
 config.txt
 ROMs
 saves
