@@ -45,11 +45,9 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
     { wxSize(1024, 960), wxSize(1024, 896) },
 };
 
-void MainWindow::EmulatorFrameCallback()
+void MainWindow::OnFrameComplete()
 {
-	//SetTitle(std::to_string(Nes->GetFrameRate()));
-
-    std::unique_lock<std::mutex> lock(PpuViewerMutex);
+	std::unique_lock<std::mutex> lock(PpuViewerMutex);
     
     if (PpuWindow != nullptr)
     {
@@ -100,10 +98,10 @@ void MainWindow::OnVideoSettingsClosed(wxCommandEvent& event)
     }
 }
 
-void MainWindow::EmulatorErrorCallback(std::string err)
+void MainWindow::OnError(std::exception_ptr eptr)
 {
     wxThreadEvent evt(EVT_NES_UNEXPECTED_SHUTDOWN);
-    evt.SetString(err);
+    evt.SetPayload(eptr);
 
     wxQueueEvent(this, evt.Clone());
     SetFocus();
@@ -113,93 +111,82 @@ void MainWindow::StartEmulator(const std::string& filename)
 {
     if (Nes == nullptr)
     {
-        AppSettings* appSettings = AppSettings::GetInstance();
-
-        NesParams params;
-        params.RomPath = filename;
-        params.CpuLogEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
-        params.TurboModeEnabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
-
-        bool audioEnabled, filtersEnabled;
-        appSettings->Read("/Audio/Enabled", &audioEnabled);
-        appSettings->Read("/Audio/FiltersEnabled", &filtersEnabled);
-
-        params.AudioEnabled = audioEnabled;
-        params.FiltersEnabled = filtersEnabled;
-
-        int master, pulseOne, pulseTwo, triangle, noise, dmc;
-        appSettings->Read("/Audio/MasterVolume", &master);
-        appSettings->Read("/Audio/PulseOneVolume", &pulseOne);
-        appSettings->Read("/Audio/PulseTwoVolume", &pulseTwo);
-        appSettings->Read("/Audio/TriangleVolume", &triangle);
-        appSettings->Read("/Audio/NoiseVolume", &noise);
-        appSettings->Read("/Audio/DmcVolume", &dmc);
-
-        params.MasterVolume = master / 100.0f;
-        params.PulseOneVolume = pulseOne / 100.0f;
-        params.PulseTwoVolume = pulseTwo / 100.0f;
-        params.TriangleVolume = triangle / 100.0f;
-        params.NoiseVolume = noise / 100.0f;
-        params.DmcVolume = dmc / 100.0f;
-
         RenderSurface->Show();
 
 #ifdef _WIN32
-        params.WindowHandle = RenderSurface->GetHandle();
+        void* windowHandle = RenderSurface->GetHandle();
 #endif
 
 #ifdef __linux
-        params.WindowHandle = reinterpret_cast<void*>(GetX11WindowHandle(RenderSurface->GetHandle()));
+        void* windowHandle = reinterpret_cast<void*>(GetX11WindowHandle(RenderSurface->GetHandle()));
 #endif
-        
-        appSettings->Read("/Video/ShowFps", &params.FpsDisplayEnabled);
-        appSettings->Read("/Video/Overscan", &params.OverscanEnabled);
-        appSettings->Read("/Video/NtscDecoding", &params.NtscDecoderEnabled);
-        appSettings->Read("/Paths/NativeSavePath", &params.SavePath);
+        AppSettings& appSettings = AppSettings::GetInstance();
 
-        if (!wxDir::Exists(params.SavePath))
+        wxString nativeSavePath, stateSavePath;
+        appSettings.Read("/Paths/NativeSavePath", &nativeSavePath);
+        appSettings.Read("/Paths/StateSavePath", &stateSavePath);
+
+        if (!wxDir::Exists(nativeSavePath))
         {
-            wxDir::Make(params.SavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+            wxDir::Make(nativeSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+        }    
+
+        if (!wxDir::Exists(stateSavePath))
+        {
+            wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         }
 
         try
         {
-            Nes = new NES(params);
-            Nes->BindFrameCallback(&MainWindow::EmulatorFrameCallback, this);
-            Nes->BindErrorCallback(&MainWindow::EmulatorErrorCallback, this);
+            Nes = std::make_unique<NES>(filename, windowHandle, this);
+
+            Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
+            Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
+
+            bool audioEnabled;
+            appSettings.Read("/Audio/Enabled", &audioEnabled);
+
+            Nes->SetAudioEnabled(audioEnabled);
+
+            int master, pulseOne, pulseTwo, triangle, noise, dmc;
+            appSettings.Read("/Audio/MasterVolume", &master);
+            appSettings.Read("/Audio/PulseOneVolume", &pulseOne);
+            appSettings.Read("/Audio/PulseTwoVolume", &pulseTwo);
+            appSettings.Read("/Audio/TriangleVolume", &triangle);
+            appSettings.Read("/Audio/NoiseVolume", &noise);
+            appSettings.Read("/Audio/DmcVolume", &dmc);
+
+            Nes->SetMasterVolume(master / 100.f);
+            Nes->SetPulseOneVolume(pulseOne / 100.f);
+            Nes->SetPulseTwoVolume(pulseTwo / 100.f);
+            Nes->SetTriangleVolume(triangle / 100.f);
+            Nes->SetNoiseVolume(noise / 100.f);
+            Nes->SetDmcVolume(dmc / 100.f);
+
+
+            bool fpsEnabled, overscanEnabled, ntscDecodingEnabled;
+            appSettings.Read("/Video/ShowFps", &fpsEnabled);
+            appSettings.Read("/Video/Overscan", &overscanEnabled);
+            appSettings.Read("/Video/NtscDecoding", &ntscDecodingEnabled);
+
+            Nes->SetFpsDisplayEnabled(fpsEnabled);
+            Nes->SetOverscanEnabled(overscanEnabled);
+            Nes->SetNtscDecoderEnabled(ntscDecodingEnabled);
+
+            Nes->SetNativeSaveDirectory(nativeSavePath.ToStdString());
+            Nes->SetStateSaveDirectory(stateSavePath.ToStdString());
         }
         catch (std::exception &e)
         {
             wxMessageDialog message(nullptr, e.what(), "ERROR", wxOK | wxICON_ERROR);
             message.ShowModal();
 
-            delete Nes;
-            Nes = nullptr;
+            Nes.reset();
 
             RenderSurface->Hide();
             RomList->SetFocus();
 
             return;
-        }
-
-        if (PpuWindow != nullptr)
-        {
-            PpuWindow->SetNes(Nes);
-        }
-
-        if (AudioWindow != nullptr)
-        {
-            AudioWindow->SetNes(Nes);
-        }
-
-        if (VideoWindow != nullptr)
-        {
-            VideoWindow->SetNes(Nes);
-        }
-
-        if (PathWindow != nullptr)
-        {
-            PathWindow->SetNes(Nes);
         }
 
         GameMenuSize.SetWidth(GetSize().GetWidth());
@@ -230,9 +217,7 @@ void MainWindow::StopEmulator(bool showRomList)
     if (Nes != nullptr)
     {
         Nes->Stop();
-
-        delete Nes;
-        Nes = nullptr;
+        Nes.reset();
 
         if (showRomList)
         {
@@ -251,22 +236,6 @@ void MainWindow::StopEmulator(bool showRomList)
         if (PpuWindow != nullptr)
         {
             PpuWindow->ClearAll();
-            PpuWindow->SetNes(nullptr);
-        }
-        
-        if (AudioWindow != nullptr)
-        {
-            AudioWindow->SetNes(nullptr);
-        }
-
-        if (VideoWindow != nullptr)
-        {
-            VideoWindow->SetNes(nullptr);
-        }
-
-        if (PathWindow != nullptr)
-        {
-            PathWindow->SetNes(nullptr);
         }
     }
 }
@@ -285,28 +254,27 @@ void MainWindow::ToggleFrameLimit(wxCommandEvent& event)
     if (Nes != nullptr)
     {
         bool enabled = SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked();
-        //Nes->SetFrameLimitEnabled(enabled);
         Nes->SetTurboModeEnabled(enabled);
     }
 }
 
 void MainWindow::OnROMDoubleClick(wxListEvent& event)
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
     wxString filename = RomList->GetItemText(event.GetIndex(), 0);
 
     wxString romName;
-    settings->Read("/Paths/RomPath", &romName);
+    settings.Read("/Paths/RomPath", &romName);
     romName += "/" + filename;
     StartEmulator(romName.ToStdString());
 }
 
 void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
     wxString romPath;
-    settings->Read("/Paths/RomPath", &romPath);
+    settings.Read("/Paths/RomPath", &romPath);
 
     wxFileDialog dialog(NULL, "Open ROM", romPath, wxEmptyString, "NES Files (*.nes)|*.nes|All Files (*.*)|*.*");
 
@@ -340,24 +308,14 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        AppSettings* settings = AppSettings::GetInstance();
-
-        std::string stateSavePath;
-        settings->Read("/Paths/StateSavePath", &stateSavePath);
-
-        if (!wxDir::Exists(stateSavePath))
-        {
-            wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-        }
-
         try
         {
             int slot = event.GetId() % 10;
-            Nes->SaveState(slot + 1, stateSavePath);
+            Nes->SaveState(slot + 1);
         }
         catch (std::exception& e)
         {
-            wxMessageDialog message(nullptr, e.what(), "ERROR", wxOK | wxICON_ERROR);
+            wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
         }
 
@@ -368,15 +326,10 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        AppSettings* settings = AppSettings::GetInstance();
-
-        std::string stateSavePath;
-        settings->Read("/Paths/StateSavePath", &stateSavePath);
-
         try
         {
             int slot = event.GetId() % 10;
-            Nes->LoadState(slot + 1, stateSavePath);
+            Nes->LoadState(slot + 1);
         }
         catch (std::exception&)
         {
@@ -431,10 +384,9 @@ void MainWindow::OpenPathSettings(wxCommandEvent& WXUNUSED(event))
 {
     if (PathWindow == nullptr)
     {
-        PathWindow = new PathSettingsWindow(this);
+        PathWindow = new PathSettingsWindow(this, Nes);
     }
 
-    PathWindow->SetNes(Nes);
     PathWindow->Show();
 }
 
@@ -442,10 +394,9 @@ void MainWindow::OpenAudioSettings(wxCommandEvent& event)
 {
     if (AudioWindow == nullptr)
     {
-        AudioWindow = new AudioSettingsWindow(this);
+        AudioWindow = new AudioSettingsWindow(this, Nes);
     }
 
-    AudioWindow->SetNes(Nes);
     AudioWindow->Show();
 }
 
@@ -453,16 +404,24 @@ void MainWindow::OpenVideoSettings(wxCommandEvent& event)
 {
     if (VideoWindow == nullptr)
     {
-        VideoWindow = new VideoSettingsWindow(this);
+        VideoWindow = new VideoSettingsWindow(this, Nes);
     }
 
-    VideoWindow->SetNes(Nes);
     VideoWindow->Show();
 }
 
 void MainWindow::OnUnexpectedShutdown(wxThreadEvent& event)
 {
-    wxMessageDialog message(nullptr, event.GetString(), "ERROR", wxOK | wxICON_ERROR);
+    std::exception_ptr eptr = event.GetPayload<std::exception_ptr>();
+
+    wxString errString;
+    try {
+        std::rethrow_exception(eptr);
+    } catch (std::exception& e) {
+        errString = e.what();
+    }
+
+    wxMessageDialog message(nullptr, errString, "Error", wxOK | wxICON_ERROR);
     message.ShowModal();
     StopEmulator();
 }
@@ -596,14 +555,11 @@ void MainWindow::InitializeMenus()
 
     SettingsMenu = new wxMenu;
     SettingsMenu->AppendCheckItem(ID_CPU_LOG, wxT("&Enable CPU Log"));
-    //SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Limit To 60 FPS"));
     SettingsMenu->AppendCheckItem(ID_FRAME_LIMIT, wxT("&Enable Turbo Mode"));
     SettingsMenu->AppendSeparator();
     SettingsMenu->Append(ID_SETTINGS_AUDIO, wxT("&Audio Settings"));
     SettingsMenu->Append(ID_SETTINGS_VIDEO, wxT("&Video Settings"));
     SettingsMenu->Append(ID_SETTINGS_PATHS, wxT("&Path Settings"));
-
-    //SettingsMenu->FindItem(ID_FRAME_LIMIT)->Check();
 
     AboutMenu = new wxMenu;
     AboutMenu->Append(wxID_ANY, wxT("&About"));
@@ -626,19 +582,19 @@ void MainWindow::InitializeLayout()
     VerticalBox->Add(RomList, 1, wxEXPAND | wxALL);
     SetSizer(VerticalBox);
 
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
     int gameResolutionIndex;
-    settings->Read("/Video/Resolution", &gameResolutionIndex);
+    settings.Read("/Video/Resolution", &gameResolutionIndex);
 
     bool overscan;
-    settings->Read("/Video/Overscan", &overscan);
+    settings.Read("/Video/Overscan", &overscan);
 
     SetGameResolution(static_cast<GameResolutions>(gameResolutionIndex), overscan);
 
     int menuWidth, menuHeight;
-    settings->Read("/Menu/Width", &menuWidth);
-    settings->Read("/Menu/Height", &menuHeight);
+    settings.Read("/Menu/Width", &menuWidth);
+    settings.Read("/Menu/Height", &menuHeight);
 
     GameMenuSize = wxSize(menuWidth, menuHeight);
     SetSize(GameMenuSize);
@@ -734,17 +690,17 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
     if (Nes != nullptr)
     {
-        settings->Write("/Menu/Width", GameMenuSize.GetWidth());
-        settings->Write("/Menu/Height", GameMenuSize.GetHeight());
+        settings.Write("/Menu/Width", GameMenuSize.GetWidth());
+        settings.Write("/Menu/Height", GameMenuSize.GetHeight());
     }
     else
     {
-        settings->Write("/Menu/Width", GetSize().GetWidth());
-        settings->Write("/Menu/Height", GetSize().GetHeight());
+        settings.Write("/Menu/Width", GetSize().GetWidth());
+        settings.Write("/Menu/Height", GetSize().GetHeight());
     }
 
     StopEmulator(false);

@@ -4,6 +4,7 @@
 
 #include <mutex>
 #include <vector>
+#include <memory>
 
 #include <wx/menu.h>
 #include <wx/event.h>
@@ -14,7 +15,8 @@
 #include <wx/listctrl.h>
 #include <wx/bitmap.h>
 
-class NES;
+#include "nes.h"
+
 class GameList;
 class PPUViewerWindow;
 class PathSettingsWindow;
@@ -30,19 +32,19 @@ enum GameResolutions
     NUM_RESOLUTIONS
 };
 
-class MainWindow : public wxFrame
+class MainWindow : public wxFrame, public NESCallback
 {
 public:
     MainWindow();
-    ~MainWindow();
+    ~MainWindow() noexcept;
 
     void StopEmulator(bool showRomList = true);
     void SetGameResolution(GameResolutions resolution, bool overscan);
 
 private:
-    static std::vector<std::pair<wxSize, wxSize> > ResolutionsList;
+    static std::vector<std::pair<wxSize, wxSize>> ResolutionsList;
 
-    NES* Nes;
+    std::unique_ptr<NES> Nes;
 
     std::mutex PpuViewerMutex;
     PPUViewerWindow* PpuWindow;
@@ -103,6 +105,11 @@ private:
 #ifdef _WIN32
     void OnRenderSurfaceFocus(wxFocusEvent& event);
 #endif
+
+    // NESCallback functions
+
+    void OnFrameComplete() override;
+    void OnError(std::exception_ptr eptr) override;
 };
 
 wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);

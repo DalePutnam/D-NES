@@ -11,7 +11,7 @@ wxDECLARE_EVENT(EVT_VIDEO_WINDOW_CLOSED, wxCommandEvent);
 class VideoSettingsWindow : public SettingsWindowBase
 {
 public:
-    VideoSettingsWindow(MainWindow* parent);
+    VideoSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes);
 
 protected:
     virtual void DoOk() override;

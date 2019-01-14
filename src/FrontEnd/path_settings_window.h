@@ -11,7 +11,7 @@ wxDECLARE_EVENT(EVT_PATH_WINDOW_CLOSED, wxCommandEvent);
 class PathSettingsWindow : public SettingsWindowBase
 {
 public:
-    PathSettingsWindow(MainWindow* parent);
+    PathSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes);
     void SaveSettings();
 
 protected:

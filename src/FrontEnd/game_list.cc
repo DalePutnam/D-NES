@@ -26,10 +26,10 @@ GameList::GameList(wxWindow* parent)
 
 void GameList::PopulateList()
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
     wxString romPath;
-    settings->Read("/Paths/RomPath", &romPath);
+    settings.Read("/Paths/RomPath", &romPath);
 
     DeleteAllItems();
 

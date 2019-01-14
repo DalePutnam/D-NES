@@ -8,12 +8,13 @@
 #pragma once
 
 #include <string>
+#include <memory>
 #include <wx/fileconf.h>
 
 class AppSettings
 {
 public:
-    static AppSettings* GetInstance(); // Get single instance
+    static AppSettings& GetInstance(); // Get single instance
 
     void Save(); // Write out to file
 
@@ -42,16 +43,16 @@ public:
 
 private:
     // Singleton
-    static AppSettings* instance;
-    static void CleanUp(); // Destroy single instance
-
     AppSettings();
-    AppSettings(const AppSettings&); // Prevent construction by copying
-    AppSettings& operator=(const AppSettings&); // Prevent assignment
-    ~AppSettings(); // Prevent unwanted destruction
+    ~AppSettings();
+
+    // Disable copying and moving
+    AppSettings(const AppSettings&) = delete;
+    AppSettings& operator=(const AppSettings&) = delete;
+    AppSettings(AppSettings&&) = delete;
+    AppSettings& operator=(AppSettings&&) = delete;
 
     // Application Settings
-    wxFileConfig* Settings;
-
+    std::unique_ptr<wxFileConfig> Settings;
 };
 

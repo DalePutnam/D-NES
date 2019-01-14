@@ -15,5 +15,5 @@ public:
 	virtual void SubmitSample(float sample) = 0;
 	virtual uint32_t GetSampleRate() = 0;
 
-	virtual ~IAudioPlatform() {}
+	virtual ~IAudioPlatform() = default;
 };

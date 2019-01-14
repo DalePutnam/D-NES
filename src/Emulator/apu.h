@@ -38,7 +38,6 @@ public:
 
     void SetTurboModeEnabled(bool enabled);
     void SetAudioEnabled(bool mute);
-    void SetFiltersEnabled(bool enabled);
 
     float GetMasterVolume();
     void SetMasterVolume(float volume);

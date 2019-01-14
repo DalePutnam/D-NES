@@ -26,7 +26,7 @@ void PPUViewerWindow::OnPaletteSelected(wxCommandEvent&)
     SelectedPalette = PaletteSelect->GetSelection();
 }
 
-PPUViewerWindow::PPUViewerWindow(wxWindow* parent, NES* nes)
+PPUViewerWindow::PPUViewerWindow(wxWindow* parent, std::unique_ptr<NES>& nes)
     : wxFrame(parent, wxID_ANY, "PPU Viewer", wxDefaultPosition, wxDefaultSize, FRAME_STYLE)
     , Nes(nes)
     , SelectedPalette(0)
@@ -340,11 +340,3 @@ void PPUViewerWindow::ClearAll()
         dc.DrawRectangle(0, 0, 8, 8);
     }
 }
-
-void PPUViewerWindow::SetNes(NES* nes)
-{
-    std::unique_lock<std::recursive_mutex> lock(UpdateLock);
-
-    Nes = nes;
-}
-

@@ -14,6 +14,7 @@
 #include <functional>
 
 #include "cart.h"
+#include "nes_callback.h"
 
 class CPU;
 class APU;
@@ -22,14 +23,12 @@ class VideoBackend;
 class PPU
 {
 public:
-    PPU(VideoBackend* vb);
+    PPU(VideoBackend* vb, NESCallback* callback);
     ~PPU();
 
     void AttachCPU(CPU* cpu);
     void AttachAPU(APU* apu);
     void AttachCart(Cart* cart);
-
-    void BindFrameCallback(const std::function<void()>& fn);
 
     uint16_t GetCurrentDot();
     uint16_t GetCurrentScanline();
@@ -69,6 +68,7 @@ private:
     APU* Apu;
     Cart* Cartridge;
     VideoBackend* VideoOut;
+    NESCallback* Callback;
 
     enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
 
@@ -202,6 +202,4 @@ private:
 
     void UpdateFrameRate();
     void UpdateFrameSkipCounters();
-
-    std::function<void()> OnFrameComplete;
 };

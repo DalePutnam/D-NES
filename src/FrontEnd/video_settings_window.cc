@@ -13,8 +13,8 @@
 
 wxDEFINE_EVENT(EVT_VIDEO_WINDOW_CLOSED, wxCommandEvent);
 
-VideoSettingsWindow::VideoSettingsWindow(MainWindow* parent)
-    : SettingsWindowBase(parent, "Video Settings")
+VideoSettingsWindow::VideoSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes)
+    : SettingsWindowBase(parent, nes, "Video Settings")
 {
     InitializeLayout();
     BindEvents();
@@ -22,7 +22,7 @@ VideoSettingsWindow::VideoSettingsWindow(MainWindow* parent)
 
 void VideoSettingsWindow::InitializeLayout()
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
     wxString choices[NUM_RESOLUTIONS];
     choices[_256X240] = "256x240 (x1)";
@@ -33,7 +33,7 @@ void VideoSettingsWindow::InitializeLayout()
     ResolutionComboBox = new wxComboBox(SettingsPanel, ID_RESOLUTION_CHANGED, "", wxDefaultPosition, wxDefaultSize, NUM_RESOLUTIONS, choices, wxCB_READONLY);
 
     int currentChoice;
-    settings->Read("/Video/Resolution", &currentChoice);
+    settings.Read("/Video/Resolution", &currentChoice);
     ResolutionComboBox->SetSelection(currentChoice);
 
     EnableNtscDecoding = new wxCheckBox(SettingsPanel, ID_NTSC_ENABLED, "Enable NTCS Decoding");
@@ -41,9 +41,9 @@ void VideoSettingsWindow::InitializeLayout()
     ShowFpsCounter = new wxCheckBox(SettingsPanel, ID_SHOW_FPS_COUNTER, "Show FPS");
 
     bool ntscDecoding, overscan, showFps;
-    settings->Read("/Video/NtscDecoding", &ntscDecoding);
-    settings->Read("/Video/Overscan", &overscan);
-    settings->Read("/Video/ShowFps", &showFps);
+    settings.Read("/Video/NtscDecoding", &ntscDecoding);
+    settings.Read("/Video/Overscan", &overscan);
+    settings.Read("/Video/ShowFps", &showFps);
 
     EnableNtscDecoding->SetValue(ntscDecoding);
     EnableOverscan->SetValue(overscan);
@@ -83,12 +83,12 @@ void VideoSettingsWindow::DoClose()
 
 void VideoSettingsWindow::DoOk()
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
-    settings->Write("/Video/Resolution", ResolutionComboBox->GetSelection());
-    settings->Write("/Video/NtscDecoding", EnableNtscDecoding->GetValue());
-    settings->Write("/Video/Overscan", EnableOverscan->GetValue());
-    settings->Write("/Video/ShowFps", ShowFpsCounter->GetValue());
+    settings.Write("/Video/Resolution", ResolutionComboBox->GetSelection());
+    settings.Write("/Video/NtscDecoding", EnableNtscDecoding->GetValue());
+    settings.Write("/Video/Overscan", EnableOverscan->GetValue());
+    settings.Write("/Video/ShowFps", ShowFpsCounter->GetValue());
 
     UpdateNtscDecoding(EnableNtscDecoding->GetValue());
     UpdateShowFpsCounter(ShowFpsCounter->GetValue());
@@ -99,15 +99,15 @@ void VideoSettingsWindow::DoOk()
 
 void VideoSettingsWindow::DoCancel()
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
     int resolution;
     bool overscan, ntscDecoding, showFps;
 
-    settings->Read("/Video/Resolution", &resolution);
-    settings->Read("/Video/NtscDecoding", &ntscDecoding);
-    settings->Read("/Video/Overscan", &overscan);
-    settings->Read("/Video/ShowFps", &showFps);
+    settings.Read("/Video/Resolution", &resolution);
+    settings.Read("/Video/NtscDecoding", &ntscDecoding);
+    settings.Read("/Video/Overscan", &overscan);
+    settings.Read("/Video/ShowFps", &showFps);
 
     UpdateNtscDecoding(ntscDecoding);
     UpdateShowFpsCounter(showFps);

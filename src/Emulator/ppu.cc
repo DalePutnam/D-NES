@@ -826,10 +826,11 @@ uint16_t PPU::GetCurrentScanline()
     }
 }
 
-PPU::PPU(VideoBackend* vout)
+PPU::PPU(VideoBackend* vout, NESCallback* callback)
     : Cpu(nullptr)
     , Cartridge(nullptr)
     , VideoOut(vout)
+    , Callback(callback)
     , FpsCounter(0)
     , CurrentFps(0)
     , FrameCountStart(std::chrono::steady_clock::now())
@@ -905,11 +906,6 @@ void PPU::AttachAPU(APU* apu)
 void PPU::AttachCart(Cart* cart)
 {
     Cartridge = cart;
-}
-
-void PPU::BindFrameCallback(const std::function<void()>& fn)
-{
-    OnFrameComplete = fn;
 }
 
 int PPU::STATE_SIZE = (sizeof(uint64_t)*2)+(sizeof(uint16_t)*8)+(sizeof(uint8_t)*0x96C)+(sizeof(char)*3);
@@ -1837,8 +1833,8 @@ void PPU::Step(uint64_t cycles)
 					VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
 					FrameBufferIndex = 0;
 
-					if (OnFrameComplete) {
-						OnFrameComplete();
+					if (Callback != nullptr) {
+						Callback->OnFrameComplete();
 					}
 				}
             }

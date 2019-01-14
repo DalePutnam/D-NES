@@ -13,51 +13,7 @@
 #include <iostream>
 #include <functional>
 
-struct NesParams
-{
-    std::string RomPath;
-    std::string SavePath;
-    bool CpuLogEnabled;
-
-    uint32_t TargetFrameRate;
-    bool TurboModeEnabled;
-    // PPU Settings
-    bool NtscDecoderEnabled;
-    bool FpsDisplayEnabled;
-    bool OverscanEnabled;
-
-    // APU Settings
-    bool AudioEnabled;
-    bool FiltersEnabled;
-    float MasterVolume;
-    float PulseOneVolume;
-    float PulseTwoVolume;
-    float TriangleVolume;
-    float NoiseVolume;
-    float DmcVolume;
-
-    bool HeadlessMode;
-    void* WindowHandle;
-
-    NesParams()
-        : RomPath("")
-        , SavePath("")
-        , CpuLogEnabled(false)
-        , TargetFrameRate(60)
-        , TurboModeEnabled(false)
-        , NtscDecoderEnabled(false)
-        , AudioEnabled(true)
-        , FiltersEnabled(false)
-        , MasterVolume(1.0f)
-        , PulseOneVolume(1.0f)
-        , PulseTwoVolume(1.0f)
-        , TriangleVolume(1.0f)
-        , NoiseVolume(1.0f)
-        , DmcVolume(1.0f)
-        , HeadlessMode(false)
-        , WindowHandle(nullptr)
-    {}
-};
+#include "nes_callback.h"
 
 class CPU;
 class APU;
@@ -69,25 +25,10 @@ class AudioBackend;
 class NES
 {
 public:
-    NES(const NesParams& params);
+    NES(const std::string& gamePath, void* windowHandle = nullptr, NESCallback* callback = nullptr);
     ~NES();
 
     const std::string& GetGameName();
-
-    void BindFrameCallback(const std::function<void()>& fn);
-    void BindErrorCallback(const std::function<void(std::string)>& fn);
-
-    template<class T>
-    void BindFrameCallback(void(T::*fn)(), T* obj)
-    {
-        BindFrameCallback(std::bind(fn, obj));
-    }
-
-    template<class T>
-    void BindErrorCallback(void(T::*fn)(std::string), T* obj)
-    {
-        BindErrorCallback(std::bind(fn, obj, std::placeholders::_1));
-    }
 
     bool IsStopped();
     bool IsPaused();
@@ -97,6 +38,7 @@ public:
 
     void SetCpuLogEnabled(bool enabled);
     void SetNativeSaveDirectory(const std::string& saveDir);
+    void SetStateSaveDirectory(const std::string& saveDir);
 
     void SetTargetFrameRate(uint32_t rate);
     void SetTurboModeEnabled(bool enabled);
@@ -113,7 +55,6 @@ public:
     void ShowMessage(const std::string& message, uint32_t duration);
 
     void SetAudioEnabled(bool enabled);
-    void SetAudioFiltersEnabled(bool enabled);
     void SetMasterVolume(float volume);
 
     void SetPulseOneVolume(float volume);
@@ -139,14 +80,15 @@ public:
     void Pause();
     void Reset();
 
-    void SaveState(int slot, const std::string& savePath);
-    void LoadState(int slot, const std::string& savePath);
+    void SaveState(int slot);
+    void LoadState(int slot);
 
 private:
     // Main run function, launched in a new thread by NES::Start
     void Run();
 
     std::thread NesThread;
+    std::string StateSaveDirectory;
 
     APU* Apu;
     CPU* Cpu;
@@ -155,5 +97,5 @@ private:
     VideoBackend* VideoOut;
     AudioBackend* AudioOut;
 
-    std::function<void(std::string)> OnError;
+    NESCallback* Callback;
 };

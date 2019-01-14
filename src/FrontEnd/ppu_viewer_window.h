@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <memory>
 #include <wx/frame.h>
 #include <wx/panel.h>
 #include <wx/combobox.h>
@@ -17,12 +18,11 @@ class NES;
 class PPUViewerWindow : public wxFrame
 {
 public:
-    explicit PPUViewerWindow(wxWindow* parent, NES* nes = nullptr);
-    ~PPUViewerWindow();
+    explicit PPUViewerWindow(wxWindow* parent, std::unique_ptr<NES>& nes);
+    ~PPUViewerWindow() noexcept;
 
     void UpdatePanels();
     void ClearAll();
-    void SetNes(NES* nes);
 
 private:
     void InitializeLayout();
@@ -41,7 +41,7 @@ private:
     wxPanel* Sprite[64];
     wxChoice* PaletteSelect;
 
-    NES* Nes;
+    std::unique_ptr<NES>& Nes;
 
     int SelectedPalette;
     uint8_t* NameTableBuffers[4];

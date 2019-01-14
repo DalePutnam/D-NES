@@ -16,27 +16,28 @@
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 
-NES::NES(const NesParams& params)
+NES::NES(const std::string& gamePath, void* windowHandle, NESCallback* callback)
     : Apu(nullptr)
     , Cpu(nullptr)
     , Ppu(nullptr)
     , Cartridge(nullptr)
     , VideoOut(nullptr)
     , AudioOut(nullptr)
+    , Callback(callback)
 {
     try
     {
-        if (!params.HeadlessMode)
+        if (windowHandle != nullptr)
         {
-            VideoOut = new VideoBackend(params.WindowHandle);
+            VideoOut = new VideoBackend(windowHandle);
         }
 
         AudioOut = new AudioBackend();
         
         Cpu = new CPU;
-        Ppu = new PPU(VideoOut); // Will be nullptr in HeadlessMode
+        Ppu = new PPU(VideoOut, Callback); // Will be nullptr in HeadlessMode
         Apu = new APU(AudioOut, VideoOut);
-        Cartridge = new Cart(params.RomPath, params.SavePath);
+        Cartridge = new Cart(gamePath, "");
     }
     catch (std::runtime_error& e)
     {
@@ -52,8 +53,8 @@ NES::NES(const NesParams& params)
 
     if (VideoOut != nullptr)
     {
-        VideoOut->ShowFps(params.FpsDisplayEnabled);
-        VideoOut->SetOverscanEnabled(params.OverscanEnabled);
+        VideoOut->ShowFps(false);
+        VideoOut->SetOverscanEnabled(true);
     }
     
     Apu->AttachCPU(Cpu);
@@ -69,21 +70,22 @@ NES::NES(const NesParams& params)
 
     Cartridge->AttachCPU(Cpu);
 
-    Cpu->SetLogEnabled(params.CpuLogEnabled);
+    // CPU Settings
+    Cpu->SetLogEnabled(false);
 
-    Ppu->SetTurboModeEnabled(params.TurboModeEnabled);
-    Ppu->SetNtscDecodingEnabled(params.NtscDecoderEnabled);
+    // PPU Settings
+    Ppu->SetTurboModeEnabled(false);
+    Ppu->SetNtscDecodingEnabled(false);
 
-    Apu->SetTargetFrameRate(params.TargetFrameRate);
-    Apu->SetTurboModeEnabled(params.TurboModeEnabled);
-    Apu->SetAudioEnabled(params.AudioEnabled);
-    Apu->SetFiltersEnabled(params.FiltersEnabled);
-    Apu->SetMasterVolume(params.MasterVolume);
-    Apu->SetPulseOneVolume(params.PulseOneVolume);
-    Apu->SetPulseTwoVolume(params.PulseTwoVolume);
-    Apu->SetTriangleVolume(params.TriangleVolume);
-    Apu->SetNoiseVolume(params.NoiseVolume);
-    Apu->SetDmcVolume(params.DmcVolume);
+    // APU Settings
+    Apu->SetTurboModeEnabled(false);
+    Apu->SetAudioEnabled(true);
+    Apu->SetMasterVolume(1.f);
+    Apu->SetPulseOneVolume(1.f);
+    Apu->SetPulseTwoVolume(1.f);
+    Apu->SetTriangleVolume(1.f);
+    Apu->SetNoiseVolume(1.f);
+    Apu->SetDmcVolume(1.f);
 }
 
 const std::string& NES::GetGameName()
@@ -109,6 +111,11 @@ void NES::SetCpuLogEnabled(bool enabled)
 void NES::SetNativeSaveDirectory(const std::string& saveDir)
 {
     Cartridge->SetSaveDirectory(saveDir);
+}
+
+void NES::SetStateSaveDirectory(const std::string& saveDir)
+{
+    StateSaveDirectory = saveDir;
 }
 
 void NES::SetTargetFrameRate(uint32_t rate)
@@ -170,11 +177,6 @@ void NES::ShowMessage(const std::string& message, uint32_t duration)
 void NES::SetAudioEnabled(bool enabled)
 {
     Apu->SetAudioEnabled(enabled);
-}
-
-void NES::SetAudioFiltersEnabled(bool enabled)
-{
-    Apu->SetFiltersEnabled(enabled);
 }
 
 void NES::SetMasterVolume(float volume)
@@ -266,9 +268,9 @@ void NES::Run()
     }
     catch (std::exception& e)
     {
-        if (OnError)
+        if (Callback != nullptr)
         {
-            OnError(e.what());
+            Callback->OnError(std::current_exception());
         }
     }
 }
@@ -300,19 +302,9 @@ void NES::Pause()
 
 void NES::Reset() {}
 
-void NES::BindFrameCallback(const std::function<void()>& fn)
+void NES::SaveState(int slot)
 {
-    Ppu->BindFrameCallback(fn);
-}
-
-void NES::BindErrorCallback(const std::function<void(std::string)>& fn)
-{
-    OnError = fn;
-}
-
-void NES::SaveState(int slot, const std::string& savePath)
-{
-    std::string fileName = savePath + "/" + GetGameName() + ".state" + std::to_string(slot);
+    std::string fileName = StateSaveDirectory + "/" + GetGameName() + ".state" + std::to_string(slot);
     std::ofstream saveStream(fileName.c_str(), std::ofstream::out | std::ofstream::binary);
 
     if (!saveStream.good())
@@ -349,9 +341,9 @@ void NES::SaveState(int slot, const std::string& savePath)
     Resume();
 }
 
-void NES::LoadState(int slot, const std::string& savePath)
+void NES::LoadState(int slot)
 {
-    std::string fileName = savePath + "/" + GetGameName() + ".state" + std::to_string(slot);
+    std::string fileName = StateSaveDirectory + "/" + GetGameName() + ".state" + std::to_string(slot);
     std::ifstream saveStream(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 
     if (!saveStream.good())

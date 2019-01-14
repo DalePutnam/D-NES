@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <wx/dialog.h>
 
 class NES;
@@ -9,15 +10,14 @@ class MainWindow;
 class SettingsWindowBase : public wxDialog
 {
 public:
-    SettingsWindowBase(MainWindow* parent, const std::string& title);
-    void SetNes(NES* nes);
+    SettingsWindowBase(MainWindow* parent, std::unique_ptr<NES>& nes, const std::string& title);
 
 protected:
     virtual void DoOk() = 0;
     virtual void DoCancel() = 0;
     virtual void DoClose() = 0;
 
-    NES* Nes;
+    std::unique_ptr<NES>& Nes;
     wxPanel* SettingsPanel;
 
 private:

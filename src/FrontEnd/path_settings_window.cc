@@ -58,8 +58,8 @@ void PathSettingsWindow::OnDirectorySelect(wxCommandEvent& event)
     }
 }
 
-PathSettingsWindow::PathSettingsWindow(MainWindow* parent)
-    : SettingsWindowBase(parent, "Path Settings")
+PathSettingsWindow::PathSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes)
+    : SettingsWindowBase(parent, nes, "Path Settings")
 {
     InitializeLayout();
     BindEvents();
@@ -111,12 +111,12 @@ void PathSettingsWindow::InitializeLayout()
 
     Fit();
 
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
     std::string romPath, nativeSavePath, stateSavePath;
 
-    settings->Read("/Paths/RomPath", &romPath);
-    settings->Read("/Paths/NativeSavePath", &nativeSavePath);
-    settings->Read("/Paths/StateSavePath", &stateSavePath);
+    settings.Read("/Paths/RomPath", &romPath);
+    settings.Read("/Paths/NativeSavePath", &nativeSavePath);
+    settings.Read("/Paths/StateSavePath", &stateSavePath);
 
     RomPathText->SetValue(romPath);
     SavePathText->SetValue(nativeSavePath);
@@ -132,10 +132,10 @@ void PathSettingsWindow::BindEvents()
 
 void PathSettingsWindow::DoOk()
 {
-    AppSettings* settings = AppSettings::GetInstance();
-    settings->Write("/Paths/RomPath", RomPathText->GetValue());
-    settings->Write("/Paths/NativeSavePath", SavePathText->GetValue());
-    settings->Write("/Paths/StateSavePath", StatePathText->GetValue());
+    AppSettings& settings = AppSettings::GetInstance();
+    settings.Write("/Paths/RomPath", RomPathText->GetValue());
+    settings.Write("/Paths/NativeSavePath", SavePathText->GetValue());
+    settings.Write("/Paths/StateSavePath", StatePathText->GetValue());
 
     std::string newSavePath = SavePathText->GetValue().ToStdString();
     std::string newStatePath = StatePathText->GetValue().ToStdString();

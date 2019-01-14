@@ -1434,11 +1434,6 @@ float APU::GetMasterVolume()
     return MasterVolume;
 }
 
-void APU::SetFiltersEnabled(bool enabled)
-{
-    //AudioOut->SetFiltersEnabled(enabled);
-}
-
 void APU::SetPulseOneVolume(float volume)
 {
     PulseOneVolume = clamp(volume, 0.0f, 1.0f);

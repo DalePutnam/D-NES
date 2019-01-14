@@ -11,8 +11,6 @@
 
 #include "app_settings.h"
 
-AppSettings* AppSettings::instance = nullptr; // Initialize static instance field
-
 AppSettings::AppSettings()
 {
     wxFileName configFile(wxGetCwd(), "config.txt");
@@ -20,11 +18,11 @@ AppSettings::AppSettings()
     if (configFile.FileExists())
     {
         wxFileInputStream configStream(configFile.GetFullPath());
-        Settings = new wxFileConfig(configStream);
+        Settings = std::make_unique<wxFileConfig>(configStream);
     }
     else
     {
-        Settings = new wxFileConfig();
+        Settings = std::make_unique<wxFileConfig>();
     }
 
     if (!Settings->HasEntry("/Paths/RomPath"))
@@ -47,11 +45,6 @@ AppSettings::AppSettings()
     if (!Settings->HasEntry("/Audio/Enabled"))
     {
         Settings->Write("/Audio/Enabled", true);
-    }
-
-    if (!Settings->HasEntry("/Audio/FiltersEnabled"))
-    {
-        Settings->Write("/Audio/FiltersEnabled", false);
     }
 
     if (!Settings->HasEntry("/Audio/MasterVolume"))
@@ -118,7 +111,6 @@ AppSettings::AppSettings()
 AppSettings::~AppSettings()
 {
     Save();
-    delete Settings;
 }
 
 void AppSettings::Save()
@@ -131,23 +123,9 @@ void AppSettings::Save()
     }
 }
 
-AppSettings* AppSettings::GetInstance()
+AppSettings& AppSettings::GetInstance()
 {
-    if (instance == nullptr) // If instance doesn't exist
-    {
-        // Create and return new instance
-        instance = new AppSettings();
-        atexit(AppSettings::CleanUp);
-
-        return instance;
-    }
-    else
-    {
-        return instance; // Otherwise return the instance
-    }
-}
-
-void AppSettings::CleanUp()
-{
-    delete instance;
+    // C++11 has a feature called 'magic statics' that makes this thread safe
+    static AppSettings instance;
+    return instance;
 }

@@ -13,7 +13,7 @@ wxDECLARE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 class AudioSettingsWindow : public SettingsWindowBase
 {
 public:
-    AudioSettingsWindow(MainWindow* parent);
+    AudioSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes);
 
 protected:
     virtual void DoOk() override;
@@ -25,7 +25,6 @@ private:
     void BindEvents();
 
     void EnableAudioClicked(wxCommandEvent& event);
-    void EnableFiltersClicked(wxCommandEvent& event);
     void MasterVolumeChanged(wxCommandEvent& event);
     void PulseOneVolumeChanged(wxCommandEvent& event);
     void PulseTwoVolumeChanged(wxCommandEvent& event);
@@ -47,7 +46,6 @@ private:
     wxStaticText* CurrentDmcVolume;
 
     wxCheckBox* EnableAudioCheckBox;
-    wxCheckBox* EnableFiltersCheckBox;
 };
 
 const int ID_AUDIO_ENABLED = 200;

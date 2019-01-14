@@ -13,8 +13,8 @@
 
 wxDEFINE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 
-AudioSettingsWindow::AudioSettingsWindow(MainWindow* parent)
-    : SettingsWindowBase(parent, "Audio Settings")
+AudioSettingsWindow::AudioSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes)
+    : SettingsWindowBase(parent, nes, "Audio Settings")
 {
     InitializeLayout();
     BindEvents();
@@ -22,7 +22,7 @@ AudioSettingsWindow::AudioSettingsWindow(MainWindow* parent)
 
 void AudioSettingsWindow::InitializeLayout()
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
     wxBoxSizer* volumeSizer = new wxBoxSizer(wxVERTICAL);
     wxGridSizer* volumeGrid = new wxGridSizer(1, 6, 0, 5);
@@ -37,12 +37,12 @@ void AudioSettingsWindow::InitializeLayout()
     int sliderStyle = wxSL_VERTICAL | wxSL_INVERSE;
 
     int master, pulseOne, pulseTwo, triangle, noise, dmc;
-    settings->Read("/Audio/MasterVolume", &master);
-    settings->Read("/Audio/PulseOneVolume", &pulseOne);
-    settings->Read("/Audio/PulseTwoVolume", &pulseTwo);
-    settings->Read("/Audio/TriangleVolume", &triangle);
-    settings->Read("/Audio/NoiseVolume", &noise);
-    settings->Read("/Audio/DmcVolume", &dmc);
+    settings.Read("/Audio/MasterVolume", &master);
+    settings.Read("/Audio/PulseOneVolume", &pulseOne);
+    settings.Read("/Audio/PulseTwoVolume", &pulseTwo);
+    settings.Read("/Audio/TriangleVolume", &triangle);
+    settings.Read("/Audio/NoiseVolume", &noise);
+    settings.Read("/Audio/DmcVolume", &dmc);
 
     wxSize sliderSize(-1, 100);
 
@@ -100,17 +100,13 @@ void AudioSettingsWindow::InitializeLayout()
     wxBoxSizer* otherSizer = new wxBoxSizer(wxHORIZONTAL);
 
     EnableAudioCheckBox = new wxCheckBox(SettingsPanel, ID_AUDIO_ENABLED, "Enable Audio");
-    EnableFiltersCheckBox = new wxCheckBox(SettingsPanel, ID_FILTERS_ENABLED, "Enable Filters");
 
-    bool audioEnabled, filtersEnabled;
-    settings->Read("/Audio/Enabled", &audioEnabled);
-    settings->Read("/Audio/FiltersEnabled", &filtersEnabled);
+    bool audioEnabled;
+    settings.Read("/Audio/Enabled", &audioEnabled);
 
     EnableAudioCheckBox->SetValue(audioEnabled);
-    EnableFiltersCheckBox->SetValue(filtersEnabled);
 
     otherSizer->Add(EnableAudioCheckBox);
-    otherSizer->Add(EnableFiltersCheckBox);
 
     volumeSizer->Add(channelBox, wxSizerFlags().Expand().Border(wxALL, 10));
     volumeSizer->Add(otherSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
@@ -122,7 +118,6 @@ void AudioSettingsWindow::InitializeLayout()
 void AudioSettingsWindow::BindEvents()
 {
     Bind(wxEVT_CHECKBOX, &AudioSettingsWindow::EnableAudioClicked, this, ID_AUDIO_ENABLED);
-    Bind(wxEVT_CHECKBOX, &AudioSettingsWindow::EnableFiltersClicked, this, ID_FILTERS_ENABLED);
     Bind(wxEVT_SLIDER, &AudioSettingsWindow::MasterVolumeChanged, this, ID_MASTER_SLIDER);
     Bind(wxEVT_SLIDER, &AudioSettingsWindow::PulseOneVolumeChanged, this, ID_PULSE_ONE_SLIDER);
     Bind(wxEVT_SLIDER, &AudioSettingsWindow::PulseTwoVolumeChanged, this, ID_PULSE_TWO_SLIDER);
@@ -140,17 +135,16 @@ void AudioSettingsWindow::DoClose()
 
 void AudioSettingsWindow::DoOk()
 {
-    AppSettings* settings = AppSettings::GetInstance();
+    AppSettings& settings = AppSettings::GetInstance();
 
-    settings->Write("/Audio/MasterVolume", MasterVolume->GetValue());
-    settings->Write("/Audio/PulseOneVolume", PulseOneVolume->GetValue());
-    settings->Write("/Audio/PulseTwoVolume", PulseTwoVolume->GetValue());
-    settings->Write("/Audio/TriangleVolume", TriangleVolume->GetValue());
-    settings->Write("/Audio/NoiseVolume", NoiseVolume->GetValue());
-    settings->Write("/Audio/DmcVolume", DmcVolume->GetValue());
+    settings.Write("/Audio/MasterVolume", MasterVolume->GetValue());
+    settings.Write("/Audio/PulseOneVolume", PulseOneVolume->GetValue());
+    settings.Write("/Audio/PulseTwoVolume", PulseTwoVolume->GetValue());
+    settings.Write("/Audio/TriangleVolume", TriangleVolume->GetValue());
+    settings.Write("/Audio/NoiseVolume", NoiseVolume->GetValue());
+    settings.Write("/Audio/DmcVolume", DmcVolume->GetValue());
 
-    settings->Write("/Audio/Enabled", EnableAudioCheckBox->GetValue());
-    settings->Write("/Audio/FiltersEnabled", EnableFiltersCheckBox->GetValue());
+    settings.Write("/Audio/Enabled", EnableAudioCheckBox->GetValue());
 
     Close();
 }
@@ -160,22 +154,20 @@ void AudioSettingsWindow::DoCancel()
     // Reset settings on cancel
     if (Nes != nullptr)
     {
-        AppSettings* settings = AppSettings::GetInstance();
+        AppSettings& settings = AppSettings::GetInstance();
 
         bool audioEnabled, filtersEnabled;
-        settings->Read("/Audio/Enabled", &audioEnabled);
-        settings->Read("/Audio/FiltersEnabled", &filtersEnabled);
+        settings.Read("/Audio/Enabled", &audioEnabled);
 
         Nes->SetAudioEnabled(audioEnabled);
-        Nes->SetAudioFiltersEnabled(filtersEnabled);
 
         int master, pulseOne, pulseTwo, triangle, noise, dmc;
-        settings->Read("/Audio/MasterVolume", &master);
-        settings->Read("/Audio/PulseOneVolume", &pulseOne);
-        settings->Read("/Audio/PulseTwoVolume", &pulseTwo);
-        settings->Read("/Audio/TriangleVolume", &triangle);
-        settings->Read("/Audio/NoiseVolume", &noise);
-        settings->Read("/Audio/DmcVolume", &dmc);
+        settings.Read("/Audio/MasterVolume", &master);
+        settings.Read("/Audio/PulseOneVolume", &pulseOne);
+        settings.Read("/Audio/PulseTwoVolume", &pulseTwo);
+        settings.Read("/Audio/TriangleVolume", &triangle);
+        settings.Read("/Audio/NoiseVolume", &noise);
+        settings.Read("/Audio/DmcVolume", &dmc);
 
         Nes->SetMasterVolume(master / 100.0f);
         Nes->SetPulseOneVolume(pulseOne / 100.0f);
@@ -193,14 +185,6 @@ void AudioSettingsWindow::EnableAudioClicked(wxCommandEvent& event)
     if (Nes != nullptr)
     {
         Nes->SetAudioEnabled(EnableAudioCheckBox->GetValue());
-    }
-}
-
-void AudioSettingsWindow::EnableFiltersClicked(wxCommandEvent& event)
-{
-    if (Nes != nullptr)
-    {
-        Nes->SetAudioFiltersEnabled(EnableFiltersCheckBox->GetValue());
     }
 }
 
