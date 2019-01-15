@@ -60,6 +60,7 @@ void GLXPlatform::DestroyWindow()
 {
     XDestroyWindow(_display, _windowHandle);
     XCloseDisplay(_display);
+    XFree(_xVisualInfo);
 }
 
 void GLXPlatform::DestroyContext()
