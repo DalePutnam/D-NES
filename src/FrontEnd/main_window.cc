@@ -113,13 +113,12 @@ void MainWindow::StartEmulator(const std::string& filename)
     {
         RenderSurface->Show();
 
-#ifdef _WIN32
+#if defined(_WIN32)
         void* windowHandle = RenderSurface->GetHandle();
-#endif
-
-#ifdef __linux
+#elif defined(__linux)
         void* windowHandle = reinterpret_cast<void*>(GetX11WindowHandle(RenderSurface->GetHandle()));
 #endif
+
         AppSettings& appSettings = AppSettings::GetInstance();
 
         wxString nativeSavePath, stateSavePath;
@@ -138,7 +137,7 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         try
         {
-            Nes = std::make_unique<NES>(filename, windowHandle, this);
+            Nes = std::make_unique<NES>(filename, nativeSavePath.ToStdString(), windowHandle, this);
 
             Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
             Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
@@ -173,12 +172,11 @@ void MainWindow::StartEmulator(const std::string& filename)
             Nes->SetOverscanEnabled(overscanEnabled);
             Nes->SetNtscDecoderEnabled(ntscDecodingEnabled);
 
-            Nes->SetNativeSaveDirectory(nativeSavePath.ToStdString());
             Nes->SetStateSaveDirectory(stateSavePath.ToStdString());
         }
         catch (std::exception &e)
         {
-            wxMessageDialog message(nullptr, e.what(), "ERROR", wxOK | wxICON_ERROR);
+            wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
 
             Nes.reset();
@@ -200,8 +198,9 @@ void MainWindow::StartEmulator(const std::string& filename)
         SetMaxClientSize(GameWindowSize);
 
         RenderSurface->SetSize(GetClientSize());
-
         RenderSurface->SetFocus();
+
+        PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
 
         Nes->Start();
     }
@@ -218,6 +217,8 @@ void MainWindow::StopEmulator(bool showRomList)
     {
         Nes->Stop();
         Nes.reset();
+
+        PlayPauseMenuItem->SetItemLabel("&Play");
 
         if (showRomList)
         {
@@ -293,12 +294,14 @@ void MainWindow::OnEmulatorSuspendResume(wxCommandEvent& WXUNUSED(event))
 {
     if (Nes != nullptr)
     {
-        if (Nes->IsPaused())
+        if (Nes->GetState() == NES::State::Paused)
         {
+            PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
             Nes->Resume();
         }
         else
         {
+            PlayPauseMenuItem->SetItemLabel(wxT("&Play"));
             Nes->Pause();
         }
     }
@@ -545,7 +548,9 @@ void MainWindow::InitializeMenus()
     StateLoadSubMenu->Append(ID_STATE_LOAD_10, wxT("&Slot 10"));
 
     EmulatorMenu = new wxMenu;
-    EmulatorMenu->Append(ID_EMULATOR_SUSPEND_RESUME, wxT("&Suspend/Resume"));
+    PlayPauseMenuItem = new wxMenuItem(nullptr, ID_EMULATOR_SUSPEND_RESUME, wxT("&Play"));
+
+    EmulatorMenu->Append(PlayPauseMenuItem);
     EmulatorMenu->Append(ID_EMULATOR_STOP, wxT("&Stop"));
     EmulatorMenu->AppendSeparator();
     EmulatorMenu->AppendSubMenu(StateSaveSubMenu, wxT("&Save State"));

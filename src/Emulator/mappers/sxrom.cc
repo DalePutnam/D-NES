@@ -2,8 +2,7 @@
 #include <iostream>
 
 #include "sxrom.h"
-#include "../nes.h"
-#include "../cpu.h"
+#include "cpu.h"
 
 int SXROM::GetStateSize()
 {

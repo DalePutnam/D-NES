@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10.2)
 
 project(Emulator)
 
-include_directories(mappers audio video)
+include_directories(mappers audio video .)
 
 add_library(core
     nes.cc

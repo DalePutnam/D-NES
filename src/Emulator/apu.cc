@@ -1183,11 +1183,10 @@ void APU::MixerUnit::UpdateMode()
 // APU Main Unit
 //**********************************************************************
 
-APU::APU(AudioBackend* aout, VideoBackend* vb)
+APU::APU(AudioBackend* aout)
 	: Cpu(nullptr)
 	, Cartridge(nullptr)
 	, AudioOut(aout)
-	, VideoOut(vb)
 	, PulseOne(true)
 	, PulseTwo(false)
 	, Dmc(*this)

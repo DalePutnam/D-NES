@@ -12,7 +12,7 @@ class VideoBackend;
 class APU
 {
 public:
-	APU(AudioBackend* aout, VideoBackend* vb);
+	APU(AudioBackend* aout);
     ~APU();
 
     void AttachCPU(CPU* cpu);
@@ -256,7 +256,6 @@ private:
     CPU* Cpu;
     Cart* Cartridge;
     AudioBackend* AudioOut;
-	VideoBackend* VideoOut;
 
     PulseUnit PulseOne;
     PulseUnit PulseTwo;

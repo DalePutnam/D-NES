@@ -2,44 +2,62 @@
 #include <exception>
 #include <cstring>
 
-#include "../cpu.h"
+#include "cpu.h"
 #include "mapper_base.h"
 
 using namespace std;
+
+#if defined(_WIN32)
+static const std::string FILE_SEPARATOR = "\\";
+#elif defined(__linux)
+static const std::string FILE_SEPARATOR = "/";
+#endif
+
+static std::string getGameNameFromPath(const std::string& gamePath)
+{
+    std::string gameName;
+
+    size_t indexSeparator = gamePath.rfind(FILE_SEPARATOR);
+    if (indexSeparator == std::string::npos)
+    {
+        gameName = gamePath;
+    }
+    else
+    {
+        gameName = gamePath.substr(indexSeparator + 1);
+    }
+
+    size_t indexExtension = gameName.find(".");
+    if (indexExtension != std::string::npos)
+    {
+        gameName = gameName.substr(0, indexExtension);
+    }
+
+    return gameName;
+}
+
+static const string NATIVE_SAVE_EXTENSION = "sav";
+static std::string createNativeSavePath(const std::string& saveDirectory, const std::string& gameName)
+{
+    if (saveDirectory.empty())
+    {
+        return gameName + "." + NATIVE_SAVE_EXTENSION;
+    }
+    else
+    {
+        return saveDirectory + FILE_SEPARATOR + gameName + "." + NATIVE_SAVE_EXTENSION;
+    }
+}
 
 MapperBase::MapperBase(const string& fileName, const string& saveDir)
     : Prg(nullptr)
     , Chr(nullptr)
     , Wram(nullptr)
     , HasSaveMem(false)
-    , SaveDir(saveDir)
     , Cpu(nullptr)
 {
-    size_t indexForwardSlash = fileName.rfind('/');
-    size_t indexBackSlash = fileName.rfind('\\');
-
-    if (indexForwardSlash == string::npos && indexBackSlash == string::npos)
-    {
-        GameName = fileName;
-    }
-    else if (indexForwardSlash != string::npos)
-    {
-        GameName = fileName.substr(indexForwardSlash + 1);
-    }
-    else if (indexBackSlash != string::npos)
-    {
-        GameName = fileName.substr(indexBackSlash + 1);
-    }
-    else
-    {
-        GameName = fileName.substr(((indexForwardSlash > indexBackSlash) ? indexForwardSlash : indexBackSlash) + 1);
-    }
-
-    size_t indexExtension = GameName.find(".nes");
-    if (indexExtension != string::npos)
-    {
-        GameName = GameName.substr(0, indexExtension);
-    }
+    GameName = getGameNameFromPath(fileName);
+    SaveFile = createNativeSavePath(saveDir, GameName);
 
     ifstream romStream(fileName.c_str(), ifstream::in | ifstream::binary);
 
@@ -69,8 +87,7 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
         if (header[6] & 0x2)
         {
             HasSaveMem = true;
-            string saveFile = saveDir + "/" + GameName + ".sav";
-            ifstream saveStream(saveFile.c_str(), ifstream::in | ifstream::binary);
+            ifstream saveStream(SaveFile.c_str(), ifstream::in | ifstream::binary);
 
             if (saveStream.good())
             {
@@ -122,8 +139,7 @@ MapperBase::~MapperBase()
 {
     if (HasSaveMem)
     {
-        string saveFile = SaveDir + "/" + GameName + ".sav";
-        ofstream saveStream(saveFile.c_str(), ifstream::out | ifstream::binary);
+        ofstream saveStream(SaveFile.c_str(), ifstream::out | ifstream::binary);
 
         if (saveStream.good())
         {
@@ -146,7 +162,7 @@ void MapperBase::SetSaveDirectory(const std::string& saveDir)
 {
     std::lock_guard<std::mutex> lock(MapperMutex);
 
-    SaveDir = saveDir;
+    SaveFile = createNativeSavePath(saveDir, GameName);
 }
 
 void MapperBase::AttachCPU(CPU* cpu)

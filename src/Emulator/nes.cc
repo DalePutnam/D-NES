@@ -16,7 +16,28 @@
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 
-NES::NES(const std::string& gamePath, void* windowHandle, NESCallback* callback)
+#if defined(_WIN32)
+static const std::string FILE_SEPARATOR = "\\";
+#elif defined(__linux)
+static const std::string FILE_SEPARATOR = "/";
+#endif
+
+static const std::string STATE_SAVE_EXTENSION = "state";
+static std::string createStateSavePath(int slot, const std::string& saveDirectory, const std::string& gameName)
+{
+    if (saveDirectory.empty())
+    {
+        return gameName + "." + STATE_SAVE_EXTENSION + std::to_string(slot);
+    }
+    else
+    {
+        return saveDirectory + FILE_SEPARATOR + gameName + "." + STATE_SAVE_EXTENSION + std::to_string(slot);
+    }
+}
+
+
+NES::NES(const std::string& gamePath, const std::string& savePath,
+            void* windowHandle, NESCallback* callback)
     : Apu(nullptr)
     , Cpu(nullptr)
     , Ppu(nullptr)
@@ -36,8 +57,8 @@ NES::NES(const std::string& gamePath, void* windowHandle, NESCallback* callback)
         
         Cpu = new CPU;
         Ppu = new PPU(VideoOut, Callback); // Will be nullptr in HeadlessMode
-        Apu = new APU(AudioOut, VideoOut);
-        Cartridge = new Cart(gamePath, "");
+        Apu = new APU(AudioOut);
+        Cartridge = new Cart(gamePath, savePath);
     }
     catch (std::runtime_error& e)
     {
@@ -86,6 +107,8 @@ NES::NES(const std::string& gamePath, void* windowHandle, NESCallback* callback)
     Apu->SetTriangleVolume(1.f);
     Apu->SetNoiseVolume(1.f);
     Apu->SetDmcVolume(1.f);
+
+    CurrentState = State::Ready;
 }
 
 const std::string& NES::GetGameName()
@@ -234,14 +257,9 @@ float NES::GetDmcVolume()
     return Apu->GetDmcVolume();
 }
 
-bool NES::IsStopped()
+NES::State NES::GetState()
 {
-    return !NesThread.joinable();
-}
-
-bool NES::IsPaused()
-{
-    return Cpu->IsPaused();
+    return CurrentState;
 }
 
 void NES::Start()
@@ -262,12 +280,15 @@ void NES::Run()
     {
 		VideoOut->Prepare();
 
+        CurrentState = State::Running;
         Cpu->Run();
 
 		VideoOut->Finalize();
     }
     catch (std::exception& e)
     {
+        CurrentState = State::Error;
+
         if (Callback != nullptr)
         {
             Callback->OnError(std::current_exception());
@@ -277,34 +298,40 @@ void NES::Run()
 
 void NES::Stop()
 {
-    Cpu->Stop();
-
     if (NesThread.joinable())
     {
+        Cpu->Stop();
+
         if (std::this_thread::get_id() == NesThread.get_id())
         {
-            throw std::runtime_error("NES Thread tried to stop itself!");
+            throw std::runtime_error("NES Thread tried to stop itself.");
         }
 
         NesThread.join();
+
+        CurrentState = State::Stopped;
+    } else {
+        throw std::runtime_error("Cannot restart a stopped NES instance.");
     }
 }
 
 void NES::Resume()
 {
+    CurrentState = State::Running;
     Cpu->Resume();
 }
 
 void NES::Pause()
 {
     Cpu->Pause();
+    CurrentState = State::Paused;
 }
 
 void NES::Reset() {}
 
 void NES::SaveState(int slot)
 {
-    std::string fileName = StateSaveDirectory + "/" + GetGameName() + ".state" + std::to_string(slot);
+    std::string fileName = createStateSavePath(slot, StateSaveDirectory, GetGameName());
     std::ofstream saveStream(fileName.c_str(), std::ofstream::out | std::ofstream::binary);
 
     if (!saveStream.good())
@@ -343,7 +370,7 @@ void NES::SaveState(int slot)
 
 void NES::LoadState(int slot)
 {
-    std::string fileName = StateSaveDirectory + "/" + GetGameName() + ".state" + std::to_string(slot);
+    std::string fileName = createStateSavePath(slot, StateSaveDirectory, GetGameName());
     std::ifstream saveStream(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 
     if (!saveStream.good())

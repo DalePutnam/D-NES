@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <mutex>
+#include <atomic>
 #include <string>
 #include <thread>
 #include <iostream>
@@ -25,13 +25,23 @@ class AudioBackend;
 class NES
 {
 public:
-    NES(const std::string& gamePath, void* windowHandle = nullptr, NESCallback* callback = nullptr);
+    NES(const std::string& gamePath, const std::string& nativeSavePath = "",
+            void* windowHandle = nullptr, NESCallback* callback = nullptr);
+            
     ~NES();
+
+    enum State
+    {
+        Ready,
+        Running,
+        Paused,
+        Stopped,
+        Error
+    };
 
     const std::string& GetGameName();
 
-    bool IsStopped();
-    bool IsPaused();
+    State GetState();
 
     void SetControllerOneState(uint8_t state);
     uint8_t GetControllerOneState();
@@ -86,6 +96,8 @@ public:
 private:
     // Main run function, launched in a new thread by NES::Start
     void Run();
+
+    std::atomic<State> CurrentState;
 
     std::thread NesThread;
     std::string StateSaveDirectory;

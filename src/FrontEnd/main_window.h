@@ -57,6 +57,8 @@ private:
     wxMenu* SettingsMenu;
     wxMenu* AboutMenu;
 
+    wxMenuItem* PlayPauseMenuItem;
+
     wxMenu* StateSaveSubMenu;
     wxMenu* StateLoadSubMenu;
 

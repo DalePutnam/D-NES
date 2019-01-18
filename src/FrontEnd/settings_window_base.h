@@ -11,6 +11,7 @@ class SettingsWindowBase : public wxDialog
 {
 public:
     SettingsWindowBase(MainWindow* parent, std::unique_ptr<NES>& nes, const std::string& title);
+    virtual ~SettingsWindowBase() = default;
 
 protected:
     virtual void DoOk() = 0;

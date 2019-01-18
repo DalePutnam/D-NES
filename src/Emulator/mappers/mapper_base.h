@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <mutex>
 
-#include "../cart.h"
+#include "cart.h"
 
 class CPU;
 
@@ -41,7 +41,7 @@ protected:
     Cart::MirrorMode Mirroring;
 
     std::string GameName;
-    std::string SaveDir;
+    std::string SaveFile;
 
     std::mutex MapperMutex;
 
