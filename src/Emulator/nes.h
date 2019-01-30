@@ -27,7 +27,6 @@ class NES
 public:
     NES(const std::string& gamePath, const std::string& nativeSavePath = "",
             void* windowHandle = nullptr, NESCallback* callback = nullptr);
-            
     ~NES();
 
     enum State

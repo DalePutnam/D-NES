@@ -13,28 +13,9 @@
 #include "apu.h"
 #include "ppu.h"
 #include "cart.h"
+#include "file.h"
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
-
-#if defined(_WIN32)
-static const std::string FILE_SEPARATOR = "\\";
-#elif defined(__linux)
-static const std::string FILE_SEPARATOR = "/";
-#endif
-
-static const std::string STATE_SAVE_EXTENSION = "state";
-static std::string createStateSavePath(int slot, const std::string& saveDirectory, const std::string& gameName)
-{
-    if (saveDirectory.empty())
-    {
-        return gameName + "." + STATE_SAVE_EXTENSION + std::to_string(slot);
-    }
-    else
-    {
-        return saveDirectory + FILE_SEPARATOR + gameName + "." + STATE_SAVE_EXTENSION + std::to_string(slot);
-    }
-}
-
 
 NES::NES(const std::string& gamePath, const std::string& savePath,
             void* windowHandle, NESCallback* callback)
@@ -111,6 +92,16 @@ NES::NES(const std::string& gamePath, const std::string& savePath,
     CurrentState = State::Ready;
 }
 
+NES::~NES()
+{
+    delete Apu;
+    delete Cpu;
+    delete Ppu;
+    delete Cartridge;
+    delete VideoOut;
+    delete AudioOut;
+}
+
 const std::string& NES::GetGameName()
 {
     return Cartridge->GetGameName();
@@ -138,6 +129,7 @@ void NES::SetNativeSaveDirectory(const std::string& saveDir)
 
 void NES::SetStateSaveDirectory(const std::string& saveDir)
 {
+
     StateSaveDirectory = saveDir;
 }
 
@@ -331,7 +323,9 @@ void NES::Reset() {}
 
 void NES::SaveState(int slot)
 {
-    std::string fileName = createStateSavePath(slot, StateSaveDirectory, GetGameName());
+
+    std::string extension = "state" + std::to_string(slot);
+    std::string fileName = file::createFullPath(GetGameName(), extension, StateSaveDirectory);
     std::ofstream saveStream(fileName.c_str(), std::ofstream::out | std::ofstream::binary);
 
     if (!saveStream.good())
@@ -370,7 +364,8 @@ void NES::SaveState(int slot)
 
 void NES::LoadState(int slot)
 {
-    std::string fileName = createStateSavePath(slot, StateSaveDirectory, GetGameName());
+    std::string extension = "state" + std::to_string(slot);
+    std::string fileName = file::createFullPath(GetGameName(), extension, StateSaveDirectory);
     std::ifstream saveStream(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 
     if (!saveStream.good())
@@ -405,14 +400,4 @@ void NES::LoadState(int slot)
     VideoOut->ShowMessage("Loaded State " + std::to_string(slot), 5);
 
     Resume();
-}
-
-NES::~NES()
-{
-    delete Apu;
-    delete Cpu;
-    delete Ppu;
-    delete Cartridge;
-    delete VideoOut;
-    delete AudioOut;
 }

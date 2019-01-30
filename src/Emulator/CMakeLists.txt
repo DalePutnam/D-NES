@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10.2)
 
 project(Emulator)
 
-include_directories(mappers audio video .)
+include_directories(mappers audio video common .)
 
 add_library(core
     nes.cc
@@ -10,6 +10,7 @@ add_library(core
     ppu.cc
     apu.cc
     cart.cc
+    common/file.cc
     mappers/mapper_base.cc
     mappers/nrom.cc
     mappers/sxrom.cc

@@ -3,51 +3,10 @@
 #include <cstring>
 
 #include "cpu.h"
+#include "file.h"
 #include "mapper_base.h"
 
 using namespace std;
-
-#if defined(_WIN32)
-static const std::string FILE_SEPARATOR = "\\";
-#elif defined(__linux)
-static const std::string FILE_SEPARATOR = "/";
-#endif
-
-static std::string getGameNameFromPath(const std::string& gamePath)
-{
-    std::string gameName;
-
-    size_t indexSeparator = gamePath.rfind(FILE_SEPARATOR);
-    if (indexSeparator == std::string::npos)
-    {
-        gameName = gamePath;
-    }
-    else
-    {
-        gameName = gamePath.substr(indexSeparator + 1);
-    }
-
-    size_t indexExtension = gameName.find(".");
-    if (indexExtension != std::string::npos)
-    {
-        gameName = gameName.substr(0, indexExtension);
-    }
-
-    return gameName;
-}
-
-static const string NATIVE_SAVE_EXTENSION = "sav";
-static std::string createNativeSavePath(const std::string& saveDirectory, const std::string& gameName)
-{
-    if (saveDirectory.empty())
-    {
-        return gameName + "." + NATIVE_SAVE_EXTENSION;
-    }
-    else
-    {
-        return saveDirectory + FILE_SEPARATOR + gameName + "." + NATIVE_SAVE_EXTENSION;
-    }
-}
 
 MapperBase::MapperBase(const string& fileName, const string& saveDir)
     : Prg(nullptr)
@@ -56,8 +15,8 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
     , HasSaveMem(false)
     , Cpu(nullptr)
 {
-    GameName = getGameNameFromPath(fileName);
-    SaveFile = createNativeSavePath(saveDir, GameName);
+    GameName = file::stripExtension(file::getNameFromPath(fileName));
+    SaveFile = file::createFullPath(GameName, "sav", saveDir);
 
     ifstream romStream(fileName.c_str(), ifstream::in | ifstream::binary);
 
@@ -162,7 +121,7 @@ void MapperBase::SetSaveDirectory(const std::string& saveDir)
 {
     std::lock_guard<std::mutex> lock(MapperMutex);
 
-    SaveFile = createNativeSavePath(saveDir, GameName);
+    SaveFile = file::createFullPath(GameName, "sav", saveDir);
 }
 
 void MapperBase::AttachCPU(CPU* cpu)
