@@ -31,6 +31,12 @@
     <Filter Include="Source Files\Video">
       <UniqueIdentifier>{cacbe0b7-1d27-4c08-9100-7501d180c912}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Common">
+      <UniqueIdentifier>{dce5beee-97b0-44d6-9701-9393b1fe7a10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Common">
+      <UniqueIdentifier>{142b2b12-42ab-4195-b3a7-a23d77cc20af}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h">
@@ -81,6 +87,15 @@
     <ClInclude Include="audio\audio_backend.h">
       <Filter>Header Files\Audio</Filter>
     </ClInclude>
+    <ClInclude Include="common\file.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\nes_callback.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\nes_exception.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
@@ -127,6 +142,12 @@
     </ClCompile>
     <ClCompile Include="audio\iaudio_platform.cc">
       <Filter>Source Files\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="common\file.cc">
+      <Filter>Source Files\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\nes_exception.cc">
+      <Filter>Source Files\Common</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

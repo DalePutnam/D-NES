@@ -74,10 +74,10 @@
     <IncludePath>./backends;./mappers;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>./backends;./backends/utils;./mappers;$(IncludePath)</IncludePath>
+    <IncludePath>./;./audio;./video;./common;./mappers;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>./backends;./backends/utils;./mappers;$(IncludePath)</IncludePath>
+    <IncludePath>./;./audio;./video;./common;./mappers;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -165,6 +165,9 @@
     <ClInclude Include="audio\audio_backend.h" />
     <ClInclude Include="audio\xaudio2_platform.h" />
     <ClInclude Include="cart.h" />
+    <ClInclude Include="common\file.h" />
+    <ClInclude Include="common\nes_callback.h" />
+    <ClInclude Include="common\nes_exception.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="mappers\mapper_base.h" />
     <ClInclude Include="mappers\nrom.h" />
@@ -183,6 +186,8 @@
     <ClCompile Include="audio\iaudio_platform.cc" />
     <ClCompile Include="audio\xaudio2_platform.cc" />
     <ClCompile Include="cart.cc" />
+    <ClCompile Include="common\file.cc" />
+    <ClCompile Include="common\nes_exception.cc" />
     <ClCompile Include="cpu.cc" />
     <ClCompile Include="mappers\mapper_base.cc" />
     <ClCompile Include="mappers\nrom.cc" />
