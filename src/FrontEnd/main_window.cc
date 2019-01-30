@@ -264,10 +264,11 @@ void MainWindow::OnROMDoubleClick(wxListEvent& event)
     AppSettings& settings = AppSettings::GetInstance();
     wxString filename = RomList->GetItemText(event.GetIndex(), 0);
 
-    wxString romName;
-    settings.Read("/Paths/RomPath", &romName);
-    romName += "/" + filename;
-    StartEmulator(romName.ToStdString());
+    wxString romDirectory;
+    settings.Read("/Paths/RomPath", &romDirectory);
+	wxFileName romFile(romDirectory, filename);
+
+    StartEmulator(romFile.GetFullPath().ToStdString());
 }
 
 void MainWindow::OnOpenROM(wxCommandEvent& WXUNUSED(event))
