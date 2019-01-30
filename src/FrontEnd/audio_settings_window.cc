@@ -156,7 +156,7 @@ void AudioSettingsWindow::DoCancel()
     {
         AppSettings& settings = AppSettings::GetInstance();
 
-        bool audioEnabled, filtersEnabled;
+        bool audioEnabled;
         settings.Read("/Audio/Enabled", &audioEnabled);
 
         Nes->SetAudioEnabled(audioEnabled);

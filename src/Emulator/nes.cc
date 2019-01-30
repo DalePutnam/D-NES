@@ -277,7 +277,7 @@ void NES::Run()
 
 		VideoOut->Finalize();
     }
-    catch (NesException& e)
+    catch (NesException&)
     {
         CurrentState = State::Error;
 
