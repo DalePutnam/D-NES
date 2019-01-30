@@ -5,6 +5,7 @@
 #include "cpu.h"
 #include "file.h"
 #include "mapper_base.h"
+#include "nes_exception.h"
 
 using namespace std;
 
@@ -40,7 +41,7 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
 
         if (PrgSize == 0)
         {
-            throw runtime_error("MapperBase: Failed to load ROM, invalid PRG size");
+            throw NesException("MapperBase", "Failed to load ROM, invalid PRG size");
         }
 
         if (header[6] & 0x2)
@@ -90,7 +91,7 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
     }
     else
     {
-        throw runtime_error("MapperBase: Unable to open " + fileName);
+        throw NesException("MapperBase", "Unable to open " + fileName);
     }
 }
 

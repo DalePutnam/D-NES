@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "cart.h"
+#include "nes_exception.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
 #include "mappers/sxrom.h"
@@ -44,17 +45,17 @@ Cart::Cart(const string& fileName, const string& saveDir)
             default:
                 ostringstream oss;
                 oss << "Cart: Mapper " << static_cast<int>(mapperNumber) << " specified by " << fileName << " does not exist or is not supported.";
-                throw runtime_error(oss.str());
+                throw NesException("Cart", oss.str());
             }
         }
         else
         {
-            throw runtime_error("Cart: Unable to load " + fileName + ": Bad header");
+            throw NesException("Cart", "Unable to load " + fileName + ": Bad header");
         }
     }
     else
     {
-        throw runtime_error("Cart: Unable to open " + fileName + ": " + strerror(errno));
+        throw NesException("Cart", "Unable to open " + fileName + ": " + strerror(errno));
     }
 
 }

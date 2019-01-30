@@ -64,8 +64,6 @@ private:
     // CPU Main Memory
     uint8_t Memory[0x800];
 
-    bool StartupFlag;
-
     std::atomic<bool> StopFlag;
 
     volatile bool Paused;

@@ -1,6 +1,7 @@
 #include "video_backend.h"
 #include "osd_font.h"
 #include "igl_platform.h"
+#include "nes_exception.h"
 
 namespace
 {
@@ -198,7 +199,7 @@ void VideoBackend::Prepare()
 	catch (std::string& err)
 	{
 		Finalize();
-		throw std::runtime_error(err);
+		throw NesException("VideoBackend", err);
 	}
 
 	glGenVertexArrays(1, &_frameVertexArrayId);

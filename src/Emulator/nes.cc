@@ -41,7 +41,7 @@ NES::NES(const std::string& gamePath, const std::string& savePath,
         Apu = new APU(AudioOut);
         Cartridge = new Cart(gamePath, savePath);
     }
-    catch (std::runtime_error& e)
+    catch (NesException& e)
     {
         delete Apu;
         delete Cpu;
@@ -262,7 +262,7 @@ void NES::Start()
     }
     else
     {
-        throw std::runtime_error("There is already a thread running on this NES instance.");
+        throw NesException("NES", "There is already a thread running on this NES instance");
     }
 }
 
@@ -277,7 +277,7 @@ void NES::Run()
 
 		VideoOut->Finalize();
     }
-    catch (std::exception& e)
+    catch (NesException& e)
     {
         CurrentState = State::Error;
 
@@ -296,14 +296,14 @@ void NES::Stop()
 
         if (std::this_thread::get_id() == NesThread.get_id())
         {
-            throw std::runtime_error("NES Thread tried to stop itself.");
+            throw NesException("NES", "NES Thread tried to stop itself");
         }
 
         NesThread.join();
 
         CurrentState = State::Stopped;
     } else {
-        throw std::runtime_error("Cannot restart a stopped NES instance.");
+        throw NesException("NES", "Cannot restart a stopped NES instance");
     }
 }
 
@@ -330,7 +330,7 @@ void NES::SaveState(int slot)
 
     if (!saveStream.good())
     {
-        throw std::runtime_error("NES: Failed to open state save file");
+        throw NesException("NES", "Failed to open state save file");
     }
 
     // Pause the emulator and bring the PPU up to date with the CPU
@@ -370,7 +370,7 @@ void NES::LoadState(int slot)
 
     if (!saveStream.good())
     {
-        throw std::runtime_error("NES: Failed to open state save file");
+        throw NesException("NES", "Failed to open state save file");
     }
 
     // Pause the emulator and bring the PPU up to date with the CPU

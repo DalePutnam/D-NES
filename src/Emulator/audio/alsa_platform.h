@@ -13,7 +13,7 @@
 class AlsaPlatform : public IAudioPlatform
 {
 public:
-	virtual bool Initialize(uint32_t sampleRate) override;
+	virtual void Initialize(uint32_t sampleRate) override;
 	virtual void CleanUp() override;
 	virtual void Reset() override;
 	virtual uint32_t GetNumPendingSamples() override;

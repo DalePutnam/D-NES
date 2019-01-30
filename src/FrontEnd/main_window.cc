@@ -174,7 +174,7 @@ void MainWindow::StartEmulator(const std::string& filename)
 
             Nes->SetStateSaveDirectory(stateSavePath.ToStdString());
         }
-        catch (std::exception &e)
+        catch (NesException& e)
         {
             wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
@@ -316,7 +316,7 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
             int slot = event.GetId() % 10;
             Nes->SaveState(slot + 1);
         }
-        catch (std::exception& e)
+        catch (NesException& e)
         {
             wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
@@ -334,7 +334,7 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
             int slot = event.GetId() % 10;
             Nes->LoadState(slot + 1);
         }
-        catch (std::exception&)
+        catch (NesException&)
         {
             // Just quietly discard the exception
         }
@@ -420,7 +420,7 @@ void MainWindow::OnUnexpectedShutdown(wxThreadEvent& event)
     wxString errString;
     try {
         std::rethrow_exception(eptr);
-    } catch (std::exception& e) {
+    } catch (NesException& e) {
         errString = e.what();
     }
 

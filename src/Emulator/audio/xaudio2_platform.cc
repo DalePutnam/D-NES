@@ -1,6 +1,7 @@
 #if defined(_WIN32)
 
 #include "xaudio2_platform.h"
+#include "nes_exception.h"
 #include <string>
 
 #pragma comment(lib, "XAudio2.lib")
@@ -63,7 +64,7 @@ XAudio2Platform::XAudio2Platform()
 	, _outputBuffers(nullptr)
 {}
 
-bool XAudio2Platform::Initialize(uint32_t sampleRate)
+void XAudio2Platform::Initialize(uint32_t sampleRate)
 {
 	_xaudio2Instance = nullptr;
 	_xaudio2MasteringVoice = nullptr;
@@ -103,15 +104,15 @@ bool XAudio2Platform::Initialize(uint32_t sampleRate)
 		_outputBuffers[i] = new float[_bufferSize];
 	}
 
-	return true;
+	return;
 
 FailedExit:
 	if (_xaudio2SourceVoice) _xaudio2SourceVoice->DestroyVoice();
 	if (_xaudio2MasteringVoice) _xaudio2MasteringVoice->DestroyVoice();
 	if (_xaudio2Instance) _xaudio2Instance->Release();
 	if (_voiceCallback) delete _voiceCallback;
-	throw std::runtime_error("APU: Failed to initialize XAudio2");
-	return false;
+
+	throw NesException("XAudio2Platform", "Failed to initialize. Error code " + std::to_string(hr));
 }
 
 void XAudio2Platform::CleanUp()

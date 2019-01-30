@@ -1,6 +1,7 @@
 #if defined(__linux)
 
 #include "glx_platform.h"
+#include "nes_exception.h"
 
 void GLXPlatform::InitializeWindow(void* windowHandle)
 {
@@ -9,14 +10,14 @@ void GLXPlatform::InitializeWindow(void* windowHandle)
 
     if (_display == nullptr)
     {
-        throw std::runtime_error("Failed to connect to X11 Display");
+        throw NesException("GLXPlatform", "Failed to connect to X11 Display");
     }
 
     XWindowAttributes attributes;
     if (XGetWindowAttributes(_display, _parentWindowHandle, &attributes) == 0)
     {
         XCloseDisplay(_display);
-        throw std::runtime_error("Failed to retrieve X11 window attributes");
+        throw NesException("GLXPlatform", "Failed to retrieve X11 window attributes");
     }
 
 	GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
@@ -24,7 +25,7 @@ void GLXPlatform::InitializeWindow(void* windowHandle)
 	_xVisualInfo = glXChooseVisual(_display, 0, att);
 	if (_xVisualInfo == nullptr) {
 		XCloseDisplay(_display);
-		throw std::runtime_error("Failed to choose GLX visual settings");
+		throw NesException("GLXPlatform", "Failed to choose GLX visual settings");
 	}
 
 	Colormap colorMap = XCreateColormap(_display, _parentWindowHandle, _xVisualInfo->visual, AllocNone);
@@ -40,7 +41,7 @@ void GLXPlatform::InitializeWindow(void* windowHandle)
     {
         XDestroyWindow(_display, _windowHandle);
         XCloseDisplay(_display);
-        throw std::runtime_error("Failed to map X11 window");
+        throw NesException("GLXPlatform", "Failed to map X11 window");
     }
 }
 
@@ -48,11 +49,11 @@ void GLXPlatform::InitializeContext()
 {
 	_oglContext = glXCreateContext(_display, _xVisualInfo, NULL, GL_TRUE);
 	if (_oglContext == NULL) {
-		throw std::runtime_error("Failed to create GLX context");
+		throw NesException("GLXPlatform", "Failed to create GLX context");
 	}
 
 	if (!glXMakeCurrent(_display, _windowHandle, _oglContext)) {
-		throw std::runtime_error("Failed to make GLX context current");
+		throw NesException("GLXPlatform", "Failed to make GLX context current");
 	}
 }
 

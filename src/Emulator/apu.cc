@@ -4,6 +4,7 @@
 
 #include "apu.h"
 #include "cpu.h"
+#include "nes_exception.h"
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 
@@ -102,7 +103,7 @@ void APU::PulseUnit::WriteRegister(uint8_t reg, uint8_t value)
 
         break;
     default:
-        throw std::runtime_error("APU::PulseUnit tried to write to non-existant register");
+        throw NesException("APU::PulseUnit", "Tried to write to non-existant register " + std::to_string(reg));
     }
 }
 
@@ -387,7 +388,7 @@ void APU::TriangleUnit::WriteRegister(uint8_t reg, uint8_t value)
 
         break;
     default:
-        throw std::runtime_error("APU::TriangleUnit tried to write to non-existant register");
+        throw NesException("APU::TriangleUnit",  "Tried to write to non-existant register " + std::to_string(reg));
     }
 }
 
@@ -560,7 +561,7 @@ void APU::NoiseUnit::WriteRegister(uint8_t reg, uint8_t value)
         EnvelopeStartFlag = true;
         break;
     default:
-        throw std::runtime_error("APU::NoiseUnit tried to write to non-existant register");
+        throw NesException("APU::NoiseUnit", "Tried to write to non-existant register " + std::to_string(reg));
     }
 }
 
@@ -802,7 +803,7 @@ void APU::DmcUnit::WriteRegister(uint8_t reg, uint8_t value)
         SampleLength = 0x0001 | (static_cast<uint16_t>(value) << 4);
         break;
     default:
-        throw std::runtime_error("APU::DmcUnit tried to write to non-existant register");
+        throw NesException("APU::DmcUnit", "Tried to write to non-existant register " + std::to_string(reg));
     }
 }
 

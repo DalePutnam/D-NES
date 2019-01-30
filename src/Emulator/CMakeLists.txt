@@ -11,6 +11,7 @@ add_library(core
     apu.cc
     cart.cc
     common/file.cc
+    common/nes_exception.cc
     mappers/mapper_base.cc
     mappers/nrom.cc
     mappers/sxrom.cc

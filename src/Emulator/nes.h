@@ -10,10 +10,9 @@
 #include <atomic>
 #include <string>
 #include <thread>
-#include <iostream>
-#include <functional>
 
-#include "nes_callback.h"
+#include "common/nes_callback.h"
+#include "common/nes_exception.h"
 
 class CPU;
 class APU;

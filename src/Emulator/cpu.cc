@@ -12,6 +12,7 @@
 #include "cpu.h"
 #include "ppu.h"
 #include "apu.h"
+#include "nes_exception.h"
 
 // One of the headers on windows defines OVERFLOW
 #ifdef OVERFLOW
@@ -1860,7 +1861,6 @@ CPU::CPU()
     , Apu(nullptr)
     , Cartridge(nullptr)
     , Clock(0)
-    , StartupFlag(true)
     , StopFlag(false)
     , Paused(false)
     , PauseFlag(false)
@@ -2062,26 +2062,22 @@ void CPU::Reset()
 // Run the CPU
 void CPU::Run()
 {
-    if (StartupFlag)
+    if (Ppu == nullptr)
     {
-        if (Ppu == nullptr)
-        {
-            throw std::runtime_error("CPU: No PPU attached");
-        }
-        else if (Apu == nullptr)
-        {
-            throw std::runtime_error("CPU: No APU attached");
-        }
-        else if (Cartridge == nullptr)
-        {
-            throw std::runtime_error("CPU: No Cartridge attached");
-        }
-        else
-        {
-            // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-            PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
-            StartupFlag = false;
-        }
+        throw NesException("CPU", "Failed to start, no PPU attached");
+    }
+    else if (Apu == nullptr)
+    {
+        throw NesException("CPU", "Failed to start, no APU attached");
+    }
+    else if (Cartridge == nullptr)
+    {
+        throw NesException("CPU", "Failed to start, no Cartidge attached");
+    }
+    else
+    {
+        // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
+        PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
     }
 
     while (!StopFlag) // Run stop command issued
@@ -2098,10 +2094,10 @@ void CPU::Run()
 
                 if (LogFile == nullptr)
                 {
-                    std::string message = "Failed to open log file: ";
+                    std::string message = "Failed to open log file. ";
                     message += logName;
 
-                    throw std::runtime_error(message);
+                    throw NesException("CPU", message);
                 }
             }
             else
@@ -2445,7 +2441,7 @@ void CPU::Step()
         DoXAA(address);
         break;
     case STP:
-        throw std::runtime_error("CPU executed STP instruction");
+        throw NesException("CPU", "Executed STP instruction, halting");
     }
 
     AccumulatorFlag = false;

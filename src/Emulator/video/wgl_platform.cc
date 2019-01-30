@@ -1,7 +1,7 @@
 #if defined(_WIN32)
 
 #include "wgl_platform.h"
-#include <stdexcept>
+#include "nes_exception.h"
 
 void WGLPlatform::InitializeWindow(void* windowHandle)
 {
@@ -35,23 +35,23 @@ void WGLPlatform::InitializeContext()
 	int pf = ChoosePixelFormat(_windowDc, &pfd);
 	if (pf == 0)
 	{
-		throw std::runtime_error("Unable to create pixel format");
+		throw NesException("WGLPlatform", "Unable to create pixel format");
 	}
 
 	if (!SetPixelFormat(_windowDc, pf, &pfd))
 	{
-		throw std::runtime_error("Unable to set new pixel format");
+		throw NesException("WGLPlatform", "Unable to set new pixel format");
 	}
 
 	_oglContext = wglCreateContext(_windowDc);
 	if (_oglContext == NULL)
 	{
-		throw std::runtime_error("Failed to create OpenGL context");
+		throw NesException("WGLPlatform", "Failed to create OpenGL context");
 	}
 
 	if (!wglMakeCurrent(_windowDc, _oglContext))
 	{
-		throw std::runtime_error("Failed to make OpenGL context current");
+		throw NesException("WGLPlatform", "Failed to make OpenGL context current");
 	}
 }
 

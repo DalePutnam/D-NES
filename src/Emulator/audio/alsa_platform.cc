@@ -1,12 +1,13 @@
 #if defined(__linux)
 
 #include "alsa_platform.h"
+#include "nes_exception.h"
 #include <cstring>
 
 static constexpr uint32_t NUM_PERIODS = 4;
 static constexpr uint32_t STANDARD_FRAME_RATE = 60;
 
-bool AlsaPlatform::Initialize(uint32_t sampleRate)
+void AlsaPlatform::Initialize(uint32_t sampleRate)
 {
     int32_t rc;
     snd_pcm_hw_params_t* alsaHwParams = nullptr;
@@ -92,15 +93,14 @@ bool AlsaPlatform::Initialize(uint32_t sampleRate)
     _running = true;
     _thread = std::thread(&AlsaPlatform::StreamWorker, this);
 
-    return true;
+    return;
 
 FailedExit:
     if (_alsaHandle) snd_pcm_close(_alsaHandle);
     if (alsaHwParams) snd_pcm_hw_params_free(alsaHwParams);
     if (alsaSwParams) snd_pcm_sw_params_free(alsaSwParams);
     
-    //throw std::runtime_error(std::string("Failed to initialize ALSA. ") + snd_strerror(rc));
-    return false;
+    throw NesException("AlsaPlatform", std::string{"Failed to initialize. "} + snd_strerror(rc));
 }
 
 void AlsaPlatform::CleanUp()
