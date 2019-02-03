@@ -71,6 +71,7 @@ NES::NES(const std::string& gamePath, const std::string& savePath,
     Ppu->AttachCart(Cartridge);
 
     Cartridge->AttachCPU(Cpu);
+    Cartridge->AttachPPU(Ppu);
 
     // CPU Settings
     Cpu->SetLogEnabled(false);

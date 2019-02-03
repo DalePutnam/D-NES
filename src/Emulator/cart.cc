@@ -80,6 +80,11 @@ void Cart::AttachCPU(CPU* cpu)
     Mapper->AttachCPU(cpu);
 }
 
+void Cart::AttachPPU(PPU* ppu)
+{
+    Mapper->AttachPPU(ppu);
+}
+
 Cart::MirrorMode Cart::GetMirrorMode()
 {
     return Mapper->GetMirrorMode();

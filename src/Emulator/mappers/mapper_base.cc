@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "cpu.h"
+#include "ppu.h"
 #include "file.h"
 #include "mapper_base.h"
 #include "nes_exception.h"
@@ -15,6 +16,7 @@ MapperBase::MapperBase(const string& fileName, const string& saveDir)
     , Wram(nullptr)
     , HasSaveMem(false)
     , Cpu(nullptr)
+    , Ppu(nullptr)
 {
     GameName = file::stripExtension(file::getNameFromPath(fileName));
     SaveFile = file::createFullPath(GameName, "sav", saveDir);
@@ -129,6 +131,12 @@ void MapperBase::AttachCPU(CPU* cpu)
 {
     Cpu = cpu;
 }
+
+void MapperBase::AttachPPU(PPU* ppu)
+{
+    Ppu = ppu;
+}
+
 
 int MapperBase::GetStateSize()
 {

@@ -10,6 +10,7 @@
 #include <string>
 
 class CPU;
+class PPU;
 class MapperBase;
 
 class Cart
@@ -30,6 +31,7 @@ public:
 
     void SetSaveDirectory(const std::string& saveDir);
     void AttachCPU(CPU* cpu);
+    void AttachPPU(PPU* ppu);
     MirrorMode GetMirrorMode();
 
     uint8_t PrgRead(uint16_t address);

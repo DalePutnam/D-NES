@@ -3,6 +3,7 @@
 
 #include "sxrom.h"
 #include "cpu.h"
+#include "ppu.h"
 
 int SXROM::GetStateSize()
 {
@@ -166,6 +167,13 @@ uint8_t SXROM::PrgRead(uint16_t address)
 
 void SXROM::PrgWrite(uint8_t M, uint16_t address)
 {
+    if (Cpu->GetClock() - LastWriteCycle <= 6)
+    {
+        return;
+    }
+
+    LastWriteCycle = Cpu->GetClock();
+
     if (address < 0x2000)
     {
         if (!WramDisable)
@@ -186,24 +194,18 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 
             return;
         }
-        else
+        else 
         {
-            if (Cpu->GetClock() - LastWriteCycle > 6)
-            {
-                LastWriteCycle = Cpu->GetClock();
-                TempRegister = TempRegister | ((M & 0x1) << Counter);
-                ++Counter;
-            }
-            else
-            {
-                return;
-            }
+            TempRegister = TempRegister | ((M & 0x1) << Counter);
+            ++Counter;
         }
 
         if (Counter == 5)
         {
             if (address >= 0x2000 && address < 0x4000)
             {
+                Ppu->Run();
+
 				ChrPageSize4K = !!(TempRegister & 0x10);
 				PrgPageSize16K = !!(TempRegister & 0x8);
 				PrgLastPageFixed = !!(TempRegister & 0x4);
@@ -227,10 +229,12 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
             }
             else if (address >= 0x4000 && address < 0x6000)
             {
+                Ppu->Run();
 				ChrPage0 = TempRegister;
             }
             else if (address >= 0x6000 && address < 0x8000)
             {
+                Ppu->Run();
 				ChrPage1 = TempRegister;
             }
             else if (address >= 0x8000 && address < 0xA000)

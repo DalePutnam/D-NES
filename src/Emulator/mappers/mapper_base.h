@@ -6,6 +6,7 @@
 #include "cart.h"
 
 class CPU;
+class PPU;
 
 class MapperBase
 {
@@ -16,6 +17,7 @@ public:
     const std::string& GetGameName();
     void SetSaveDirectory(const std::string& saveDir);
     void AttachCPU(CPU* cpu);
+    void AttachPPU(PPU* ppu);
 
     virtual int GetStateSize();
     virtual void SaveState(char* state);
@@ -46,4 +48,5 @@ protected:
     std::mutex MapperMutex;
 
     CPU* Cpu;
+    PPU* Ppu;
 };
