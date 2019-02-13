@@ -89,8 +89,6 @@ private:
     uint8_t ControllerOneShift;
     std::atomic<uint8_t> ControllerOneState;
 
-    // Cycles to next NMI check
-    int PpuRendevous;
     bool NmiLineStatus;
     bool NmiRaised;
     bool NmiPending;

@@ -34,8 +34,7 @@ public:
     uint16_t GetCurrentScanline();
 
     void Run();
-    void Step(uint64_t cycles);
-    int ScheduleSync();
+    void Step();
     bool CheckNMI(uint64_t& occuredCycle);
 
     void SetTurboModeEnabled(bool enabled);
@@ -69,8 +68,6 @@ private:
     Cart* Cartridge;
     VideoBackend* VideoOut;
     NESCallback* Callback;
-
-    enum Register { PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUSCROLL, PPUADDR, PPUDATA };
 
     static const uint32_t RgbLookupTable[64];
     static constexpr uint32_t ResetDelay = 88974;
@@ -125,9 +122,6 @@ private:
 
     bool AddressLatch;
 
-    // Register Buffer
-    std::queue<std::tuple<uint64_t, uint8_t, Register>> RegisterBuffer;
-
     // PPU Data Read Buffer
     uint8_t DataBuffer;
 
@@ -173,7 +167,6 @@ private:
     void RenderNtscPixel(int pixel);
     void RenderNtscLine();
 
-    void UpdateState();
     void SpriteEvaluation();
     void SpriteZeroHitCheck();
     void RenderPixel();

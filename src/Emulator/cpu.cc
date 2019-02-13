@@ -67,16 +67,12 @@ void CPU::IncrementClock()
 {
     Clock += 3;
 
+    Ppu->Run();
     Apu->Step();
 
     if (Apu->CheckDmaRequest())
     {
         DmcDmaDelay = 4;
-    }
-
-    if (PpuRendevous > 0)
-    {
-        PpuRendevous -= 3;
     }
 }
 
@@ -1698,10 +1694,8 @@ void CPU::CheckNMI()
         NmiPending = true;
     }
 
-    if (PpuRendevous <= 0 || NmiLineStatus)
-    {
-        Ppu->Run();
-
+    //if (NmiLineStatus)
+    { 
         uint64_t nmiOccuredCycle;
         bool nmiLine = Ppu->CheckNMI(nmiOccuredCycle);
 
@@ -1718,7 +1712,6 @@ void CPU::CheckNMI()
         }
 
         NmiLineStatus = nmiLine;
-        PpuRendevous = Ppu->ScheduleSync();
     }
 }
 
@@ -1870,7 +1863,6 @@ CPU::CPU()
     , ControllerStrobe(0)
     , ControllerOneShift(0)
     , ControllerOneState(0)
-    , PpuRendevous(0)
     , NmiLineStatus(false)
     , NmiRaised(false)
     , NmiPending(false)
@@ -1965,7 +1957,7 @@ void CPU::SetLogEnabled(bool enabled)
     EnableLogFlag = enabled;
 }
 
-const int CPU::STATE_SIZE = sizeof(uint64_t)+(sizeof(uint8_t)*0x806)+sizeof(uint16_t)+sizeof(int)+sizeof(char);
+const int CPU::STATE_SIZE = sizeof(uint64_t)+(sizeof(uint8_t)*0x806)+sizeof(uint16_t)+sizeof(char);
 
 void CPU::SaveState(char* state)
 {
@@ -1977,9 +1969,6 @@ void CPU::SaveState(char* state)
 
     memcpy(state, &ControllerOneShift, sizeof(uint8_t));
     state += sizeof(uint8_t);
-
-    memcpy(state, &PpuRendevous, sizeof(int));
-    state += sizeof(int);
 
     memcpy(state, &PC, sizeof(uint16_t));
     state += sizeof(uint16_t);
@@ -2020,9 +2009,6 @@ void CPU::LoadState(const char* state)
 
     memcpy(&ControllerOneShift, state, sizeof(uint8_t));
     state += sizeof(uint8_t);
-
-    memcpy(&PpuRendevous, state, sizeof(int));
-    state += sizeof(int);
 
     memcpy(&PC, state, sizeof(uint16_t));
     state += sizeof(uint16_t);
@@ -2153,8 +2139,6 @@ void CPU::Step()
 
     if (IsLogEnabled())
     {
-        Ppu->Run();
-
         LogProgramCounter();
         LogRegisters();
     }

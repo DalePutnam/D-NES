@@ -311,85 +311,6 @@ void PPU::RenderNtscLine()
     }
 }
 
-
-void PPU::UpdateState()
-{
-    //assert(registerBuffer.size() > 0 ? std::get<0>(registerBuffer.front()) >= clock : true);
-
-    if (RegisterBuffer.size() > 0 && std::get<0>(RegisterBuffer.front()) == Clock)
-    {
-        uint8_t value = std::get<1>(RegisterBuffer.front());
-        Register reg = std::get<2>(RegisterBuffer.front());
-        RegisterBuffer.pop();
-
-        switch (reg)
-        {
-        case PPUCTRL:
-            PpuTempAddress = (PpuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(value)) << 10); // High bits of NameTable address
-            PpuAddressIncrement = ((0x4 & value) >> 2) != 0;
-            BaseSpriteTableAddress = 0x1000 * ((0x8 & value) >> 3);
-            BaseBackgroundTableAddress = 0x1000 * ((0x10 & value) >> 4);
-            SpriteSizeSwitch = ((0x20 & value) >> 5) != 0;
-            NmiEnabled = ((0x80 & value) >> 7) != 0;
-            LowerBits = (0x1F & value);
-
-            if (NmiEnabled == false && Line == 241 && (Dot - 1) >= 1 && (Dot - 1) < 2)
-            {
-                InterruptActive = false;
-            }
-
-            break;
-        case PPUMASK:
-            GrayScaleEnabled = (0x1 & value);
-            ShowBackgroundLeft = ((0x2 & value) >> 1) != 0;
-            ShowSpritesLeft = ((0x4 & value) >> 2) != 0;
-            ShowBackground = ((0x8 & value) >> 3) != 0;
-            ShowSprites = ((0x10 & value) >> 4) != 0;
-            IntenseRed = ((0x20 & value) >> 5) != 0;
-            IntenseGreen = ((0x40 & value) >> 6) != 0;
-            IntenseBlue = ((0x80 & value) >> 7) != 0;
-            LowerBits = (0x1F & value);
-            break;
-        case PPUSCROLL:
-            if (AddressLatch)
-            {
-                PpuTempAddress = (PpuTempAddress & 0x0FFF) | ((0x7 & value) << 12);
-                PpuTempAddress = (PpuTempAddress & 0x7C1F) | ((0xF8 & value) << 2);
-            }
-            else
-            {
-                FineXScroll = static_cast<uint8_t>(0x7 & value);
-                PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & value) >> 3);
-            }
-
-            AddressLatch = !AddressLatch;
-            LowerBits = static_cast<uint8_t>(0x1F & value);
-            break;
-        case OAMADDR:
-            OamAddress = value;
-            LowerBits = (0x1F & OamAddress);
-            break;
-        case PPUADDR:
-            AddressLatch ? PpuTempAddress = (PpuTempAddress & 0x7F00) | value : PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & value) << 8);
-            if (AddressLatch) PpuAddress = PpuTempAddress;
-            AddressLatch = !AddressLatch;
-            LowerBits = static_cast<uint8_t>(0x1F & value);
-            break;
-        case OAMDATA:
-            PrimaryOam[OamAddress++] = value;
-            LowerBits = (0x1F & value);
-            break;
-        case PPUDATA:
-            Write(PpuAddress, value);
-            PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
-            LowerBits = (0x1F & value);
-            break;
-        default:
-            break;
-        }
-    }
-}
-
 // This is sort of a bastardized version of the PPU sprite evaluation
 // It is not cycle accurate unfortunately, but I don't suspect that will
 // cause any issues (but what do I know really?)
@@ -1166,37 +1087,6 @@ void PPU::LoadState(const char* state)
     NmiOccuredFlag = !!(packedBool & 0x40);
     SpriteZeroSecondaryOamFlag = !!(packedBool & 0x20);
     AddressLatch = !!(packedBool & 0x10);
-
-    if (VideoOut == nullptr)
-    {
-        return;
-    }
-
-    // Set the current pixel being rendered in the frame buffer
-    if (Line >= 0 && Line <= 239)
-    {
-        if (Dot >= 1 && Dot <= 256)
-        {
-            if (NtscMode)
-            {
-                // In NTSC mode all the pixels in a scanline are calculated at the end of that scanline
-                //VideoOut->SetFramePosition(0, Line);
-            }
-            else
-            {
-                //VideoOut->SetFramePosition(Dot - 1, Line);
-            }
-        }
-        else
-        {
-            //VideoOut->SetFramePosition(0, Line + 1);
-        }
-    }
-    else
-    {
-        //VideoOut->SetFramePosition(0, 0);
-    }
-    
 }
 
 void PPU::SetTurboModeEnabled(bool enabled)
@@ -1211,11 +1101,6 @@ void PPU::SetNtscDecodingEnabled(bool enabled)
 
 uint8_t PPU::ReadPPUStatus()
 {
-    if (Cpu->GetClock() != Clock)
-    {
-        Run();
-    }
-
     uint8_t vB = static_cast<uint8_t>(NmiOccuredFlag);
     uint8_t sp0 = static_cast<uint8_t>(SpriteZeroHitFlag);
     uint8_t spOv = static_cast<uint8_t>(SpriteOverflowFlag);
@@ -1238,21 +1123,11 @@ uint8_t PPU::ReadPPUStatus()
 
 uint8_t PPU::ReadOAMData()
 {
-    if (Cpu->GetClock() != Clock)
-    {
-        Run();
-    }
-
     return PrimaryOam[OamAddress];
 }
 
 uint8_t PPU::ReadPPUData()
 {
-    if (Cpu->GetClock() != Clock)
-    {
-        Run();
-    }
-
     uint16_t addr = PpuAddress % 0x4000;
     PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
     uint8_t value = DataBuffer;
@@ -1279,24 +1154,17 @@ void PPU::WritePPUCTRL(uint8_t M)
 {
     if (Cpu->GetClock() > ResetDelay)
     {
-        if (VblankFlag)
-        {
-            PpuTempAddress = (PpuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(M)) << 10); // High bits of NameTable address
-            PpuAddressIncrement = ((0x4 & M) >> 2) != 0;
-            BaseSpriteTableAddress = 0x1000 * ((0x8 & M) >> 3);
-            BaseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
-            SpriteSizeSwitch = ((0x20 & M) >> 5) != 0;
-            NmiEnabled = ((0x80 & M) >> 7) != 0;
-            LowerBits = (0x1F & M);
+        PpuTempAddress = (PpuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(M)) << 10); // High bits of NameTable address
+        PpuAddressIncrement = ((0x4 & M) >> 2) != 0;
+        BaseSpriteTableAddress = 0x1000 * ((0x8 & M) >> 3);
+        BaseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
+        SpriteSizeSwitch = ((0x20 & M) >> 5) != 0;
+        NmiEnabled = ((0x80 & M) >> 7) != 0;
+        LowerBits = (0x1F & M);
 
-            if (NmiEnabled == false && Line == 241 && (Dot - 1) == 1)
-            {
-                InterruptActive = false;
-            }
-        }
-        else
+        if (NmiEnabled == false && Line == 241 && (Dot - 1) == 1)
         {
-            RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUCTRL));
+            InterruptActive = false;
         }
     }
 }
@@ -1305,76 +1173,47 @@ void PPU::WritePPUMASK(uint8_t M)
 {
     if (Cpu->GetClock() > ResetDelay)
     {
-        if (VblankFlag || Cpu->GetClock() == Clock - 1)
-        {
-            GrayScaleEnabled = (0x1 & M);
-            ShowBackgroundLeft = ((0x2 & M) >> 1) != 0;
-            ShowSpritesLeft = ((0x4 & M) >> 2) != 0;
-            ShowBackground = ((0x8 & M) >> 3) != 0;
-            ShowSprites = ((0x10 & M) >> 4) != 0;
-            IntenseRed = ((0x20 & M) >> 5) != 0;
-            IntenseGreen = ((0x40 & M) >> 6) != 0;
-            IntenseBlue = ((0x80 & M) >> 7) != 0;
-            LowerBits = (0x1F & M);
-        }
-        else
-        {
-            RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUMASK));
-        }
+        GrayScaleEnabled = (0x1 & M);
+        ShowBackgroundLeft = ((0x2 & M) >> 1) != 0;
+        ShowSpritesLeft = ((0x4 & M) >> 2) != 0;
+        ShowBackground = ((0x8 & M) >> 3) != 0;
+        ShowSprites = ((0x10 & M) >> 4) != 0;
+        IntenseRed = ((0x20 & M) >> 5) != 0;
+        IntenseGreen = ((0x40 & M) >> 6) != 0;
+        IntenseBlue = ((0x80 & M) >> 7) != 0;
+        LowerBits = (0x1F & M);
     }
 }
 
 void PPU::WriteOAMADDR(uint8_t M)
 {
-    if (VblankFlag || Cpu->GetClock() == Clock - 1)
-    {
-        OamAddress = M;
-        LowerBits = (0x1F & OamAddress);
-    }
-    else
-    {
-        RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, OAMADDR));
-    }
+    OamAddress = M;
+    LowerBits = (0x1F & OamAddress);
 }
 
 void PPU::WriteOAMDATA(uint8_t M)
 {
-    if (VblankFlag || Cpu->GetClock() == Clock - 1)
-    {
-        PrimaryOam[OamAddress++] = M;
-        LowerBits = (0x1F & M);
-    }
-    else
-    {
-        RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, OAMDATA));
-    }
+    PrimaryOam[OamAddress++] = M;
+    LowerBits = (0x1F & M);
 }
 
 void PPU::WritePPUSCROLL(uint8_t M)
 {
     if (Cpu->GetClock() > ResetDelay)
     {
-        if (VblankFlag || Cpu->GetClock() == Clock - 1)
+        if (AddressLatch)
         {
-            if (AddressLatch)
-            {
-                PpuTempAddress = (PpuTempAddress & 0x0FFF) | ((0x7 & M) << 12);
-                PpuTempAddress = (PpuTempAddress & 0x7C1F) | ((0xF8 & M) << 2);
-            }
-            else
-            {
-                FineXScroll = static_cast<uint8_t>(0x7 & M);
-                PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
-            }
-
-            AddressLatch = !AddressLatch;
-            LowerBits = static_cast<uint8_t>(0x1F & M);
+            PpuTempAddress = (PpuTempAddress & 0x0FFF) | ((0x7 & M) << 12);
+            PpuTempAddress = (PpuTempAddress & 0x7C1F) | ((0xF8 & M) << 2);
         }
         else
         {
-            RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUSCROLL));
+            FineXScroll = static_cast<uint8_t>(0x7 & M);
+            PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
         }
 
+        AddressLatch = !AddressLatch;
+        LowerBits = static_cast<uint8_t>(0x1F & M);
     }
 }
 
@@ -1382,57 +1221,18 @@ void PPU::WritePPUADDR(uint8_t M)
 {
     if (Cpu->GetClock() > ResetDelay)
     {
-        if (VblankFlag || Cpu->GetClock() == Clock - 1)
-        {
-            AddressLatch ? PpuTempAddress = (PpuTempAddress & 0x7F00) | M : PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
-            if (AddressLatch) PpuAddress = PpuTempAddress;
-            AddressLatch = !AddressLatch;
-            LowerBits = static_cast<uint8_t>(0x1F & M);
-        }
-        else
-        {
-            RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUADDR));
-        }
-
+        AddressLatch ? PpuTempAddress = (PpuTempAddress & 0x7F00) | M : PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
+        if (AddressLatch) PpuAddress = PpuTempAddress;
+        AddressLatch = !AddressLatch;
+        LowerBits = static_cast<uint8_t>(0x1F & M);
     }
 }
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-    if (VblankFlag || Cpu->GetClock() == Clock - 1)
-    {
-        Write(PpuAddress, M);
-        PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
-        LowerBits = (0x1F & M);
-    }
-    else
-    {
-        RegisterBuffer.push(std::tuple<uint64_t, uint8_t, Register>(Cpu->GetClock(), M, PPUDATA));
-    }
-
-}
-
-// At this point this function just gives two points where the PPU should sync with the CPU
-// If the PPU is in vBlank or the Pre-Render line then it should give an interval guaranteed to land in the visible frame (7169 in this case)
-// Otherwise the next Sync happens when the next NMI will occur.
-// I chose to do it this way because it simplifies the issue of variable frame length, something that is subject to change until after the pre-render line.
-int PPU::ScheduleSync()
-{
-    if ((Line >= 242 && Line <= 261) || (Line == 241 && Dot >= 2)) // Any point in VBLANK or the Pre-Render line
-    {
-        if (NmiOccuredFlag)
-        {
-            return 0;
-        }
-        else
-        {
-            return 7169; // Guaranteed to be after the pre-render line
-        }
-    }
-    else
-    {
-        return ((240 - Line) * 341) + (341 - Dot + 1) + 1; // Time to next NMI
-    }
+    Write(PpuAddress, M);
+    PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
+    LowerBits = (0x1F & M);
 }
 
 bool PPU::CheckNMI(uint64_t& occurredCycle)
@@ -1616,311 +1416,301 @@ void PPU::MaybeChangeModes()
     }
 }
 
-void PPU::Step(uint64_t cycles)
+void PPU::Step()
 {
-    while (cycles-- > 0)
+    // Pre-render line
+    if (Line == 261)
     {
-        // Pre-render line
-        if (Line == 261)
+        if (Dot == 1)
         {
-            UpdateState();
-
-            if (Dot == 1)
-            {
-                VblankFlag = false;
-                NmiOccuredFlag = false;
-                InterruptActive = false;
-                SpriteZeroHitFlag = false;
-            }
-
-            if (ShowSprites || ShowBackground)
-            {
-                if ((Dot >= 2 && Dot <= 255) || (Dot >= 321 && Dot <= 338))
-                {
-                    uint8_t cycle = (Dot - 1) % 8;
-                    switch (cycle)
-                    {
-                    case 0:
-                        LoadBackgroundShiftRegisters();
-                        break;
-                    case 1:
-                        NameTableFetch();
-                        break;
-                    case 3:
-                        BackgroundAttributeFetch();
-                        break;
-                    case 5:
-                        BackgroundLowByteFetch();
-                        break;
-                    case 7:
-                        BackgroundHighByteFetch();
-                        IncrementXScroll();
-                        break;
-                    default:
-                        break;
-                    }
-                }
-                else if (Dot == 256)
-                {
-                    BackgroundLowByteFetch();
-                    IncrementXScroll();
-                    IncrementYScroll();
-                }
-                else if (Dot == 257)
-                {
-                    PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
-                }
-                else if (Dot >= 258 && Dot <= 320)
-                {
-                    uint8_t cycle = (Dot - 1) % 8;
-                    switch (cycle)
-                    {
-                    case 2:
-                        SpriteAttributeFetch();
-                        break;
-                    case 3:
-                        SpriteXCoordinateFetch();
-                        break;
-                    case 5:
-                        SpriteLowByteFetch();
-                        break;
-                    case 7:
-                        SpriteHighByteFetch();
-                        break;
-                    }
-                }
-                else if (Dot == 340)
-                {
-                    NameTableFetch();
-                }
-
-                // From dot 280 to 304 of the pre-render line copy all vertical position bits to ppuAddress from ppuTempAddress
-                if (Dot >= 280 && Dot <= 304)
-                {
-                    PpuAddress = (PpuAddress & 0x041F) | (PpuTempAddress & 0x7BE0);
-                }
-
-                if (Dot == 339 && !Even)
-                {
-                    Dot = Line = 0;
-                }
-                else if (Dot == 340)
-                {
-                    Dot = Line = 0;
-                }
-                else
-                {
-                    ++Dot;
-                }
-            }
-            else
-            {
-                if (Dot == 340)
-                {
-                    Dot = Line = 0;
-                }
-                else
-                {
-                    ++Dot;
-                }
-            }
+            VblankFlag = false;
+            NmiOccuredFlag = false;
+            InterruptActive = false;
+            SpriteZeroHitFlag = false;
         }
-        // Visible Lines
-        else if (Line >= 0 && Line <= 239)
-        {
-            UpdateState();
 
-            if (ShowSprites || ShowBackground)
+        if (ShowSprites || ShowBackground)
+        {
+            if ((Dot >= 2 && Dot <= 255) || (Dot >= 321 && Dot <= 338))
             {
-                if ((Dot >= 2 && Dot <= 255) || (Dot >= 321 && Dot <= 338))
+                uint8_t cycle = (Dot - 1) % 8;
+                switch (cycle)
                 {
-                    uint8_t cycle = (Dot - 1) % 8;
-                    switch (cycle)
-                    {
-                    case 0:
-                        LoadBackgroundShiftRegisters();
-                        break;
-                    case 1:
-                        NameTableFetch();
-                        break;
-                    case 3:
-                        BackgroundAttributeFetch();
-                        break;
-                    case 5:
-                        BackgroundLowByteFetch();
-                        break;
-                    case 7:
-                        BackgroundHighByteFetch();
-                        IncrementXScroll();
-                        break;
-                    default:
-                        break;
-                    }
-                }
-                else if (Dot >= 258 && Dot <= 320)
-                {
-                    uint8_t cycle = (Dot - 1) % 8;
-                    switch (cycle)
-                    {
-                    case 2:
-                        SpriteAttributeFetch();
-                        break;
-                    case 3:
-                        SpriteXCoordinateFetch();
-                        break;
-                    case 5:
-                        SpriteLowByteFetch();
-                        break;
-                    case 7:
-                        SpriteHighByteFetch();
-                        break;
-                    }
-                }
-                else if (Dot == 256)
-                {
+                case 0:
+                    LoadBackgroundShiftRegisters();
+                    break;
+                case 1:
+                    NameTableFetch();
+                    break;
+                case 3:
+                    BackgroundAttributeFetch();
+                    break;
+                case 5:
+                    BackgroundLowByteFetch();
+                    break;
+                case 7:
                     BackgroundHighByteFetch();
                     IncrementXScroll();
-                    IncrementYScroll();
+                    break;
+                default:
+                    break;
                 }
-                else if (Dot == 257)
+            }
+            else if (Dot == 256)
+            {
+                BackgroundLowByteFetch();
+                IncrementXScroll();
+                IncrementYScroll();
+            }
+            else if (Dot == 257)
+            {
+                PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+            }
+            else if (Dot >= 258 && Dot <= 320)
+            {
+                uint8_t cycle = (Dot - 1) % 8;
+                switch (cycle)
                 {
-                    SpriteEvaluation();
-                    PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+                case 2:
+                    SpriteAttributeFetch();
+                    break;
+                case 3:
+                    SpriteXCoordinateFetch();
+                    break;
+                case 5:
+                    SpriteLowByteFetch();
+                    break;
+                case 7:
+                    SpriteHighByteFetch();
+                    break;
                 }
-                else if (Dot == 340)
+            }
+            else if (Dot == 340)
+            {
+                NameTableFetch();
+            }
+
+            // From dot 280 to 304 of the pre-render line copy all vertical position bits to ppuAddress from ppuTempAddress
+            if (Dot >= 280 && Dot <= 304)
+            {
+                PpuAddress = (PpuAddress & 0x041F) | (PpuTempAddress & 0x7BE0);
+            }
+
+            if (Dot == 339 && !Even)
+            {
+                Dot = Line = 0;
+            }
+            else if (Dot == 340)
+            {
+                Dot = Line = 0;
+            }
+            else
+            {
+                ++Dot;
+            }
+        }
+        else
+        {
+            if (Dot == 340)
+            {
+                Dot = Line = 0;
+            }
+            else
+            {
+                ++Dot;
+            }
+        }
+    }
+    // Visible Lines
+    else if (Line >= 0 && Line <= 239)
+    {
+        if (ShowSprites || ShowBackground)
+        {
+            if ((Dot >= 2 && Dot <= 255) || (Dot >= 321 && Dot <= 338))
+            {
+                uint8_t cycle = (Dot - 1) % 8;
+                switch (cycle)
                 {
+                case 0:
+                    LoadBackgroundShiftRegisters();
+                    break;
+                case 1:
                     NameTableFetch();
+                    break;
+                case 3:
+                    BackgroundAttributeFetch();
+                    break;
+                case 5:
+                    BackgroundLowByteFetch();
+                    break;
+                case 7:
+                    BackgroundHighByteFetch();
+                    IncrementXScroll();
+                    break;
+                default:
+                    break;
                 }
-
-                if (Dot >= 1 && Dot <= 256)
+            }
+            else if (Dot >= 258 && Dot <= 320)
+            {
+                uint8_t cycle = (Dot - 1) % 8;
+                switch (cycle)
                 {
-                    SpriteZeroHitCheck();
-
-                    if (TurboFrameSkip == 0)
-                    {
-                        RenderPixel();
-                    }
-
-                    ClockSpriteCounters();
+                case 2:
+                    SpriteAttributeFetch();
+                    break;
+                case 3:
+                    SpriteXCoordinateFetch();
+                    break;
+                case 5:
+                    SpriteLowByteFetch();
+                    break;
+                case 7:
+                    SpriteHighByteFetch();
+                    break;
                 }
             }
-            else
+            else if (Dot == 256)
             {
-                if (Dot >= 1 && Dot <= 256)
+                BackgroundHighByteFetch();
+                IncrementXScroll();
+                IncrementYScroll();
+            }
+            else if (Dot == 257)
+            {
+                SpriteEvaluation();
+                PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+            }
+            else if (Dot == 340)
+            {
+                NameTableFetch();
+            }
+
+            if (Dot >= 1 && Dot <= 256)
+            {
+                SpriteZeroHitCheck();
+
+                if (TurboFrameSkip == 0)
                 {
-                    if (TurboFrameSkip == 0)
-                    {
-                        RenderPixelIdle();
-                    }
+                    RenderPixel();
                 }
-            }
 
-            // End of Visible Frame
-            if (Dot == 256 && Line == 239)
-            {
-                // Toggle even flag
-                Even = !Even;
-
-                UpdateFrameSkipCounters();
-
-                // Update frame rate counter
-                UpdateFrameRate();
-
-                // Check if a change in rendering mode or turbo mode has been requested
-                MaybeChangeModes();
-
-				if (TurboFrameSkip == 0) {
-					VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
-					FrameBufferIndex = 0;
-
-					if (Callback != nullptr) {
-						Callback->OnFrameComplete();
-					}
-				}
-            }
-
-            if (Dot == 340)
-            {
-                Dot = 0;
-                ++Line;
-            }
-            else
-            {
-                ++Dot;
+                ClockSpriteCounters();
             }
         }
-        // Post-render line
-        else if (Line == 240 || (Line == 241 && Dot == 0))
+        else
         {
-            UpdateState();
-
-            if (Dot == 340)
+            if (Dot >= 1 && Dot <= 256)
             {
-                Dot = 0;
-                ++Line;
-            }
-            else
-            {
-                ++Dot;
+                if (TurboFrameSkip == 0)
+                {
+                    RenderPixelIdle();
+                }
             }
         }
-        // VBlank Lines
-        else if (Line >= 241 && Line <= 260)
+
+        // End of Visible Frame
+        if (Dot == 256 && Line == 239)
         {
-            if (Dot == 1 && Line == 241 && Clock > ResetDelay)
-            {
-                UpdateState();
+            // Toggle even flag
+            Even = !Even;
 
-                if (Dot == 1 && Line == 241 && !SuppressNmi)
-                {
-                    NmiOccuredFlag = true;
+            UpdateFrameSkipCounters();
 
-                    if (NmiOccuredFlag && NmiEnabled)
-                    {
-                        NmiOccuredCycle = Clock;
-                        InterruptActive = true;
-                    }
+            // Update frame rate counter
+            UpdateFrameRate();
+
+            // Check if a change in rendering mode or turbo mode has been requested
+            MaybeChangeModes();
+
+            if (TurboFrameSkip == 0) {
+                VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
+                FrameBufferIndex = 0;
+
+                if (Callback != nullptr) {
+                    Callback->OnFrameComplete();
                 }
-
-                SuppressNmi = false;
             }
-            else
-            {
-                if (!NmiOccuredFlag || !NmiEnabled)
-                {
-                    InterruptActive = false;
-                }
+        }
 
-                UpdateState();
+        if (Dot == 340)
+        {
+            Dot = 0;
+            ++Line;
+        }
+        else
+        {
+            ++Dot;
+        }
+    }
+    // Post-render line
+    else if (Line == 240 || (Line == 241 && Dot == 0))
+    {
+        if (Dot == 340)
+        {
+            Dot = 0;
+            ++Line;
+        }
+        else
+        {
+            ++Dot;
+        }
+    }
+    // VBlank Lines
+    else if (Line >= 241 && Line <= 260)
+    {
+        if (Dot == 1 && Line == 241 && Clock > ResetDelay)
+        {
+            if (Dot == 1 && Line == 241 && !SuppressNmi)
+            {
+                NmiOccuredFlag = true;
 
                 if (NmiOccuredFlag && NmiEnabled)
                 {
-                    if (!InterruptActive)
-                    {
-                        NmiOccuredCycle = Clock;
-                        InterruptActive = true;
-                    }
+                    NmiOccuredCycle = Clock;
+                    InterruptActive = true;
                 }
             }
 
-            if (Dot == 340)
+            SuppressNmi = false;
+        }
+        else
+        {
+            if (!NmiOccuredFlag || !NmiEnabled)
             {
-                Dot = 0;
-                ++Line;
+                InterruptActive = false;
             }
-            else
+
+            if (NmiOccuredFlag && NmiEnabled)
             {
-                ++Dot;
+                if (!InterruptActive)
+                {
+                    NmiOccuredCycle = Clock;
+                    InterruptActive = true;
+                }
             }
         }
 
-        ++Clock;
+        if (Dot == 340)
+        {
+            Dot = 0;
+            ++Line;
+        }
+        else
+        {
+            ++Dot;
+        }
     }
+
+    ++Clock;
 }
 
 void PPU::Run()
 {
-    Step(Cpu->GetClock() - Clock + 1);
+    while (Cpu->GetClock() - Clock > 0)
+    {
+        Step();
+    }
 }
 
 PPU::~PPU() {}
