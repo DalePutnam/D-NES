@@ -161,7 +161,6 @@ private:
     void RenderNtscLine();
 
     void SpriteEvaluation();
-    void SpriteZeroHitCheck();
     void RenderPixel();
     void RenderPixelIdle();
     void DecodePixel(uint16_t colour);
@@ -179,7 +178,6 @@ private:
     void SpriteXCoordinateFetch();
     void SpriteLowByteFetch();
     void SpriteHighByteFetch();
-    void ClockSpriteCounters();
 
     uint8_t Read(uint16_t address);
     void Write(uint16_t address, uint8_t value);
