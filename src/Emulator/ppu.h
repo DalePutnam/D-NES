@@ -7,11 +7,9 @@
 
 #pragma once
 
-#include <queue>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <functional>
 
 #include "cart.h"
 #include "nes_callback.h"
@@ -52,7 +50,6 @@ public:
     void WritePPUDATA(uint8_t M);
 
     int GetFrameRate();
-    void ResetFrameCounter();
     void GetNameTable(int table, uint8_t* pixels);
     void GetPatternTable(int table, int palette, uint8_t* pixels);
     void GetPalette(int palette, uint8_t* pixels);
@@ -68,9 +65,6 @@ private:
     Cart* Cartridge;
     VideoBackend* VideoOut;
     NESCallback* Callback;
-
-    static const uint32_t RgbLookupTable[64];
-    static constexpr uint32_t ResetDelay = 88974;
 
     int FpsCounter;
     std::atomic<int> CurrentFps;
@@ -111,7 +105,6 @@ private:
     uint8_t LowerBits;
     bool SpriteOverflowFlag;
     bool SpriteZeroHitFlag;
-    bool VblankFlag;
     bool NmiOccuredFlag;
     bool SpriteZeroSecondaryOamFlag;
 
