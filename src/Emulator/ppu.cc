@@ -5,9 +5,7 @@
  *      Author: Dale
  */
 
-#include <cassert>
 #include <cstring>
-#include <cmath>
 #include "ppu.h"
 #include "cpu.h"
 #include "apu.h"
