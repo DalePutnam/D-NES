@@ -1194,7 +1194,8 @@ void PPU::RenderPixel()
 {
 	uint16_t bgPixel = 0;
     uint16_t bgPaletteIndex = 0x3F00;
-	if (ShowBackground && (ShowBackgroundLeft || Dot > 8))
+
+    if (ShowBackground && (ShowBackgroundLeft || Dot > 8))
 	{
         uint16_t bgAttribute = (((BackgroundAttributeShift0 << FineXScroll) & 0x8000) >> 13) | (((BackgroundAttributeShift1 << FineXScroll) & 0x8000) >> 12);
 		bgPixel = (((BackgroundShift0 << FineXScroll) & 0x8000) >> 15) | (((BackgroundShift1 << FineXScroll) & 0x8000) >> 14);
@@ -1206,30 +1207,30 @@ void PPU::RenderPixel()
     bool spPriority = true;
     bool spriteFound = false;
 
-    if (ShowSprites && (ShowSpritesLeft || Dot > 8))
+    for (int i = 0; i < 8; ++i)
     {
-        for (int i = 0; i < 8; ++i)
+        if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
         {
-            if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
+            uint8_t spShift0 = SpriteShift0[i];
+            uint8_t spShift1 = SpriteShift1[i];
+            uint8_t spAttribute = SpriteAttribute[i];
+
+            uint16_t pixel;
+            if (spAttribute & 0x40)
             {
-                uint8_t spShift0 = SpriteShift0[i];
-                uint8_t spShift1 = SpriteShift1[i];
-                uint8_t spAttribute = SpriteAttribute[i];
+                pixel = (spShift0 & 0x1) | ((spShift1 & 0x1) << 1);
+                SpriteShift0[i] = spShift0 >> 1;
+                SpriteShift1[i] = spShift1 >> 1;
+            }
+            else
+            {
+                pixel = ((spShift0 & 0x80) >> 7) | ((spShift1 & 0x80) >> 6);
+                SpriteShift0[i] = spShift0 << 1;
+                SpriteShift1[i] = spShift1 << 1;
+            }
 
-                uint16_t pixel;
-                if (spAttribute & 0x40)
-                {
-                    pixel = (spShift0 & 0x1) | ((spShift1 & 0x1) << 1);
-                    SpriteShift0[i] = spShift0 >> 1;
-                    SpriteShift1[i] = spShift1 >> 1;
-                }
-                else
-                {
-                    pixel = ((spShift0 & 0x80) >> 7) | ((spShift1 & 0x80) >> 6);
-                    SpriteShift0[i] = spShift0 << 1;
-                    SpriteShift1[i] = spShift1 << 1;
-                }
-
+            if (ShowSprites && (ShowSpritesLeft || Dot > 8))
+            {
                 if (pixel != 0 && !spriteFound)
                 {
                     spPixel = pixel;
@@ -1244,10 +1245,7 @@ void PPU::RenderPixel()
                 }
             }
         }
-    }
 
-    for (int i = 0; i < 8; ++i)
-    {
         --SpriteCounter[i];
     }
 
