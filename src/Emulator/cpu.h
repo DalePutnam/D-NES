@@ -248,7 +248,8 @@ private:
     void DoTAS(uint16_t address);
     void DoXAA(uint16_t address);
 
-    void CheckNMI();
+    void PollNMIInput();
+    void CheckNMIRaised();
     void DoNMI(); // Handle non-maskable interrupt
     void CheckIRQ();
     void DoIRQ(); // Handle standard interrupt

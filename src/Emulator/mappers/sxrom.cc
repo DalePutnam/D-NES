@@ -204,9 +204,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
         {
             if (address >= 0x2000 && address < 0x4000)
             {
-                Ppu->Run();
-
-				ChrPageSize4K = !!(TempRegister & 0x10);
+                ChrPageSize4K = !!(TempRegister & 0x10);
 				PrgPageSize16K = !!(TempRegister & 0x8);
 				PrgLastPageFixed = !!(TempRegister & 0x4);
 
@@ -229,12 +227,10 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
             }
             else if (address >= 0x4000 && address < 0x6000)
             {
-                Ppu->Run();
 				ChrPage0 = TempRegister;
             }
             else if (address >= 0x6000 && address < 0x8000)
             {
-                Ppu->Run();
 				ChrPage1 = TempRegister;
             }
             else if (address >= 0x8000 && address < 0xA000)

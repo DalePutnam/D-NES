@@ -31,9 +31,8 @@ public:
     uint16_t GetCurrentDot();
     uint16_t GetCurrentScanline();
 
-    void Run();
     void Step();
-    bool CheckNMI(uint64_t& occuredCycle);
+    bool GetNMIActive();
 
     void SetTurboModeEnabled(bool enabled);
     void SetNtscDecodingEnabled(bool enabled);
@@ -80,7 +79,6 @@ private:
     bool Even;
     bool SuppressNmi;
     bool InterruptActive;
-    uint64_t NmiOccuredCycle;
 
     // Main Registers
 

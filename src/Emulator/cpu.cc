@@ -67,7 +67,6 @@ void CPU::IncrementClock()
 {
     Clock += 3;
 
-    Ppu->Run();
     Apu->Step();
 
     if (Apu->CheckDmaRequest())
@@ -93,13 +92,17 @@ uint8_t CPU::Read(uint16_t address, bool noDMA)
     {
         DmcDmaDelay--;
 
-        IncrementClock();
+        Read(PC, true);
 
         if (DmcDmaDelay == 0)
         {
             DoDmcDMA();
         }
     }
+
+    CheckNMIRaised();
+    Ppu->Step();
+    Ppu->Step();
 
     if (address < 0x2000)
     {
@@ -138,7 +141,9 @@ uint8_t CPU::Read(uint16_t address, bool noDMA)
         value = 0x00;
     }
 
-    CheckNMI();
+    Ppu->Step();
+    PollNMIInput();
+
     CheckIRQ();
 
     return value;
@@ -161,14 +166,17 @@ void CPU::Write(uint8_t M, uint16_t address, bool noDMA)
         DmcDmaDelay--;
     }
 
+    CheckNMIRaised();
+    Ppu->Step();
+
     // OAM DMA
     if (address == 0x4014 && !noDMA)
     {
         // If DMC DMA was requested this cycle, delay 2 cycles execute the DMA
         if (DmcDmaDelay > 0)
         {
-            IncrementClock();
-            IncrementClock();
+            Read(PC, true);
+            Read(PC, true);
             DoDmcDMA();
             DmcDmaDelay = 0;
         }
@@ -230,7 +238,10 @@ void CPU::Write(uint8_t M, uint16_t address, bool noDMA)
         Cartridge->PrgWrite(M, address - 0x6000);
     }
 
-    CheckNMI();
+    Ppu->Step();
+    Ppu->Step();
+    PollNMIInput();
+
     CheckIRQ();
 }
 
@@ -1686,32 +1697,25 @@ void CPU::DoXAA(uint16_t address)
     SET_OR_CLEAR_FLAG(P, NEGATIVE, IS_NEGATIVE(A));
 }
 
-void CPU::CheckNMI()
+void CPU::PollNMIInput()
+{
+    bool nmiLine = Ppu->GetNMIActive();
+
+    // False to true transition detected
+    if (!NmiLineStatus && nmiLine)
+    {
+        NmiRaised = true;
+    }
+
+    NmiLineStatus = nmiLine;
+}
+
+void CPU::CheckNMIRaised()
 {
     if (NmiRaised)
     {
         NmiRaised = false;
         NmiPending = true;
-    }
-
-    //if (NmiLineStatus)
-    { 
-        uint64_t nmiOccuredCycle;
-        bool nmiLine = Ppu->CheckNMI(nmiOccuredCycle);
-
-        if (!NmiLineStatus && nmiLine)
-        {
-            if (Clock - nmiOccuredCycle >= 2)
-            {
-                NmiPending = true;
-            }
-            else
-            {
-                NmiRaised = true;
-            }
-        }
-
-        NmiLineStatus = nmiLine;
     }
 }
 
@@ -1780,8 +1784,8 @@ void CPU::DoOamDMA(uint8_t page)
 
         if (DmcDmaDelay > 0)
         {
-            IncrementClock();
-            IncrementClock();
+            Read(PC, true);
+            Read(PC, true);
             DoDmcDMA();
             DmcDmaDelay = 0;
         }
@@ -1791,8 +1795,8 @@ void CPU::DoOamDMA(uint8_t page)
 
     if (DmcDmaDelay > 0)
     {
-        IncrementClock();
-        IncrementClock();
+        Read(PC, true);
+        Read(PC, true);
         DoDmcDMA();
         DmcDmaDelay = 0;
     }
@@ -1805,18 +1809,19 @@ void CPU::DoOamDMA(uint8_t page)
         {
             if (i == 0xFE)
             {
-                IncrementClock();
+                Read(PC, true);
             }
             else if (i == 0xFF)
             {
-                IncrementClock();
-                IncrementClock();
-                IncrementClock();
+                Read(PC, true);
+                Read(PC, true);
+                Read(PC, true);
             }
             else
             {
-                IncrementClock();
-                IncrementClock();
+
+                Read(PC, true);
+                Read(PC, true);
             }
             
             DoDmcDMA();
@@ -2130,8 +2135,7 @@ void CPU::Step()
         DoNMI();
         NmiPending = false;
     }
-
-    if (IrqPending)
+    else if (IrqPending)
     {
         DoIRQ();
         IrqPending = false;

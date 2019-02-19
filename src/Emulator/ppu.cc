@@ -38,7 +38,6 @@ PPU::PPU(VideoBackend* vout, NESCallback* callback)
     , Even(true)
     , SuppressNmi(false)
     , InterruptActive(false)
-    , NmiOccuredCycle(0)
     , PpuAddressIncrement(false)
     , BaseSpriteTableAddress(0)
     , BaseBackgroundTableAddress(0)
@@ -385,35 +384,15 @@ void PPU::Step()
     {
         if (Dot == 1 && Line == 241 && Clock > ResetDelay)
         {
-            if (Dot == 1 && Line == 241 && !SuppressNmi)
+            if (!SuppressNmi)
             {
                 NmiOccuredFlag = true;
-
-                if (NmiOccuredFlag && NmiEnabled)
-                {
-                    NmiOccuredCycle = Clock;
-                    InterruptActive = true;
-                }
             }
 
             SuppressNmi = false;
         }
-        else
-        {
-            if (!NmiOccuredFlag || !NmiEnabled)
-            {
-                InterruptActive = false;
-            }
 
-            if (NmiOccuredFlag && NmiEnabled)
-            {
-                if (!InterruptActive)
-                {
-                    NmiOccuredCycle = Clock;
-                    InterruptActive = true;
-                }
-            }
-        }
+        InterruptActive = NmiOccuredFlag && NmiEnabled;
 
         if (Dot == 340)
         {
@@ -429,17 +408,9 @@ void PPU::Step()
     ++Clock;
 }
 
-void PPU::Run()
-{
-    while (Cpu->GetClock() - Clock > 0)
-    {
-        Step();
-    }
-}
 
-bool PPU::CheckNMI(uint64_t& occurredCycle)
+bool PPU::GetNMIActive()
 {
-    occurredCycle = NmiOccuredCycle;
     return InterruptActive;
 }
 
@@ -459,12 +430,12 @@ uint8_t PPU::ReadPPUStatus()
     uint8_t sp0 = static_cast<uint8_t>(SpriteZeroHitFlag);
     uint8_t spOv = static_cast<uint8_t>(SpriteOverflowFlag);
 
-    if (Line == 241 && (Dot - 1) == 0)
+    if (Line == 241 && Dot == 1)
     {
         SuppressNmi = true; // Suppress interrupt
     }
 
-    if (Line == 241 && (Dot - 1) >= 1 && (Dot - 1) <= 2)
+    if (Line == 241 && Dot >= 2 && Dot <= 3)
     {
         InterruptActive = false;
     }
@@ -785,7 +756,7 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
     }
 }
 
-int PPU::STATE_SIZE = (sizeof(uint64_t)*2)+(sizeof(uint16_t)*8)+(sizeof(uint8_t)*0x96C)+(sizeof(char)*3);
+int PPU::STATE_SIZE = sizeof(uint64_t)+(sizeof(uint16_t)*8)+(sizeof(uint8_t)*0x96C)+(sizeof(char)*3);
 
 void PPU::SaveState(char* state)
 {
@@ -797,9 +768,6 @@ void PPU::SaveState(char* state)
 
     memcpy(state, &Line, sizeof(uint16_t));
     state += sizeof(uint16_t);
-
-    memcpy(state, &NmiOccuredCycle, sizeof(uint64_t));
-    state += sizeof(uint64_t);
 
     memcpy(state, &BaseSpriteTableAddress, sizeof(uint16_t));
     state += sizeof(uint16_t);
@@ -926,9 +894,6 @@ void PPU::LoadState(const char* state)
 
     memcpy(&Line, state, sizeof(uint16_t));
     state += sizeof(uint16_t);
-
-    memcpy(&NmiOccuredCycle, state, sizeof(uint64_t));
-    state += sizeof(uint64_t);
 
     memcpy(&BaseSpriteTableAddress, state, sizeof(uint16_t));
     state += sizeof(uint16_t);

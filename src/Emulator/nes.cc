@@ -336,7 +336,6 @@ void NES::SaveState(int slot)
 
     // Pause the emulator and bring the PPU up to date with the CPU
     Pause();
-    Ppu->Run();
 
     char* state = new char[CPU::STATE_SIZE];
     Cpu->SaveState(state);
@@ -376,7 +375,6 @@ void NES::LoadState(int slot)
 
     // Pause the emulator and bring the PPU up to date with the CPU
     Pause();
-    Ppu->Run();
 
     char* state = new char[CPU::STATE_SIZE];
     saveStream.read(state, CPU::STATE_SIZE);
