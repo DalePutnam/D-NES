@@ -687,19 +687,14 @@ void CPU::DoBRK()
 {
     uint8_t value = Read(PC++);
 
-    if (IsLogEnabled())
-    {
-        LogInstructionName("BRK");
-        LogImmediate(value);
-    }
+    if (IsLogEnabled()) LogInstructionName("BRK");
 
     uint8_t highPC = static_cast<uint8_t>(PC >> 8);
     uint8_t lowPC = static_cast<uint8_t>(PC & 0xFF);
 
-    Write(highPC, STACK_BASE + S);
-    Write(lowPC, STACK_BASE + (S - 1));
-    Write(P | INTERRUPT | BREAK, STACK_BASE + (S - 2));
-    S -= 3;
+    Write(highPC, STACK_BASE + S--);
+    Write(lowPC, STACK_BASE + S--);
+    Write(P | INTERRUPT | BREAK, STACK_BASE + S--);
 
     SET_FLAG(P, IRQ_INHIBIT);
 
@@ -1195,15 +1190,14 @@ void CPU::DoRTI()
     if (IsLogEnabled()) LogInstructionName("RTI");
 
     Read(PC);
-    Read(STACK_BASE + S);
+    Read(STACK_BASE + S++);
 
-    P = Read(STACK_BASE + (S + 1));
+    P = Read(STACK_BASE + S++);
     CLEAR_FLAG(P, BREAK);
     CLEAR_FLAG(P, INTERRUPT);
 
-    uint16_t lowPC = Read(STACK_BASE + (S + 2));
-    uint16_t highPC = Read(STACK_BASE + (S + 3));
-    S += 3;
+    uint16_t lowPC = Read(STACK_BASE + S++);
+    uint16_t highPC = Read(STACK_BASE + S);
 
     PC = (highPC << 8) | lowPC;
 }
@@ -1220,6 +1214,7 @@ void CPU::DoRTS()
 
     uint16_t lowPC = Read(STACK_BASE + S++);
     uint16_t highPC = Read(STACK_BASE + S);
+
     PC = (highPC << 8) | lowPC;
 
     Read(PC++);
@@ -1727,10 +1722,9 @@ void CPU::DoNMI()
     Read(PC);
     Read(PC);
 
-    Write(highPC, STACK_BASE + S);
-    Write(lowPC, STACK_BASE + (S - 1));
-    Write(P | INTERRUPT, STACK_BASE + (S - 2));
-    S -= 3;
+    Write(highPC, STACK_BASE + S--);
+    Write(lowPC, STACK_BASE + S--);
+    Write(P | INTERRUPT, STACK_BASE + S--);
 
     SET_FLAG(P, IRQ_INHIBIT);
 
@@ -1761,10 +1755,9 @@ void CPU::DoIRQ()
     Read(PC);
     Read(PC);
 
-    Write(highPC, STACK_BASE + S);
-    Write(lowPC, STACK_BASE + (S - 1));
-    Write(P | INTERRUPT, STACK_BASE + (S - 2));
-    S -= 3;
+    Write(highPC, STACK_BASE + S--);
+    Write(lowPC, STACK_BASE + S--);
+    Write(P | INTERRUPT, STACK_BASE + S--);
 
     SET_FLAG(P, IRQ_INHIBIT);
 
@@ -2720,7 +2713,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { DEY, IMPLIED,     false, true  }, // 0x88
     { NOP, IMMEDIATE,   false, false }, // 0x89
     { TXA, IMPLIED,     false, true  }, // 0x8A
-    { XAA, IMPLIED,     false, false }, // 0x8B
+    { XAA, IMMEDIATE,   false, false }, // 0x8B
     { STY, ABSOLUTE,    true,  true  }, // 0x8C
     { STA, ABSOLUTE,    true,  true  }, // 0x8D
     { STX, ABSOLUTE,    true,  true  }, // 0x8E
@@ -2728,7 +2721,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { BCC, RELATIVE,    false, true  }, // 0x90
     { STA, INDIRECT_Y,  true,  true  }, // 0x91
     { STP, IMPLIED,     false, false }, // 0x92
-    { AHX, INDIRECT_Y,  false, true  }, // 0x93
+    { AHX, INDIRECT_Y,  true,  false }, // 0x93
     { STY, ZEROPAGE_X,  true,  true  }, // 0x94
     { STA, ZEROPAGE_X,  true,  true  }, // 0x95
     { STX, ZEROPAGE_Y,  true,  true  }, // 0x96
@@ -2740,7 +2733,7 @@ const std::array<CPU::InstructionDescriptor, 0x100> CPU::InstructionSet
     { SHY, ABSOLUTE_X,  true,  false }, // 0x9C
     { STA, ABSOLUTE_X,  true,  true  }, // 0x9D
     { SHX, ABSOLUTE_Y,  true,  false }, // 0x9E
-    { AHX, ABSOLUTE_Y,  false, false }, // 0x9F
+    { AHX, ABSOLUTE_Y,  true,  false }, // 0x9F
     { LDY, IMMEDIATE,   false, true  }, // 0xA0
     { LDA, INDIRECT_X,  false, true  }, // 0xA1
     { LDX, IMMEDIATE,   false, true  }, // 0xA2
