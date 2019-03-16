@@ -29,7 +29,7 @@ Requirements: Visual Studio 2017
 6. `cd build`
 7. `cmake ..`
 8. `make`
-9. The output program is can be found in the `build/bin`
+9. The output program can be found in the `build/bin`
 
 ### OSX
 
