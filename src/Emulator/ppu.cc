@@ -105,8 +105,9 @@ void PPU::AttachCart(Cart* cart)
     Cartridge = cart;
 }
 
-uint16_t PPU::GetCurrentDot()
+int32_t PPU::GetCurrentDot()
 {
+    // Adjust the value of Dot to match Nintedulator's logs
     if (Dot == 0)
     {
         return 340;
@@ -117,13 +118,14 @@ uint16_t PPU::GetCurrentDot()
     }
 }
 
-uint16_t PPU::GetCurrentScanline()
+int32_t PPU::GetCurrentScanline()
 {
+    // Adjust the value of Line to match Nintedulator's logs
     if (Dot == 0)
     {
         if (Line == 0)
         {
-            return 261;
+            return -1;
         }
         else
         {
@@ -132,7 +134,14 @@ uint16_t PPU::GetCurrentScanline()
     }
     else
     {
-        return Line;
+        if (Line == 261)
+        {
+            return -1;
+        }
+        else 
+        {
+            return Line - 1;
+        }
     }
 }
 

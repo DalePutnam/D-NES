@@ -28,8 +28,8 @@ public:
     void AttachAPU(APU* apu);
     void AttachCart(Cart* cart);
 
-    uint16_t GetCurrentDot();
-    uint16_t GetCurrentScanline();
+    int32_t GetCurrentDot();
+    int32_t GetCurrentScanline();
 
     void Step();
     bool GetNMIActive();
@@ -74,8 +74,8 @@ private:
     int TurboFrameSkip;
 
     uint64_t Clock;
-    uint16_t Dot;
-    uint16_t Line;
+    int32_t Dot;
+    int32_t Line;
     bool Even;
     bool SuppressNmi;
     bool InterruptActive;

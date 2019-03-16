@@ -2437,14 +2437,7 @@ void CPU::LogProgramCounter()
 
 void CPU::LogRegisters()
 {
-    int32_t scanline = Ppu->GetCurrentScanline();
-
-    if (scanline == 261)
-    {
-        scanline = -1;
-    }
-
-    sprintf(Registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, Ppu->GetCurrentDot(), scanline);
+    sprintf(Registers, "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3u SL:%d", A, X, Y, P, S, Ppu->GetCurrentDot(), Ppu->GetCurrentScanline());
 }
 
 void CPU::LogOpcode(uint8_t opcode)
