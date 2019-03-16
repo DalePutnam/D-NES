@@ -61,6 +61,8 @@ PPU::PPU(VideoBackend* vout, NESCallback* callback)
     , PpuTempAddress(0)
     , FineXScroll(0)
     , AddressLatch(false)
+    , RenderingEnabled(false)
+    , RenderStateDelaySlot(false)
     , DataBuffer(0)
     , NameTableByte(0)
     , AttributeByte(0)
@@ -146,7 +148,7 @@ void PPU::Step()
             SpriteZeroHitFlag = false;
         }
 
-        if (ShowSprites || ShowBackground)
+        if (RenderingEnabled)
         {
             if ((Dot >= 2 && Dot <= 257) || (Dot >= 322 && Dot <= 337))
             {
@@ -246,7 +248,7 @@ void PPU::Step()
     // Visible Lines
     else if (Line >= 0 && Line <= 239)
     {
-        if (ShowSprites || ShowBackground)
+        if (RenderingEnabled)
         {
             if ((Dot >= 2 && Dot <= 257) || (Dot >= 322 && Dot <= 337))
             {
@@ -405,6 +407,9 @@ void PPU::Step()
         }
     }
 
+    RenderingEnabled = RenderStateDelaySlot;
+    RenderStateDelaySlot = ShowBackground || ShowSprites;
+    
     ++Clock;
 }
 

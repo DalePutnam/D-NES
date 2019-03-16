@@ -113,6 +113,9 @@ private:
 
     bool AddressLatch;
 
+    bool RenderingEnabled;
+    bool RenderStateDelaySlot;
+
     // PPU Data Read Buffer
     uint8_t DataBuffer;
 
