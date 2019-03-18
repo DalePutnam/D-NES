@@ -3,6 +3,8 @@
 #include <atomic>
 #include <cstdint>
 
+#include "state.h"
+
 class NES;
 class CPU;
 class Cart;
@@ -52,9 +54,8 @@ public:
     void SetDmcVolume(float volume);
     float GetDmcVolume();
 
-    static const int STATE_SIZE;
-    void SaveState(char* state);
-    void LoadState(const char* state);
+    State::Ptr SaveState();
+    void LoadState(const State::Ptr& state);
 
 private:
     static const uint8_t LengthCounterLookupTable[32];
@@ -75,9 +76,8 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        static const int STATE_SIZE;
-        void SaveState(char* state);
-        void LoadState(const char* state);
+        State::Ptr SaveState();
+        void LoadState(const State::Ptr&);
 
     private:
         static const uint8_t Sequences[4];
@@ -118,9 +118,8 @@ private:
         void ClockLengthCounter();
 		uint8_t GetLevel();
 
-        static const int STATE_SIZE;
-        void SaveState(char* state);
-        void LoadState(const char* state);
+        State::Ptr SaveState();
+        void LoadState(const State::Ptr& state);
 
     private:
         static const uint8_t Sequence[32];
@@ -151,9 +150,8 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        static const int STATE_SIZE;
-        void SaveState(char* state);
-        void LoadState(const char* state);
+        State::Ptr SaveState();
+        void LoadState(const  State::Ptr& state);
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -191,9 +189,8 @@ private:
         uint16_t GetDmaAddress();
         void WriteDmaByte(uint8_t byte);
 
-        static const int STATE_SIZE;
-        void SaveState(char* state);
-        void LoadState(const char* state);
+        State::Ptr SaveState();
+        void LoadState(const State::Ptr& state);
 
     private:
         static const uint16_t TimerPeriods[16];

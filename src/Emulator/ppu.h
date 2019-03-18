@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include "cart.h"
+#include "state.h"
 #include "nes_callback.h"
 
 class CPU;
@@ -54,9 +55,8 @@ public:
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
 
-    static int STATE_SIZE;
-    void SaveState(char* state);
-    void LoadState(const char* state);
+    State::Ptr SaveState();
+    void LoadState(const State::Ptr& state);
 
 private:
     CPU* Cpu;

@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include "cart.h"
+#include "state.h"
 
 class CPU;
 class PPU;
@@ -19,9 +20,8 @@ public:
     void AttachCPU(CPU* cpu);
     void AttachPPU(PPU* ppu);
 
-    virtual int GetStateSize();
-    virtual void SaveState(char* state);
-    virtual void LoadState(const char* state);
+    virtual State::Ptr SaveState();
+    virtual void LoadState(const State::Ptr& state);
 
     Cart::MirrorMode GetMirrorMode();
 

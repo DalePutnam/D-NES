@@ -19,6 +19,7 @@
 #include <condition_variable>
 
 #include "cart.h"
+#include "state.h"
 
 class PPU;
 class APU;
@@ -49,11 +50,11 @@ public:
 
     void SetLogEnabled(bool enabled);
 
-    void SaveState(char* state);
-    void LoadState(const char* state);
+    State::Ptr SaveState();
+    void LoadState(const State::Ptr& state);
 
-    static const int STATE_SIZE;
     static constexpr uint32_t NTSC_FREQUENCY = 1789773;
+
 private:
     PPU* Ppu;
     APU* Apu;

@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include "state.h"
+
 class CPU;
 class PPU;
 class MapperBase;
@@ -40,9 +42,8 @@ public:
     uint8_t ChrRead(uint16_t address);
     void ChrWrite(uint8_t M, uint16_t address);
 
-    int GetStateSize();
-    void SaveState(char* state);
-    void LoadState(const char* state);
+    State::Ptr SaveState();
+    void LoadState(const State::Ptr& state);
 
 private:
     MapperBase* Mapper;

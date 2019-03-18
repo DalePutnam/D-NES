@@ -137,55 +137,35 @@ void MapperBase::AttachPPU(PPU* ppu)
     Ppu = ppu;
 }
 
-
-int MapperBase::GetStateSize()
+State::Ptr MapperBase::SaveState()
 {
-    int totalSize = 0;
+    State::Ptr state = State::New();
 
     if (ChrSize == 0)
     {
-        totalSize += 0x2000;
-    }
-
-    totalSize += WramSize == 0 ? 0x2000 : WramSize;
-
-    return totalSize;
-}
-
-void MapperBase::SaveState(char* state)
-{
-    if (ChrSize == 0)
-    {
-        memcpy(state, Chr, sizeof(uint8_t) * 0x2000);
-        state += sizeof(uint8_t) * 0x2000;
+        state->StoreBuffer(Chr, 0x2000);
     }
 
     if (WramSize == 0)
     {
-        memcpy(state, Wram, sizeof(uint8_t) * 0x2000);
+        state->StoreBuffer(Wram, 0x2000);
     }
     else
     {
-        memcpy(state, Wram, sizeof(uint8_t) * WramSize);
+        state->StoreBuffer(Wram, WramSize);
     }
+
+    return state;
 }
 
-void MapperBase::LoadState(const char* state)
+void MapperBase::LoadState(const State::Ptr& state)
 {
     if (ChrSize == 0)
     {
-        memcpy(Chr, state, sizeof(uint8_t) * 0x2000);
-        state += sizeof(uint8_t) * 0x2000;
+        state->ExtractBuffer(Chr);
     }
 
-    if (WramSize == 0)
-    {
-        memcpy(Wram, state, sizeof(uint8_t) * 0x2000);
-    }
-    else
-    {
-        memcpy(Wram, state, sizeof(uint8_t) * WramSize);
-    }
+    state->ExtractBuffer(Wram);
 }
 
 Cart::MirrorMode MapperBase::GetMirrorMode()

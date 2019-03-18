@@ -14,6 +14,7 @@
 #include "ppu.h"
 #include "cart.h"
 #include "file.h"
+#include "state.h"
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 
@@ -337,25 +338,32 @@ void NES::SaveState(int slot)
     // Pause the emulator and bring the PPU up to date with the CPU
     Pause();
 
-    char* state = new char[CPU::STATE_SIZE];
-    Cpu->SaveState(state);
-    saveStream.write(state, CPU::STATE_SIZE);
-    delete[] state;
+    size_t componentStateSize;
+    ::State::Ptr componentState;
 
-    state = new char[PPU::STATE_SIZE];
-    Ppu->SaveState(state);
-    saveStream.write(state, PPU::STATE_SIZE);
-    delete[] state;
+    componentState = Cpu->SaveState();
+    componentStateSize = componentState->GetSize();
 
-    state = new char[APU::STATE_SIZE];
-    Apu->SaveState(state);
-    saveStream.write(state, APU::STATE_SIZE);
-    delete[] state;
+    saveStream.write(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    saveStream.write(componentState->GetBuffer(), componentStateSize);
 
-    state = new char[Cartridge->GetStateSize()];
-    Cartridge->SaveState(state);
-    saveStream.write(state, Cartridge->GetStateSize());
-    delete[] state;
+    componentState = Ppu->SaveState();
+    componentStateSize = componentState->GetSize();
+
+    saveStream.write(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    saveStream.write(componentState->GetBuffer(), componentStateSize);
+
+    componentState = Apu->SaveState();
+    componentStateSize = componentState->GetSize();
+
+    saveStream.write(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    saveStream.write(componentState->GetBuffer(), componentStateSize);
+
+    componentState = Cartridge->SaveState();
+    componentStateSize = componentState->GetSize();
+
+    saveStream.write(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    saveStream.write(componentState->GetBuffer(), componentStateSize);
 
     VideoOut->ShowMessage("Saved State " + std::to_string(slot), 5);
 
@@ -375,26 +383,33 @@ void NES::LoadState(int slot)
 
     // Pause the emulator and bring the PPU up to date with the CPU
     Pause();
+  
+    size_t componentStateSize;
+    std::unique_ptr<char[]> componentState;
 
-    char* state = new char[CPU::STATE_SIZE];
-    saveStream.read(state, CPU::STATE_SIZE);
-    Cpu->LoadState(state);
-    delete[] state;
+    saveStream.read(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    componentState = std::make_unique<char[]>(componentStateSize);
+    saveStream.read(componentState.get(), componentStateSize);
 
-    state = new char[PPU::STATE_SIZE];
-    saveStream.read(state, PPU::STATE_SIZE);
-    Ppu->LoadState(state);
-    delete[] state;
+    Cpu->LoadState(::State::New(componentState, componentStateSize));
 
-    state = new char[APU::STATE_SIZE];
-    saveStream.read(state, APU::STATE_SIZE);
-    Apu->LoadState(state);
-    delete[] state;
+    saveStream.read(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    componentState = std::make_unique<char[]>(componentStateSize);
+    saveStream.read(componentState.get(), componentStateSize);
 
-    state = new char[Cartridge->GetStateSize()];
-    saveStream.read(state, Cartridge->GetStateSize());
-    Cartridge->LoadState(state);
-    delete[] state;
+    Ppu->LoadState(::State::New(componentState, componentStateSize));
+
+    saveStream.read(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    componentState = std::make_unique<char[]>(componentStateSize);
+    saveStream.read(componentState.get(), componentStateSize);
+
+    Apu->LoadState(::State::New(componentState, componentStateSize));
+
+    saveStream.read(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
+    componentState = std::make_unique<char[]>(componentStateSize);
+    saveStream.read(componentState.get(), componentStateSize);
+
+    Cartridge->LoadState(::State::New(componentState, componentStateSize));
 
     VideoOut->ShowMessage("Loaded State " + std::to_string(slot), 5);
 

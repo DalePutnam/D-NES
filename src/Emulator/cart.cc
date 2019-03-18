@@ -110,17 +110,12 @@ void Cart::ChrWrite(uint8_t M, uint16_t address)
     Mapper->ChrWrite(M, address);
 }
 
-int Cart::GetStateSize()
+State::Ptr Cart::SaveState()
 {
-    return Mapper->GetStateSize();
+    return Mapper->SaveState();
 }
 
-void Cart::SaveState(char* state)
-{
-    Mapper->SaveState(state);
-}
-
-void Cart::LoadState(const char* state)
+void Cart::LoadState(const State::Ptr& state)
 {
     Mapper->LoadState(state);
 }

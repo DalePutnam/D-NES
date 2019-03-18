@@ -5,73 +5,49 @@
 #include "cpu.h"
 #include "ppu.h"
 
-int SXROM::GetStateSize()
+State::Ptr SXROM::SaveState()
 {
-    return MapperBase::GetStateSize()+sizeof(uint64_t)+(sizeof(uint8_t)*5)+sizeof(char);
+    State::Ptr state = State::New();
+ 
+    State::Ptr baseState = MapperBase::SaveState();
+    state->StoreSubState(baseState);
+    
+    state->StoreNextValue(LastWriteCycle);
+    state->StoreNextValue(Counter);
+    state->StoreNextValue(TempRegister);
+    state->StoreNextValue(PrgPage);
+    state->StoreNextValue(ChrPage0);
+    state->StoreNextValue(ChrPage1);
+
+    state->StoreNextValuePacked(
+        WramDisable,
+        PrgLastPageFixed,
+        PrgPageSize16K,
+        ChrPageSize4K
+    );
+
+    return state;
 }
 
-void SXROM::SaveState(char* state)
+void SXROM::LoadState(const State::Ptr& state)
 {
-    memcpy(state, &LastWriteCycle, sizeof(uint64_t));
-    state += sizeof(uint64_t);
+    State::Ptr baseState;
+    state->ExtractSubState(baseState);
+    MapperBase::LoadState(baseState);
 
-    memcpy(state, &Counter, sizeof(uint8_t));
-    state += sizeof(uint8_t);
+    state->ExtractNextValue(LastWriteCycle);
+    state->ExtractNextValue(Counter);
+    state->ExtractNextValue(TempRegister);
+    state->ExtractNextValue(PrgPage);
+    state->ExtractNextValue(ChrPage0);
+    state->ExtractNextValue(ChrPage1);
 
-    memcpy(state, &TempRegister, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-	memcpy(state, &PrgPage, sizeof(uint8_t));
-	state += sizeof(uint8_t);
-
-	memcpy(state, &ChrPage0, sizeof(uint8_t));
-	state += sizeof(uint8_t);
-
-	memcpy(state, &ChrPage1, sizeof(uint8_t));
-	state += sizeof(uint8_t);
-
-	char packedBool = 0;
-	packedBool |= WramDisable << 3;
-	packedBool |= PrgLastPageFixed << 2;
-	packedBool |= PrgPageSize16K << 1;
-	packedBool |= ChrPageSize4K << 0;
-
-	memcpy(state, &packedBool, sizeof(char));
-	state += sizeof(char);
-
-    MapperBase::SaveState(state);
-}
-
-void SXROM::LoadState(const char* state)
-{
-    memcpy(&LastWriteCycle, state, sizeof(uint64_t));
-    state += sizeof(uint64_t);
-
-    memcpy(&Counter, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(&TempRegister, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-	memcpy(&PrgPage, state, sizeof(uint8_t));
-	state += sizeof(uint8_t);
-
-	memcpy(&ChrPage0, state, sizeof(uint8_t));
-	state += sizeof(uint8_t);
-
-	memcpy(&ChrPage1, state, sizeof(uint8_t));
-	state += sizeof(uint8_t);
-
-	char packedBool;
-	memcpy(&packedBool, state, sizeof(char));
-	state += sizeof(char);
-
-	WramDisable = !!(packedBool & 0x8);
-	PrgLastPageFixed = !!(packedBool & 0x4);
-	PrgPageSize16K = !!(packedBool & 0x2);
-	ChrPageSize4K = !!(packedBool & 0x1);
-
-	MapperBase::LoadState(state);
+    state->ExtractNextValuePacked(
+        WramDisable,
+        PrgLastPageFixed,
+        PrgPageSize16K,
+        ChrPageSize4K
+    );
 	
 	UpdatePageOffsets();
 }

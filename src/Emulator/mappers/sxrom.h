@@ -8,11 +8,10 @@ class SXROM : public MapperBase
 {
 public:
     SXROM(const std::string& fileName, const std::string& saveDir);
-    ~SXROM();
+    virtual ~SXROM();
 
-    int GetStateSize();
-    void SaveState(char* state);
-    void LoadState(const char* state);
+    State::Ptr SaveState();
+    void LoadState(const State::Ptr& state);
 
     //Cart::MirrorMode GetMirrorMode() override;
 

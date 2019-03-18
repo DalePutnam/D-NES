@@ -1917,9 +1917,9 @@ CPU::~CPU()
     }
 }
 
-void CPU::SetControllerOneState(uint8_t state)
+void CPU::SetControllerOneState(uint8_t statePtr)
 {
-    ControllerOneState = state;
+    ControllerOneState = statePtr;
 }
 
 uint8_t CPU::GetControllerOneState()
@@ -1955,86 +1955,35 @@ void CPU::SetLogEnabled(bool enabled)
     EnableLogFlag = enabled;
 }
 
-const int CPU::STATE_SIZE = sizeof(uint64_t)+(sizeof(uint8_t)*0x806)+sizeof(uint16_t)+sizeof(char);
-
-void CPU::SaveState(char* state)
+State::Ptr CPU::SaveState()
 {
-    memcpy(state, &Clock, sizeof(uint64_t));
-    state += sizeof(uint64_t);
+    State::Ptr state = State::New();
+    state->StoreNextValue(Clock);
+    state->StoreNextValue(Memory);
+    state->StoreNextValue(ControllerOneShift);
+    state->StoreNextValue(PC);
+    state->StoreNextValue(S);
+    state->StoreNextValue(P);
+    state->StoreNextValue(A);
+    state->StoreNextValue(X);
+    state->StoreNextValue(Y);
+    state->StoreNextValuePacked(ControllerStrobe, NmiLineStatus, NmiRaised, NmiPending, IrqPending);
 
-    memcpy(state, Memory, sizeof(uint8_t) * 0x800);
-    state += sizeof(uint8_t) * 0x800;
-
-    memcpy(state, &ControllerOneShift, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(state, &PC, sizeof(uint16_t));
-    state += sizeof(uint16_t);
-
-    memcpy(state, &S, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(state, &P, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(state, &A, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(state, &X, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(state, &Y, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    char packedBool = 0;
-    packedBool |= ControllerStrobe << 5;
-    packedBool |= NmiLineStatus << 4;
-    packedBool |= NmiRaised << 3;
-    packedBool |= NmiPending << 2;
-    //packedBool |= IsStalled << 1;
-    packedBool |= IrqPending << 0;
-
-    memcpy(state, &packedBool, sizeof(char));
+    return state;
 }
 
-void CPU::LoadState(const char* state)
+void CPU::LoadState(const State::Ptr& state)
 {
-    memcpy(&Clock, state, sizeof(uint64_t));
-    state += sizeof(uint64_t);
-
-    memcpy(Memory, state, sizeof(uint8_t) * 0x800);
-    state += sizeof(uint8_t) * 0x800;
-
-    memcpy(&ControllerOneShift, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(&PC, state, sizeof(uint16_t));
-    state += sizeof(uint16_t);
-
-    memcpy(&S, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(&P, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(&A, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(&X, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    memcpy(&Y, state, sizeof(uint8_t));
-    state += sizeof(uint8_t);
-
-    char packedBool;
-    memcpy(&packedBool, state, sizeof(char));
-
-    ControllerStrobe = !!(packedBool & 0x20);
-    NmiLineStatus = !!(packedBool & 0x10);
-    NmiRaised = !!(packedBool & 0x8);
-    NmiPending = !!(packedBool & 0x4);
-    //IsStalled = !!(packedBool & 0x2);
-    IrqPending = !!(packedBool & 0x1);
+    state->ExtractNextValue(Clock);
+    state->ExtractNextValue(Memory);
+    state->ExtractNextValue(ControllerOneShift);
+    state->ExtractNextValue(PC);
+    state->ExtractNextValue(S);
+    state->ExtractNextValue(P);
+    state->ExtractNextValue(A);
+    state->ExtractNextValue(X);
+    state->ExtractNextValue(Y);
+    state->ExtractNextValuePacked(ControllerStrobe, NmiLineStatus, NmiRaised, NmiPending, IrqPending);
 }
 
 // Currently unimplemented
