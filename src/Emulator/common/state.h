@@ -16,12 +16,12 @@ public:
 
     static State::Ptr New()
     {
-        return std::unique_ptr<State>(new State());
+        return State::Ptr(new State());
     }
 
     static State::Ptr New(const std::unique_ptr<char[]>& data, size_t length)
     {
-        return std::unique_ptr<State>(new State(data, length));
+        return State::Ptr(new State(data, length));
     }
 
     const char* GetBuffer() const
@@ -35,7 +35,7 @@ public:
     }
 
     template<typename T>
-    void StoreNextValue(const T& value)
+    void StoreValue(const T& value)
     {
         if (buffer.size() - index < sizeof(T))
         {
@@ -48,13 +48,14 @@ public:
 
     template<typename... Ts,    
         typename = typename std::enable_if<
+            // There can only be as many flags as can fit in a uint8_t
             sizeof...(Ts) <= std::numeric_limits<uint8_t>::digits
         >::type>
-    void StoreNextValuePacked(const Ts&... targs)
+    void StorePackedValues(const Ts&... targs)
     {
         uint8_t packedData = 0;
         pack(packedData, targs...);
-        StoreNextValue(packedData);
+        StoreValue(packedData);
     }
 
     template<typename T>
@@ -88,7 +89,7 @@ public:
     }
 
     template<typename T>
-    void ExtractNextValue(T& value) const
+    void ExtractValue(T& value) const
     {
         if (buffer.size() - index < sizeof(T))
         {
@@ -101,12 +102,13 @@ public:
 
     template<typename... Ts,
         typename = typename std::enable_if<
+            // There can only be as many flags as can fit in a uint8_t
             sizeof...(Ts) <= std::numeric_limits<uint8_t>::digits
         >::type>
-    void ExtractNextValuePacked(Ts&... targs)
+    void ExtractPackedValues(Ts&... targs)
     {
         uint8_t packedData;
-        ExtractNextValue(packedData);
+        ExtractValue(packedData);
         unpack(packedData, targs...);
     }
 
@@ -160,7 +162,11 @@ private:
         , buffer(data.get(), data.get() + length)
     {}
 
-    template<typename T>
+    template<typename T,
+        typename = typename std::enable_if<
+            // Flag must be convertible to bool
+            std::is_convertible<T, bool>::value
+        >::type>
     void pack(uint8_t& data, const T& flag)
     {
         data |= !!flag;
@@ -168,7 +174,8 @@ private:
 
     template<typename T, typename... Ts,    
         typename = typename std::enable_if<
-            sizeof...(Ts) <= std::numeric_limits<uint8_t>::digits
+            // All flags must be convertible to bool
+            std::is_convertible<T, bool>::value
         >::type>
     void pack(uint8_t& data, const T& flag, const Ts&... targs)
     {
@@ -178,7 +185,11 @@ private:
         pack(data, targs...);
     }
 
-    template<typename T>
+    template<typename T,
+        typename = typename std::enable_if<
+            // Flag must be convertible to bool
+            std::is_assignable<T&, bool>::value
+        >::type>
     void unpack(uint8_t& data, T& flag)
     {
         flag = !!(data & 1);
@@ -186,7 +197,8 @@ private:
 
     template<typename T, typename... Ts, 
         typename = typename std::enable_if<
-            sizeof...(Ts) <= std::numeric_limits<uint8_t>::digits
+            // All flags must be able to be assigned a bool
+            std::is_assignable<T&, bool>::value
         >::type>
     void unpack(uint8_t& data, T& flag, Ts&... targs)
     {

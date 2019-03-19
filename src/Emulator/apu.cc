@@ -233,19 +233,19 @@ State::Ptr APU::PulseUnit::SaveState()
 {
     State::Ptr state = State::New();
 
-    state->StoreNextValue(Timer);
-    state->StoreNextValue(TimerPeriod);
-    state->StoreNextValue(SequenceCount);
-    state->StoreNextValue(LengthCounter);
-    state->StoreNextValue(DutyCycle);
-    state->StoreNextValue(EnvelopeDividerVolume);
-    state->StoreNextValue(EnvelopeDividerCounter);
-    state->StoreNextValue(EnvelopeCounter);
-    state->StoreNextValue(SweepShiftCount);
-    state->StoreNextValue(SweepDivider);
-    state->StoreNextValue(SweepDividerCounter);
+    state->StoreValue(Timer);
+    state->StoreValue(TimerPeriod);
+    state->StoreValue(SequenceCount);
+    state->StoreValue(LengthCounter);
+    state->StoreValue(DutyCycle);
+    state->StoreValue(EnvelopeDividerVolume);
+    state->StoreValue(EnvelopeDividerCounter);
+    state->StoreValue(EnvelopeCounter);
+    state->StoreValue(SweepShiftCount);
+    state->StoreValue(SweepDivider);
+    state->StoreValue(SweepDividerCounter);
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         LengthHaltEnvelopeLoopFlag,
         ConstantVolumeFlag,
         SweepEnableFlag,
@@ -260,19 +260,19 @@ State::Ptr APU::PulseUnit::SaveState()
 
 void APU::PulseUnit::LoadState(const State::Ptr& state)
 {
-    state->ExtractNextValue(Timer);
-    state->ExtractNextValue(TimerPeriod);
-    state->ExtractNextValue(SequenceCount);
-    state->ExtractNextValue(LengthCounter);
-    state->ExtractNextValue(DutyCycle);
-    state->ExtractNextValue(EnvelopeDividerVolume);
-    state->ExtractNextValue(EnvelopeDividerCounter);
-    state->ExtractNextValue(EnvelopeCounter);
-    state->ExtractNextValue(SweepShiftCount);
-    state->ExtractNextValue(SweepDivider);
-    state->ExtractNextValue(SweepDividerCounter);
+    state->ExtractValue(Timer);
+    state->ExtractValue(TimerPeriod);
+    state->ExtractValue(SequenceCount);
+    state->ExtractValue(LengthCounter);
+    state->ExtractValue(DutyCycle);
+    state->ExtractValue(EnvelopeDividerVolume);
+    state->ExtractValue(EnvelopeDividerCounter);
+    state->ExtractValue(EnvelopeCounter);
+    state->ExtractValue(SweepShiftCount);
+    state->ExtractValue(SweepDivider);
+    state->ExtractValue(SweepDividerCounter);
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         LengthHaltEnvelopeLoopFlag,
         ConstantVolumeFlag,
         SweepEnableFlag,
@@ -401,14 +401,14 @@ State::Ptr APU::TriangleUnit::SaveState()
 {
     State::Ptr state = State::New();
 
-    state->StoreNextValue(Timer);
-    state->StoreNextValue(TimerPeriod);
-    state->StoreNextValue(SequenceCount);
-    state->StoreNextValue(LinearCounter);
-    state->StoreNextValue(LinearCounterPeriod);
-    state->StoreNextValue(LengthCounter);
+    state->StoreValue(Timer);
+    state->StoreValue(TimerPeriod);
+    state->StoreValue(SequenceCount);
+    state->StoreValue(LinearCounter);
+    state->StoreValue(LinearCounterPeriod);
+    state->StoreValue(LengthCounter);
     
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         LengthHaltControlFlag,
         LinearCounterReloadFlag,
         EnabledFlag
@@ -419,14 +419,14 @@ State::Ptr APU::TriangleUnit::SaveState()
 
 void APU::TriangleUnit::LoadState(const State::Ptr& state)
 {
-    state->ExtractNextValue(Timer);
-    state->ExtractNextValue(TimerPeriod);
-    state->ExtractNextValue(SequenceCount);
-    state->ExtractNextValue(LinearCounter);
-    state->ExtractNextValue(LinearCounterPeriod);
-    state->ExtractNextValue(LengthCounter);
+    state->ExtractValue(Timer);
+    state->ExtractValue(TimerPeriod);
+    state->ExtractValue(SequenceCount);
+    state->ExtractValue(LinearCounter);
+    state->ExtractValue(LinearCounterPeriod);
+    state->ExtractValue(LengthCounter);
     
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         LengthHaltControlFlag,
         LinearCounterReloadFlag,
         EnabledFlag
@@ -589,15 +589,15 @@ State::Ptr APU::NoiseUnit::SaveState()
 {
     State::Ptr state = State::New();
 
-    state->StoreNextValue(Timer);
-    state->StoreNextValue(TimerPeriodIndex);
-    state->StoreNextValue(LinearFeedbackShiftRegister);
-    state->StoreNextValue(LengthCounter);
-    state->StoreNextValue(EnvelopeDividerVolume);
-    state->StoreNextValue(EnvelopeDividerCounter);
-    state->StoreNextValue(EnvelopeCounter);
+    state->StoreValue(Timer);
+    state->StoreValue(TimerPeriodIndex);
+    state->StoreValue(LinearFeedbackShiftRegister);
+    state->StoreValue(LengthCounter);
+    state->StoreValue(EnvelopeDividerVolume);
+    state->StoreValue(EnvelopeDividerCounter);
+    state->StoreValue(EnvelopeCounter);
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         LengthHaltEnvelopeLoopFlag,
         ConstantVolumeFlag,
         EnvelopeStartFlag,
@@ -610,15 +610,15 @@ State::Ptr APU::NoiseUnit::SaveState()
 
 void APU::NoiseUnit::LoadState(const State::Ptr& state)
 {
-    state->ExtractNextValue(Timer);
-    state->ExtractNextValue(TimerPeriodIndex);
-    state->ExtractNextValue(LinearFeedbackShiftRegister);
-    state->ExtractNextValue(LengthCounter);
-    state->ExtractNextValue(EnvelopeDividerVolume);
-    state->ExtractNextValue(EnvelopeDividerCounter);
-    state->ExtractNextValue(EnvelopeCounter);
+    state->ExtractValue(Timer);
+    state->ExtractValue(TimerPeriodIndex);
+    state->ExtractValue(LinearFeedbackShiftRegister);
+    state->ExtractValue(LengthCounter);
+    state->ExtractValue(EnvelopeDividerVolume);
+    state->ExtractValue(EnvelopeDividerCounter);
+    state->ExtractValue(EnvelopeCounter);
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         LengthHaltEnvelopeLoopFlag,
         ConstantVolumeFlag,
         EnvelopeStartFlag,
@@ -827,18 +827,18 @@ State::Ptr APU::DmcUnit::SaveState()
 {
     State::Ptr state = State::New();
 
-    state->StoreNextValue(Timer);
-    state->StoreNextValue(TimerPeriodIndex);
-    state->StoreNextValue(OutputLevel);
-    state->StoreNextValue(SampleAddress);
-    state->StoreNextValue(CurrentAddress);
-    state->StoreNextValue(SampleLength);
-    state->StoreNextValue(SampleBytesRemaining);
-    state->StoreNextValue(SampleBuffer);
-    state->StoreNextValue(SampleShiftRegister);
-    state->StoreNextValue(SampleBitsRemaining);
+    state->StoreValue(Timer);
+    state->StoreValue(TimerPeriodIndex);
+    state->StoreValue(OutputLevel);
+    state->StoreValue(SampleAddress);
+    state->StoreValue(CurrentAddress);
+    state->StoreValue(SampleLength);
+    state->StoreValue(SampleBytesRemaining);
+    state->StoreValue(SampleBuffer);
+    state->StoreValue(SampleShiftRegister);
+    state->StoreValue(SampleBitsRemaining);
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         InterruptFlag,
         InterruptEnabledFlag,
         SampleLoopFlag,
@@ -852,18 +852,18 @@ State::Ptr APU::DmcUnit::SaveState()
 
 void APU::DmcUnit::LoadState(const State::Ptr& state)
 {
-    state->ExtractNextValue(Timer);
-    state->ExtractNextValue(TimerPeriodIndex);
-    state->ExtractNextValue(OutputLevel);
-    state->ExtractNextValue(SampleAddress);
-    state->ExtractNextValue(CurrentAddress);
-    state->ExtractNextValue(SampleLength);
-    state->ExtractNextValue(SampleBytesRemaining);
-    state->ExtractNextValue(SampleBuffer);
-    state->ExtractNextValue(SampleShiftRegister);
-    state->ExtractNextValue(SampleBitsRemaining);
+    state->ExtractValue(Timer);
+    state->ExtractValue(TimerPeriodIndex);
+    state->ExtractValue(OutputLevel);
+    state->ExtractValue(SampleAddress);
+    state->ExtractValue(CurrentAddress);
+    state->ExtractValue(SampleLength);
+    state->ExtractValue(SampleBytesRemaining);
+    state->ExtractValue(SampleBuffer);
+    state->ExtractValue(SampleShiftRegister);
+    state->ExtractValue(SampleBitsRemaining);
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         InterruptFlag,
         InterruptEnabledFlag,
         SampleLoopFlag,
@@ -1376,11 +1376,11 @@ State::Ptr APU::SaveState()
     subState = Dmc.SaveState();
     state->StoreSubState(subState);
 
-    state->StoreNextValue(Clock);
-    state->StoreNextValue(SequenceCount);
-    state->StoreNextValue(FrameResetCountdown);
+    state->StoreValue(Clock);
+    state->StoreValue(SequenceCount);
+    state->StoreValue(FrameResetCountdown);
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         LongSequenceFlag,
         InterruptInhibit,
         FrameInterruptFlag,
@@ -1409,11 +1409,11 @@ void APU::LoadState(const State::Ptr& state)
     state->ExtractSubState(subState);
     Dmc.LoadState(subState);
 
-    state->ExtractNextValue(Clock);
-    state->ExtractNextValue(SequenceCount);
-    state->ExtractNextValue(FrameResetCountdown);
+    state->ExtractValue(Clock);
+    state->ExtractValue(SequenceCount);
+    state->ExtractValue(FrameResetCountdown);
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         LongSequenceFlag,
         InterruptInhibit,
         FrameInterruptFlag,

@@ -12,14 +12,14 @@ State::Ptr SXROM::SaveState()
     State::Ptr baseState = MapperBase::SaveState();
     state->StoreSubState(baseState);
     
-    state->StoreNextValue(LastWriteCycle);
-    state->StoreNextValue(Counter);
-    state->StoreNextValue(TempRegister);
-    state->StoreNextValue(PrgPage);
-    state->StoreNextValue(ChrPage0);
-    state->StoreNextValue(ChrPage1);
+    state->StoreValue(LastWriteCycle);
+    state->StoreValue(Counter);
+    state->StoreValue(TempRegister);
+    state->StoreValue(PrgPage);
+    state->StoreValue(ChrPage0);
+    state->StoreValue(ChrPage1);
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         WramDisable,
         PrgLastPageFixed,
         PrgPageSize16K,
@@ -35,14 +35,14 @@ void SXROM::LoadState(const State::Ptr& state)
     state->ExtractSubState(baseState);
     MapperBase::LoadState(baseState);
 
-    state->ExtractNextValue(LastWriteCycle);
-    state->ExtractNextValue(Counter);
-    state->ExtractNextValue(TempRegister);
-    state->ExtractNextValue(PrgPage);
-    state->ExtractNextValue(ChrPage0);
-    state->ExtractNextValue(ChrPage1);
+    state->ExtractValue(LastWriteCycle);
+    state->ExtractValue(Counter);
+    state->ExtractValue(TempRegister);
+    state->ExtractValue(PrgPage);
+    state->ExtractValue(ChrPage0);
+    state->ExtractValue(ChrPage1);
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         WramDisable,
         PrgLastPageFixed,
         PrgPageSize16K,

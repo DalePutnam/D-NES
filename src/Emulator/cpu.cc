@@ -1958,32 +1958,32 @@ void CPU::SetLogEnabled(bool enabled)
 State::Ptr CPU::SaveState()
 {
     State::Ptr state = State::New();
-    state->StoreNextValue(Clock);
-    state->StoreNextValue(Memory);
-    state->StoreNextValue(ControllerOneShift);
-    state->StoreNextValue(PC);
-    state->StoreNextValue(S);
-    state->StoreNextValue(P);
-    state->StoreNextValue(A);
-    state->StoreNextValue(X);
-    state->StoreNextValue(Y);
-    state->StoreNextValuePacked(ControllerStrobe, NmiLineStatus, NmiRaised, NmiPending, IrqPending);
+    state->StoreValue(Clock);
+    state->StoreValue(Memory);
+    state->StoreValue(ControllerOneShift);
+    state->StoreValue(PC);
+    state->StoreValue(S);
+    state->StoreValue(P);
+    state->StoreValue(A);
+    state->StoreValue(X);
+    state->StoreValue(Y);
+    state->StorePackedValues(ControllerStrobe, NmiLineStatus, NmiRaised, NmiPending, IrqPending);
 
     return state;
 }
 
 void CPU::LoadState(const State::Ptr& state)
 {
-    state->ExtractNextValue(Clock);
-    state->ExtractNextValue(Memory);
-    state->ExtractNextValue(ControllerOneShift);
-    state->ExtractNextValue(PC);
-    state->ExtractNextValue(S);
-    state->ExtractNextValue(P);
-    state->ExtractNextValue(A);
-    state->ExtractNextValue(X);
-    state->ExtractNextValue(Y);
-    state->ExtractNextValuePacked(ControllerStrobe, NmiLineStatus, NmiRaised, NmiPending, IrqPending);
+    state->ExtractValue(Clock);
+    state->ExtractValue(Memory);
+    state->ExtractValue(ControllerOneShift);
+    state->ExtractValue(PC);
+    state->ExtractValue(S);
+    state->ExtractValue(P);
+    state->ExtractValue(A);
+    state->ExtractValue(X);
+    state->ExtractValue(Y);
+    state->ExtractPackedValues(ControllerStrobe, NmiLineStatus, NmiRaised, NmiPending, IrqPending);
 }
 
 // Currently unimplemented

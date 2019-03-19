@@ -774,39 +774,39 @@ State::Ptr PPU::SaveState()
 {
     State::Ptr state = State::New();
 
-    state->StoreNextValue(Clock);
-    state->StoreNextValue(Dot);
-    state->StoreNextValue(Line);
-    state->StoreNextValue(BaseSpriteTableAddress);
-    state->StoreNextValue(BaseBackgroundTableAddress);
-    state->StoreNextValue(LowerBits);
-    state->StoreNextValue(OamAddress);
-    state->StoreNextValue(PpuAddress);
-    state->StoreNextValue(PpuTempAddress);
-    state->StoreNextValue(FineXScroll);
-    state->StoreNextValue(DataBuffer);
-    state->StoreNextValue(PrimaryOam);
-    state->StoreNextValue(SecondaryOam);
-    state->StoreNextValue(NameTable0);
-    state->StoreNextValue(NameTable1);
-    state->StoreNextValue(PaletteTable);
-    state->StoreNextValue(NameTableByte);
-    state->StoreNextValue(AttributeByte);
-    state->StoreNextValue(TileBitmapLow);
-    state->StoreNextValue(TileBitmapHigh);
-    state->StoreNextValue(BackgroundShift0);
-    state->StoreNextValue(BackgroundShift1);
-    state->StoreNextValue(BackgroundAttributeShift0);
-    state->StoreNextValue(BackgroundAttributeShift1);
-    state->StoreNextValue(BackgroundAttribute);
-    state->StoreNextValue(SpriteCount);
-    state->StoreNextValue(SpriteShift0);
-    state->StoreNextValue(SpriteShift1);
-    state->StoreNextValue(SpriteAttribute);
-    state->StoreNextValue(SpriteCounter);
-    state->StoreNextValue(FrameBufferIndex);
+    state->StoreValue(Clock);
+    state->StoreValue(Dot);
+    state->StoreValue(Line);
+    state->StoreValue(BaseSpriteTableAddress);
+    state->StoreValue(BaseBackgroundTableAddress);
+    state->StoreValue(LowerBits);
+    state->StoreValue(OamAddress);
+    state->StoreValue(PpuAddress);
+    state->StoreValue(PpuTempAddress);
+    state->StoreValue(FineXScroll);
+    state->StoreValue(DataBuffer);
+    state->StoreValue(PrimaryOam);
+    state->StoreValue(SecondaryOam);
+    state->StoreValue(NameTable0);
+    state->StoreValue(NameTable1);
+    state->StoreValue(PaletteTable);
+    state->StoreValue(NameTableByte);
+    state->StoreValue(AttributeByte);
+    state->StoreValue(TileBitmapLow);
+    state->StoreValue(TileBitmapHigh);
+    state->StoreValue(BackgroundShift0);
+    state->StoreValue(BackgroundShift1);
+    state->StoreValue(BackgroundAttributeShift0);
+    state->StoreValue(BackgroundAttributeShift1);
+    state->StoreValue(BackgroundAttribute);
+    state->StoreValue(SpriteCount);
+    state->StoreValue(SpriteShift0);
+    state->StoreValue(SpriteShift1);
+    state->StoreValue(SpriteAttribute);
+    state->StoreValue(SpriteCounter);
+    state->StoreValue(FrameBufferIndex);
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         Even, 
         SuppressNmi,
         InterruptActive,
@@ -817,7 +817,7 @@ State::Ptr PPU::SaveState()
         ShowBackgroundLeft
     );
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         ShowSpritesLeft,
         ShowBackground,
         ShowSprites,
@@ -828,7 +828,7 @@ State::Ptr PPU::SaveState()
         SpriteZeroHitFlag
     );
 
-    state->StoreNextValuePacked(
+    state->StorePackedValues(
         NmiOccuredFlag,
         SpriteZeroSecondaryOamFlag,
         AddressLatch
@@ -839,39 +839,39 @@ State::Ptr PPU::SaveState()
 
 void PPU::LoadState(const State::Ptr& state)
 {
-    state->ExtractNextValue(Clock);
-    state->ExtractNextValue(Dot);
-    state->ExtractNextValue(Line);
-    state->ExtractNextValue(BaseSpriteTableAddress);
-    state->ExtractNextValue(BaseBackgroundTableAddress);
-    state->ExtractNextValue(LowerBits);
-    state->ExtractNextValue(OamAddress);
-    state->ExtractNextValue(PpuAddress);
-    state->ExtractNextValue(PpuTempAddress);
-    state->ExtractNextValue(FineXScroll);
-    state->ExtractNextValue(DataBuffer);
-    state->ExtractNextValue(PrimaryOam);
-    state->ExtractNextValue(SecondaryOam);
-    state->ExtractNextValue(NameTable0);
-    state->ExtractNextValue(NameTable1);
-    state->ExtractNextValue(PaletteTable);
-    state->ExtractNextValue(NameTableByte);
-    state->ExtractNextValue(AttributeByte);
-    state->ExtractNextValue(TileBitmapLow);
-    state->ExtractNextValue(TileBitmapHigh);
-    state->ExtractNextValue(BackgroundShift0);
-    state->ExtractNextValue(BackgroundShift1);
-    state->ExtractNextValue(BackgroundAttributeShift0);
-    state->ExtractNextValue(BackgroundAttributeShift1);
-    state->ExtractNextValue(BackgroundAttribute);
-    state->ExtractNextValue(SpriteCount);
-    state->ExtractNextValue(SpriteShift0);
-    state->ExtractNextValue(SpriteShift1);
-    state->ExtractNextValue(SpriteAttribute);
-    state->ExtractNextValue(SpriteCounter);
-    state->ExtractNextValue(FrameBufferIndex);
+    state->ExtractValue(Clock);
+    state->ExtractValue(Dot);
+    state->ExtractValue(Line);
+    state->ExtractValue(BaseSpriteTableAddress);
+    state->ExtractValue(BaseBackgroundTableAddress);
+    state->ExtractValue(LowerBits);
+    state->ExtractValue(OamAddress);
+    state->ExtractValue(PpuAddress);
+    state->ExtractValue(PpuTempAddress);
+    state->ExtractValue(FineXScroll);
+    state->ExtractValue(DataBuffer);
+    state->ExtractValue(PrimaryOam);
+    state->ExtractValue(SecondaryOam);
+    state->ExtractValue(NameTable0);
+    state->ExtractValue(NameTable1);
+    state->ExtractValue(PaletteTable);
+    state->ExtractValue(NameTableByte);
+    state->ExtractValue(AttributeByte);
+    state->ExtractValue(TileBitmapLow);
+    state->ExtractValue(TileBitmapHigh);
+    state->ExtractValue(BackgroundShift0);
+    state->ExtractValue(BackgroundShift1);
+    state->ExtractValue(BackgroundAttributeShift0);
+    state->ExtractValue(BackgroundAttributeShift1);
+    state->ExtractValue(BackgroundAttribute);
+    state->ExtractValue(SpriteCount);
+    state->ExtractValue(SpriteShift0);
+    state->ExtractValue(SpriteShift1);
+    state->ExtractValue(SpriteAttribute);
+    state->ExtractValue(SpriteCounter);
+    state->ExtractValue(FrameBufferIndex);
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         Even, 
         SuppressNmi,
         InterruptActive,
@@ -882,7 +882,7 @@ void PPU::LoadState(const State::Ptr& state)
         ShowBackgroundLeft
     );
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         ShowSpritesLeft,
         ShowBackground,
         ShowSprites,
@@ -893,7 +893,7 @@ void PPU::LoadState(const State::Ptr& state)
         SpriteZeroHitFlag
     );
 
-    state->ExtractNextValuePacked(
+    state->ExtractPackedValues(
         NmiOccuredFlag,
         SpriteZeroSecondaryOamFlag,
         AddressLatch
