@@ -339,7 +339,7 @@ void NES::SaveState(int slot)
     Pause();
 
     size_t componentStateSize;
-    ::State::Ptr componentState;
+    ::StateSave::Ptr componentState;
 
     componentState = Cpu->SaveState();
     componentStateSize = componentState->GetSize();
@@ -391,25 +391,25 @@ void NES::LoadState(int slot)
     componentState = std::make_unique<char[]>(componentStateSize);
     saveStream.read(componentState.get(), componentStateSize);
 
-    Cpu->LoadState(::State::New(componentState, componentStateSize));
+    Cpu->LoadState(StateSave::New(componentState, componentStateSize));
 
     saveStream.read(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
     componentState = std::make_unique<char[]>(componentStateSize);
     saveStream.read(componentState.get(), componentStateSize);
 
-    Ppu->LoadState(::State::New(componentState, componentStateSize));
+    Ppu->LoadState(StateSave::New(componentState, componentStateSize));
 
     saveStream.read(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
     componentState = std::make_unique<char[]>(componentStateSize);
     saveStream.read(componentState.get(), componentStateSize);
 
-    Apu->LoadState(::State::New(componentState, componentStateSize));
+    Apu->LoadState(StateSave::New(componentState, componentStateSize));
 
     saveStream.read(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
     componentState = std::make_unique<char[]>(componentStateSize);
     saveStream.read(componentState.get(), componentStateSize);
 
-    Cartridge->LoadState(::State::New(componentState, componentStateSize));
+    Cartridge->LoadState(StateSave::New(componentState, componentStateSize));
 
     VideoOut->ShowMessage("Loaded State " + std::to_string(slot), 5);
 

@@ -50,8 +50,8 @@ public:
 
     void SetLogEnabled(bool enabled);
 
-    State::Ptr SaveState();
-    void LoadState(const State::Ptr& state);
+    StateSave::Ptr SaveState();
+    void LoadState(const StateSave::Ptr& state);
 
     static constexpr uint32_t NTSC_FREQUENCY = 1789773;
 

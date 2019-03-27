@@ -42,8 +42,8 @@ public:
     uint8_t ChrRead(uint16_t address);
     void ChrWrite(uint8_t M, uint16_t address);
 
-    State::Ptr SaveState();
-    void LoadState(const State::Ptr& state);
+    StateSave::Ptr SaveState();
+    void LoadState(const StateSave::Ptr& state);
 
 private:
     MapperBase* Mapper;

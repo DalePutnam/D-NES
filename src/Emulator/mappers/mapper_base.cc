@@ -137,7 +137,7 @@ void MapperBase::AttachPPU(PPU* ppu)
     Ppu = ppu;
 }
 
-void MapperBase::SaveState(State::Ptr& state)
+void MapperBase::SaveState(StateSave::Ptr& state)
 {
     if (ChrSize == 0)
     {
@@ -154,7 +154,7 @@ void MapperBase::SaveState(State::Ptr& state)
     }
 }
 
-void MapperBase::LoadState(const State::Ptr& state)
+void MapperBase::LoadState(const StateSave::Ptr& state)
 {
     if (ChrSize == 0)
     {

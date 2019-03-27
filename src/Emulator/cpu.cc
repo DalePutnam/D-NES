@@ -1955,9 +1955,9 @@ void CPU::SetLogEnabled(bool enabled)
     EnableLogFlag = enabled;
 }
 
-State::Ptr CPU::SaveState()
+StateSave::Ptr CPU::SaveState()
 {
-    State::Ptr state = State::New();
+    StateSave::Ptr state = StateSave::New();
     state->StoreValue(Clock);
     state->StoreValue(Memory);
     state->StoreValue(ControllerOneShift);
@@ -1972,7 +1972,7 @@ State::Ptr CPU::SaveState()
     return state;
 }
 
-void CPU::LoadState(const State::Ptr& state)
+void CPU::LoadState(const StateSave::Ptr& state)
 {
     state->ExtractValue(Clock);
     state->ExtractValue(Memory);

@@ -770,9 +770,9 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
     }
 }
 
-State::Ptr PPU::SaveState()
+StateSave::Ptr PPU::SaveState()
 {
-    State::Ptr state = State::New();
+    StateSave::Ptr state = StateSave::New();
 
     state->StoreValue(Clock);
     state->StoreValue(Dot);
@@ -839,7 +839,7 @@ State::Ptr PPU::SaveState()
     return state;
 }
 
-void PPU::LoadState(const State::Ptr& state)
+void PPU::LoadState(const StateSave::Ptr& state)
 {
     state->ExtractValue(Clock);
     state->ExtractValue(Dot);

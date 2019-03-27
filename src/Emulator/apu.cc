@@ -229,7 +229,7 @@ uint8_t APU::PulseUnit::GetLevel()
 	}
 }
 
-void APU::PulseUnit::SaveState(State::Ptr& state)
+void APU::PulseUnit::SaveState(StateSave::Ptr& state)
 {
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriod);
@@ -254,7 +254,7 @@ void APU::PulseUnit::SaveState(State::Ptr& state)
     );
 }
 
-void APU::PulseUnit::LoadState(const State::Ptr& state)
+void APU::PulseUnit::LoadState(const StateSave::Ptr& state)
 {
     state->ExtractValue(Timer);
     state->ExtractValue(TimerPeriod);
@@ -393,7 +393,7 @@ uint8_t APU::TriangleUnit::GetLevel()
 	return Sequence[SequenceCount];
 }
 
-void APU::TriangleUnit::SaveState(State::Ptr& state)
+void APU::TriangleUnit::SaveState(StateSave::Ptr& state)
 {
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriod);
@@ -409,7 +409,7 @@ void APU::TriangleUnit::SaveState(State::Ptr& state)
     );
 }
 
-void APU::TriangleUnit::LoadState(const State::Ptr& state)
+void APU::TriangleUnit::LoadState(const StateSave::Ptr& state)
 {
     state->ExtractValue(Timer);
     state->ExtractValue(TimerPeriod);
@@ -577,7 +577,7 @@ uint8_t APU::NoiseUnit::GetLevel()
 	}
 }
 
-void APU::NoiseUnit::SaveState(State::Ptr& state)
+void APU::NoiseUnit::SaveState(StateSave::Ptr& state)
 {
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriodIndex);
@@ -596,7 +596,7 @@ void APU::NoiseUnit::SaveState(State::Ptr& state)
     );
 }
 
-void APU::NoiseUnit::LoadState(const State::Ptr& state)
+void APU::NoiseUnit::LoadState(const StateSave::Ptr& state)
 {
     state->ExtractValue(Timer);
     state->ExtractValue(TimerPeriodIndex);
@@ -811,7 +811,7 @@ uint8_t APU::DmcUnit::GetLevel()
 	return OutputLevel;
 }
 
-void APU::DmcUnit::SaveState(State::Ptr& state)
+void APU::DmcUnit::SaveState(StateSave::Ptr& state)
 {
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriodIndex);
@@ -834,7 +834,7 @@ void APU::DmcUnit::SaveState(State::Ptr& state)
     );
 }
 
-void APU::DmcUnit::LoadState(const State::Ptr& state)
+void APU::DmcUnit::LoadState(const StateSave::Ptr& state)
 {
     state->ExtractValue(Timer);
     state->ExtractValue(TimerPeriodIndex);
@@ -1340,10 +1340,10 @@ float APU::GetDmcVolume()
     return DmcVolume;
 }
 
-State::Ptr APU::SaveState()
+StateSave::Ptr APU::SaveState()
 {
-    State::Ptr subState;
-    State::Ptr state = State::New();
+    StateSave::Ptr subState;
+    StateSave::Ptr state = StateSave::New();
 
     PulseOne.SaveState(state);
     PulseTwo.SaveState(state);
@@ -1365,7 +1365,7 @@ State::Ptr APU::SaveState()
     return state;
 }
 
-void APU::LoadState(const State::Ptr& state)
+void APU::LoadState(const StateSave::Ptr& state)
 {
     PulseOne.LoadState(state);
     PulseTwo.LoadState(state);

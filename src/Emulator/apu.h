@@ -54,8 +54,8 @@ public:
     void SetDmcVolume(float volume);
     float GetDmcVolume();
 
-    State::Ptr SaveState();
-    void LoadState(const State::Ptr& state);
+    StateSave::Ptr SaveState();
+    void LoadState(const StateSave::Ptr& state);
 
 private:
     static const uint8_t LengthCounterLookupTable[32];
@@ -76,8 +76,8 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        void SaveState(State::Ptr& state);
-        void LoadState(const State::Ptr&);
+        void SaveState(StateSave::Ptr& state);
+        void LoadState(const StateSave::Ptr&);
 
     private:
         static const uint8_t Sequences[4];
@@ -118,8 +118,8 @@ private:
         void ClockLengthCounter();
 		uint8_t GetLevel();
 
-        void SaveState(State::Ptr& state);
-        void LoadState(const State::Ptr& state);
+        void SaveState(StateSave::Ptr& state);
+        void LoadState(const StateSave::Ptr& state);
 
     private:
         static const uint8_t Sequence[32];
@@ -150,8 +150,8 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        void SaveState(State::Ptr& state);
-        void LoadState(const State::Ptr& state);
+        void SaveState(StateSave::Ptr& state);
+        void LoadState(const StateSave::Ptr& state);
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -189,8 +189,8 @@ private:
         uint16_t GetDmaAddress();
         void WriteDmaByte(uint8_t byte);
 
-        void SaveState(State::Ptr& state);
-        void LoadState(const State::Ptr& state);
+        void SaveState(StateSave::Ptr& state);
+        void LoadState(const StateSave::Ptr& state);
 
     private:
         static const uint16_t TimerPeriods[16];

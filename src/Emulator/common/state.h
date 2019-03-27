@@ -9,19 +9,19 @@
 
 #include "nes_exception.h"
 
-class State
+class StateSave
 {
 public:
-    typedef std::unique_ptr<State> Ptr;
+    typedef std::unique_ptr<StateSave> Ptr;
 
-    static State::Ptr New()
+    static StateSave::Ptr New()
     {
-        return State::Ptr(new State());
+        return StateSave::Ptr(new StateSave());
     }
 
-    static State::Ptr New(const std::unique_ptr<char[]>& data, size_t length)
+    static StateSave::Ptr New(const std::unique_ptr<char[]>& data, size_t length)
     {
-        return State::Ptr(new State(data, length));
+        return StateSave::Ptr(new StateSave(data, length));
     }
 
     const char* GetBuffer() const
@@ -107,8 +107,8 @@ public:
     }
 
 private:
-    State() = default;
-    explicit State(const std::unique_ptr<char[]>& data, size_t length)
+    StateSave() = default;
+    explicit StateSave(const std::unique_ptr<char[]>& data, size_t length)
         : buffer(data.get(), data.get() + length)
     {}
 

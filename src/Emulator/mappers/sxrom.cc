@@ -5,7 +5,7 @@
 #include "cpu.h"
 #include "ppu.h"
 
-void SXROM::SaveState(State::Ptr& state)
+void SXROM::SaveState(StateSave::Ptr& state)
 {
     MapperBase::SaveState(state);
     
@@ -24,7 +24,7 @@ void SXROM::SaveState(State::Ptr& state)
     );
 }
 
-void SXROM::LoadState(const State::Ptr& state)
+void SXROM::LoadState(const StateSave::Ptr& state)
 {
     MapperBase::LoadState(state);
 

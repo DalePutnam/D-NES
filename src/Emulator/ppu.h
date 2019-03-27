@@ -55,8 +55,8 @@ public:
     void GetPalette(int palette, uint8_t* pixels);
     void GetPrimaryOAM(int sprite, uint8_t* pixels);
 
-    State::Ptr SaveState();
-    void LoadState(const State::Ptr& state);
+    StateSave::Ptr SaveState();
+    void LoadState(const StateSave::Ptr& state);
 
 private:
     CPU* Cpu;
