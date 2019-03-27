@@ -229,10 +229,8 @@ uint8_t APU::PulseUnit::GetLevel()
 	}
 }
 
-State::Ptr APU::PulseUnit::SaveState()
+void APU::PulseUnit::SaveState(State::Ptr& state)
 {
-    State::Ptr state = State::New();
-
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriod);
     state->StoreValue(SequenceCount);
@@ -254,8 +252,6 @@ State::Ptr APU::PulseUnit::SaveState()
         EnvelopeStartFlag,
         EnabledFlag
     );
-
-    return state;
 }
 
 void APU::PulseUnit::LoadState(const State::Ptr& state)
@@ -397,10 +393,8 @@ uint8_t APU::TriangleUnit::GetLevel()
 	return Sequence[SequenceCount];
 }
 
-State::Ptr APU::TriangleUnit::SaveState()
+void APU::TriangleUnit::SaveState(State::Ptr& state)
 {
-    State::Ptr state = State::New();
-
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriod);
     state->StoreValue(SequenceCount);
@@ -413,8 +407,6 @@ State::Ptr APU::TriangleUnit::SaveState()
         LinearCounterReloadFlag,
         EnabledFlag
     );
-
-    return state;
 }
 
 void APU::TriangleUnit::LoadState(const State::Ptr& state)
@@ -585,10 +577,8 @@ uint8_t APU::NoiseUnit::GetLevel()
 	}
 }
 
-State::Ptr APU::NoiseUnit::SaveState()
+void APU::NoiseUnit::SaveState(State::Ptr& state)
 {
-    State::Ptr state = State::New();
-
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriodIndex);
     state->StoreValue(LinearFeedbackShiftRegister);
@@ -604,8 +594,6 @@ State::Ptr APU::NoiseUnit::SaveState()
         ModeFlag,
         EnabledFlag
     );
-
-    return state;
 }
 
 void APU::NoiseUnit::LoadState(const State::Ptr& state)
@@ -823,10 +811,8 @@ uint8_t APU::DmcUnit::GetLevel()
 	return OutputLevel;
 }
 
-State::Ptr APU::DmcUnit::SaveState()
+void APU::DmcUnit::SaveState(State::Ptr& state)
 {
-    State::Ptr state = State::New();
-
     state->StoreValue(Timer);
     state->StoreValue(TimerPeriodIndex);
     state->StoreValue(OutputLevel);
@@ -846,8 +832,6 @@ State::Ptr APU::DmcUnit::SaveState()
         DmaRequest,
         SilenceFlag
     );
-
-    return state;
 }
 
 void APU::DmcUnit::LoadState(const State::Ptr& state)
@@ -1361,20 +1345,11 @@ State::Ptr APU::SaveState()
     State::Ptr subState;
     State::Ptr state = State::New();
 
-    subState = PulseOne.SaveState();
-    state->StoreSubState(subState);
-
-    subState = PulseTwo.SaveState();
-    state->StoreSubState(subState);
-
-    subState = Triangle.SaveState();
-    state->StoreSubState(subState);
-
-    subState = Noise.SaveState();
-    state->StoreSubState(subState);
-
-    subState = Dmc.SaveState();
-    state->StoreSubState(subState);
+    PulseOne.SaveState(state);
+    PulseTwo.SaveState(state);
+    Triangle.SaveState(state);
+    Noise.SaveState(state);
+    Dmc.SaveState(state);
 
     state->StoreValue(Clock);
     state->StoreValue(SequenceCount);
@@ -1392,22 +1367,11 @@ State::Ptr APU::SaveState()
 
 void APU::LoadState(const State::Ptr& state)
 {
-    State::Ptr subState;
-
-    state->ExtractSubState(subState);
-    PulseOne.LoadState(subState);
-
-    state->ExtractSubState(subState);
-    PulseTwo.LoadState(subState);
-
-    state->ExtractSubState(subState);
-    Triangle.LoadState(subState);
-
-    state->ExtractSubState(subState);
-    Noise.LoadState(subState);
-
-    state->ExtractSubState(subState);
-    Dmc.LoadState(subState);
+    PulseOne.LoadState(state);
+    PulseTwo.LoadState(state);
+    Triangle.LoadState(state);
+    Noise.LoadState(state);
+    Dmc.LoadState(state);
 
     state->ExtractValue(Clock);
     state->ExtractValue(SequenceCount);

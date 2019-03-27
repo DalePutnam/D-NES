@@ -76,7 +76,7 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        State::Ptr SaveState();
+        void SaveState(State::Ptr& state);
         void LoadState(const State::Ptr&);
 
     private:
@@ -118,7 +118,7 @@ private:
         void ClockLengthCounter();
 		uint8_t GetLevel();
 
-        State::Ptr SaveState();
+        void SaveState(State::Ptr& state);
         void LoadState(const State::Ptr& state);
 
     private:
@@ -150,8 +150,8 @@ private:
         void ClockEnvelope();
         void ClockLengthCounter();
 
-        State::Ptr SaveState();
-        void LoadState(const  State::Ptr& state);
+        void SaveState(State::Ptr& state);
+        void LoadState(const State::Ptr& state);
 
     private:
         static const uint16_t TimerPeriods[16];
@@ -189,7 +189,7 @@ private:
         uint16_t GetDmaAddress();
         void WriteDmaByte(uint8_t byte);
 
-        State::Ptr SaveState();
+        void SaveState(State::Ptr& state);
         void LoadState(const State::Ptr& state);
 
     private:

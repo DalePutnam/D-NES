@@ -831,7 +831,9 @@ State::Ptr PPU::SaveState()
     state->StorePackedValues(
         NmiOccuredFlag,
         SpriteZeroSecondaryOamFlag,
-        AddressLatch
+        AddressLatch,
+        RenderingEnabled,
+        RenderStateDelaySlot
     );
 
     return state;
@@ -896,7 +898,9 @@ void PPU::LoadState(const State::Ptr& state)
     state->ExtractPackedValues(
         NmiOccuredFlag,
         SpriteZeroSecondaryOamFlag,
-        AddressLatch
+        AddressLatch,
+        RenderingEnabled,
+        RenderStateDelaySlot
     );
 }
 

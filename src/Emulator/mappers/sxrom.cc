@@ -5,12 +5,9 @@
 #include "cpu.h"
 #include "ppu.h"
 
-State::Ptr SXROM::SaveState()
+void SXROM::SaveState(State::Ptr& state)
 {
-    State::Ptr state = State::New();
- 
-    State::Ptr baseState = MapperBase::SaveState();
-    state->StoreSubState(baseState);
+    MapperBase::SaveState(state);
     
     state->StoreValue(LastWriteCycle);
     state->StoreValue(Counter);
@@ -25,15 +22,11 @@ State::Ptr SXROM::SaveState()
         PrgPageSize16K,
         ChrPageSize4K
     );
-
-    return state;
 }
 
 void SXROM::LoadState(const State::Ptr& state)
 {
-    State::Ptr baseState;
-    state->ExtractSubState(baseState);
-    MapperBase::LoadState(baseState);
+    MapperBase::LoadState(state);
 
     state->ExtractValue(LastWriteCycle);
     state->ExtractValue(Counter);

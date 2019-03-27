@@ -10,8 +10,8 @@ public:
     SXROM(const std::string& fileName, const std::string& saveDir);
     virtual ~SXROM();
 
-    State::Ptr SaveState();
-    void LoadState(const State::Ptr& state);
+    void SaveState(State::Ptr& state) override;
+    void LoadState(const State::Ptr& state) override;
 
     //Cart::MirrorMode GetMirrorMode() override;
 

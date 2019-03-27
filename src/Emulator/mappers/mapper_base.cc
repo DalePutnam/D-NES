@@ -137,10 +137,8 @@ void MapperBase::AttachPPU(PPU* ppu)
     Ppu = ppu;
 }
 
-State::Ptr MapperBase::SaveState()
+void MapperBase::SaveState(State::Ptr& state)
 {
-    State::Ptr state = State::New();
-
     if (ChrSize == 0)
     {
         state->StoreBuffer(Chr, 0x2000);
@@ -154,18 +152,23 @@ State::Ptr MapperBase::SaveState()
     {
         state->StoreBuffer(Wram, WramSize);
     }
-
-    return state;
 }
 
 void MapperBase::LoadState(const State::Ptr& state)
 {
     if (ChrSize == 0)
     {
-        state->ExtractBuffer(Chr);
+        state->ExtractBuffer(Chr, 0x2000);
     }
 
-    state->ExtractBuffer(Wram);
+    if (WramSize == 0)
+    {
+        state->ExtractBuffer(Wram, 0x2000);
+    }
+    else
+    {
+        state->ExtractBuffer(Wram, WramSize);
+    }
 }
 
 Cart::MirrorMode MapperBase::GetMirrorMode()

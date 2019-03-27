@@ -20,7 +20,7 @@ public:
     void AttachCPU(CPU* cpu);
     void AttachPPU(PPU* ppu);
 
-    virtual State::Ptr SaveState();
+    virtual void SaveState(State::Ptr& state);
     virtual void LoadState(const State::Ptr& state);
 
     Cart::MirrorMode GetMirrorMode();
