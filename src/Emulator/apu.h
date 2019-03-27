@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cstdint>
 
-#include "state.h"
+#include "state_save.h"
 
 class NES;
 class CPU;

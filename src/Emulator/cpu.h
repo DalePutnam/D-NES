@@ -19,7 +19,7 @@
 #include <condition_variable>
 
 #include "cart.h"
-#include "state.h"
+#include "state_save.h"
 
 class PPU;
 class APU;

@@ -14,7 +14,7 @@
 #include "ppu.h"
 #include "cart.h"
 #include "file.h"
-#include "state.h"
+#include "state_save.h"
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 

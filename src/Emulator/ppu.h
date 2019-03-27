@@ -12,7 +12,7 @@
 #include <cstdint>
 
 #include "cart.h"
-#include "state.h"
+#include "state_save.h"
 #include "nes_callback.h"
 
 class CPU;
