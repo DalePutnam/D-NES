@@ -40,7 +40,8 @@ NES::NES(const std::string& gamePath, const std::string& savePath,
         Cpu = new CPU;
         Ppu = new PPU(VideoOut, Callback); // Will be nullptr in HeadlessMode
         Apu = new APU(AudioOut);
-        Cartridge = new Cart(gamePath, savePath);
+        Cartridge = new Cart(gamePath);
+        Cartridge->SetSaveDirectory(savePath);
     }
     catch (NesException& e)
     {
@@ -273,10 +274,12 @@ void NES::Run()
     try
     {
 		VideoOut->Prepare();
+        Cartridge->LoadNativeSave();
 
         CurrentState = State::Running;
         Cpu->Run();
 
+        Cartridge->SaveNativeSave();
 		VideoOut->Finalize();
     }
     catch (NesException&)

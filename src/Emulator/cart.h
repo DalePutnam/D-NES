@@ -8,6 +8,7 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
 #include "state_save.h"
 
@@ -26,15 +27,19 @@ public:
         SINGLE_SCREEN_B
     };
 
-    Cart(const std::string& fileName, const std::string& saveDir);
+    Cart(const std::string& fileName);
     ~Cart();
 
     const std::string& GetGameName();
-
     void SetSaveDirectory(const std::string& saveDir);
+
     void AttachCPU(CPU* cpu);
     void AttachPPU(PPU* ppu);
+    
     MirrorMode GetMirrorMode();
+
+    void SaveNativeSave();
+    void LoadNativeSave();
 
     uint8_t PrgRead(uint16_t address);
     void PrgWrite(uint8_t M, uint16_t address);
@@ -46,5 +51,8 @@ public:
     void LoadState(const StateSave::Ptr& state);
 
 private:
-    MapperBase* Mapper;
+    std::string _gameName;
+    std::string _saveDirectory;
+
+    std::unique_ptr<MapperBase> _mapper;
 };

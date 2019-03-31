@@ -11,114 +11,126 @@
 #include <cstring>
 
 #include "cart.h"
+#include "ines.h"
+#include "file.h"
 #include "nes_exception.h"
+#include "mappers/nes_header.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
 #include "mappers/sxrom.h"
 
 using namespace std;
 
-Cart::Cart(const string& fileName, const string& saveDir)
+
+Cart::Cart(const string& fileName)
 {
-    ifstream romStream(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
+    _gameName = file::stripExtension(file::getNameFromPath(fileName));
 
-    if (romStream.good())
+    iNesFile file(fileName);
+
+    uint16_t mapperNumber = file.GetMapperNumber();
+
+    switch (mapperNumber)
     {
-        char header[16];
-        romStream.read(header, 16);
-        romStream.close();
-
-        if (header[0] == 'N' && header[1] == 'E' && header[2] == 'S' && header[3] == '\x1A')
-        {
-            uint8_t flags6 = header[6];
-            uint8_t flags7 = header[7];
-            uint8_t mapperNumber = (flags7 & 0xF0) | (flags6 >> 4);
-
-            switch (mapperNumber)
-            {
-            case 0x00:
-                Mapper = new NROM(fileName, saveDir);
-                break;
-            case 0x01:
-                Mapper = new SXROM(fileName, saveDir);
-                break;
-            default:
-                ostringstream oss;
-                oss << "Cart: Mapper " << static_cast<int>(mapperNumber) << " specified by " << fileName << " does not exist or is not supported.";
-                throw NesException("Cart", oss.str());
-            }
-        }
-        else
-        {
-            throw NesException("Cart", "Unable to load " + fileName + ": Bad header");
-        }
+    case 0x00:
+        _mapper = std::make_unique<NROM>(file);
+        break;
+    case 0x01:
+        _mapper = std::make_unique<SXROM>(file);
+        break;
+    default:
+        ostringstream oss;
+        oss << "Cart: Mapper " << static_cast<int>(mapperNumber) << " specified by " << fileName << " does not exist or is not supported.";
+        throw NesException("Cart", oss.str());
     }
-    else
-    {
-        throw NesException("Cart", "Unable to open " + fileName + ": " + strerror(errno));
-    }
-
 }
 
 Cart::~Cart()
 {
-    delete Mapper;
 }
 
 const string& Cart::GetGameName()
 {
-    return Mapper->GetGameName();
+    return _gameName;
 }
 
 void Cart::SetSaveDirectory(const std::string& saveDir)
 {
-    Mapper->SetSaveDirectory(saveDir);
+    _saveDirectory = saveDir;
 }
 
 void Cart::AttachCPU(CPU* cpu)
 {
-    Mapper->AttachCPU(cpu);
+    _mapper->AttachCPU(cpu);
 }
 
 void Cart::AttachPPU(PPU* ppu)
 {
-    Mapper->AttachPPU(ppu);
+    _mapper->AttachPPU(ppu);
 }
 
 Cart::MirrorMode Cart::GetMirrorMode()
 {
-    return Mapper->GetMirrorMode();
+    return _mapper->GetMirrorMode();
+}
+
+void Cart::SaveNativeSave()
+{
+    std::string saveFile = file::createFullPath(_gameName, "sav", _saveDirectory);
+    std::ofstream saveStream(saveFile.c_str(), std::ofstream::out | std::ofstream::binary);
+
+    if (saveStream.good())
+    {
+        _mapper->SaveNativeSave(saveStream);
+    }
+    else
+    {
+        throw NesException("Cart", "Failed to open save file for writing");
+    }
+}
+
+void Cart::LoadNativeSave()
+{
+    std::string saveFile = file::createFullPath(_gameName, "sav", _saveDirectory);
+    std::ifstream saveStream(saveFile.c_str(), std::ifstream::in | std::ofstream::binary);
+
+    if (saveStream.good())
+    {
+        _mapper->LoadNativeSave(saveStream);
+    }
+
+    // If the file didn't open just assume save data doesn't exist
 }
 
 uint8_t Cart::PrgRead(uint16_t address)
 {
-    return Mapper->PrgRead(address);
+    return _mapper->PrgRead(address);
 }
 
 void Cart::PrgWrite(uint8_t M, uint16_t address)
 {
-    Mapper->PrgWrite(M, address);
+    _mapper->PrgWrite(M, address);
 }
 
 uint8_t Cart::ChrRead(uint16_t address)
 {
-    return Mapper->ChrRead(address);
+    return _mapper->ChrRead(address);
 }
 
 void Cart::ChrWrite(uint8_t M, uint16_t address)
 {
-    Mapper->ChrWrite(M, address);
+    _mapper->ChrWrite(M, address);
 }
 
 StateSave::Ptr Cart::SaveState()
 {
     StateSave::Ptr state = StateSave::New();
-    Mapper->SaveState(state);
+    _mapper->SaveState(state);
 
     return state;
 }
 
 void Cart::LoadState(const StateSave::Ptr& state)
 {
-    Mapper->LoadState(state);
+    _mapper->LoadState(state);
 }

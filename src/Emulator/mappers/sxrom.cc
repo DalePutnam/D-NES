@@ -69,7 +69,7 @@ uint8_t SXROM::ChrRead(uint16_t address)
 
 void SXROM::ChrWrite(uint8_t M, uint16_t address)
 {
-    if (ChrSize == 0)
+    if (_chrRomSize == 0)
     {
         if (ChrPageSize4K)
         {
@@ -107,7 +107,7 @@ uint8_t SXROM::PrgRead(uint16_t address)
         }
         else
         {
-            return Wram[address];
+            return _prgRam[address];
         }
     }
     else
@@ -147,7 +147,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     {
         if (!WramDisable)
         {
-            Wram[address] = M;
+            _prgRam[address] = M;
         }
     }
     else
@@ -181,16 +181,16 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 				switch (mirroring)
 				{
 				case 0:
-					Mirroring = Cart::MirrorMode::SINGLE_SCREEN_A;
+					_mirroring = Cart::MirrorMode::SINGLE_SCREEN_A;
 					break;
 				case 1:
-					Mirroring = Cart::MirrorMode::SINGLE_SCREEN_B;
+					_mirroring = Cart::MirrorMode::SINGLE_SCREEN_B;
 					break;
 				case 2:
-					Mirroring = Cart::MirrorMode::VERTICAL;
+					_mirroring = Cart::MirrorMode::VERTICAL;
 					break;
 				case 3:
-					Mirroring = Cart::MirrorMode::HORIZONTAL;
+					_mirroring = Cart::MirrorMode::HORIZONTAL;
 					break;
 				}
             }
@@ -222,50 +222,50 @@ void SXROM::UpdatePageOffsets()
 
 	if (PrgPageSize16K)
 	{
-		prgOffset = (PrgPage * 0x4000) % PrgSize;
+		prgOffset = (PrgPage * 0x4000) % _prgRomSize;
 
 		if (PrgLastPageFixed)
 		{
-			PrgPage0Pointer = Prg + prgOffset;
-			PrgPage1Pointer = Prg + ((0x4000 * 0xf) % PrgSize);
+			PrgPage0Pointer = _prgRom.get() + prgOffset;
+			PrgPage1Pointer = _prgRom.get() + ((0x4000 * 0xf) % _prgRomSize);
 		}
 		else
 		{
-			PrgPage0Pointer = Prg;
-			PrgPage1Pointer = Prg + prgOffset;
+			PrgPage0Pointer = _prgRom.get();
+			PrgPage1Pointer = _prgRom.get() + prgOffset;
 		}
 	}
 	else
 	{
-		prgOffset = ((PrgPage >> 1) * 0x8000) % PrgSize;
-		PrgPage0Pointer = Prg + prgOffset;
+		prgOffset = ((PrgPage >> 1) * 0x8000) % _prgRomSize;
+		PrgPage0Pointer = _prgRom.get() + prgOffset;
 	}
 
 	if (ChrPageSize4K)
 	{
-		chrOffset0 = (ChrPage0 * 0x1000) % (ChrSize == 0 ? 0x2000 : ChrSize);
-		chrOffset1 = (ChrPage1 * 0x1000) % (ChrSize == 0 ? 0x2000 : ChrSize);
+		chrOffset0 = (ChrPage0 * 0x1000) % (_chrRomSize == 0 ? _chrRamSize : _chrRomSize);
+		chrOffset1 = (ChrPage1 * 0x1000) % (_chrRomSize == 0 ? _chrRamSize : _chrRomSize);
 
-		ChrPage0Pointer = Chr + chrOffset0;
-		ChrPage1Pointer = Chr + chrOffset1;
+		ChrPage0Pointer = (_chrRomSize == 0 ? _chrRam.get() : _chrRom.get()) + chrOffset0;
+		ChrPage1Pointer = (_chrRomSize == 0 ? _chrRam.get() : _chrRom.get()) + chrOffset1;
 	}
 	else
 	{
-		chrOffset0 = ((ChrPage0 >> 1) * 0x2000) % (ChrSize == 0 ? 0x2000 : ChrSize);
-		ChrPage0Pointer = Chr + chrOffset0;
+		chrOffset0 = ((ChrPage0 >> 1) * 0x2000) % (_chrRomSize == 0 ? _chrRamSize : _chrRomSize);
+		ChrPage0Pointer = (_chrRomSize == 0 ? _chrRam.get() : _chrRom.get()) + chrOffset0;
 	}
 	
 }
 
-SXROM::SXROM(const std::string& fileName, const std::string& saveDir)
-    : MapperBase(fileName, saveDir)
+SXROM::SXROM(iNesFile& file)
+    : MapperBase(file)
     , LastWriteCycle(0)
     , Counter(0)
     , TempRegister(0)
-	, PrgPage0Pointer(Prg)
-	, PrgPage1Pointer(Prg + ((0x4000 * 0xf) % PrgSize))
-	, ChrPage0Pointer(Chr)
-	, ChrPage1Pointer(Chr)
+	, PrgPage0Pointer(_prgRom.get())
+	, PrgPage1Pointer(_prgRom.get() + ((0x4000 * 0xf) % _prgRomSize))
+	, ChrPage0Pointer(_chrRomSize == 0 ? _chrRam.get() : _chrRom.get())
+	, ChrPage1Pointer(_chrRomSize == 0 ? _chrRam.get() : _chrRom.get())
 	, PrgPage(0)
 	, ChrPage0(0)
 	, ChrPage1(0)

@@ -7,7 +7,7 @@ class CPU;
 class SXROM : public MapperBase
 {
 public:
-    SXROM(const std::string& fileName, const std::string& saveDir);
+    SXROM(iNesFile& file);
     virtual ~SXROM();
 
     void SaveState(StateSave::Ptr& state) override;

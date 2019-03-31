@@ -16,13 +16,13 @@ uint8_t NROM::PrgRead(uint16_t address)
     }
     else
     {
-        if (PrgSize == 0x4000)
+        if (_prgRomSize == 0x4000)
         {
-            return Prg[(address - 0x2000) % 0x4000];
+            return _prgRom[(address - 0x2000) % 0x4000];
         }
         else
         {
-            return Prg[address - 0x2000];
+            return _prgRom[address - 0x2000];
         }
     }
 }
@@ -34,19 +34,20 @@ void NROM::PrgWrite(uint8_t M, uint16_t address)
 
 uint8_t NROM::ChrRead(uint16_t address)
 {
-    return Chr[address];
+    return _chr[address];
 }
 
 void NROM::ChrWrite(uint8_t M, uint16_t address)
 {
-    if (ChrSize == 0)
+    if (_chrRomSize == 0)
     {
-        Chr[address] = M;
+        _chr[address] = M;
     }
 }
 
-NROM::NROM(const std::string& fileName, const std::string& saveDir)
-    : MapperBase(fileName, saveDir)
+NROM::NROM(iNesFile& file)
+    : MapperBase(file)
+    , _chr(_chrRomSize == 0 ? _chrRam.get() : _chrRom.get())
 {
 }
 

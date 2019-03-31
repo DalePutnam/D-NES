@@ -10,121 +10,44 @@
 
 using namespace std;
 
-MapperBase::MapperBase(const string& fileName, const string& saveDir)
-    : Prg(nullptr)
-    , Chr(nullptr)
-    , Wram(nullptr)
-    , HasSaveMem(false)
-    , Cpu(nullptr)
+MapperBase::MapperBase(iNesFile& file)
+    : Cpu(nullptr)
     , Ppu(nullptr)
 {
-    GameName = file::stripExtension(file::getNameFromPath(fileName));
-    SaveFile = file::createFullPath(GameName, "sav", saveDir);
+    _prgRom = file.GetPrgRom();
+    _prgRomSize = file.GetPrgRomSize();
+    
+    _chrRom = file.GetChrRom();
+    _chrRomSize = file.GetChrRomSize();
 
-    ifstream romStream(fileName.c_str(), ifstream::in | ifstream::binary);
+    _miscRom = file.GetMiscRom();
+    _miscRomSize = file.GetMiscRomSize();
 
-    if (romStream.good())
+    _prgRamSize = file.GetPrgRamSize();
+    _prgNvRamSize = file.GetPrgNvRamSize();
+    _chrRamSize = file.GetChrRamSize();
+    _chrNvRamSize = file.GetChrNvRamSize();
+
+    _prgRam = std::make_unique<uint8_t[]>(_prgRamSize + _prgNvRamSize);
+    _chrRam = std::make_unique<uint8_t[]>(_chrRamSize + _chrNvRamSize);
+
+    std::fill(_prgRam.get(), _prgRam.get() + _prgRamSize + _prgNvRamSize, 0);
+    std::fill(_chrRam.get(), _chrRam.get() + _chrRamSize + _chrNvRamSize, 0);
+
+    _hasNonVolatileMemory = file.HasNonVolatileMemory();
+
+    if (file.GetMirroring() == iNesFile::Mirroring::Vertical)
     {
-        char header[16];
-        romStream.read(header, 16);
-
-        PrgSize = header[4] * 0x4000;
-        ChrSize = header[5] * 0x2000;
-        WramSize = header[8] ? header[8] * 0x2000 : 0x2000;
-
-        if (header[6] & 0x1)
-        {
-            Mirroring = Cart::VERTICAL;
-        }
-        else
-        {
-            Mirroring = Cart::HORIZONTAL;
-        }
-
-        if (PrgSize == 0)
-        {
-            throw NesException("MapperBase", "Failed to load ROM, invalid PRG size");
-        }
-
-        if (header[6] & 0x2)
-        {
-            HasSaveMem = true;
-            ifstream saveStream(SaveFile.c_str(), ifstream::in | ifstream::binary);
-
-            if (saveStream.good())
-            {
-                char* buf = new char[WramSize];
-                saveStream.read(buf, WramSize);
-                Wram = reinterpret_cast<uint8_t*>(buf);
-            }
-            else
-            {
-                Wram = new uint8_t[WramSize];
-                memset(Wram, 0, sizeof(uint8_t) * WramSize);
-            }
-        }
-        else
-        {
-            Wram = new uint8_t[WramSize];
-            memset(Wram, 0, sizeof(uint8_t) * WramSize);
-        }
-
-        if (header[6] & 0x4)
-        {
-            // Skip trainer if present
-            romStream.seekg(0x200, romStream.cur);
-        }
-
-        char* buf = new char[PrgSize];
-        romStream.read(buf, PrgSize);
-        Prg = reinterpret_cast<uint8_t*>(buf);
-
-        if (ChrSize != 0)
-        {
-            buf = new char[ChrSize];
-            romStream.read(buf, ChrSize);
-            Chr = reinterpret_cast<uint8_t*>(buf);
-        }
-        else
-        {
-            Chr = new uint8_t[0x2000];
-            memset(Chr, 0, sizeof(uint8_t) * 0x2000);
-        }
+        _mirroring = Cart::MirrorMode::VERTICAL;
     }
     else
     {
-        throw NesException("MapperBase", "Unable to open " + fileName);
+        _mirroring = Cart::MirrorMode::HORIZONTAL;
     }
 }
 
 MapperBase::~MapperBase()
 {
-    if (HasSaveMem)
-    {
-        ofstream saveStream(SaveFile.c_str(), ifstream::out | ifstream::binary);
-
-        if (saveStream.good())
-        {
-            char* buf = reinterpret_cast<char*>(Wram);
-            saveStream.write(buf, WramSize);
-        }
-    }
-
-    delete[] Wram;
-    delete[] Prg;
-    delete[] Chr;
-}
-
-const string& MapperBase::GetGameName()
-{
-    return GameName;
-}
-
-void MapperBase::SetSaveDirectory(const std::string& saveDir)
-{
-    std::lock_guard<std::mutex> lock(MapperMutex);
-
-    SaveFile = file::createFullPath(GameName, "sav", saveDir);
 }
 
 void MapperBase::AttachCPU(CPU* cpu)
@@ -137,41 +60,37 @@ void MapperBase::AttachPPU(PPU* ppu)
     Ppu = ppu;
 }
 
+void MapperBase::SaveNativeSave(std::ofstream& stream)
+{
+    if (_hasNonVolatileMemory)
+    {
+        stream.write(reinterpret_cast<char*>(_prgRam.get() + _prgRamSize), _prgNvRamSize);
+        stream.write(reinterpret_cast<char*>(_chrRam.get() + _chrRamSize), _chrNvRamSize);
+    }
+}
+
+void MapperBase::LoadNativeSave(std::ifstream& stream)
+{
+    if (_hasNonVolatileMemory)
+    {
+        stream.read(reinterpret_cast<char*>(_prgRam.get() + _prgRamSize), _prgNvRamSize);
+        stream.read(reinterpret_cast<char*>(_chrRam.get() + _chrRamSize), _chrNvRamSize);
+    }
+}
+
 void MapperBase::SaveState(StateSave::Ptr& state)
 {
-    if (ChrSize == 0)
-    {
-        state->StoreBuffer(Chr, 0x2000);
-    }
-
-    if (WramSize == 0)
-    {
-        state->StoreBuffer(Wram, 0x2000);
-    }
-    else
-    {
-        state->StoreBuffer(Wram, WramSize);
-    }
+    state->StoreBuffer(_prgRam.get(), _prgRamSize + _prgNvRamSize);
+    state->StoreBuffer(_chrRam.get(), _chrRamSize + _chrNvRamSize);
 }
 
 void MapperBase::LoadState(const StateSave::Ptr& state)
 {
-    if (ChrSize == 0)
-    {
-        state->ExtractBuffer(Chr, 0x2000);
-    }
-
-    if (WramSize == 0)
-    {
-        state->ExtractBuffer(Wram, 0x2000);
-    }
-    else
-    {
-        state->ExtractBuffer(Wram, WramSize);
-    }
+    state->ExtractBuffer(_prgRam.get(), _prgRamSize + _prgNvRamSize);
+    state->ExtractBuffer(_chrRam.get(), _chrRamSize + _chrNvRamSize);
 }
 
 Cart::MirrorMode MapperBase::GetMirrorMode()
 {
-	return Mirroring;
+	return _mirroring;
 }
