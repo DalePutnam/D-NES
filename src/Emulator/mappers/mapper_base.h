@@ -53,6 +53,6 @@ protected:
 
     Cart::MirrorMode _mirroring;
 
-    CPU* Cpu;
-    PPU* Ppu;
+    CPU* _cpu;
+    PPU* _ppu;
 };

@@ -14,7 +14,6 @@
 #include "ines.h"
 #include "file.h"
 #include "nes_exception.h"
-#include "mappers/nes_header.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
 #include "mappers/sxrom.h"

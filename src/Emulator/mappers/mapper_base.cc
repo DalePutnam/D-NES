@@ -11,8 +11,8 @@
 using namespace std;
 
 MapperBase::MapperBase(iNesFile& file)
-    : Cpu(nullptr)
-    , Ppu(nullptr)
+    : _cpu(nullptr)
+    , _ppu(nullptr)
 {
     _prgRom = file.GetPrgRom();
     _prgRomSize = file.GetPrgRomSize();
@@ -52,12 +52,12 @@ MapperBase::~MapperBase()
 
 void MapperBase::AttachCPU(CPU* cpu)
 {
-    Cpu = cpu;
+    _cpu = cpu;
 }
 
 void MapperBase::AttachPPU(PPU* ppu)
 {
-    Ppu = ppu;
+    _ppu = ppu;
 }
 
 void MapperBase::SaveNativeSave(std::ofstream& stream)
