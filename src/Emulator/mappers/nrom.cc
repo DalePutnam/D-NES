@@ -10,7 +10,7 @@
 uint8_t NROM::PrgRead(uint16_t address)
 {
     // Battery backed memory, not implemented
-    if (address >= 0x0000 && address < 0x2000)
+    if (address < 0x8000)
     {
         return 0x00;
     }
@@ -18,11 +18,11 @@ uint8_t NROM::PrgRead(uint16_t address)
     {
         if (_prgRomSize == 0x4000)
         {
-            return _prgRom[(address - 0x2000) % 0x4000];
+            return _prgRom[(address - 0x8000) % 0x4000];
         }
         else
         {
-            return _prgRom[address - 0x2000];
+            return _prgRom[address - 0x8000];
         }
     }
 }

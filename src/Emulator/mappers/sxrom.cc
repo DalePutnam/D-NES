@@ -99,7 +99,7 @@ void SXROM::ChrWrite(uint8_t M, uint16_t address)
 uint8_t SXROM::PrgRead(uint16_t address)
 {
     // Battery backed memory
-    if (address >= 0x0000 && address < 0x2000)
+    if (address >= 0x6000 && address < 0x8000)
     {
         if (_wramDisable)
         {
@@ -114,21 +114,21 @@ uint8_t SXROM::PrgRead(uint16_t address)
     {
         if (_prgPageSize16K)
         {
-			if (address < 0x6000)
+			if (address < 0xC000)
 			{
-				uint32_t addr = address - 0x2000;
+				uint32_t addr = address - 0x8000;
 				return _prgPage0Pointer[addr];
 
 			}
 			else
 			{
-				uint32_t addr = address - 0x6000;
+				uint32_t addr = address - 0xC000;
 				return _prgPage1Pointer[addr];
 			}
         }
         else
         {
-            uint32_t addr = address - 0x2000;
+            uint32_t addr = address - 0x8000;
             return _prgPage0Pointer[addr];
         }
     }
@@ -143,7 +143,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 
     _lastWriteCycle = _cpu->GetClock();
 
-    if (address < 0x2000)
+    if (address >= 0x6000 && address < 0x8000)
     {
         if (!_wramDisable)
         {
@@ -171,7 +171,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 
         if (_cycleCounter == 5)
         {
-            if (address >= 0x2000 && address < 0x4000)
+            if (address >= 0x8000 && address < 0xA000)
             {
                 _chrPageSize4K = !!(_tempRegister & 0x10);
 				_prgPageSize16K = !!(_tempRegister & 0x8);
@@ -194,15 +194,15 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
 					break;
 				}
             }
-            else if (address >= 0x4000 && address < 0x6000)
+            else if (address >= 0xA000 && address < 0xC000)
             {
 				_chrPage0 = _tempRegister;
             }
-            else if (address >= 0x6000 && address < 0x8000)
+            else if (address >= 0xC000 && address < 0xE000)
             {
 				_chrPage1 = _tempRegister;
             }
-            else if (address >= 0x8000 && address < 0xA000)
+            else if (address >= 0xE000 && address < 0x10000)
             {
 				_prgPage = _tempRegister & 0xF;
 				_wramDisable = !!(_tempRegister & 0x10);

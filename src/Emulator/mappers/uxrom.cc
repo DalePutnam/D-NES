@@ -26,35 +26,37 @@ void UXROM::LoadState(const StateSave::Ptr& state)
 
 uint8_t UXROM::PrgRead(uint16_t address)
 {
-    if (address >= 0x2000)
+    if (address >= 0x6000 && address < 0x8000)
     {
-        uint16_t addr = address - 0x2000;
-        if (addr < 0x4000)
+        return _prgRam[address - 0x6000];
+    }
+    else if (address >= 0x8000)
+    {
+        if (address < 0xC000)
         {
-            return _prgRom[addr + (0x4000 * _register)];
+            return _prgRom[(address - 0x8000) + (0x4000 * _register)];
         }
         else
         {   
-            addr -= 0x4000;
-            return _prgRom[addr + (_prgRomSize - 0x4000)];
+            return _prgRom[(address - 0xC000) + (_prgRomSize - 0x4000)];
         }
     }
-    else
+    else 
     {
-        return _prgRam[address];
+        return 0x00;
     }
 }
 
 void UXROM::PrgWrite(uint8_t M, uint16_t address)
 {
-    if (address >= 0x2000)
+    if (address >= 0x6000 && address < 0x8000)
+    {
+        _prgRam[address - 0x6000] = M;
+    }
+    else if (address >= 0x8000)
     {
         _register = M;
-    }
-    else
-    {
-        _prgRam[address] = M;
-    }
+    } 
 }
 
 uint8_t UXROM::ChrRead(uint16_t address)

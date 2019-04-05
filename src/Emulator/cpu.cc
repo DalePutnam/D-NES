@@ -53,9 +53,9 @@ uint8_t CPU::Peek(uint16_t address)
     {
         return 0xFF; // We ignore any reads to the PPU registers
     }
-    else if (address > 0x5FFF && address < 0x10000)
+    else if (address >= 0x4020 && address < 0x10000)
     {
-        return Cartridge->PrgRead(address - 0x6000);
+        return Cartridge->PrgRead(address);
     }
     else
     {
@@ -130,10 +130,10 @@ uint8_t CPU::Read(uint16_t address, bool noDMA)
         default:     value = 0x00; break;
         }
     }
-    else if (address >= 0x6000 && address < 0x10000)
+    else if (address >= 0x4020 && address < 0x10000)
     {
         // Cartridge Space
-        value = Cartridge->PrgRead(address - 0x6000);
+        value = Cartridge->PrgRead(address);
     }
     else
     {
@@ -232,10 +232,10 @@ void CPU::Write(uint8_t M, uint16_t address, bool noDMA)
         default: break;
         }
     }
-    else if (address >= 0x6000 && address < 0x10000)
+    else if (address >= 0x4020 && address < 0x10000)
     {
         // Cartridge Space
-        Cartridge->PrgWrite(M, address - 0x6000);
+        Cartridge->PrgWrite(M, address);
     }
 
     Ppu->Step();
