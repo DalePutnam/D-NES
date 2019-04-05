@@ -18,6 +18,7 @@
 #include "mappers/nrom.h"
 #include "mappers/sxrom.h"
 #include "mappers/uxrom.h"
+#include "mappers/cnrom.h"
 
 using namespace std;
 
@@ -40,6 +41,9 @@ Cart::Cart(const string& fileName)
         break;
     case 0x02:
         _mapper = std::make_unique<UXROM>(file);
+        break;
+    case 0x03:
+        _mapper = std::make_unique<CNROM>(file);
         break;
     default:
         ostringstream oss;
