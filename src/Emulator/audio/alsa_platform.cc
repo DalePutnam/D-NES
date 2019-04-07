@@ -105,6 +105,10 @@ FailedExit:
 
 void AlsaPlatform::CleanUp()
 {
+    _running = false;
+    _cv.notify_all();
+    _thread.join();
+
     snd_pcm_drop(_alsaHandle);
     
     for (size_t i = 0; i < _numOutputBuffers; ++i)
@@ -112,10 +116,6 @@ void AlsaPlatform::CleanUp()
 		delete[] _outputBuffers[i];
 	}
 	delete[] _outputBuffers;
-
-    _running = false;
-    _cv.notify_all();
-    _thread.join();
 
     snd_pcm_close(_alsaHandle);
 }

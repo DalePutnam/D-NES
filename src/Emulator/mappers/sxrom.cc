@@ -107,10 +107,10 @@ uint8_t SXROM::PrgRead(uint16_t address)
         }
         else
         {
-            return _prgRam[address];
+            return _prgRam[address - 0x6000];
         }
     }
-    else
+    else if (address >= 0x8000)
     {
         if (_prgPageSize16K)
         {
@@ -118,7 +118,6 @@ uint8_t SXROM::PrgRead(uint16_t address)
 			{
 				uint32_t addr = address - 0x8000;
 				return _prgPage0Pointer[addr];
-
 			}
 			else
 			{
@@ -131,6 +130,10 @@ uint8_t SXROM::PrgRead(uint16_t address)
             uint32_t addr = address - 0x8000;
             return _prgPage0Pointer[addr];
         }
+    }
+    else
+    {
+        return 0x00;
     }
 }
 
@@ -147,7 +150,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
     {
         if (!_wramDisable)
         {
-            _prgRam[address] = M;
+            _prgRam[address - 0x6000] = M;
         }
     }
     else
