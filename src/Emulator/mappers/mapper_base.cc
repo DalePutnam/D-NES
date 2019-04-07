@@ -94,3 +94,8 @@ Cart::MirrorMode MapperBase::GetMirrorMode()
 {
 	return _mirroring;
 }
+
+bool MapperBase::CheckIRQ()
+{
+    return false;
+}

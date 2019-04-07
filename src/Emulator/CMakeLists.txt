@@ -18,6 +18,7 @@ add_library(core
     mappers/sxrom.cc
     mappers/uxrom.cc
     mappers/cnrom.cc
+    mappers/mmc3.cc
     audio/audio_backend.cc
     audio/iaudio_platform.cc
     audio/alsa_platform.cc

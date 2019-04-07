@@ -50,6 +50,8 @@ public:
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);
 
+    bool CheckIRQ();
+
 private:
     std::string _gameName;
     std::string _saveDirectory;

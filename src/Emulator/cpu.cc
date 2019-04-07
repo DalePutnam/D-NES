@@ -1736,8 +1736,10 @@ void CPU::DoNMI()
 
 void CPU::CheckIRQ()
 {
+    bool irq = Apu->CheckIRQ() || Cartridge->CheckIRQ();
+
     // If IRQ line is high and interrupt inhibit flag is false
-    if (Apu->CheckIRQ() && !TEST_FLAG(P, IRQ_INHIBIT))
+    if (irq && !TEST_FLAG(P, IRQ_INHIBIT))
     {
         IrqRaised = true;
     }

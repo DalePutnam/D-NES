@@ -34,6 +34,8 @@ public:
     virtual uint8_t ChrRead(uint16_t address) = 0;
     virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
 
+    virtual bool CheckIRQ();
+
 protected:
     uint32_t _prgRomSize;
     uint32_t _chrRomSize;

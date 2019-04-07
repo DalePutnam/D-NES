@@ -19,6 +19,7 @@
 #include "mappers/sxrom.h"
 #include "mappers/uxrom.h"
 #include "mappers/cnrom.h"
+#include "mappers/mmc3.h"
 
 using namespace std;
 
@@ -44,6 +45,9 @@ Cart::Cart(const string& fileName)
         break;
     case 0x03:
         _mapper = std::make_unique<CNROM>(file);
+        break;
+    case 0x04:
+        _mapper = std::make_unique<MMC3>(file);
         break;
     default:
         ostringstream oss;
@@ -140,4 +144,9 @@ StateSave::Ptr Cart::SaveState()
 void Cart::LoadState(const StateSave::Ptr& state)
 {
     _mapper->LoadState(state);
+}
+
+bool Cart::CheckIRQ()
+{
+    return _mapper->CheckIRQ();
 }
