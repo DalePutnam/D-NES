@@ -123,14 +123,14 @@ void Cart::PrgWrite(uint8_t M, uint16_t address)
     _mapper->PrgWrite(M, address);
 }
 
-uint8_t Cart::ChrRead(uint16_t address)
+uint8_t Cart::PpuRead(uint16_t address)
 {
-    return _mapper->ChrRead(address);
+    return _mapper->PpuRead(address);
 }
 
-void Cart::ChrWrite(uint8_t M, uint16_t address)
+void Cart::PpuWrite(uint8_t M, uint16_t address)
 {
-    _mapper->ChrWrite(M, address);
+    _mapper->PpuWrite(M, address);
 }
 
 StateSave::Ptr Cart::SaveState()

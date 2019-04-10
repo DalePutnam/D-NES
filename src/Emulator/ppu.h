@@ -31,6 +31,7 @@ public:
 
     int32_t GetCurrentDot();
     int32_t GetCurrentScanline();
+    uint64_t GetClock();
 
     void Step();
     bool GetNMIActive();
@@ -57,6 +58,11 @@ public:
 
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);
+
+    uint8_t ReadNameTable0(uint16_t address);
+    uint8_t ReadNameTable1(uint16_t address);
+    void WriteNameTable0(uint8_t M, uint16_t address);
+    void WriteNameTable1(uint8_t M, uint16_t address);
 
 private:
     CPU* Cpu;
@@ -182,8 +188,6 @@ private:
 
     uint8_t Read(uint16_t address);
     void Write(uint16_t address, uint8_t value);
-    uint8_t ReadNameTable(uint16_t address);
-    void WriteNameTable(uint16_t address, uint8_t value);
 
     void UpdateFrameRate();
     void UpdateFrameSkipCounters();

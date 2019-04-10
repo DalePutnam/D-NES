@@ -95,7 +95,91 @@ Cart::MirrorMode MapperBase::GetMirrorMode()
 	return _mirroring;
 }
 
+uint8_t MapperBase::PpuRead(uint16_t address)
+{
+    if (address < 0x2000)
+    {
+        return ChrRead(address);
+    }
+    else if (address >= 0x2000 && address < 0x3F00)
+    {
+        return NameTableRead(address);
+    }
+    else
+    {
+        return 0x00;
+    }
+}
+
+void MapperBase::PpuWrite(uint8_t M, uint16_t address)
+{
+    if (address < 0x2000)
+    {
+        ChrWrite(M, address);
+    }
+    else if (address < 0x3F00)
+    {
+        NameTableWrite(M, address);
+    }
+}
+
 bool MapperBase::CheckIRQ()
 {
     return false;
+}
+
+uint8_t MapperBase::NameTableRead(uint16_t address)
+{
+    address = (address - 0x2000) % 0x1000;
+
+    if (_mirroring == Cart::MirrorMode::HORIZONTAL)
+    {
+        if (address < 0x800)
+        {
+            return _ppu->ReadNameTable0(address % 0x400);
+        }
+        else
+        {
+            return _ppu->ReadNameTable1(address % 0x400);
+        }
+    }
+    else
+    {
+        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
+        {
+            return _ppu->ReadNameTable0(address % 0x400);
+        }
+        else
+        {
+            return _ppu->ReadNameTable1(address % 0x400);
+        }
+    }
+}
+
+void MapperBase::NameTableWrite(uint8_t M, uint16_t address)
+{
+    address = (address - 0x2000) % 0x1000;
+
+    if (_mirroring == Cart::MirrorMode::HORIZONTAL)
+    {
+        if (address < 0x800)
+        {
+            _ppu->WriteNameTable0(M, address % 0x400);
+        }
+        else
+        {
+            _ppu->WriteNameTable1(M, address % 0x400);
+        }
+    }
+    else
+    {
+        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
+        {
+            _ppu->WriteNameTable0(M, address % 0x400);
+        }
+        else
+        {
+            _ppu->WriteNameTable1(M, address % 0x400);
+        }
+    }
 }

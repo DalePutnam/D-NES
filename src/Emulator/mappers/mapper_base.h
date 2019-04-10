@@ -31,12 +31,17 @@ public:
     virtual uint8_t PrgRead(uint16_t address) = 0;
     virtual void PrgWrite(uint8_t M, uint16_t address) = 0;
 
-    virtual uint8_t ChrRead(uint16_t address) = 0;
-    virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
+    virtual uint8_t PpuRead(uint16_t address);
+    virtual void PpuWrite(uint8_t M, uint16_t address);
 
     virtual bool CheckIRQ();
 
 protected:
+    virtual uint8_t NameTableRead(uint16_t address);
+    virtual void NameTableWrite(uint8_t M, uint16_t address);
+    virtual uint8_t ChrRead(uint16_t address) = 0;
+    virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
+
     uint32_t _prgRomSize;
     uint32_t _chrRomSize;
     uint32_t _miscRomSize;

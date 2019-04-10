@@ -44,8 +44,8 @@ public:
     uint8_t PrgRead(uint16_t address);
     void PrgWrite(uint8_t M, uint16_t address);
 
-    uint8_t ChrRead(uint16_t address);
-    void ChrWrite(uint8_t M, uint16_t address);
+    uint8_t PpuRead(uint16_t address);
+    void PpuWrite(uint8_t M, uint16_t address);
 
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);

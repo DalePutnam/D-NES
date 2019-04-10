@@ -145,6 +145,11 @@ int32_t PPU::GetCurrentScanline()
     }
 }
 
+uint64_t PPU::GetClock()
+{
+    return Clock;
+}
+
 void PPU::Step()
 {
     // Pre-render line
@@ -178,10 +183,10 @@ void PPU::Step()
                 case 3:
                     BackgroundAttributeFetch();
                     break;
-                case 5:
+                case 4:
                     BackgroundLowByteFetch();
                     break;
-                case 7:
+                case 6:
                     BackgroundHighByteFetch();
                     IncrementXScroll();
                     break;
@@ -204,16 +209,20 @@ void PPU::Step()
                 uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
+                case 1:
+                    NameTableFetch();
+                    break;
                 case 2:
                     SpriteAttributeFetch();
                     break;
                 case 3:
+                    BackgroundAttributeFetch();
                     SpriteXCoordinateFetch();
                     break;
-                case 5:
+                case 4:
                     SpriteLowByteFetch();
                     break;
-                case 7:
+                case 6:
                     SpriteHighByteFetch();
                     break;
                 }
@@ -278,10 +287,10 @@ void PPU::Step()
                 case 3:
                     BackgroundAttributeFetch();
                     break;
-                case 5:
+                case 4:
                     BackgroundLowByteFetch();
                     break;
-                case 7:
+                case 6:
                     BackgroundHighByteFetch();
                     IncrementXScroll();
                     break;
@@ -305,16 +314,20 @@ void PPU::Step()
                 uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
+                case 1:
+                    NameTableFetch();
+                    break;
                 case 2:
                     SpriteAttributeFetch();
                     break;
                 case 3:
+                    BackgroundAttributeFetch();
                     SpriteXCoordinateFetch();
                     break;
-                case 5:
+                case 4:
                     SpriteLowByteFetch();
                     break;
-                case 7:
+                case 6:
                     SpriteHighByteFetch();
                     break;
                 }
@@ -467,24 +480,10 @@ uint8_t PPU::ReadOAMData()
 
 uint8_t PPU::ReadPPUData()
 {
-    uint16_t addr = PpuAddress % 0x4000;
-    PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
     uint8_t value = DataBuffer;
-
-    if (addr < 0x2000)
-    {
-        DataBuffer = Cartridge->ChrRead(addr);
-    }
-    else if (addr >= 0x2000 && addr < 0x4000)
-    {
-        DataBuffer = ReadNameTable(addr);
-    }
-
-    if (addr >= 0x3F00)
-    {
-        if (addr % 4 == 0) addr &= 0xFF0F; // Ignore second nibble if addr is a multiple of 4
-        value = PaletteTable[addr % 0x20];
-    }
+    DataBuffer = Read(PpuAddress);
+    PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
+    Read(PpuAddress);
 
     return value;
 }
@@ -499,13 +498,14 @@ void PPU::WritePPUCTRL(uint8_t M)
         BaseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
         SpriteSizeSwitch = ((0x20 & M) >> 5) != 0;
         NmiEnabled = ((0x80 & M) >> 7) != 0;
-        LowerBits = (0x1F & M);
 
         if (NmiEnabled == false && Line == 241 && (Dot - 1) == 1)
         {
             InterruptActive = false;
         }
     }
+
+    LowerBits = (0x1F & M);
 }
 
 void PPU::WritePPUMASK(uint8_t M)
@@ -520,8 +520,9 @@ void PPU::WritePPUMASK(uint8_t M)
         IntenseRed = ((0x20 & M) >> 5) != 0;
         IntenseGreen = ((0x40 & M) >> 6) != 0;
         IntenseBlue = ((0x80 & M) >> 7) != 0;
-        LowerBits = (0x1F & M);
     }
+
+    LowerBits = (0x1F & M);
 }
 
 void PPU::WriteOAMADDR(uint8_t M)
@@ -552,25 +553,38 @@ void PPU::WritePPUSCROLL(uint8_t M)
         }
 
         AddressLatch = !AddressLatch;
-        LowerBits = static_cast<uint8_t>(0x1F & M);
     }
+
+    LowerBits = static_cast<uint8_t>(0x1F & M);
 }
 
 void PPU::WritePPUADDR(uint8_t M)
 {
     if (Cpu->GetClock() > ResetDelay)
-    {
-        AddressLatch ? PpuTempAddress = (PpuTempAddress & 0x7F00) | M : PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
-        if (AddressLatch) PpuAddress = PpuTempAddress;
+    {      
+        if (AddressLatch)
+        {
+            PpuTempAddress = (PpuTempAddress & 0x7F00) | M;
+            PpuAddress = PpuTempAddress;
+            Read(PpuAddress);
+        }
+        else
+        {
+            PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
+        }
+        
         AddressLatch = !AddressLatch;
-        LowerBits = static_cast<uint8_t>(0x1F & M);
     }
+
+    LowerBits = static_cast<uint8_t>(0x1F & M);
 }
 
 void PPU::WritePPUDATA(uint8_t M)
 {
     Write(PpuAddress, M);
     PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
+    Read(PpuAddress);
+
     LowerBits = (0x1F & M);
 }
 
@@ -604,16 +618,16 @@ void PPU::GetNameTable(int table, uint8_t* pixels)
         for (uint32_t f = 0; f < 32; ++f)
         {
             uint16_t address = (tableIndex | (i << 5) | f);
-            uint8_t ntByte = ReadNameTable(0x2000 | address);
+            uint8_t ntByte = Read(0x2000 | address);
             uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
-            uint8_t atByte = ReadNameTable(0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
+            uint8_t atByte = Read(0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
             atByte = (atByte >> atShift) & 0x3;
             uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
 
             for (uint32_t h = 0; h < 8; ++h)
             {
-                uint8_t tileLow = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + h);
-                uint8_t tileHigh = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + h + 8);
+                uint8_t tileLow = Read(BaseBackgroundTableAddress + patternAddress + h);
+                uint8_t tileHigh = Read(BaseBackgroundTableAddress + patternAddress + h + 8);
 
                 for (uint32_t g = 0; g < 8; ++g)
                 {
@@ -656,8 +670,8 @@ void PPU::GetPatternTable(int table, int palette, uint8_t* pixels)
 
             for (uint32_t g = 0; g < 8; ++g)
             {
-                uint8_t tileLow = Cartridge->ChrRead(tableIndex + patternIndex + g);
-                uint8_t tileHigh = Cartridge->ChrRead(tableIndex + patternIndex + g + 8);
+                uint8_t tileLow = Read(tableIndex + patternIndex + g);
+                uint8_t tileHigh = Read(tableIndex + patternIndex + g + 8);
 
                 for (uint32_t h = 0; h < 8; ++h)
                 {
@@ -749,8 +763,8 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 
     for (uint32_t i = 0; i < 8; ++i)
     {
-        uint8_t tileLow = Cartridge->ChrRead(tableIndex + patternIndex + i);
-        uint8_t tileHigh = Cartridge->ChrRead(tableIndex + patternIndex + i + 8);
+        uint8_t tileLow = Read(tableIndex + patternIndex + i);
+        uint8_t tileHigh = Read(tableIndex + patternIndex + i + 8);
 
         for (uint32_t f = 0; f < 8; ++f)
         {
@@ -902,6 +916,26 @@ void PPU::LoadState(const StateSave::Ptr& state)
         RenderingEnabled,
         RenderStateDelaySlot
     );
+}
+
+uint8_t PPU::ReadNameTable0(uint16_t address)
+{
+    return NameTable0[address];
+}
+
+uint8_t PPU::ReadNameTable1(uint16_t address)
+{
+    return NameTable1[address];
+}
+
+void PPU::WriteNameTable0(uint8_t M, uint16_t address)
+{
+    NameTable0[address] = M;
+}
+
+void PPU::WriteNameTable1(uint8_t M, uint16_t address)
+{
+    NameTable1[address] = M;
 }
 
 void PPU::RenderNtscPixel(int pixel)
@@ -1279,13 +1313,13 @@ void PPU::LoadBackgroundShiftRegisters()
 
 void PPU::NameTableFetch()
 {
-    NameTableByte = ReadNameTable(0x2000 | (PpuAddress & 0x0FFF));
+    NameTableByte = Read(0x2000 | (PpuAddress & 0x0FFF));
 }
 
 void PPU::BackgroundAttributeFetch()
 {
     // Get the attribute byte, determines the palette to use when rendering
-    AttributeByte = ReadNameTable(0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
+    AttributeByte = Read(0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
     uint8_t attributeShift = (((PpuAddress & 0x0002) >> 1) | ((PpuAddress & 0x0040) >> 5)) << 1;
     AttributeByte = (AttributeByte >> attributeShift) & 0x3;
 }
@@ -1294,14 +1328,14 @@ void PPU::BackgroundLowByteFetch()
 {
     uint8_t fineY = PpuAddress >> 12; // Get fine y scroll bits from address
     uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
-    TileBitmapLow = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
+    TileBitmapLow = Read(BaseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
 }
 
 void PPU::BackgroundHighByteFetch()
 {
     uint8_t fineY = PpuAddress >> 12; // Get fine y scroll
     uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
-    TileBitmapHigh = Cartridge->ChrRead(BaseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
+    TileBitmapHigh = Read(BaseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
 }
 
 void PPU::SpriteAttributeFetch()
@@ -1331,18 +1365,27 @@ void PPU::SpriteLowByteFetch()
             uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
-            SpriteShift0[sprite] = Cartridge->ChrRead(patternIndex + offset);
+            SpriteShift0[sprite] = Read(patternIndex + offset);
         }
         else
         {
             uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
-            SpriteShift0[sprite] = Cartridge->ChrRead(patternIndex + offset);
+            SpriteShift0[sprite] = Read(patternIndex + offset);
         }
     }
     else
     {
+        if (SpriteSizeSwitch)
+        {
+            Read(0x1FF0);
+        }
+        else
+        {
+            Read(BaseSpriteTableAddress + 0xFF0);
+        }
+
         SpriteShift0[sprite] = 0x00;
     }
 }
@@ -1362,18 +1405,27 @@ void PPU::SpriteHighByteFetch()
             uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
-            SpriteShift1[sprite] = Cartridge->ChrRead(patternIndex + offset + 8);
+            SpriteShift1[sprite] = Read(patternIndex + offset + 8);
         }
         else
         {
             uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
-            SpriteShift1[sprite] = Cartridge->ChrRead(patternIndex + offset + 8);
+            SpriteShift1[sprite] = Read(patternIndex + offset + 8);
         }
     }
     else
     {
+        if (SpriteSizeSwitch)
+        {
+            Read(0x1FF0);
+        }
+        else
+        {
+            Read(BaseSpriteTableAddress + 0xFF0);
+        }
+
         SpriteShift1[sprite] = 0x00;
     }
 }
@@ -1382,13 +1434,9 @@ uint8_t PPU::Read(uint16_t address)
 {
     uint16_t addr = address % 0x4000;
 
-    if (addr < 0x2000)
+    if (addr < 0x3F00)
     {
-        return Cartridge->ChrRead(addr);
-    }
-    else if (addr >= 0x2000 && addr < 0x3F00)
-    {
-        return ReadNameTable(addr);
+        return Cartridge->PpuRead(addr);
     }
     else
     {
@@ -1401,104 +1449,14 @@ void PPU::Write(uint16_t address, uint8_t value)
 {
     uint16_t addr = address % 0x4000;
 
-    if (addr < 0x2000)
+    if (addr < 0x3F00)
     {
-        Cartridge->ChrWrite(value, addr);
-    }
-    else if (addr >= 0x2000 && addr < 0x3F00)
-    {
-        WriteNameTable(addr, value);
+        Cartridge->PpuWrite(value, addr);
     }
     else
     {
         if (addr % 4 == 0) addr &= 0xFF0F;  // Ignore second nibble if addr is a multiple of 4
         PaletteTable[addr % 0x20] = value & 0x3F; // Ignore bits 6 and 7
-    }
-}
-
-uint8_t PPU::ReadNameTable(uint16_t address)
-{
-    uint16_t nametableaddr = address % 0x2000;
-
-    Cart::MirrorMode mode = Cartridge->GetMirrorMode();
-
-    switch (mode)
-    {
-    case Cart::MirrorMode::SINGLE_SCREEN_A:
-
-        return NameTable0[nametableaddr % 0x400];
-
-    case Cart::MirrorMode::SINGLE_SCREEN_B:
-
-        return NameTable1[nametableaddr % 0x400];
-
-    case Cart::MirrorMode::HORIZONTAL:
-
-        if (nametableaddr < 0x800)
-        {
-            return NameTable0[nametableaddr % 0x400];
-        }
-        else
-        {
-            return NameTable1[nametableaddr % 0x400];
-        }
-
-    case Cart::MirrorMode::VERTICAL:
-
-        if (nametableaddr < 0x400 || (nametableaddr >= 0x800 && nametableaddr < 0xC00))
-        {
-            return NameTable0[nametableaddr % 0x400];
-        }
-        else
-        {
-            return NameTable1[nametableaddr % 0x400];
-        }
-    }
-
-    return 0;
-}
-
-void PPU::WriteNameTable(uint16_t address, uint8_t value)
-{
-    uint16_t nametableaddr = address % 0x2000;
-
-    Cart::MirrorMode mode = Cartridge->GetMirrorMode();
-
-    switch (mode)
-    {
-    case Cart::MirrorMode::SINGLE_SCREEN_A:
-
-        NameTable0[nametableaddr % 0x400] = 0;
-        break;
-
-    case Cart::MirrorMode::SINGLE_SCREEN_B:
-
-        NameTable1[nametableaddr % 0x400] = 0;
-        break;
-
-    case Cart::MirrorMode::HORIZONTAL:
-
-        if (nametableaddr < 0x800)
-        {
-            NameTable0[nametableaddr % 0x400] = value;
-        }
-        else
-        {
-            NameTable1[nametableaddr % 0x400] = value;
-        }
-        break;
-
-    case Cart::MirrorMode::VERTICAL:
-
-        if (nametableaddr < 0x400 || (nametableaddr >= 0x800 && nametableaddr < 0xC00))
-        {
-            NameTable0[nametableaddr % 0x400] = value;
-        }
-        else
-        {
-            NameTable1[nametableaddr % 0x400] = value;
-        }
-        break;
     }
 }
 

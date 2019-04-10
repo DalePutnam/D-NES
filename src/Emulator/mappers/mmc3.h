@@ -14,10 +14,14 @@ public:
     uint8_t PrgRead(uint16_t address) override;
     void PrgWrite(uint8_t M, uint16_t address) override;
 
-    uint8_t ChrRead(uint16_t address) override;
-    void ChrWrite(uint8_t M, uint16_t address) override;
+    uint8_t PpuRead(uint16_t address) override;
+    void PpuWrite(uint8_t M, uint16_t address) override;
 
     bool CheckIRQ() override;
+
+protected:
+    uint8_t ChrRead(uint16_t address) override;
+    void ChrWrite(uint8_t M, uint16_t address) override;
 
 private:
     void ClockIRQCounter(uint16_t address);

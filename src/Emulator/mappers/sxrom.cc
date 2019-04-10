@@ -45,57 +45,6 @@ void SXROM::LoadState(const StateSave::Ptr& state)
 	UpdatePageOffsets();
 }
 
-uint8_t SXROM::ChrRead(uint16_t address)
-{
-    if (_chrPageSize4K)
-    {
-        if (address < 0x1000)
-        {
-            uint32_t addr = address;
-			return _chrPage0Pointer[addr];
-        }
-        else
-        {
-            uint32_t addr = address - 0x1000;
-			return _chrPage1Pointer[addr];
-        }
-    }
-    else
-    {
-        uint32_t addr = address;
-		return _chrPage0Pointer[addr];
-    }
-}
-
-void SXROM::ChrWrite(uint8_t M, uint16_t address)
-{
-    if (_chrRomSize == 0)
-    {
-        if (_chrPageSize4K)
-        {
-            if (address < 0x1000)
-            {
-                uint32_t addr = address;
-				_chrPage0Pointer[addr] = M;
-            }
-            else
-            {
-                uint32_t addr = address - 0x1000;
-				_chrPage1Pointer[addr] = M;
-            }
-        }
-        else
-        {
-            uint32_t addr = address;
-			_chrPage0Pointer[addr] = M;
-        }
-    }
-    else
-    {
-        return;
-    }
-}
-
 uint8_t SXROM::PrgRead(uint16_t address)
 {
     // Battery backed memory
@@ -216,6 +165,57 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
             _cycleCounter = 0;
             _tempRegister = 0;
         }
+    }
+}
+
+uint8_t SXROM::ChrRead(uint16_t address)
+{
+    if (_chrPageSize4K)
+    {
+        if (address < 0x1000)
+        {
+            uint32_t addr = address;
+			return _chrPage0Pointer[addr];
+        }
+        else
+        {
+            uint32_t addr = address - 0x1000;
+			return _chrPage1Pointer[addr];
+        }
+    }
+    else
+    {
+        uint32_t addr = address;
+		return _chrPage0Pointer[addr];
+    }
+}
+
+void SXROM::ChrWrite(uint8_t M, uint16_t address)
+{
+    if (_chrRomSize == 0)
+    {
+        if (_chrPageSize4K)
+        {
+            if (address < 0x1000)
+            {
+                uint32_t addr = address;
+				_chrPage0Pointer[addr] = M;
+            }
+            else
+            {
+                uint32_t addr = address - 0x1000;
+				_chrPage1Pointer[addr] = M;
+            }
+        }
+        else
+        {
+            uint32_t addr = address;
+			_chrPage0Pointer[addr] = M;
+        }
+    }
+    else
+    {
+        return;
     }
 }
 

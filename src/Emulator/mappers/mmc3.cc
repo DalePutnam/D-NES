@@ -1,5 +1,5 @@
 #include "mmc3.h"
-#include "cpu.h"
+#include "ppu.h"
 
 MMC3::MMC3(iNesFile& file)
     : MapperBase(file)
@@ -195,8 +195,8 @@ void MMC3::PrgWrite(uint8_t M, uint16_t address)
     }
     else if (address == 0xA001)
     {
-        _prgRamEnabled = !!(M & 0x8);
-        _prgRamWriteProtect = !!(M & 0x4);
+        _prgRamEnabled = !!(M & 0x80);
+        _prgRamWriteProtect = !!(M & 0x40);
     }
     else if (address == 0xC000)
     {
@@ -217,10 +217,20 @@ void MMC3::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-uint8_t MMC3::ChrRead(uint16_t address)
+uint8_t MMC3::PpuRead(uint16_t address)
 {
     ClockIRQCounter(address);
-    
+    return MapperBase::PpuRead(address);
+}
+
+void MMC3::PpuWrite(uint8_t M, uint16_t address)
+{
+    ClockIRQCounter(address);
+    MapperBase::PpuWrite(M, address);
+}
+
+uint8_t MMC3::ChrRead(uint16_t address)
+{
     if (_chrMode == 0)
     {
         if (address < 0x0800)
@@ -279,7 +289,6 @@ uint8_t MMC3::ChrRead(uint16_t address)
 
 void MMC3::ChrWrite(uint8_t M, uint16_t address)
 {
-    ClockIRQCounter(address);
 }
 
 bool MMC3::CheckIRQ()
@@ -291,7 +300,7 @@ void MMC3::ClockIRQCounter(uint16_t address)
 {
     if ((address & 0x1000) != 0)
     {
-        if (_cpu->GetClock() - _lastRiseCycle > 16)
+        if (!_lastReadHigh && _ppu->GetClock() - _lastRiseCycle >= 16)
         {
             if (_irqCounter == 0)
             {
@@ -300,14 +309,23 @@ void MMC3::ClockIRQCounter(uint16_t address)
             else
             {
                 _irqCounter--;
-
-                if (_irqEnabled && _irqCounter == 0)
-                {
-                    _irqPending = true;
-                }
             }
+
+            if (_irqEnabled && _irqCounter == 0)
+            {
+                _irqPending = true;
+            }           
         }
 
-        _lastRiseCycle = _cpu->GetClock();
+        if (!_lastReadHigh)
+        {
+            _lastRiseCycle = _ppu->GetClock();
+        }
+        
+        _lastReadHigh = true;   
+    }
+    else
+    {
+        _lastReadHigh = false;
     }
 }
