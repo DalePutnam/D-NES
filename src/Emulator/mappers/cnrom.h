@@ -6,13 +6,12 @@ class CNROM : public MapperBase
 {
 public:
     CNROM(iNesFile& file);
-    virtual ~CNROM() = default;
 
     void SaveState(StateSave::Ptr& state) override;
     void LoadState(const StateSave::Ptr& state) override;
 
-    uint8_t PrgRead(uint16_t address) override;
-    void PrgWrite(uint8_t M, uint16_t address) override;
+    uint8_t CpuRead(uint16_t address) override;
+    void CpuWrite(uint8_t M, uint16_t address) override;
 
 protected:
     uint8_t ChrRead(uint16_t address) override;

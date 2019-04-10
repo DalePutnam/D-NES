@@ -4,7 +4,6 @@
 #include <fstream>
 #include <mutex>
 
-#include "cart.h"
 #include "ines.h"
 #include "state_save.h"
 
@@ -15,7 +14,7 @@ class MapperBase
 {
 public:
     MapperBase(iNesFile& file);
-    virtual ~MapperBase();
+    virtual ~MapperBase() = default;
 
     void AttachCPU(CPU* cpu);
     void AttachPPU(PPU* ppu);
@@ -26,13 +25,12 @@ public:
     virtual void SaveState(StateSave::Ptr& state);
     virtual void LoadState(const StateSave::Ptr& state);
 
-    Cart::MirrorMode GetMirrorMode();
+    virtual uint8_t CpuRead(uint16_t address) = 0;
+    virtual void CpuWrite(uint8_t M, uint16_t address) = 0;
 
-    virtual uint8_t PrgRead(uint16_t address) = 0;
-    virtual void PrgWrite(uint8_t M, uint16_t address) = 0;
-
-    virtual uint8_t PpuRead(uint16_t address);
-    virtual void PpuWrite(uint8_t M, uint16_t address);
+    virtual void SetPpuAddress(uint16_t address);
+    virtual uint8_t PpuRead();
+    virtual void PpuWrite(uint8_t M);
 
     virtual bool CheckIRQ();
 
@@ -41,6 +39,8 @@ protected:
     virtual void NameTableWrite(uint8_t M, uint16_t address);
     virtual uint8_t ChrRead(uint16_t address) = 0;
     virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
+
+    uint16_t _ppuAddress;
 
     uint32_t _prgRomSize;
     uint32_t _chrRomSize;
@@ -51,14 +51,13 @@ protected:
     uint32_t _chrNvRamSize;
 
     bool _hasNonVolatileMemory;
+    bool _mirroringVertical;
 
     std::unique_ptr<uint8_t[]> _prgRom;
     std::unique_ptr<uint8_t[]> _chrRom;
     std::unique_ptr<uint8_t[]> _miscRom;
     std::unique_ptr<uint8_t[]> _prgRam;
     std::unique_ptr<uint8_t[]> _chrRam;
-
-    Cart::MirrorMode _mirroring;
 
     CPU* _cpu;
     PPU* _ppu;

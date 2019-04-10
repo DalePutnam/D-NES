@@ -7,7 +7,7 @@
 
 #include "nrom.h"
 
-uint8_t NROM::PrgRead(uint16_t address)
+uint8_t NROM::CpuRead(uint16_t address)
 {
     // Battery backed memory, not implemented
     if (address < 0x8000)
@@ -27,9 +27,8 @@ uint8_t NROM::PrgRead(uint16_t address)
     }
 }
 
-void NROM::PrgWrite(uint8_t M, uint16_t address)
+void NROM::CpuWrite(uint8_t M, uint16_t address)
 {
-
 }
 
 uint8_t NROM::ChrRead(uint16_t address)
@@ -51,6 +50,3 @@ NROM::NROM(iNesFile& file)
 {
 }
 
-NROM::~NROM()
-{
-}

@@ -20,7 +20,7 @@ void CNROM::LoadState(const StateSave::Ptr& state)
     state->StoreValue(_register);
 }
 
-uint8_t CNROM::PrgRead(uint16_t address)
+uint8_t CNROM::CpuRead(uint16_t address)
 {
     // Battery backed memory, not implemented
     if (address < 0x8000)
@@ -40,7 +40,7 @@ uint8_t CNROM::PrgRead(uint16_t address)
     }
 }
 
-void CNROM::PrgWrite(uint8_t M, uint16_t address)
+void CNROM::CpuWrite(uint8_t M, uint16_t address)
 {
     if (address >= 0x8000)
     {

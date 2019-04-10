@@ -80,11 +80,6 @@ void Cart::AttachPPU(PPU* ppu)
     _mapper->AttachPPU(ppu);
 }
 
-Cart::MirrorMode Cart::GetMirrorMode()
-{
-    return _mapper->GetMirrorMode();
-}
-
 void Cart::SaveNativeSave()
 {
     std::string saveFile = file::createFullPath(_gameName, "sav", _saveDirectory);
@@ -113,24 +108,29 @@ void Cart::LoadNativeSave()
     // If the file didn't open just assume save data doesn't exist
 }
 
-uint8_t Cart::PrgRead(uint16_t address)
+uint8_t Cart::CpuRead(uint16_t address)
 {
-    return _mapper->PrgRead(address);
+    return _mapper->CpuRead(address);
 }
 
-void Cart::PrgWrite(uint8_t M, uint16_t address)
+void Cart::CpuWrite(uint8_t M, uint16_t address)
 {
-    _mapper->PrgWrite(M, address);
+    _mapper->CpuWrite(M, address);
 }
 
-uint8_t Cart::PpuRead(uint16_t address)
+void Cart::SetPpuAddress(uint16_t address)
 {
-    return _mapper->PpuRead(address);
+    _mapper->SetPpuAddress(address);
 }
 
-void Cart::PpuWrite(uint8_t M, uint16_t address)
+uint8_t Cart::PpuRead()
 {
-    _mapper->PpuWrite(M, address);
+    return _mapper->PpuRead();
+}
+
+void Cart::PpuWrite(uint8_t M)
+{
+    _mapper->PpuWrite(M);
 }
 
 StateSave::Ptr Cart::SaveState()

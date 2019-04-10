@@ -171,67 +171,101 @@ void PPU::Step()
                 BackgroundAttributeShift0 <<= 1;
                 BackgroundAttributeShift1 <<= 1;
 
+                if ((Dot - 1) % 8 == 0)
+                {
+                    LoadBackgroundShiftRegisters();
+                }
+            }
+
+            if (Dot == 257)
+            {
+                PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+            }
+
+            if ((Dot >= 1 && Dot <= 256) || (Dot >= 321 && Dot <= 336))
+            {
                 uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
                 case 0:
-                    LoadBackgroundShiftRegisters();
+                    SetNameTableAddress();
                     break;
                 case 1:
-                    NameTableFetch();
+                    DoNameTableFetch();
+                    break;
+                case 2:
+                    SetBackgroundAttributeAddress();
                     break;
                 case 3:
-                    BackgroundAttributeFetch();
+                    DoBackgroundAttributeFetch();
                     break;
                 case 4:
-                    BackgroundLowByteFetch();
+                    SetBackgroundLowByteAddress();
+                    break;
+                case 5:
+                    DoBackgroundLowByteFetch();
                     break;
                 case 6:
-                    BackgroundHighByteFetch();
+                    SetBackgroundHighByteAddress();
+                    break;
+                case 7:
+                    DoBackgroundHighByteFetch();
                     IncrementXScroll();
-                    break;
-                default:
-                    break;
-                }
 
-                if (Dot == 256)
-                {
-                    IncrementYScroll();
-                }
+                    if (Dot == 256)
+                    {
+                        IncrementYScroll();
+                    }
 
-                if (Dot == 257)
-                {
-                    PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+                    break;
                 }
             }
-            else if (Dot >= 258 && Dot <= 320)
+            else if (Dot >= 257 && Dot <= 320)
             {
                 uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
+                case 0:
+                    SetNameTableAddress();
+                    break;
                 case 1:
-                    NameTableFetch();
+                    DoNameTableFetch();
                     break;
                 case 2:
-                    SpriteAttributeFetch();
+                    SetBackgroundAttributeAddress();
+                    DoSpriteAttributeFetch();
                     break;
                 case 3:
-                    BackgroundAttributeFetch();
-                    SpriteXCoordinateFetch();
+                    DoBackgroundAttributeFetch();
+                    DoSpriteXCoordinateFetch();
                     break;
                 case 4:
-                    SpriteLowByteFetch();
+                    SetSpriteLowByteAddress();
+                    break;
+                case 5:
+                    DoSpriteLowByteFetch();
                     break;
                 case 6:
-                    SpriteHighByteFetch();
+                    SetSpriteHighByteAddress();
+                    break;
+                case 7:
+                    DoSpriteHighByteFetch();
                     break;
                 }
             }
-            else if (Dot == 338 || Dot == 340)
+            else if (Dot >= 337 && Dot <= 340)
             {
-                NameTableFetch();
+                uint8_t cycle = (Dot - 1) % 4;
+                switch (cycle)
+                {
+                    case 0: case 2:
+                        SetNameTableAddress();
+                        break;
+                    case 1: case 3:
+                        DoNameTableFetch();
+                        break;
+                }
             }
-
             // From dot 280 to 304 of the pre-render line copy all vertical position bits to ppuAddress from ppuTempAddress
             if (Dot >= 280 && Dot <= 304)
             {
@@ -275,66 +309,101 @@ void PPU::Step()
                 BackgroundAttributeShift0 <<= 1;
                 BackgroundAttributeShift1 <<= 1;
 
+                if ((Dot - 1) % 8 == 0)
+                {
+                    LoadBackgroundShiftRegisters();
+                }
+            }
+
+            if (Dot == 257)
+            {
+                SpriteEvaluation();
+                PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+            }
+
+            if ((Dot >= 1 && Dot <= 256) || (Dot >= 321 && Dot <= 336))
+            {
                 uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
                 case 0:
-                    LoadBackgroundShiftRegisters();
+                    SetNameTableAddress();
                     break;
                 case 1:
-                    NameTableFetch();
+                    DoNameTableFetch();
+                    break;
+                case 2:
+                    SetBackgroundAttributeAddress();
                     break;
                 case 3:
-                    BackgroundAttributeFetch();
+                    DoBackgroundAttributeFetch();
                     break;
                 case 4:
-                    BackgroundLowByteFetch();
+                    SetBackgroundLowByteAddress();
+                    break;
+                case 5:
+                    DoBackgroundLowByteFetch();
                     break;
                 case 6:
-                    BackgroundHighByteFetch();
+                    SetBackgroundHighByteAddress();
+                    break;
+                case 7:
+                    DoBackgroundHighByteFetch();
                     IncrementXScroll();
-                    break;
-                default:
-                    break;
-                }
 
-                if (Dot == 256)
-                {
-                    IncrementYScroll();
-                }
+                    if (Dot == 256)
+                    {
+                        IncrementYScroll();
+                    }
 
-                if (Dot == 257)
-                {
-                    SpriteEvaluation();
-                    PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
+                    break;
                 }
             }
-            else if (Dot >= 258 && Dot <= 320)
+            else if (Dot >= 257 && Dot <= 320)
             {
                 uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
+                case 0:
+                    SetNameTableAddress();
+                    break;
                 case 1:
-                    NameTableFetch();
+                    DoNameTableFetch();
                     break;
                 case 2:
-                    SpriteAttributeFetch();
+                    SetBackgroundAttributeAddress();
+                    DoSpriteAttributeFetch();
                     break;
                 case 3:
-                    BackgroundAttributeFetch();
-                    SpriteXCoordinateFetch();
+                    DoBackgroundAttributeFetch();
+                    DoSpriteXCoordinateFetch();
                     break;
                 case 4:
-                    SpriteLowByteFetch();
+                    SetSpriteLowByteAddress();
+                    break;
+                case 5:
+                    DoSpriteLowByteFetch();
                     break;
                 case 6:
-                    SpriteHighByteFetch();
+                    SetSpriteHighByteAddress();
+                    break;
+                case 7:
+                    DoSpriteHighByteFetch();
                     break;
                 }
             }
-            else if (Dot == 338 || Dot == 340)
+            else if (Dot >= 337 && Dot <= 340)
             {
-                NameTableFetch();
+                uint8_t cycle = (Dot - 1) % 4;
+                switch (cycle)
+                {
+                    case 0: case 2:
+                        SetNameTableAddress();
+                        break;
+                    case 1: case 3:
+                        DoNameTableFetch();
+                        break;
+                }
             }
 
             if (Dot >= 1 && Dot <= 256)
@@ -481,9 +550,9 @@ uint8_t PPU::ReadOAMData()
 uint8_t PPU::ReadPPUData()
 {
     uint8_t value = DataBuffer;
-    DataBuffer = Read(PpuAddress);
+    DataBuffer = Read();
     PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
-    Read(PpuAddress);
+    SetBusAddress(PpuAddress);
 
     return value;
 }
@@ -566,7 +635,7 @@ void PPU::WritePPUADDR(uint8_t M)
         {
             PpuTempAddress = (PpuTempAddress & 0x7F00) | M;
             PpuAddress = PpuTempAddress;
-            Read(PpuAddress);
+            SetBusAddress(PpuAddress);
         }
         else
         {
@@ -581,9 +650,9 @@ void PPU::WritePPUADDR(uint8_t M)
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-    Write(PpuAddress, M);
+    Write(M);
     PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
-    Read(PpuAddress);
+    SetBusAddress(PpuAddress);
 
     LowerBits = (0x1F & M);
 }
@@ -595,193 +664,193 @@ int PPU::GetFrameRate()
 
 void PPU::GetNameTable(int table, uint8_t* pixels)
 {
-    uint16_t tableIndex;
-    if (table == 0)
-    {
-        tableIndex = 0x000;
-    }
-    else if (table == 1)
-    {
-        tableIndex = 0x400;
-    }
-    else if (table == 2)
-    {
-        tableIndex = 0x800;
-    }
-    else
-    {
-        tableIndex = 0xC00;
-    }
+    // uint16_t tableIndex;
+    // if (table == 0)
+    // {
+    //     tableIndex = 0x000;
+    // }
+    // else if (table == 1)
+    // {
+    //     tableIndex = 0x400;
+    // }
+    // else if (table == 2)
+    // {
+    //     tableIndex = 0x800;
+    // }
+    // else
+    // {
+    //     tableIndex = 0xC00;
+    // }
 
-    for (uint32_t i = 0; i < 30; ++i)
-    {
-        for (uint32_t f = 0; f < 32; ++f)
-        {
-            uint16_t address = (tableIndex | (i << 5) | f);
-            uint8_t ntByte = Read(0x2000 | address);
-            uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
-            uint8_t atByte = Read(0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
-            atByte = (atByte >> atShift) & 0x3;
-            uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
+    // for (uint32_t i = 0; i < 30; ++i)
+    // {
+    //     for (uint32_t f = 0; f < 32; ++f)
+    //     {
+    //         uint16_t address = (tableIndex | (i << 5) | f);
+    //         uint8_t ntByte = Read(0x2000 | address);
+    //         uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
+    //         uint8_t atByte = Read(0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
+    //         atByte = (atByte >> atShift) & 0x3;
+    //         uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
 
-            for (uint32_t h = 0; h < 8; ++h)
-            {
-                uint8_t tileLow = Read(BaseBackgroundTableAddress + patternAddress + h);
-                uint8_t tileHigh = Read(BaseBackgroundTableAddress + patternAddress + h + 8);
+    //         for (uint32_t h = 0; h < 8; ++h)
+    //         {
+    //             uint8_t tileLow = Read(BaseBackgroundTableAddress + patternAddress + h);
+    //             uint8_t tileHigh = Read(BaseBackgroundTableAddress + patternAddress + h + 8);
 
-                for (uint32_t g = 0; g < 8; ++g)
-                {
-                    uint16_t pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
-                    uint16_t paletteIndex = 0x3F00 | (atByte << 2) | pixel;
-                    if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
-                    uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
-                    uint8_t red = (rgb & 0xFF0000) >> 16;
-                    uint8_t green = (rgb & 0x00FF00) >> 8;
-                    uint8_t blue = (rgb & 0x0000FF);
+    //             for (uint32_t g = 0; g < 8; ++g)
+    //             {
+    //                 uint16_t pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
+    //                 uint16_t paletteIndex = 0x3F00 | (atByte << 2) | pixel;
+    //                 if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
+    //                 uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
+    //                 uint8_t red = (rgb & 0xFF0000) >> 16;
+    //                 uint8_t green = (rgb & 0x00FF00) >> 8;
+    //                 uint8_t blue = (rgb & 0x0000FF);
 
-                    uint32_t index = ((24 * f) + (g * 3)) + ((6144 * i) + (h * 768));
+    //                 uint32_t index = ((24 * f) + (g * 3)) + ((6144 * i) + (h * 768));
 
-                    pixels[index] = red;
-                    pixels[index + 1] = green;
-                    pixels[index + 2] = blue;
-                }
-            }
-        }
-    }
+    //                 pixels[index] = red;
+    //                 pixels[index + 1] = green;
+    //                 pixels[index + 2] = blue;
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 void PPU::GetPatternTable(int table, int palette, uint8_t* pixels)
 {
-    uint16_t tableIndex;
-    if (table == 0)
-    {
-        tableIndex = 0x0000;
-    }
-    else
-    {
-        tableIndex = 0x1000;
-    }
+    // uint16_t tableIndex;
+    // if (table == 0)
+    // {
+    //     tableIndex = 0x0000;
+    // }
+    // else
+    // {
+    //     tableIndex = 0x1000;
+    // }
 
-    for (uint32_t i = 0; i < 16; ++i)
-    {
-        for (uint32_t f = 0; f < 16; ++f)
-        {
-            uint32_t patternIndex = (16 * f) + (256 * i);
+    // for (uint32_t i = 0; i < 16; ++i)
+    // {
+    //     for (uint32_t f = 0; f < 16; ++f)
+    //     {
+    //         uint32_t patternIndex = (16 * f) + (256 * i);
 
-            for (uint32_t g = 0; g < 8; ++g)
-            {
-                uint8_t tileLow = Read(tableIndex + patternIndex + g);
-                uint8_t tileHigh = Read(tableIndex + patternIndex + g + 8);
+    //         for (uint32_t g = 0; g < 8; ++g)
+    //         {
+    //             uint8_t tileLow = Read(tableIndex + patternIndex + g);
+    //             uint8_t tileHigh = Read(tableIndex + patternIndex + g + 8);
 
-                for (uint32_t h = 0; h < 8; ++h)
-                {
-                    uint16_t pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
-                    uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-                    uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
-                    uint8_t red = (rgb & 0xFF0000) >> 16;
-                    uint8_t green = (rgb & 0x00FF00) >> 8;
-                    uint8_t blue = (rgb & 0x0000FF);
+    //             for (uint32_t h = 0; h < 8; ++h)
+    //             {
+    //                 uint16_t pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
+    //                 uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
+    //                 uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
+    //                 uint8_t red = (rgb & 0xFF0000) >> 16;
+    //                 uint8_t green = (rgb & 0x00FF00) >> 8;
+    //                 uint8_t blue = (rgb & 0x0000FF);
 
-                    uint32_t index = ((24 * f) + (h * 3)) + ((3072 * i) + (g * 384));
+    //                 uint32_t index = ((24 * f) + (h * 3)) + ((3072 * i) + (g * 384));
 
-                    pixels[index] = red;
-                    pixels[index + 1] = green;
-                    pixels[index + 2] = blue;
-                }
-            }
-        }
-    }
+    //                 pixels[index] = red;
+    //                 pixels[index + 1] = green;
+    //                 pixels[index + 2] = blue;
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 void PPU::GetPalette(int palette, uint8_t* pixels)
 {
-    uint16_t baseAddress;
-    if (palette == 0)
-    {
-        baseAddress = 0x3F00;
-    }
-    else if (palette == 1)
-    {
-        baseAddress = 0x3F04;
-    }
-    else if (palette == 2)
-    {
-        baseAddress = 0x3F08;
-    }
-    else if (palette == 3)
-    {
-        baseAddress = 0x3F0C;
-    }
-    else if (palette == 4)
-    {
-        baseAddress = 0x3F10;
-    }
-    else if (palette == 5)
-    {
-        baseAddress = 0x3F14;
-    }
-    else if (palette == 6)
-    {
-        baseAddress = 0x3F18;
-    }
-    else
-    {
-        baseAddress = 0x3F1C;
-    }
+    // uint16_t baseAddress;
+    // if (palette == 0)
+    // {
+    //     baseAddress = 0x3F00;
+    // }
+    // else if (palette == 1)
+    // {
+    //     baseAddress = 0x3F04;
+    // }
+    // else if (palette == 2)
+    // {
+    //     baseAddress = 0x3F08;
+    // }
+    // else if (palette == 3)
+    // {
+    //     baseAddress = 0x3F0C;
+    // }
+    // else if (palette == 4)
+    // {
+    //     baseAddress = 0x3F10;
+    // }
+    // else if (palette == 5)
+    // {
+    //     baseAddress = 0x3F14;
+    // }
+    // else if (palette == 6)
+    // {
+    //     baseAddress = 0x3F18;
+    // }
+    // else
+    // {
+    //     baseAddress = 0x3F1C;
+    // }
 
-    for (uint32_t i = 0; i < 4; ++i)
-    {
-        uint16_t paletteAddress = baseAddress + i;
+    // for (uint32_t i = 0; i < 4; ++i)
+    // {
+    //     uint16_t paletteAddress = baseAddress + i;
 
-        for (uint32_t g = 0; g < 16; ++g)
-        {
-            for (uint32_t h = 0; h < 16; ++h)
-            {
-                uint32_t rgb = RgbLookupTable[Read(paletteAddress)];
-                uint8_t red = (rgb & 0xFF0000) >> 16;
-                uint8_t green = (rgb & 0x00FF00) >> 8;
-                uint8_t blue = (rgb & 0x0000FF);
+    //     for (uint32_t g = 0; g < 16; ++g)
+    //     {
+    //         for (uint32_t h = 0; h < 16; ++h)
+    //         {
+    //             uint32_t rgb = RgbLookupTable[Read(paletteAddress)];
+    //             uint8_t red = (rgb & 0xFF0000) >> 16;
+    //             uint8_t green = (rgb & 0x00FF00) >> 8;
+    //             uint8_t blue = (rgb & 0x0000FF);
 
-                uint32_t index = ((48 * i) + (h * 3)) + (192 * g);
+    //             uint32_t index = ((48 * i) + (h * 3)) + (192 * g);
 
-                pixels[index] = red;
-                pixels[index + 1] = green;
-                pixels[index + 2] = blue;
-            }
-        }
-    }
+    //             pixels[index] = red;
+    //             pixels[index + 1] = green;
+    //             pixels[index + 2] = blue;
+    //         }
+    //     }
+    // }
 }
 
 void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 {
-    uint8_t byteOne = PrimaryOam[(0x4 * sprite) + 1];
-    uint8_t byteTwo = PrimaryOam[(0x4 * sprite) + 2];
+    // uint8_t byteOne = PrimaryOam[(0x4 * sprite) + 1];
+    // uint8_t byteTwo = PrimaryOam[(0x4 * sprite) + 2];
 
-    uint16_t tableIndex = BaseSpriteTableAddress;
-    uint16_t patternIndex = byteOne * 16;
-    uint8_t palette = (byteTwo & 0x03) + 4;
+    // uint16_t tableIndex = BaseSpriteTableAddress;
+    // uint16_t patternIndex = byteOne * 16;
+    // uint8_t palette = (byteTwo & 0x03) + 4;
 
-    for (uint32_t i = 0; i < 8; ++i)
-    {
-        uint8_t tileLow = Read(tableIndex + patternIndex + i);
-        uint8_t tileHigh = Read(tableIndex + patternIndex + i + 8);
+    // for (uint32_t i = 0; i < 8; ++i)
+    // {
+    //     uint8_t tileLow = Read(tableIndex + patternIndex + i);
+    //     uint8_t tileHigh = Read(tableIndex + patternIndex + i + 8);
 
-        for (uint32_t f = 0; f < 8; ++f)
-        {
-            uint16_t pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
-            uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-            uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
-            uint8_t red = (rgb & 0xFF0000) >> 16;
-            uint8_t green = (rgb & 0x00FF00) >> 8;
-            uint8_t blue = (rgb & 0x0000FF);
+    //     for (uint32_t f = 0; f < 8; ++f)
+    //     {
+    //         uint16_t pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
+    //         uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
+    //         uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
+    //         uint8_t red = (rgb & 0xFF0000) >> 16;
+    //         uint8_t green = (rgb & 0x00FF00) >> 8;
+    //         uint8_t blue = (rgb & 0x0000FF);
 
-            uint32_t index = (24 * i) + (f * 3);
+    //         uint32_t index = (24 * i) + (f * 3);
 
-            pixels[index] = red;
-            pixels[index + 1] = green;
-            pixels[index + 2] = blue;
-        }
-    }
+    //         pixels[index] = red;
+    //         pixels[index + 1] = green;
+    //         pixels[index + 2] = blue;
+    //     }
+    // }
 }
 
 StateSave::Ptr PPU::SaveState()
@@ -1173,7 +1242,7 @@ void PPU::RenderPixel()
         paletteIndex = 0x3F00;
     }
 
-    colour = Read(paletteIndex);
+    colour = ReadPalette(paletteIndex);
 
     DecodePixel(colour);
 }
@@ -1186,11 +1255,11 @@ void PPU::RenderPixelIdle()
 
         if (PpuAddress >= 0x3F00 && PpuAddress <= 0x3FFF)
         {
-            colour = Read(PpuAddress);
+            colour = ReadPalette(PpuAddress);
         }
         else
         {
-            colour = Read(0x3F00);
+            colour = ReadPalette(0x3F00);
         }
 
         DecodePixel(colour);
@@ -1311,46 +1380,68 @@ void PPU::LoadBackgroundShiftRegisters()
     BackgroundAttributeShift1 = BackgroundAttributeShift1 | ((AttributeByte & 0x2) ? 0xFF : 0x00);
 }
 
-void PPU::NameTableFetch()
+void PPU::SetNameTableAddress()
 {
-    NameTableByte = Read(0x2000 | (PpuAddress & 0x0FFF));
+    SetBusAddress(0x2000 | (PpuAddress & 0x0FFF));
 }
 
-void PPU::BackgroundAttributeFetch()
+void PPU::DoNameTableFetch()
+{
+    NameTableByte = Read();
+}
+
+void PPU::SetBackgroundAttributeAddress()
+{
+    SetBusAddress(0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
+}
+
+void PPU::DoBackgroundAttributeFetch()
 {
     // Get the attribute byte, determines the palette to use when rendering
-    AttributeByte = Read(0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
+    AttributeByte = Read();
     uint8_t attributeShift = (((PpuAddress & 0x0002) >> 1) | ((PpuAddress & 0x0040) >> 5)) << 1;
     AttributeByte = (AttributeByte >> attributeShift) & 0x3;
 }
 
-void PPU::BackgroundLowByteFetch()
+void PPU::SetBackgroundLowByteAddress()
 {
     uint8_t fineY = PpuAddress >> 12; // Get fine y scroll bits from address
     uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
-    TileBitmapLow = Read(BaseBackgroundTableAddress + patternAddress + fineY); // Read pattern byte
+
+    SetBusAddress(BaseBackgroundTableAddress + patternAddress + fineY);
 }
 
-void PPU::BackgroundHighByteFetch()
+void PPU::DoBackgroundLowByteFetch()
+{
+    TileBitmapLow = Read();
+}
+
+void PPU::SetBackgroundHighByteAddress()
 {
     uint8_t fineY = PpuAddress >> 12; // Get fine y scroll
     uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
-    TileBitmapHigh = Read(BaseBackgroundTableAddress + patternAddress + fineY + 8); // Read pattern byte
+
+    SetBusAddress(BaseBackgroundTableAddress + patternAddress + fineY + 8);
 }
 
-void PPU::SpriteAttributeFetch()
+void PPU::DoBackgroundHighByteFetch()
+{
+    TileBitmapHigh = Read();
+}
+
+void PPU::DoSpriteAttributeFetch()
 {
     uint8_t sprite = (Dot - 257) / 8;
     SpriteAttribute[sprite] = SecondaryOam[(sprite * 4) + 2];
 }
 
-void PPU::SpriteXCoordinateFetch()
+void PPU::DoSpriteXCoordinateFetch()
 {
     uint8_t sprite = (Dot - 257) / 8;
     SpriteCounter[sprite] = SecondaryOam[(sprite * 4) + 3];
 }
 
-void PPU::SpriteLowByteFetch()
+void PPU::SetSpriteLowByteAddress()
 {
     uint8_t sprite = (Dot - 257) / 8;
     if (sprite < SpriteCount)
@@ -1365,32 +1456,38 @@ void PPU::SpriteLowByteFetch()
             uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
-            SpriteShift0[sprite] = Read(patternIndex + offset);
+            SetBusAddress(patternIndex + offset);
         }
         else
         {
             uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
-            SpriteShift0[sprite] = Read(patternIndex + offset);
+            SetBusAddress(patternIndex + offset);
         }
     }
     else
     {
         if (SpriteSizeSwitch)
         {
-            Read(0x1FF0);
+            SetBusAddress(0x1FF0);
         }
         else
         {
-            Read(BaseSpriteTableAddress + 0xFF0);
+            SetBusAddress(BaseSpriteTableAddress + 0xFF0);
         }
-
-        SpriteShift0[sprite] = 0x00;
     }
 }
 
-void PPU::SpriteHighByteFetch()
+void PPU::DoSpriteLowByteFetch()
+{
+    uint8_t sprite = (Dot - 257) / 8;
+    uint8_t bitmap = Read();
+
+    SpriteShift0[sprite] = sprite < SpriteCount ? bitmap : 0x00; 
+}
+
+void PPU::SetSpriteHighByteAddress()
 {
     uint8_t sprite = (Dot - 257) / 8;
     if (sprite < SpriteCount)
@@ -1405,59 +1502,92 @@ void PPU::SpriteHighByteFetch()
             uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
-            SpriteShift1[sprite] = Read(patternIndex + offset + 8);
+            SetBusAddress(patternIndex + offset + 8);
         }
         else
         {
             uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
-            SpriteShift1[sprite] = Read(patternIndex + offset + 8);
+            SetBusAddress(patternIndex + offset + 8);
         }
     }
     else
     {
         if (SpriteSizeSwitch)
         {
-            Read(0x1FF0);
+            SetBusAddress(0x1FF0);
         }
         else
         {
-            Read(BaseSpriteTableAddress + 0xFF0);
+            SetBusAddress(BaseSpriteTableAddress + 0xFF0);
         }
-
-        SpriteShift1[sprite] = 0x00;
     }
 }
 
-uint8_t PPU::Read(uint16_t address)
+void PPU::DoSpriteHighByteFetch()
 {
-    uint16_t addr = address % 0x4000;
+    uint8_t sprite = (Dot - 257) / 8;
+    uint8_t bitmap = Read();
 
-    if (addr < 0x3F00)
+    SpriteShift1[sprite] = sprite < SpriteCount ? bitmap : 0x00; 
+}
+
+
+void PPU::SetBusAddress(uint16_t address)
+{
+    PpuBusAddress = address & 0x3FFF;
+
+    if (PpuBusAddress < 0x3F00)
     {
-        return Cartridge->PpuRead(addr);
-    }
-    else
-    {
-        if (addr % 4 == 0) addr &= 0xFF0F;  // Ignore second nibble if addr is a multiple of 4
-        return PaletteTable[addr % 0x20];
+        Cartridge->SetPpuAddress(PpuBusAddress);
     }
 }
 
-void PPU::Write(uint16_t address, uint8_t value)
+uint8_t PPU::Read()
 {
-    uint16_t addr = address % 0x4000;
-
-    if (addr < 0x3F00)
+    if (PpuBusAddress < 0x3F00)
     {
-        Cartridge->PpuWrite(value, addr);
+        return Cartridge->PpuRead();
     }
     else
     {
-        if (addr % 4 == 0) addr &= 0xFF0F;  // Ignore second nibble if addr is a multiple of 4
-        PaletteTable[addr % 0x20] = value & 0x3F; // Ignore bits 6 and 7
+        return ReadPalette(PpuBusAddress);
     }
+}
+
+void PPU::Write(uint8_t value)
+{
+    if (PpuBusAddress < 0x3F00)
+    {
+        Cartridge->PpuWrite(value);
+    }
+    else
+    {
+        WritePalette(value, PpuBusAddress);
+    }
+}
+
+uint8_t PPU::ReadPalette(uint16_t address)
+{
+    // Ignore second nibble if addr is a multiple of 4
+    if (address % 4 == 0)
+    {
+        address &= 0xFF0F;
+    }
+
+    return PaletteTable[address % 0x20];
+}
+
+void PPU::WritePalette(uint8_t value, uint16_t address)
+{
+    // Ignore second nibble if addr is a multiple of 4
+    if (address % 4 == 0)
+    {
+        address &= 0xFF0F;
+    }
+
+    PaletteTable[address % 0x20] = value & 0x3F; // Ignore bits 6 and 7
 }
 
 void PPU::UpdateFrameRate()

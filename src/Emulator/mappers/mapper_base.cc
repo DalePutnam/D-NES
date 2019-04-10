@@ -38,16 +38,12 @@ MapperBase::MapperBase(iNesFile& file)
 
     if (file.GetMirroring() == iNesFile::Mirroring::Vertical)
     {
-        _mirroring = Cart::MirrorMode::VERTICAL;
+        _mirroringVertical = true;
     }
     else
     {
-        _mirroring = Cart::MirrorMode::HORIZONTAL;
+        _mirroringVertical = false;
     }
-}
-
-MapperBase::~MapperBase()
-{
 }
 
 void MapperBase::AttachCPU(CPU* cpu)
@@ -90,20 +86,20 @@ void MapperBase::LoadState(const StateSave::Ptr& state)
     state->ExtractBuffer(_chrRam.get(), _chrRamSize + _chrNvRamSize);
 }
 
-Cart::MirrorMode MapperBase::GetMirrorMode()
+void MapperBase::SetPpuAddress(uint16_t address)
 {
-	return _mirroring;
+    _ppuAddress = address;
 }
 
-uint8_t MapperBase::PpuRead(uint16_t address)
+uint8_t MapperBase::PpuRead()
 {
-    if (address < 0x2000)
+    if (_ppuAddress < 0x2000)
     {
-        return ChrRead(address);
+        return ChrRead(_ppuAddress);
     }
-    else if (address >= 0x2000 && address < 0x3F00)
+    else if (_ppuAddress >= 0x2000 && _ppuAddress < 0x3F00)
     {
-        return NameTableRead(address);
+        return NameTableRead(_ppuAddress);
     }
     else
     {
@@ -111,15 +107,15 @@ uint8_t MapperBase::PpuRead(uint16_t address)
     }
 }
 
-void MapperBase::PpuWrite(uint8_t M, uint16_t address)
+void MapperBase::PpuWrite(uint8_t M)
 {
-    if (address < 0x2000)
+    if (_ppuAddress < 0x2000)
     {
-        ChrWrite(M, address);
+        ChrWrite(M, _ppuAddress);
     }
-    else if (address < 0x3F00)
+    else if (_ppuAddress < 0x3F00)
     {
-        NameTableWrite(M, address);
+        NameTableWrite(M, _ppuAddress);
     }
 }
 
@@ -132,9 +128,9 @@ uint8_t MapperBase::NameTableRead(uint16_t address)
 {
     address = (address - 0x2000) % 0x1000;
 
-    if (_mirroring == Cart::MirrorMode::HORIZONTAL)
+    if (_mirroringVertical)
     {
-        if (address < 0x800)
+        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
         {
             return _ppu->ReadNameTable0(address % 0x400);
         }
@@ -145,7 +141,7 @@ uint8_t MapperBase::NameTableRead(uint16_t address)
     }
     else
     {
-        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
+        if (address < 0x800)
         {
             return _ppu->ReadNameTable0(address % 0x400);
         }
@@ -160,9 +156,9 @@ void MapperBase::NameTableWrite(uint8_t M, uint16_t address)
 {
     address = (address - 0x2000) % 0x1000;
 
-    if (_mirroring == Cart::MirrorMode::HORIZONTAL)
+    if (_mirroringVertical)
     {
-        if (address < 0x800)
+        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
         {
             _ppu->WriteNameTable0(M, address % 0x400);
         }
@@ -173,7 +169,8 @@ void MapperBase::NameTableWrite(uint8_t M, uint16_t address)
     }
     else
     {
-        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
+
+        if (address < 0x800)
         {
             _ppu->WriteNameTable0(M, address % 0x400);
         }

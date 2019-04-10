@@ -6,10 +6,6 @@ UXROM::UXROM(iNesFile& file)
 {
 }
 
-UXROM::~UXROM()
-{
-}
-
 void UXROM::SaveState(StateSave::Ptr& state)
 {
     MapperBase::SaveState(state);
@@ -24,7 +20,7 @@ void UXROM::LoadState(const StateSave::Ptr& state)
     state->StoreValue(_register);
 }
 
-uint8_t UXROM::PrgRead(uint16_t address)
+uint8_t UXROM::CpuRead(uint16_t address)
 {
     if (address >= 0x6000 && address < 0x8000)
     {
@@ -47,7 +43,7 @@ uint8_t UXROM::PrgRead(uint16_t address)
     }
 }
 
-void UXROM::PrgWrite(uint8_t M, uint16_t address)
+void UXROM::CpuWrite(uint8_t M, uint16_t address)
 {
     if (address >= 0x6000 && address < 0x8000)
     {

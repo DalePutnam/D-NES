@@ -6,16 +6,14 @@ class MMC3 : public MapperBase
 {
 public:
     MMC3(iNesFile& file);
-    virtual ~MMC3() = default;
 
     void SaveState(StateSave::Ptr& state) override;
     void LoadState(const StateSave::Ptr& state) override;
 
-    uint8_t PrgRead(uint16_t address) override;
-    void PrgWrite(uint8_t M, uint16_t address) override;
+    uint8_t CpuRead(uint16_t address) override;
+    void CpuWrite(uint8_t M, uint16_t address) override;
 
-    uint8_t PpuRead(uint16_t address) override;
-    void PpuWrite(uint8_t M, uint16_t address) override;
+    void SetPpuAddress(uint16_t address) override;
 
     bool CheckIRQ() override;
 

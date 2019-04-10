@@ -45,7 +45,7 @@ void SXROM::LoadState(const StateSave::Ptr& state)
 	UpdatePageOffsets();
 }
 
-uint8_t SXROM::PrgRead(uint16_t address)
+uint8_t SXROM::CpuRead(uint16_t address)
 {
     // Battery backed memory
     if (address >= 0x6000 && address < 0x8000)
@@ -86,7 +86,7 @@ uint8_t SXROM::PrgRead(uint16_t address)
     }
 }
 
-void SXROM::PrgWrite(uint8_t M, uint16_t address)
+void SXROM::CpuWrite(uint8_t M, uint16_t address)
 {
     if (_cpu->GetClock() - _lastWriteCycle <= 6)
     {
@@ -128,23 +128,7 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
                 _chrPageSize4K = !!(_tempRegister & 0x10);
 				_prgPageSize16K = !!(_tempRegister & 0x8);
 				_prgLastPageFixed = !!(_tempRegister & 0x4);
-
-				uint8_t mirroring = _tempRegister & 0x3;
-				switch (mirroring)
-				{
-				case 0:
-					_mirroring = Cart::MirrorMode::SINGLE_SCREEN_A;
-					break;
-				case 1:
-					_mirroring = Cart::MirrorMode::SINGLE_SCREEN_B;
-					break;
-				case 2:
-					_mirroring = Cart::MirrorMode::VERTICAL;
-					break;
-				case 3:
-					_mirroring = Cart::MirrorMode::HORIZONTAL;
-					break;
-				}
+				_mirroring = _tempRegister & 0x3;
             }
             else if (address >= 0xA000 && address < 0xC000)
             {
@@ -165,6 +149,80 @@ void SXROM::PrgWrite(uint8_t M, uint16_t address)
             _cycleCounter = 0;
             _tempRegister = 0;
         }
+    }
+}
+
+uint8_t SXROM::NameTableRead(uint16_t address)
+{
+    address = (address - 0x2000) % 0x1000;
+
+    switch (_mirroring)
+    {
+    case 0:
+        return _ppu->ReadNameTable0(address % 0x400);
+        break;
+    case 1:
+        return _ppu->ReadNameTable1(address % 0x400);
+        break;
+    case 2:
+        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
+        {
+            return _ppu->ReadNameTable0(address % 0x400);
+        }
+        else
+        {
+            return _ppu->ReadNameTable1(address % 0x400);
+        }
+        break;
+    case 3:
+        if (address < 0x800)
+        {
+            return _ppu->ReadNameTable0(address % 0x400);
+        }
+        else
+        {
+            return _ppu->ReadNameTable1(address % 0x400);
+        }
+        break;
+    default:
+        throw NesException("SXROM", "Unreachable");
+    }
+}
+
+void SXROM::NameTableWrite(uint8_t M, uint16_t address)
+{
+    address = (address - 0x2000) % 0x1000;
+
+    switch (_mirroring)
+    {
+    case 0:
+        _ppu->WriteNameTable0(M, address % 0x400);
+        break;
+    case 1:
+        _ppu->WriteNameTable1(M, address % 0x400);
+        break;
+    case 2:
+        if (address < 0x400 || (address >= 0x800 && address < 0xC00))
+        {
+            _ppu->WriteNameTable0(M, address % 0x400);
+        }
+        else
+        {
+            _ppu->WriteNameTable1(M, address % 0x400);
+        }
+        break;
+    case 3:
+        if (address < 0x800)
+        {
+            _ppu->WriteNameTable0(M, address % 0x400);
+        }
+        else
+        {
+            _ppu->WriteNameTable1(M, address % 0x400);
+        }
+        break;
+    default:
+        throw NesException("SXROM", "Unreachable");
     }
 }
 
@@ -267,6 +325,7 @@ SXROM::SXROM(iNesFile& file)
     , _tempRegister(0)
     , _chr(_chrRomSize == 0 ? _chrRam.get() : _chrRom.get())
     , _chrSize(_chrRomSize == 0 ? _chrRamSize : _chrRomSize)
+    , _mirroring(0)
 	, _prgPage0Pointer(_prgRom.get())
 	, _prgPage1Pointer(_prgRom.get() + ((0x4000 * 0xf) % _prgRomSize))
 	, _chrPage0Pointer(_chrRomSize == 0 ? _chrRam.get() : _chrRom.get())
@@ -278,9 +337,5 @@ SXROM::SXROM(iNesFile& file)
 	, _prgLastPageFixed(true)
 	, _prgPageSize16K(true)
 	, _chrPageSize4K(false)
-{
-}
-
-SXROM::~SXROM()
 {
 }

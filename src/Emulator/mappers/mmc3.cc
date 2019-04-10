@@ -75,7 +75,7 @@ void MMC3::LoadState(const StateSave::Ptr& state)
                                _irqPending);
 }
 
-uint8_t MMC3::PrgRead(uint16_t address)
+uint8_t MMC3::CpuRead(uint16_t address)
 {
     if (address >= 0x6000 && address < 0x8000)
     {
@@ -135,7 +135,7 @@ uint8_t MMC3::PrgRead(uint16_t address)
     }
 }
 
-void MMC3::PrgWrite(uint8_t M, uint16_t address)
+void MMC3::CpuWrite(uint8_t M, uint16_t address)
 {
     if (address >= 0x6000 && address < 0x8000)
     {
@@ -186,11 +186,11 @@ void MMC3::PrgWrite(uint8_t M, uint16_t address)
     {
         if ((M & 0x1) == 0)
         {
-            _mirroring = Cart::MirrorMode::VERTICAL;
+            _mirroringVertical = true;
         }
         else
         {
-            _mirroring = Cart::MirrorMode::HORIZONTAL;
+            _mirroringVertical = false;
         }
     }
     else if (address == 0xA001)
@@ -217,16 +217,10 @@ void MMC3::PrgWrite(uint8_t M, uint16_t address)
     }
 }
 
-uint8_t MMC3::PpuRead(uint16_t address)
+void MMC3::SetPpuAddress(uint16_t address)
 {
+    MapperBase::SetPpuAddress(address);
     ClockIRQCounter(address);
-    return MapperBase::PpuRead(address);
-}
-
-void MMC3::PpuWrite(uint8_t M, uint16_t address)
-{
-    ClockIRQCounter(address);
-    MapperBase::PpuWrite(M, address);
 }
 
 uint8_t MMC3::ChrRead(uint16_t address)

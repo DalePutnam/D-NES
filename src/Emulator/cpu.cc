@@ -55,7 +55,7 @@ uint8_t CPU::Peek(uint16_t address)
     }
     else if (address >= 0x4020 && address < 0x10000)
     {
-        return Cartridge->PrgRead(address);
+        return Cartridge->CpuRead(address);
     }
     else
     {
@@ -133,7 +133,7 @@ uint8_t CPU::Read(uint16_t address, bool noDMA)
     else if (address >= 0x4020 && address < 0x10000)
     {
         // Cartridge Space
-        value = Cartridge->PrgRead(address);
+        value = Cartridge->CpuRead(address);
     }
     else
     {
@@ -235,7 +235,7 @@ void CPU::Write(uint8_t M, uint16_t address, bool noDMA)
     else if (address >= 0x4020 && address < 0x10000)
     {
         // Cartridge Space
-        Cartridge->PrgWrite(M, address);
+        Cartridge->CpuWrite(M, address);
     }
 
     Ppu->Step();
@@ -1827,7 +1827,7 @@ void CPU::DoOamDMA(uint8_t page)
 
 void CPU::DoDmcDMA()
 {
-    Apu->WriteDmaByte(Cartridge->PrgRead(Apu->GetDmaAddress() - 0x6000));
+    Apu->WriteDmaByte(Cartridge->CpuRead(Apu->GetDmaAddress() - 0x6000));
 }
 
 void CPU::SetControllerStrobe(bool strobe)

@@ -19,14 +19,6 @@ class MapperBase;
 class Cart
 {
 public:
-    enum MirrorMode
-    {
-        HORIZONTAL,
-        VERTICAL,
-        SINGLE_SCREEN_A,
-        SINGLE_SCREEN_B
-    };
-
     Cart(const std::string& fileName);
     ~Cart();
 
@@ -36,16 +28,15 @@ public:
     void AttachCPU(CPU* cpu);
     void AttachPPU(PPU* ppu);
     
-    MirrorMode GetMirrorMode();
-
     void SaveNativeSave();
     void LoadNativeSave();
 
-    uint8_t PrgRead(uint16_t address);
-    void PrgWrite(uint8_t M, uint16_t address);
+    uint8_t CpuRead(uint16_t address);
+    void CpuWrite(uint8_t M, uint16_t address);
 
-    uint8_t PpuRead(uint16_t address);
-    void PpuWrite(uint8_t M, uint16_t address);
+    void SetPpuAddress(uint16_t address);
+    uint8_t PpuRead();
+    void PpuWrite(uint8_t M);
 
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);

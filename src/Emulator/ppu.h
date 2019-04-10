@@ -160,6 +160,8 @@ private:
 	uint32_t FrameBufferIndex;
 	uint32_t FrameBuffer[256 * 240];
 
+    uint16_t PpuBusAddress;
+
     bool NtscMode;
     std::atomic<bool> RequestNtscMode;
     float SignalLevels[256 * 8];
@@ -177,17 +179,33 @@ private:
     void IncrementYScroll();
     void IncrementClock();
     void LoadBackgroundShiftRegisters();
-    void NameTableFetch();
-    void BackgroundAttributeFetch();
-    void BackgroundLowByteFetch();
-    void BackgroundHighByteFetch();
-    void SpriteAttributeFetch();
-    void SpriteXCoordinateFetch();
-    void SpriteLowByteFetch();
-    void SpriteHighByteFetch();
 
-    uint8_t Read(uint16_t address);
-    void Write(uint16_t address, uint8_t value);
+    void SetNameTableAddress();
+    void DoNameTableFetch();
+
+    void SetBackgroundAttributeAddress();
+    void DoBackgroundAttributeFetch();
+
+    void SetBackgroundLowByteAddress();
+    void DoBackgroundLowByteFetch();
+
+    void SetBackgroundHighByteAddress();
+    void DoBackgroundHighByteFetch();
+
+    void DoSpriteAttributeFetch();
+    void DoSpriteXCoordinateFetch();
+
+    void SetSpriteLowByteAddress();
+    void DoSpriteLowByteFetch();
+
+    void SetSpriteHighByteAddress();
+    void DoSpriteHighByteFetch();
+
+    void SetBusAddress(uint16_t address);
+    uint8_t Read();
+    void Write(uint8_t value);
+    uint8_t ReadPalette(uint16_t address);
+    void WritePalette(uint8_t value, uint16_t address);
 
     void UpdateFrameRate();
     void UpdateFrameSkipCounters();
