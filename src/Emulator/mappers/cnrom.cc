@@ -48,11 +48,22 @@ void CNROM::CpuWrite(uint8_t M, uint16_t address)
     }
 }
 
-uint8_t CNROM::ChrRead(uint16_t address)
+uint8_t CNROM::PpuRead()
 {
-    return _chrRom[address + (0x2000 * _register)];
+    if (_ppuAddress < 0x2000)
+    {
+        return _chrRom[_ppuAddress + (0x2000 * _register)];
+    }
+    else
+    {
+        return DefaultNameTableRead();
+    }
 }
 
-void CNROM::ChrWrite(uint8_t M, uint16_t address)
+void CNROM::PpuWrite(uint8_t M)
 {
+    if (_ppuAddress >= 0x2000)
+    {
+        DefaultNameTableWrite(M);
+    }
 }

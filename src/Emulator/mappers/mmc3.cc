@@ -46,8 +46,8 @@ void MMC3::SaveState(StateSave::Ptr& state)
 
     state->StorePackedValues(_prgRamEnabled,
                              _prgRamWriteProtect,
-                            _irqEnabled,
-                            _irqPending);
+                             _irqEnabled,
+                             _irqPending);
 }
 
 void MMC3::LoadState(const StateSave::Ptr& state)
@@ -223,66 +223,77 @@ void MMC3::SetPpuAddress(uint16_t address)
     ClockIRQCounter(address);
 }
 
-uint8_t MMC3::ChrRead(uint16_t address)
+uint8_t MMC3::PpuRead()
 {
-    if (_chrMode == 0)
+    if (_ppuAddress < 0x2000)
     {
-        if (address < 0x0800)
+        if (_chrMode == 0)
         {
-            return _chrRom[address + ((_chrReg0 >> 1) * 0x0800)];
-        }
-        else if (address < 0x1000)
-        {
-            return _chrRom[(address - 0x0800) + ((_chrReg1 >> 1) * 0x0800)];
-        }
-        else if (address < 0x1400)
-        {
-            return _chrRom[(address - 0x1000) + (_chrReg2 * 0x0400)];
-        }
-        else if (address < 0x1800)
-        {
-            return _chrRom[(address - 0x1400) + (_chrReg3 * 0x0400)];
-        }
-        else if (address < 0x1C00)
-        {
-            return _chrRom[(address - 0x1800) + (_chrReg4 * 0x0400)];
+            if (_ppuAddress < 0x0800)
+            {
+                return _chrRom[_ppuAddress + ((_chrReg0 >> 1) * 0x0800)];
+            }
+            else if (_ppuAddress < 0x1000)
+            {
+                return _chrRom[(_ppuAddress - 0x0800) + ((_chrReg1 >> 1) * 0x0800)];
+            }
+            else if (_ppuAddress < 0x1400)
+            {
+                return _chrRom[(_ppuAddress - 0x1000) + (_chrReg2 * 0x0400)];
+            }
+            else if (_ppuAddress < 0x1800)
+            {
+                return _chrRom[(_ppuAddress - 0x1400) + (_chrReg3 * 0x0400)];
+            }
+            else if (_ppuAddress < 0x1C00)
+            {
+                return _chrRom[(_ppuAddress - 0x1800) + (_chrReg4 * 0x0400)];
+            }
+            else
+            {
+                return _chrRom[(_ppuAddress - 0x1C00) + (_chrReg5 * 0x0400)];
+            }
         }
         else
         {
-            return _chrRom[(address - 0x1C00) + (_chrReg5 * 0x0400)];
+            if (_ppuAddress < 0x0400)
+            {
+                return _chrRom[_ppuAddress + (_chrReg2 * 0x0400)];
+            }
+            else if (_ppuAddress < 0x0800)
+            {
+                return _chrRom[(_ppuAddress - 0x0400) + (_chrReg3 * 0x0400)];
+            }
+            else if (_ppuAddress < 0x0C00)
+            {
+                return _chrRom[(_ppuAddress - 0x0800) + (_chrReg4 * 0x0400)];
+            }
+            else if (_ppuAddress < 0x1000)
+            {
+                return _chrRom[(_ppuAddress - 0x0C00) + (_chrReg5 * 0x0400)];
+            }
+            else if (_ppuAddress < 0x1800)
+            {
+                return _chrRom[(_ppuAddress - 0x1000) + ((_chrReg0 >> 1) * 0x0800)];
+            }
+            else
+            {
+                return _chrRom[(_ppuAddress - 0x1800) + ((_chrReg1 >> 1) * 0x0800)];
+            }
         }
     }
     else
     {
-        if (address < 0x0400)
-        {
-            return _chrRom[address + (_chrReg2 * 0x0400)];
-        }
-        else if (address < 0x0800)
-        {
-            return _chrRom[(address - 0x0400) + (_chrReg3 * 0x0400)];
-        }
-        else if (address < 0x0C00)
-        {
-            return _chrRom[(address - 0x0800) + (_chrReg4 * 0x0400)];
-        }
-        else if (address < 0x1000)
-        {
-            return _chrRom[(address - 0x0C00) + (_chrReg5 * 0x0400)];
-        }
-        else if (address < 0x1800)
-        {
-            return _chrRom[(address - 0x1000) + ((_chrReg0 >> 1) * 0x0800)];
-        }
-        else
-        {
-            return _chrRom[(address - 0x1800) + ((_chrReg1 >> 1) * 0x0800)];
-        }
+        return DefaultNameTableRead();
     }
 }
 
-void MMC3::ChrWrite(uint8_t M, uint16_t address)
+void MMC3::PpuWrite(uint8_t M)
 {
+    if (_ppuAddress >= 0x2000)
+    {
+        DefaultNameTableWrite(M);
+    }
 }
 
 bool MMC3::CheckIRQ()

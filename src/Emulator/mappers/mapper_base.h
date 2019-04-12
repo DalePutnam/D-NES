@@ -29,16 +29,14 @@ public:
     virtual void CpuWrite(uint8_t M, uint16_t address) = 0;
 
     virtual void SetPpuAddress(uint16_t address);
-    virtual uint8_t PpuRead();
-    virtual void PpuWrite(uint8_t M);
+    virtual uint8_t PpuRead() = 0;
+    virtual void PpuWrite(uint8_t M) = 0;
 
     virtual bool CheckIRQ();
 
 protected:
-    virtual uint8_t NameTableRead(uint16_t address);
-    virtual void NameTableWrite(uint8_t M, uint16_t address);
-    virtual uint8_t ChrRead(uint16_t address) = 0;
-    virtual void ChrWrite(uint8_t M, uint16_t address) = 0;
+    uint8_t DefaultNameTableRead();
+    void DefaultNameTableWrite(uint8_t M);
 
     uint16_t _ppuAddress;
 

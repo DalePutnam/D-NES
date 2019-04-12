@@ -31,16 +31,31 @@ void NROM::CpuWrite(uint8_t M, uint16_t address)
 {
 }
 
-uint8_t NROM::ChrRead(uint16_t address)
+uint8_t NROM::PpuRead()
 {
-    return _chr[address];
+    if (_ppuAddress < 0x2000)
+    {
+        return _chr[_ppuAddress];
+    }
+    else
+    {
+        return DefaultNameTableRead();
+    }
+    
 }
 
-void NROM::ChrWrite(uint8_t M, uint16_t address)
+void NROM::PpuWrite(uint8_t M)
 {
-    if (_chrRomSize == 0)
+    if (_ppuAddress < 0x2000)
     {
-        _chr[address] = M;
+        if (_chrRomSize == 0)
+        {
+            _chr[_ppuAddress] = M;
+        }
+    }
+    else
+    {
+        DefaultNameTableWrite(M);
     }
 }
 

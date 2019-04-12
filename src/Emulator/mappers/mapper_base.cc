@@ -91,42 +91,14 @@ void MapperBase::SetPpuAddress(uint16_t address)
     _ppuAddress = address;
 }
 
-uint8_t MapperBase::PpuRead()
-{
-    if (_ppuAddress < 0x2000)
-    {
-        return ChrRead(_ppuAddress);
-    }
-    else if (_ppuAddress >= 0x2000 && _ppuAddress < 0x3F00)
-    {
-        return NameTableRead(_ppuAddress);
-    }
-    else
-    {
-        return 0x00;
-    }
-}
-
-void MapperBase::PpuWrite(uint8_t M)
-{
-    if (_ppuAddress < 0x2000)
-    {
-        ChrWrite(M, _ppuAddress);
-    }
-    else if (_ppuAddress < 0x3F00)
-    {
-        NameTableWrite(M, _ppuAddress);
-    }
-}
-
 bool MapperBase::CheckIRQ()
 {
     return false;
 }
 
-uint8_t MapperBase::NameTableRead(uint16_t address)
+uint8_t MapperBase::DefaultNameTableRead()
 {
-    address = (address - 0x2000) % 0x1000;
+    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
     if (_mirroringVertical)
     {
@@ -152,9 +124,9 @@ uint8_t MapperBase::NameTableRead(uint16_t address)
     }
 }
 
-void MapperBase::NameTableWrite(uint8_t M, uint16_t address)
+void MapperBase::DefaultNameTableWrite(uint8_t M)
 {
-    address = (address - 0x2000) % 0x1000;
+    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
     if (_mirroringVertical)
     {

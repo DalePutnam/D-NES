@@ -55,12 +55,26 @@ void UXROM::CpuWrite(uint8_t M, uint16_t address)
     } 
 }
 
-uint8_t UXROM::ChrRead(uint16_t address)
+uint8_t UXROM::PpuRead()
 {
-    return _chrRam[address];
+    if (_ppuAddress < 0x2000)
+    {
+        return _chrRam[_ppuAddress];
+    }
+    else
+    {
+        return DefaultNameTableRead();
+    }
 }
 
-void UXROM::ChrWrite(uint8_t M, uint16_t address)
+void UXROM::PpuWrite(uint8_t M)
 {
-    _chrRam[address] = M;
+    if (_ppuAddress < 0x2000)
+    {
+        _chrRam[_ppuAddress] = M;
+    }
+    else
+    {
+        DefaultNameTableWrite(M);
+    }
 }

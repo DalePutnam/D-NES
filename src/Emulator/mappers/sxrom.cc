@@ -152,9 +152,9 @@ void SXROM::CpuWrite(uint8_t M, uint16_t address)
     }
 }
 
-uint8_t SXROM::NameTableRead(uint16_t address)
+uint8_t SXROM::NameTableRead()
 {
-    address = (address - 0x2000) % 0x1000;
+    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
     switch (_mirroring)
     {
@@ -189,9 +189,9 @@ uint8_t SXROM::NameTableRead(uint16_t address)
     }
 }
 
-void SXROM::NameTableWrite(uint8_t M, uint16_t address)
+void SXROM::NameTableWrite(uint8_t M)
 {
-    address = (address - 0x2000) % 0x1000;
+    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
     switch (_mirroring)
     {
@@ -226,48 +226,72 @@ void SXROM::NameTableWrite(uint8_t M, uint16_t address)
     }
 }
 
-uint8_t SXROM::ChrRead(uint16_t address)
+uint8_t SXROM::PpuRead()
+{
+    if (_ppuAddress < 0x2000)
+    {
+        return ChrRead();
+    }
+    else
+    {
+        return NameTableRead();
+    }
+}
+
+void SXROM::PpuWrite(uint8_t M)
+{
+    if (_ppuAddress < 0x2000)
+    {
+        ChrWrite(M);
+    }
+    else
+    {
+        NameTableWrite(M);
+    }
+}
+
+uint8_t SXROM::ChrRead()
 {
     if (_chrPageSize4K)
     {
-        if (address < 0x1000)
+        if (_ppuAddress < 0x1000)
         {
-            uint32_t addr = address;
+            uint32_t addr = _ppuAddress;
 			return _chrPage0Pointer[addr];
         }
         else
         {
-            uint32_t addr = address - 0x1000;
+            uint32_t addr = _ppuAddress - 0x1000;
 			return _chrPage1Pointer[addr];
         }
     }
     else
     {
-        uint32_t addr = address;
+        uint32_t addr = _ppuAddress;
 		return _chrPage0Pointer[addr];
     }
 }
 
-void SXROM::ChrWrite(uint8_t M, uint16_t address)
+void SXROM::ChrWrite(uint8_t M)
 {
     if (_chrRomSize == 0)
     {
         if (_chrPageSize4K)
         {
-            if (address < 0x1000)
+            if (_ppuAddress < 0x1000)
             {
-                uint32_t addr = address;
+                uint32_t addr = _ppuAddress;
 				_chrPage0Pointer[addr] = M;
             }
             else
             {
-                uint32_t addr = address - 0x1000;
+                uint32_t addr = _ppuAddress - 0x1000;
 				_chrPage1Pointer[addr] = M;
             }
         }
         else
         {
-            uint32_t addr = address;
+            uint32_t addr = _ppuAddress;
 			_chrPage0Pointer[addr] = M;
         }
     }

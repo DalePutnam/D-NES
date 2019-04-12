@@ -17,9 +17,8 @@ public:
     uint8_t CpuRead(uint16_t address) override;
     void CpuWrite(uint8_t M, uint16_t address) override;
 
-protected:
-    uint8_t ChrRead(uint16_t address) override;
-    void ChrWrite(uint8_t M, uint16_t address) override;
+    uint8_t PpuRead() override;
+    void PpuWrite(uint8_t M) override;
     
 private:
     uint8_t* _chr;
