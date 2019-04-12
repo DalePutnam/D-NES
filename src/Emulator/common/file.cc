@@ -22,7 +22,7 @@ std::string file::getNameFromPath(const std::string& path)
 
 std::string file::stripExtension(const std::string& fileName)
 {
-    size_t indexExtension = fileName.find(".");
+    size_t indexExtension = fileName.find_last_of(".");
     if (indexExtension != std::string::npos)
     {
         return fileName.substr(0, indexExtension);
