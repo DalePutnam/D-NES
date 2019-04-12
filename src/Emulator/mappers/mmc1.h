@@ -4,10 +4,10 @@
 
 class CPU;
 
-class SXROM : public MapperBase
+class MMC1 : public MapperBase
 {
 public:
-    SXROM(iNesFile& file);
+    MMC1(iNesFile& file);
 
     void SaveState(StateSave::Ptr& state) override;
     void LoadState(const StateSave::Ptr& state) override;

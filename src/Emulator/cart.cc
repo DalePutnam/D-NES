@@ -16,7 +16,7 @@
 #include "nes_exception.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
-#include "mappers/sxrom.h"
+#include "mappers/mmc1.h"
 #include "mappers/uxrom.h"
 #include "mappers/cnrom.h"
 #include "mappers/mmc3.h"
@@ -38,7 +38,7 @@ Cart::Cart(const string& fileName)
         _mapper = std::make_unique<NROM>(file);
         break;
     case 0x01:
-        _mapper = std::make_unique<SXROM>(file);
+        _mapper = std::make_unique<MMC1>(file);
         break;
     case 0x02:
         _mapper = std::make_unique<UXROM>(file);

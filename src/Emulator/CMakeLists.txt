@@ -15,7 +15,7 @@ add_library(core
     common/ines.cc
     mappers/mapper_base.cc
     mappers/nrom.cc
-    mappers/sxrom.cc
+    mappers/mmc1.cc
     mappers/uxrom.cc
     mappers/cnrom.cc
     mappers/mmc3.cc

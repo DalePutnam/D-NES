@@ -1,11 +1,11 @@
 #include <cstring>
 #include <iostream>
 
-#include "sxrom.h"
+#include "mmc1.h"
 #include "cpu.h"
 #include "ppu.h"
 
-void SXROM::SaveState(StateSave::Ptr& state)
+void MMC1::SaveState(StateSave::Ptr& state)
 {
     MapperBase::SaveState(state);
     
@@ -24,7 +24,7 @@ void SXROM::SaveState(StateSave::Ptr& state)
     );
 }
 
-void SXROM::LoadState(const StateSave::Ptr& state)
+void MMC1::LoadState(const StateSave::Ptr& state)
 {
     MapperBase::LoadState(state);
 
@@ -45,7 +45,7 @@ void SXROM::LoadState(const StateSave::Ptr& state)
 	UpdatePageOffsets();
 }
 
-uint8_t SXROM::CpuRead(uint16_t address)
+uint8_t MMC1::CpuRead(uint16_t address)
 {
     // Battery backed memory
     if (address >= 0x6000 && address < 0x8000)
@@ -86,7 +86,7 @@ uint8_t SXROM::CpuRead(uint16_t address)
     }
 }
 
-void SXROM::CpuWrite(uint8_t M, uint16_t address)
+void MMC1::CpuWrite(uint8_t M, uint16_t address)
 {
     if (_cpu->GetClock() - _lastWriteCycle <= 6)
     {
@@ -152,7 +152,7 @@ void SXROM::CpuWrite(uint8_t M, uint16_t address)
     }
 }
 
-uint8_t SXROM::NameTableRead()
+uint8_t MMC1::NameTableRead()
 {
     uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
@@ -185,11 +185,11 @@ uint8_t SXROM::NameTableRead()
         }
         break;
     default:
-        throw NesException("SXROM", "Unreachable");
+        throw NesException("MMC1", "Unreachable");
     }
 }
 
-void SXROM::NameTableWrite(uint8_t M)
+void MMC1::NameTableWrite(uint8_t M)
 {
     uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
@@ -222,11 +222,11 @@ void SXROM::NameTableWrite(uint8_t M)
         }
         break;
     default:
-        throw NesException("SXROM", "Unreachable");
+        throw NesException("MMC1", "Unreachable");
     }
 }
 
-uint8_t SXROM::PpuRead()
+uint8_t MMC1::PpuRead()
 {
     if (_ppuAddress < 0x2000)
     {
@@ -238,7 +238,7 @@ uint8_t SXROM::PpuRead()
     }
 }
 
-void SXROM::PpuWrite(uint8_t M)
+void MMC1::PpuWrite(uint8_t M)
 {
     if (_ppuAddress < 0x2000)
     {
@@ -250,7 +250,7 @@ void SXROM::PpuWrite(uint8_t M)
     }
 }
 
-uint8_t SXROM::ChrRead()
+uint8_t MMC1::ChrRead()
 {
     if (_chrPageSize4K)
     {
@@ -272,7 +272,7 @@ uint8_t SXROM::ChrRead()
     }
 }
 
-void SXROM::ChrWrite(uint8_t M)
+void MMC1::ChrWrite(uint8_t M)
 {
     if (_chrRomSize == 0)
     {
@@ -301,7 +301,7 @@ void SXROM::ChrWrite(uint8_t M)
     }
 }
 
-void SXROM::UpdatePageOffsets()
+void MMC1::UpdatePageOffsets()
 {
 	uint32_t prgOffset, chrOffset0, chrOffset1;
 
@@ -342,7 +342,7 @@ void SXROM::UpdatePageOffsets()
 	
 }
 
-SXROM::SXROM(iNesFile& file)
+MMC1::MMC1(iNesFile& file)
     : MapperBase(file)
     , _lastWriteCycle(0)
     , _cycleCounter(0)
