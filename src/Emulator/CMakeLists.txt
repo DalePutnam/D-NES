@@ -12,6 +12,7 @@ add_library(core
     cart.cc
     common/file.cc
     common/nes_exception.cc
+    common/sha1.cc
     mappers/mapper_base.cc
     mappers/nrom.cc
     mappers/sxrom.cc
