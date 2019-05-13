@@ -50,12 +50,12 @@ iNesFile::iNesFile(const std::string& file)
     // Check version
     if ((header.flags7 & 0xC) == 0x08)
     {
-        _version = Version::Nes20;
+        _version = Version::iNes2_0;
     }
     else if ((header.flags7 & 0xC) == 0x00 &&
              (header.flags12 == 0 && header.flags13 == 0 && header.flags14 == 0 && header.flags15 == 0))
     {
-        _version = Version::iNes;
+        _version = Version::iNes1_0;
     }
     else
     {
@@ -69,7 +69,7 @@ iNesFile::iNesFile(const std::string& file)
     }
 
     // Get ROMs
-    if (_version == Version::Nes20)
+    if (_version == Version::iNes2_0)
     {
         uint32_t romSize;
         std::unique_ptr<uint8_t[]> rom;
@@ -149,12 +149,12 @@ iNesFile::iNesFile(const std::string& file)
     }
 
     // Get mapper number from header
-    if (_version == Version::Nes20)
+    if (_version == Version::iNes2_0)
     {
         _mapperNumber = ((header.flags8 & 0xF) << 8) | (header.flags7 & 0xF0) | (header.flags6 >> 4);
         _subMapperNumber = header.flags9 >> 4;
     }
-    else if (_version == Version::iNes)
+    else if (_version == Version::iNes1_0)
     {
         _mapperNumber = (header.flags7 & 0xF0) | (header.flags6 >> 4);
         _subMapperNumber = 0;
@@ -169,7 +169,7 @@ iNesFile::iNesFile(const std::string& file)
     _hasNonVolatileMemory = (header.flags6 & 0x2) != 0;
 
     // Get (NV)Ram sizes from header
-    if (_version == Version::Nes20)
+    if (_version == Version::iNes2_0)
     {
         _prgRamSize = 64 << (header.flags10 & 0xF);
         _prgNvRamSize = 64 << (header.flags10 >> 4);
@@ -179,7 +179,7 @@ iNesFile::iNesFile(const std::string& file)
     else
     {
         uint32_t ramSize;
-        if (_version == Version::iNes)
+        if (_version == Version::iNes1_0)
         {
             ramSize = header.flags8 == 0 ? 0x2000 : header.flags8 * 0x2000;
         }

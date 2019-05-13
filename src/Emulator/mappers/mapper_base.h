@@ -49,13 +49,15 @@ protected:
     uint32_t _chrNvRamSize;
 
     bool _hasNonVolatileMemory;
-    bool _mirroringVertical;
+    iNesFile::Mirroring _mirroring;
 
     std::unique_ptr<uint8_t[]> _prgRom;
     std::unique_ptr<uint8_t[]> _chrRom;
     std::unique_ptr<uint8_t[]> _miscRom;
     std::unique_ptr<uint8_t[]> _prgRam;
     std::unique_ptr<uint8_t[]> _chrRam;
+
+    std::unique_ptr<uint8_t[]> _vram;
 
     CPU* _cpu;
     PPU* _ppu;

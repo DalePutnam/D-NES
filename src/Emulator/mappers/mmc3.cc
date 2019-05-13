@@ -79,7 +79,7 @@ uint8_t MMC3::CpuRead(uint16_t address)
 {
     if (address >= 0x6000 && address < 0x8000)
     {
-        if (_prgRamEnabled)
+        if (_mirroring != iNesFile::FourScreen && _prgRamEnabled)
         {
             return _prgRam[address - 0x6000];
         }
@@ -139,7 +139,7 @@ void MMC3::CpuWrite(uint8_t M, uint16_t address)
 {
     if (address >= 0x6000 && address < 0x8000)
     {
-        if (_prgRamEnabled && !_prgRamWriteProtect)
+        if (_mirroring != iNesFile::FourScreen && _prgRamEnabled && !_prgRamWriteProtect)
         {
             _prgRam[address - 0x6000] = M;
         }
@@ -182,15 +182,15 @@ void MMC3::CpuWrite(uint8_t M, uint16_t address)
             throw NesException("MMC3", "Serious Problems");
         }
     }
-    else if (address == 0xA000)
+    else if (address == 0xA000 && _mirroring != iNesFile::Mirroring::FourScreen)
     {
         if ((M & 0x1) == 0)
         {
-            _mirroringVertical = true;
+            _mirroring = iNesFile::Mirroring::Vertical;
         }
         else
         {
-            _mirroringVertical = false;
+            _mirroring = iNesFile::Mirroring::Horizontal;
         }
     }
     else if (address == 0xA001)
@@ -314,12 +314,12 @@ void MMC3::ClockIRQCounter(uint16_t address)
             else
             {
                 _irqCounter--;
-            }
+            }        
 
             if (_irqEnabled && _irqCounter == 0)
             {
                 _irqPending = true;
-            }           
+            }  
         }
 
         if (!_lastReadHigh)

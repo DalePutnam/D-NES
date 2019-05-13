@@ -9,8 +9,8 @@ public:
     enum Version
     {
         Archaic,
-        iNes,
-        Nes20
+        iNes1_0,
+        iNes2_0
     };
 
     enum Mirroring

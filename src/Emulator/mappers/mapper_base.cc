@@ -36,13 +36,11 @@ MapperBase::MapperBase(iNesFile& file)
 
     _hasNonVolatileMemory = file.HasNonVolatileMemory();
 
-    if (file.GetMirroring() == iNesFile::Mirroring::Vertical)
+    _mirroring = file.GetMirroring();
+
+    if (_mirroring == iNesFile::Mirroring::FourScreen)
     {
-        _mirroringVertical = true;
-    }
-    else
-    {
-        _mirroringVertical = false;
+        _vram = std::make_unique<uint8_t[]>(0x400 * 2);
     }
 }
 
@@ -100,7 +98,7 @@ uint8_t MapperBase::DefaultNameTableRead()
 {
     uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
-    if (_mirroringVertical)
+    if (_mirroring == iNesFile::Mirroring::Vertical)
     {
         if (address < 0x400 || (address >= 0x800 && address < 0xC00))
         {
@@ -111,7 +109,7 @@ uint8_t MapperBase::DefaultNameTableRead()
             return _ppu->ReadNameTable1(address % 0x400);
         }
     }
-    else
+    else if (_mirroring == iNesFile::Mirroring::Horizontal)
     {
         if (address < 0x800)
         {
@@ -120,6 +118,25 @@ uint8_t MapperBase::DefaultNameTableRead()
         else
         {
             return _ppu->ReadNameTable1(address % 0x400);
+        }
+    }
+    else // _mirroring == iNesFile::Mirroring::FourScreen
+    {
+        if (address < 0x400)
+        {
+            return _ppu->ReadNameTable0(address % 0x400);
+        }
+        else if (address < 0x800)
+        {
+            return _ppu->ReadNameTable1(address % 0x400);
+        }
+        else if (address < 0xC00)
+        {
+            return _vram[address % 0x400];
+        }
+        else
+        {
+            return _vram[(address % 0x400) + 0x400];
         }
     }
 }
@@ -128,7 +145,7 @@ void MapperBase::DefaultNameTableWrite(uint8_t M)
 {
     uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
 
-    if (_mirroringVertical)
+    if (_mirroring == iNesFile::Mirroring::Vertical)
     {
         if (address < 0x400 || (address >= 0x800 && address < 0xC00))
         {
@@ -139,9 +156,8 @@ void MapperBase::DefaultNameTableWrite(uint8_t M)
             _ppu->WriteNameTable1(M, address % 0x400);
         }
     }
-    else
+    else if (_mirroring == iNesFile::Mirroring::Horizontal)
     {
-
         if (address < 0x800)
         {
             _ppu->WriteNameTable0(M, address % 0x400);
@@ -149,6 +165,25 @@ void MapperBase::DefaultNameTableWrite(uint8_t M)
         else
         {
             _ppu->WriteNameTable1(M, address % 0x400);
+        }
+    }
+    else // _mirroring == iNesFile::Mirroring::FourScreen
+    {
+        if (address < 0x400)
+        {
+            _ppu->WriteNameTable0(M, address % 0x400);
+        }
+        else if (address < 0x800)
+        {
+            _ppu->WriteNameTable1(M, address % 0x400);
+        }
+        else if (address < 0xC00)
+        {
+            _vram[address % 0x400] = M;
+        }
+        else
+        {
+            _vram[(address % 0x400) + 0x400] = M;
         }
     }
 }
