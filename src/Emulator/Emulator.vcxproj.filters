@@ -51,9 +51,6 @@
     <ClInclude Include="mappers\nrom.h">
       <Filter>Header Files\Mappers</Filter>
     </ClInclude>
-    <ClInclude Include="mappers\sxrom.h">
-      <Filter>Header Files\Mappers</Filter>
-    </ClInclude>
     <ClInclude Include="apu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -96,6 +93,24 @@
     <ClInclude Include="common\nes_exception.h">
       <Filter>Header Files\Common</Filter>
     </ClInclude>
+    <ClInclude Include="mappers\cnrom.h">
+      <Filter>Header Files\Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="mappers\mmc1.h">
+      <Filter>Header Files\Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="mappers\mmc3.h">
+      <Filter>Header Files\Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="mappers\uxrom.h">
+      <Filter>Header Files\Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="common\ines.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\state_save.h">
+      <Filter>Header Files\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cc">
@@ -108,9 +123,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="mappers\nrom.cc">
-      <Filter>Source Files\Mappers</Filter>
-    </ClCompile>
-    <ClCompile Include="mappers\sxrom.cc">
       <Filter>Source Files\Mappers</Filter>
     </ClCompile>
     <ClCompile Include="apu.cc">
@@ -147,6 +159,21 @@
       <Filter>Source Files\Common</Filter>
     </ClCompile>
     <ClCompile Include="common\nes_exception.cc">
+      <Filter>Source Files\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="mappers\uxrom.cc">
+      <Filter>Source Files\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="mappers\cnrom.cc">
+      <Filter>Source Files\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="mappers\mmc1.cc">
+      <Filter>Source Files\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="mappers\mmc3.cc">
+      <Filter>Source Files\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="common\ines.cc">
       <Filter>Source Files\Common</Filter>
     </ClCompile>
   </ItemGroup>
