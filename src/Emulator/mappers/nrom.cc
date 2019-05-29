@@ -33,15 +33,7 @@ void NROM::CpuWrite(uint8_t M, uint16_t address)
 
 uint8_t NROM::PpuRead()
 {
-    if (_ppuAddress < 0x2000)
-    {
-        return _chr[_ppuAddress];
-    }
-    else
-    {
-        return DefaultNameTableRead();
-    }
-    
+    return NROM::PpuPeek(_ppuAddress);
 }
 
 void NROM::PpuWrite(uint8_t M)
@@ -55,9 +47,22 @@ void NROM::PpuWrite(uint8_t M)
     }
     else
     {
-        DefaultNameTableWrite(M);
+        DefaultNameTableWrite(M, _ppuAddress);
     }
 }
+
+uint8_t NROM::PpuPeek(uint16_t address)
+{
+    if (address < 0x2000)
+    {
+        return _chr[address];
+    }
+    else
+    {
+        return DefaultNameTableRead(address);
+    }
+}
+
 
 NROM::NROM(iNesFile& file)
     : MapperBase(file)

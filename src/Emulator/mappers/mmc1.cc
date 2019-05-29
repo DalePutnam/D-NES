@@ -152,9 +152,9 @@ void MMC1::CpuWrite(uint8_t M, uint16_t address)
     }
 }
 
-uint8_t MMC1::NameTableRead()
+uint8_t MMC1::NameTableRead(uint16_t address)
 {
-    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
+    address = (address - 0x2000) % 0x1000;
 
     switch (_mirroring)
     {
@@ -189,9 +189,9 @@ uint8_t MMC1::NameTableRead()
     }
 }
 
-void MMC1::NameTableWrite(uint8_t M)
+void MMC1::NameTableWrite(uint8_t M, uint16_t address)
 {
-    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
+    address = (address - 0x2000) % 0x1000;
 
     switch (_mirroring)
     {
@@ -228,70 +228,75 @@ void MMC1::NameTableWrite(uint8_t M)
 
 uint8_t MMC1::PpuRead()
 {
-    if (_ppuAddress < 0x2000)
-    {
-        return ChrRead();
-    }
-    else
-    {
-        return NameTableRead();
-    }
+    return MMC1::PpuPeek(_ppuAddress);
 }
 
 void MMC1::PpuWrite(uint8_t M)
 {
     if (_ppuAddress < 0x2000)
     {
-        ChrWrite(M);
+        ChrWrite(M, _ppuAddress);
     }
     else
     {
-        NameTableWrite(M);
+        NameTableWrite(M, _ppuAddress);
     }
 }
 
-uint8_t MMC1::ChrRead()
+uint8_t MMC1::PpuPeek(uint16_t address)
+{
+    if (address < 0x2000)
+    {
+        return ChrRead(address);
+    }
+    else
+    {
+        return NameTableRead(address);
+    }
+}
+
+uint8_t MMC1::ChrRead(uint16_t address)
 {
     if (_chrPageSize4K)
     {
-        if (_ppuAddress < 0x1000)
+        if (address < 0x1000)
         {
-            uint32_t addr = _ppuAddress;
+            uint32_t addr = address;
 			return _chrPage0Pointer[addr];
         }
         else
         {
-            uint32_t addr = _ppuAddress - 0x1000;
+            uint32_t addr = address - 0x1000;
 			return _chrPage1Pointer[addr];
         }
     }
     else
     {
-        uint32_t addr = _ppuAddress;
+        uint32_t addr = address;
 		return _chrPage0Pointer[addr];
     }
 }
 
-void MMC1::ChrWrite(uint8_t M)
+void MMC1::ChrWrite(uint8_t M, uint16_t address)
 {
     if (_chrRomSize == 0)
     {
         if (_chrPageSize4K)
         {
-            if (_ppuAddress < 0x1000)
+            if (address < 0x1000)
             {
-                uint32_t addr = _ppuAddress;
+                uint32_t addr = address;
 				_chrPage0Pointer[addr] = M;
             }
             else
             {
-                uint32_t addr = _ppuAddress - 0x1000;
+                uint32_t addr = address - 0x1000;
 				_chrPage1Pointer[addr] = M;
             }
         }
         else
         {
-            uint32_t addr = _ppuAddress;
+            uint32_t addr = address;
 			_chrPage0Pointer[addr] = M;
         }
     }

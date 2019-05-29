@@ -38,6 +38,8 @@ public:
     uint8_t PpuRead();
     void PpuWrite(uint8_t M);
 
+    uint8_t PpuPeek(uint16_t address);
+
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);
 

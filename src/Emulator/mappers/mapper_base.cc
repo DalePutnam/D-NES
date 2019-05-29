@@ -94,9 +94,9 @@ bool MapperBase::CheckIRQ()
     return false;
 }
 
-uint8_t MapperBase::DefaultNameTableRead()
+uint8_t MapperBase::DefaultNameTableRead(uint16_t address)
 {
-    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
+    address = (address - 0x2000) % 0x1000;
 
     if (_mirroring == iNesFile::Mirroring::Vertical)
     {
@@ -141,9 +141,9 @@ uint8_t MapperBase::DefaultNameTableRead()
     }
 }
 
-void MapperBase::DefaultNameTableWrite(uint8_t M)
+void MapperBase::DefaultNameTableWrite(uint8_t M, uint16_t address)
 {
-    uint16_t address = (_ppuAddress - 0x2000) % 0x1000;
+    address = (address - 0x2000) % 0x1000;
 
     if (_mirroring == iNesFile::Mirroring::Vertical)
     {

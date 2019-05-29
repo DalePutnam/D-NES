@@ -133,6 +133,11 @@ void Cart::PpuWrite(uint8_t M)
     _mapper->PpuWrite(M);
 }
 
+uint8_t Cart::PpuPeek(uint16_t address)
+{
+    return _mapper->PpuPeek(address);
+}
+
 StateSave::Ptr Cart::SaveState()
 {
     StateSave::Ptr state = StateSave::New();

@@ -18,11 +18,13 @@ public:
     uint8_t PpuRead() override;
     void PpuWrite(uint8_t M) override;
 
+    uint8_t PpuPeek(uint16_t address) override;
+
 private:
-    uint8_t NameTableRead();
-    void NameTableWrite(uint8_t M);
-    uint8_t ChrRead();
-    void ChrWrite(uint8_t M);
+    uint8_t NameTableRead(uint16_t address);
+    void NameTableWrite(uint8_t M, uint16_t address);
+    uint8_t ChrRead(uint16_t address);
+    void ChrWrite(uint8_t M, uint16_t address);
 
     void UpdatePageOffsets();
 

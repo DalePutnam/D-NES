@@ -15,6 +15,9 @@ public:
 
     uint8_t PpuRead() override;
     void PpuWrite(uint8_t M) override;
+
+    uint8_t PpuPeek(uint16_t address) override;
+    
 private:
     uint8_t _register;
 };

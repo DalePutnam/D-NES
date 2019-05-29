@@ -207,6 +207,8 @@ private:
     uint8_t ReadPalette(uint16_t address);
     void WritePalette(uint8_t value, uint16_t address);
 
+    uint8_t Peek(uint16_t address);
+
     void UpdateFrameRate();
     void UpdateFrameSkipCounters();
 };

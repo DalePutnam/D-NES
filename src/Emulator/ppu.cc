@@ -664,193 +664,193 @@ int PPU::GetFrameRate()
 
 void PPU::GetNameTable(int table, uint8_t* pixels)
 {
-    // uint16_t tableIndex;
-    // if (table == 0)
-    // {
-    //     tableIndex = 0x000;
-    // }
-    // else if (table == 1)
-    // {
-    //     tableIndex = 0x400;
-    // }
-    // else if (table == 2)
-    // {
-    //     tableIndex = 0x800;
-    // }
-    // else
-    // {
-    //     tableIndex = 0xC00;
-    // }
+    uint16_t tableIndex;
+    if (table == 0)
+    {
+        tableIndex = 0x000;
+    }
+    else if (table == 1)
+    {
+        tableIndex = 0x400;
+    }
+    else if (table == 2)
+    {
+        tableIndex = 0x800;
+    }
+    else
+    {
+        tableIndex = 0xC00;
+    }
 
-    // for (uint32_t i = 0; i < 30; ++i)
-    // {
-    //     for (uint32_t f = 0; f < 32; ++f)
-    //     {
-    //         uint16_t address = (tableIndex | (i << 5) | f);
-    //         uint8_t ntByte = Read(0x2000 | address);
-    //         uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
-    //         uint8_t atByte = Read(0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
-    //         atByte = (atByte >> atShift) & 0x3;
-    //         uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
+    for (uint32_t i = 0; i < 30; ++i)
+    {
+        for (uint32_t f = 0; f < 32; ++f)
+        {
+            uint16_t address = (tableIndex | (i << 5) | f);
+            uint8_t ntByte = Peek(0x2000 | address);
+            uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
+            uint8_t atByte = Peek(0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
+            atByte = (atByte >> atShift) & 0x3;
+            uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
 
-    //         for (uint32_t h = 0; h < 8; ++h)
-    //         {
-    //             uint8_t tileLow = Read(BaseBackgroundTableAddress + patternAddress + h);
-    //             uint8_t tileHigh = Read(BaseBackgroundTableAddress + patternAddress + h + 8);
+            for (uint32_t h = 0; h < 8; ++h)
+            {
+                uint8_t tileLow = Peek(BaseBackgroundTableAddress + patternAddress + h);
+                uint8_t tileHigh = Peek(BaseBackgroundTableAddress + patternAddress + h + 8);
 
-    //             for (uint32_t g = 0; g < 8; ++g)
-    //             {
-    //                 uint16_t pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
-    //                 uint16_t paletteIndex = 0x3F00 | (atByte << 2) | pixel;
-    //                 if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
-    //                 uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
-    //                 uint8_t red = (rgb & 0xFF0000) >> 16;
-    //                 uint8_t green = (rgb & 0x00FF00) >> 8;
-    //                 uint8_t blue = (rgb & 0x0000FF);
+                for (uint32_t g = 0; g < 8; ++g)
+                {
+                    uint16_t pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
+                    uint16_t paletteIndex = 0x3F00 | (atByte << 2) | pixel;
+                    if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
+                    uint32_t rgb = RgbLookupTable[Peek(paletteIndex)];
+                    uint8_t red = (rgb & 0xFF0000) >> 16;
+                    uint8_t green = (rgb & 0x00FF00) >> 8;
+                    uint8_t blue = (rgb & 0x0000FF);
 
-    //                 uint32_t index = ((24 * f) + (g * 3)) + ((6144 * i) + (h * 768));
+                    uint32_t index = ((24 * f) + (g * 3)) + ((6144 * i) + (h * 768));
 
-    //                 pixels[index] = red;
-    //                 pixels[index + 1] = green;
-    //                 pixels[index + 2] = blue;
-    //             }
-    //         }
-    //     }
-    // }
+                    pixels[index] = red;
+                    pixels[index + 1] = green;
+                    pixels[index + 2] = blue;
+                }
+            }
+        }
+    }
 }
 
 void PPU::GetPatternTable(int table, int palette, uint8_t* pixels)
 {
-    // uint16_t tableIndex;
-    // if (table == 0)
-    // {
-    //     tableIndex = 0x0000;
-    // }
-    // else
-    // {
-    //     tableIndex = 0x1000;
-    // }
+    uint16_t tableIndex;
+    if (table == 0)
+    {
+        tableIndex = 0x0000;
+    }
+    else
+    {
+        tableIndex = 0x1000;
+    }
 
-    // for (uint32_t i = 0; i < 16; ++i)
-    // {
-    //     for (uint32_t f = 0; f < 16; ++f)
-    //     {
-    //         uint32_t patternIndex = (16 * f) + (256 * i);
+    for (uint32_t i = 0; i < 16; ++i)
+    {
+        for (uint32_t f = 0; f < 16; ++f)
+        {
+            uint32_t patternIndex = (16 * f) + (256 * i);
 
-    //         for (uint32_t g = 0; g < 8; ++g)
-    //         {
-    //             uint8_t tileLow = Read(tableIndex + patternIndex + g);
-    //             uint8_t tileHigh = Read(tableIndex + patternIndex + g + 8);
+            for (uint32_t g = 0; g < 8; ++g)
+            {
+                uint8_t tileLow = Peek(tableIndex + patternIndex + g);
+                uint8_t tileHigh = Peek(tableIndex + patternIndex + g + 8);
 
-    //             for (uint32_t h = 0; h < 8; ++h)
-    //             {
-    //                 uint16_t pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
-    //                 uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-    //                 uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
-    //                 uint8_t red = (rgb & 0xFF0000) >> 16;
-    //                 uint8_t green = (rgb & 0x00FF00) >> 8;
-    //                 uint8_t blue = (rgb & 0x0000FF);
+                for (uint32_t h = 0; h < 8; ++h)
+                {
+                    uint16_t pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
+                    uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
+                    uint32_t rgb = RgbLookupTable[Peek(paletteIndex)];
+                    uint8_t red = (rgb & 0xFF0000) >> 16;
+                    uint8_t green = (rgb & 0x00FF00) >> 8;
+                    uint8_t blue = (rgb & 0x0000FF);
 
-    //                 uint32_t index = ((24 * f) + (h * 3)) + ((3072 * i) + (g * 384));
+                    uint32_t index = ((24 * f) + (h * 3)) + ((3072 * i) + (g * 384));
 
-    //                 pixels[index] = red;
-    //                 pixels[index + 1] = green;
-    //                 pixels[index + 2] = blue;
-    //             }
-    //         }
-    //     }
-    // }
+                    pixels[index] = red;
+                    pixels[index + 1] = green;
+                    pixels[index + 2] = blue;
+                }
+            }
+        }
+    }
 }
 
 void PPU::GetPalette(int palette, uint8_t* pixels)
 {
-    // uint16_t baseAddress;
-    // if (palette == 0)
-    // {
-    //     baseAddress = 0x3F00;
-    // }
-    // else if (palette == 1)
-    // {
-    //     baseAddress = 0x3F04;
-    // }
-    // else if (palette == 2)
-    // {
-    //     baseAddress = 0x3F08;
-    // }
-    // else if (palette == 3)
-    // {
-    //     baseAddress = 0x3F0C;
-    // }
-    // else if (palette == 4)
-    // {
-    //     baseAddress = 0x3F10;
-    // }
-    // else if (palette == 5)
-    // {
-    //     baseAddress = 0x3F14;
-    // }
-    // else if (palette == 6)
-    // {
-    //     baseAddress = 0x3F18;
-    // }
-    // else
-    // {
-    //     baseAddress = 0x3F1C;
-    // }
+    uint16_t baseAddress;
+    if (palette == 0)
+    {
+        baseAddress = 0x3F00;
+    }
+    else if (palette == 1)
+    {
+        baseAddress = 0x3F04;
+    }
+    else if (palette == 2)
+    {
+        baseAddress = 0x3F08;
+    }
+    else if (palette == 3)
+    {
+        baseAddress = 0x3F0C;
+    }
+    else if (palette == 4)
+    {
+        baseAddress = 0x3F10;
+    }
+    else if (palette == 5)
+    {
+        baseAddress = 0x3F14;
+    }
+    else if (palette == 6)
+    {
+        baseAddress = 0x3F18;
+    }
+    else
+    {
+        baseAddress = 0x3F1C;
+    }
 
-    // for (uint32_t i = 0; i < 4; ++i)
-    // {
-    //     uint16_t paletteAddress = baseAddress + i;
+    for (uint32_t i = 0; i < 4; ++i)
+    {
+        uint16_t paletteAddress = baseAddress + i;
 
-    //     for (uint32_t g = 0; g < 16; ++g)
-    //     {
-    //         for (uint32_t h = 0; h < 16; ++h)
-    //         {
-    //             uint32_t rgb = RgbLookupTable[Read(paletteAddress)];
-    //             uint8_t red = (rgb & 0xFF0000) >> 16;
-    //             uint8_t green = (rgb & 0x00FF00) >> 8;
-    //             uint8_t blue = (rgb & 0x0000FF);
+        for (uint32_t g = 0; g < 16; ++g)
+        {
+            for (uint32_t h = 0; h < 16; ++h)
+            {
+                uint32_t rgb = RgbLookupTable[Peek(paletteAddress)];
+                uint8_t red = (rgb & 0xFF0000) >> 16;
+                uint8_t green = (rgb & 0x00FF00) >> 8;
+                uint8_t blue = (rgb & 0x0000FF);
 
-    //             uint32_t index = ((48 * i) + (h * 3)) + (192 * g);
+                uint32_t index = ((48 * i) + (h * 3)) + (192 * g);
 
-    //             pixels[index] = red;
-    //             pixels[index + 1] = green;
-    //             pixels[index + 2] = blue;
-    //         }
-    //     }
-    // }
+                pixels[index] = red;
+                pixels[index + 1] = green;
+                pixels[index + 2] = blue;
+            }
+        }
+    }
 }
 
 void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 {
-    // uint8_t byteOne = PrimaryOam[(0x4 * sprite) + 1];
-    // uint8_t byteTwo = PrimaryOam[(0x4 * sprite) + 2];
+    uint8_t byteOne = PrimaryOam[(0x4 * sprite) + 1];
+    uint8_t byteTwo = PrimaryOam[(0x4 * sprite) + 2];
 
-    // uint16_t tableIndex = BaseSpriteTableAddress;
-    // uint16_t patternIndex = byteOne * 16;
-    // uint8_t palette = (byteTwo & 0x03) + 4;
+    uint16_t tableIndex = BaseSpriteTableAddress;
+    uint16_t patternIndex = byteOne * 16;
+    uint8_t palette = (byteTwo & 0x03) + 4;
 
-    // for (uint32_t i = 0; i < 8; ++i)
-    // {
-    //     uint8_t tileLow = Read(tableIndex + patternIndex + i);
-    //     uint8_t tileHigh = Read(tableIndex + patternIndex + i + 8);
+    for (uint32_t i = 0; i < 8; ++i)
+    {
+        uint8_t tileLow = Peek(tableIndex + patternIndex + i);
+        uint8_t tileHigh = Peek(tableIndex + patternIndex + i + 8);
 
-    //     for (uint32_t f = 0; f < 8; ++f)
-    //     {
-    //         uint16_t pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
-    //         uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-    //         uint32_t rgb = RgbLookupTable[Read(paletteIndex)];
-    //         uint8_t red = (rgb & 0xFF0000) >> 16;
-    //         uint8_t green = (rgb & 0x00FF00) >> 8;
-    //         uint8_t blue = (rgb & 0x0000FF);
+        for (uint32_t f = 0; f < 8; ++f)
+        {
+            uint16_t pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
+            uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
+            uint32_t rgb = RgbLookupTable[Peek(paletteIndex)];
+            uint8_t red = (rgb & 0xFF0000) >> 16;
+            uint8_t green = (rgb & 0x00FF00) >> 8;
+            uint8_t blue = (rgb & 0x0000FF);
 
-    //         uint32_t index = (24 * i) + (f * 3);
+            uint32_t index = (24 * i) + (f * 3);
 
-    //         pixels[index] = red;
-    //         pixels[index + 1] = green;
-    //         pixels[index + 2] = blue;
-    //     }
-    // }
+            pixels[index] = red;
+            pixels[index + 1] = green;
+            pixels[index + 2] = blue;
+        }
+    }
 }
 
 StateSave::Ptr PPU::SaveState()
@@ -1588,6 +1588,18 @@ void PPU::WritePalette(uint8_t value, uint16_t address)
     }
 
     PaletteTable[address % 0x20] = value & 0x3F; // Ignore bits 6 and 7
+}
+
+uint8_t PPU::Peek(uint16_t address)
+{
+    if (address < 0x3F00)
+    {
+        return Cartridge->PpuPeek(address);
+    }
+    else
+    {
+        return ReadPalette(address);
+    }
 }
 
 void PPU::UpdateFrameRate()

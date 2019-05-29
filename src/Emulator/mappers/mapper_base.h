@@ -32,11 +32,13 @@ public:
     virtual uint8_t PpuRead() = 0;
     virtual void PpuWrite(uint8_t M) = 0;
 
+    virtual uint8_t PpuPeek(uint16_t address) = 0;
+
     virtual bool CheckIRQ();
 
 protected:
-    uint8_t DefaultNameTableRead();
-    void DefaultNameTableWrite(uint8_t M);
+    uint8_t DefaultNameTableRead(uint16_t address);
+    void DefaultNameTableWrite(uint8_t M, uint16_t address);
 
     uint16_t _ppuAddress;
 
