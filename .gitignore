@@ -4,7 +4,6 @@ Release
 Debug
 ROMs
 D-NES.*
-ext/wxWidgets
 src/Emulator/Emulator.vcxproj.user
 src/FrontEnd/FrontEnd.vcxproj.user
 *.vspx
@@ -12,11 +11,13 @@ src/FrontEnd/FrontEnd.vcxproj.user
 
 # Linux
 D-NES
-build
-debug
-release
 config.txt
 ROMs
 saves
-ext
 .vscode
+.sconsign.dblite
+scons.cfg
+**/*.o
+**/*.os
+**/*.a
+**/*.so
