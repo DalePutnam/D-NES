@@ -11,9 +11,10 @@
 #include <chrono>
 #include <cstdint>
 
+#include "nes.h"
+
 #include "cart.h"
 #include "state_save.h"
-#include "nes_callback.h"
 
 class CPU;
 class APU;

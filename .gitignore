@@ -21,3 +21,4 @@ scons.cfg
 **/*.os
 **/*.a
 **/*.so
+build/**

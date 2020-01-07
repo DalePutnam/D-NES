@@ -2,11 +2,12 @@
 #include <exception>
 #include <cstring>
 
+#include "../nes.h"
+
 #include "cpu.h"
 #include "ppu.h"
 #include "file.h"
 #include "mapper_base.h"
-#include "nes_exception.h"
 
 using namespace std;
 

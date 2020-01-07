@@ -1,7 +1,8 @@
+#include "../nes.h"
+
 #include "video_backend.h"
 #include "osd_font.h"
 #include "igl_platform.h"
-#include "nes_exception.h"
 
 namespace
 {

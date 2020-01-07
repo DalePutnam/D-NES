@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include "nes_exception.h"
+#include "../nes.h"
 
 class StateSave
 {

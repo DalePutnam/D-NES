@@ -2,9 +2,10 @@
 #include <cstring>
 #include <cmath>
 
+#include "nes.h"
+
 #include "apu.h"
 #include "cpu.h"
-#include "nes_exception.h"
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 

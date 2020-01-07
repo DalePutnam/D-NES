@@ -3,7 +3,7 @@ env = Environment()
 env.Append(CXXFLAGS = ['-O3', '-Wall', '-Wextra'])
 env.Append(CPPPATH = ['.', 'common'])
 
-env.Library('core', ['nes.cc',
+env.Library('dnes', ['nes.cc',
                      'cpu.cc',
                      'ppu.cc',
                      'apu.cc',
@@ -25,4 +25,7 @@ env.Library('core', ['nes.cc',
                      'video/igl_platform.cc',
                      'video/glx_platform.cc'])
 
-env.Alias('core', './libcore.a')
+env.Install('#build/include/dnes', 'nes.h')
+env.Install('#build/lib', 'libdnes.a')
+
+env.Alias('core', './libdnes.a')

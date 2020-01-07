@@ -1,7 +1,8 @@
 #if defined(__linux)
 
+#include "../nes.h"
+
 #include "glx_platform.h"
-#include "nes_exception.h"
 
 void GLXPlatform::InitializeWindow(void* windowHandle)
 {

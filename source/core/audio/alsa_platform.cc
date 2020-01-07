@@ -1,7 +1,8 @@
 #if defined(__linux)
 
+#include "../nes.h"
+
 #include "alsa_platform.h"
-#include "nes_exception.h"
 #include <cstring>
 
 static constexpr uint32_t NUM_PERIODS = 4;

@@ -11,15 +11,31 @@
 #include <string>
 #include <thread>
 
-#include "common/nes_callback.h"
-#include "common/nes_exception.h"
-
 class CPU;
 class APU;
 class PPU;
 class Cart;
 class VideoBackend;
 class AudioBackend;
+
+class NESCallback
+{
+public:
+    virtual void OnFrameComplete() = 0;
+    virtual void OnError(std::exception_ptr eptr) = 0;
+
+    virtual ~NESCallback() = default;
+};
+
+class NesException : public std::exception
+{
+public:
+    explicit NesException(const std::string& component, const std::string& message);
+    const char* what() const noexcept override;
+
+private:
+    std::string _message;
+};
 
 class NES
 {

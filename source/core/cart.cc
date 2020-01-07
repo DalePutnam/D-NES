@@ -10,10 +10,11 @@
 #include <exception>
 #include <cstring>
 
+#include "nes.h"
+
 #include "cart.h"
 #include "ines.h"
 #include "file.h"
-#include "nes_exception.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
 #include "mappers/mmc1.h"
