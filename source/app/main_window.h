@@ -15,7 +15,7 @@
 #include <wx/listctrl.h>
 #include <wx/bitmap.h>
 
-#include "nes.h"
+#include "dnes/nes.h"
 
 class GameList;
 class PPUViewerWindow;

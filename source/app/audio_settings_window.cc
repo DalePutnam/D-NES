@@ -9,7 +9,7 @@
 #include "audio_settings_window.h"
 #include "utilities/app_settings.h"
 
-#include "nes.h"
+#include "dnes/nes.h"
 
 wxDEFINE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 

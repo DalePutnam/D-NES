@@ -7,7 +7,7 @@
 
 #include "ppu_viewer_window.h"
 #include "main_window.h"
-#include "nes.h"
+#include "dnes/nes.h"
 
 static constexpr long FRAME_STYLE = (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX;
 

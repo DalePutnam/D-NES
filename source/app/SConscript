@@ -1,0 +1,27 @@
+env = Environment()
+
+env.Append(CXXFLAGS = ['-O3', '-Wall', '-Wextra'])
+
+env.Append(CPPPATH = ['#build/include'])
+env.Append(LIBPATH = ['#build/lib'])
+
+env.Append(LIBS = 'dnes')
+
+env.ParseConfig('wx-config --cflags --libs')
+env.ParseConfig('pkg-config gtk+-3.0 --cflags --libs')
+env.ParseConfig('pkg-config x11 --cflags --libs')
+env.ParseConfig('pkg-config gl --cflags --libs')
+env.ParseConfig('pkg-config alsa --cflags --libs')
+
+env.Program('D-NES', ['app.cc',
+                     'game_list.cc',
+                     'main_window.cc',
+                     'settings_window_base.cc',
+                     'video_settings_window.cc',
+                     'audio_settings_window.cc',
+                     'path_settings_window.cc',
+                     'ppu_viewer_window.cc',
+                     'utilities/app_settings.cc'])
+
+env.Install('#build/bin', 'D-NES')
+env.Alias('app', 'D-NES')
