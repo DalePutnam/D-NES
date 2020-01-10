@@ -1,19 +1,21 @@
-env = Environment()
+import os
 
-env.Append(CXXFLAGS = ['-O3', '-Wall', '-Wextra'])
+Import('env')
+Import('lib_registry')
 
-env.Append(CPPPATH = ['#build/include'])
-env.Append(LIBPATH = ['#build/lib'])
+env = env.Clone()
 
-env.Append(LIBS = 'dnes')
+env.Append(CPPPATH = ['../core'])
+env.Append(LIBPATH = ['../core'])
 
-env.ParseConfig('wx-config --cflags --libs')
-env.ParseConfig('pkg-config gtk+-3.0 --cflags --libs')
-env.ParseConfig('pkg-config x11 --cflags --libs')
-env.ParseConfig('pkg-config gl --cflags --libs')
-env.ParseConfig('pkg-config alsa --cflags --libs')
+env.Append(LIBS = ['dnes'])
+env.Append(LINKFLAGS = ['-Wl,-rpath,' + Dir('../core').abspath])
 
-env.Program('D-NES', ['app.cc',
+env.MergeFlags(lib_registry['GTK+3'])
+env.MergeFlags(lib_registry['X11'])
+env.MergeFlags(lib_registry['wxWidgets'])
+
+env.Program('#/D-NES', ['app.cc',
                      'game_list.cc',
                      'main_window.cc',
                      'settings_window_base.cc',
@@ -23,5 +25,7 @@ env.Program('D-NES', ['app.cc',
                      'ppu_viewer_window.cc',
                      'utilities/app_settings.cc'])
 
-env.Install('#build/bin', 'D-NES')
-env.Alias('app', 'D-NES')
+env.Install(os.path.join(env['prefix'], 'bin'), '#/D-NES')
+
+env.Alias('app', '#/D-NES')
+env.Default('app')

@@ -27,7 +27,7 @@
 ** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 */
 
-#define THREAD_LOCAL thread_local
+#define THREAD_LOCAL /* thread_local */
 
 #if defined(_WIN32)
 
