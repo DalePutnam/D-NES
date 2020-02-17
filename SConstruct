@@ -15,26 +15,27 @@ def setup_environment(env):
     # Add variables for controlling the configuration
     vars = Variables('scons.cfg')
 
-    vars.Add(EnumVariable('build_type', '', 'release',
-                          allowed_values=['release', 'debug']))
+    vars.Add(EnumVariable('build_type',
+                          'Select the build type',
+                          'release', allowed_values=['release', 'debug']))
 
-    vars.Add(PathVariable('wx_config_path', '', None, PathVariable.PathIsFile))
+    vars.Add('prefix', 'Application install prefix', '/usr/local')
 
-    vars.Add(PathVariable('prefix', '', '/usr/local', PathVariable.PathAccept))
+    vars.Add(PathVariable('wx_config', 
+                          'Path to the wx-config executable for wxWidgets',
+                          None, PathVariable.PathIsFile))
 
     add_library_variables(vars, 'alsa')
     add_library_variables(vars, 'x11')
     add_library_variables(vars, 'gl')
-    add_library_variables(vars, 'gtk3', pkgconfig_only=True)
+    add_library_variables(vars, 'gtk3', root_only=True)
 
     vars.Update(env)
     vars.Save('scons.cfg', env)
-    
+
     # scons.cfg will be cleaned if the config target is cleaned
     env.Clean(env.Alias('config'), 'scons.cfg')
 
-    # Add variables to help list
-    Help(vars.GenerateHelpText(env))
 
     # Add an alias for the install prefix. Calling scons with this alias will
     # install to the location specified by prefix.
@@ -53,6 +54,22 @@ def setup_environment(env):
     env.CompilationDatabase('compile_commands.json')
     env.Alias('compile_db', 'compile_commands.json')
     env.Default('compile_db')
+
+    # Setup build help
+
+    env.Help('\nD-NES SCons build system\n')
+    env.Help('\nTargets: app, core, compile_db, install, config (defaults: app, core, compile_db)\n')
+
+    env.Help('\n')
+    env.Help('app         Build the D-NES application\n')
+    env.Help('core        Build the dnes shared library\n')
+    env.Help('compile_db  Generate compile_commands.json\n')
+    env.Help('install     Install files to location specified by prefix\n')
+    env.Help('config      Cleaning with this target will reset all configuration variables\n')
+
+    env.Help('\nBuild Variables\n')
+
+    env.Help(vars.GenerateHelpText(env))
 
 
 def do_configuration(env, lib_registry):
@@ -73,8 +90,7 @@ def do_configuration(env, lib_registry):
     alsa_flags = get_library_options(env, 'alsa')
     x11_flags = get_library_options(env, 'x11')
     gl_flags = get_library_options(env, 'gl')
-    gtk3_flags = get_library_options(env,
-                                     'gtk3', lib_pkgconfig_name='gtk+-3.0', pkgconfig_only=True)
+    gtk3_flags = get_library_options(env, 'gtk3', lib_pkgconfig_name='gtk+-3.0', root_only=True)
 
     wx_version, wx_flags = get_wxwidgets_options(env)
 

@@ -7,21 +7,25 @@ from functools import wraps
 from SCons.Variables import PathVariable, EnumVariable
 
 
-def add_library_variables(vars, libname, pkgconfig_only=False):
+def add_library_variables(vars, libname, root_only=False):
     '''Add variables for finding the given library'''
     libname = libname.lower()
 
-    vars.Add(PathVariable('%s_pkgconfig_path' %
-                          libname, '', None, PathVariable.PathIsDir))
+    vars.Add(PathVariable('%s_lib_root' % libname,
+                          'Path to %s install root' % libname,
+                          None, PathVariable.PathIsDir))
 
-    if not pkgconfig_only:
-        vars.Add(PathVariable('%s_lib_path' %
-                              libname, '', None, PathVariable.PathIsFile))
-        vars.Add(PathVariable('%s_include_path' %
-                              libname, '', None, PathVariable.PathIsDir))
+    if not root_only:
+        vars.Add(PathVariable('%s_lib' % libname,
+                              'Path to %s library' % libname,
+                              None, PathVariable.PathIsFile))
+
+        vars.Add(PathVariable('%s_include_dir' % libname,
+                              'Path to %s include directory' % libname,
+                              None, PathVariable.PathIsDir))
 
 
-def get_library_options(env, libname, lib_pkgconfig_name=None, pkgconfig_only=False):
+def get_library_options(env, libname, lib_pkgconfig_name=None, root_only=False):
     '''Get library compile flags based on command line variables'''
 
     if not lib_pkgconfig_name:
@@ -29,25 +33,25 @@ def get_library_options(env, libname, lib_pkgconfig_name=None, pkgconfig_only=Fa
 
     libname = libname.lower()
 
-    var_pkgconfig_path = '%s_pkgconfig_path' % libname
-    var_lib_path = '%s_lib_path' % libname
-    var_include_path = '%s_include_path' % libname
+    var_root_path = '%s_lib_root' % libname
+    var_lib_path = '%s_lib' % libname
+    var_include_path = '%s_include_dir' % libname
 
-    pkgconfig = env[var_pkgconfig_path] if var_pkgconfig_path in env else None
+    root_path = env[var_root_path] if var_root_path in env else None
     lib = None
     include = None
 
     pkgconfig_args = ['pkg-config', lib_pkgconfig_name, '--cflags', '--libs']
 
-    if not pkgconfig_only:
+    if not root_only:
         lib = env[var_lib_path] if var_lib_path in env else None
         include = env[var_include_path] if var_include_path in env else None
 
     flags = None
 
     try:
-        if pkgconfig:
-            pkgconfig_path = os.path.join(pkgconfig, 'pkgconfig')
+        if root_path:
+            pkgconfig_path = os.path.join(root_path, 'lib/pkgconfig')
             flags = env.ParseFlags(subprocess.check_output(
                 pkgconfig_args,
                 env=dict(os.environ, PKG_CONFIG_PATH=pkgconfig_path),
