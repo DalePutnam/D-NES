@@ -11,19 +11,19 @@ env.Append(LIBPATH = ['../core'])
 env.Append(LIBS = ['dnes'])
 env.Append(LINKFLAGS = ['-Wl,-rpath,' + Dir('../core').abspath])
 
-env.MergeFlags(lib_registry['GTK+3'])
-env.MergeFlags(lib_registry['X11'])
-env.MergeFlags(lib_registry['wxWidgets'])
+env.MergeFlags(lib_registry.get_library_build_flags('GTK+3'))
+env.MergeFlags(lib_registry.get_library_build_flags('X11'))
+env.MergeFlags(lib_registry.get_library_build_flags('wxWidgets'))
 
 env.Program('#/D-NES', ['app.cc',
-                     'game_list.cc',
-                     'main_window.cc',
-                     'settings_window_base.cc',
-                     'video_settings_window.cc',
-                     'audio_settings_window.cc',
-                     'path_settings_window.cc',
-                     'ppu_viewer_window.cc',
-                     'utilities/app_settings.cc'])
+                        'game_list.cc',
+                        'main_window.cc',
+                        'settings_window_base.cc',
+                        'video_settings_window.cc',
+                        'audio_settings_window.cc',
+                        'path_settings_window.cc',
+                        'ppu_viewer_window.cc',
+                        'utilities/app_settings.cc'])
 
 env.Install(os.path.join(env['prefix'], 'bin'), '#/D-NES')
 

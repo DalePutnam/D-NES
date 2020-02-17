@@ -103,7 +103,7 @@ def do_configuration(env, lib_registry):
         print("Unable to find ALSA headers")
         Exit(1)
 
-    lib_registry['alsa'] = alsa_flags
+    lib_registry.add_library('alsa', alsa_flags)
 
     # Check that X11 is installed
     if not conf.CheckLibPlus('X11', x11_flags):
@@ -114,7 +114,7 @@ def do_configuration(env, lib_registry):
         print("Unable to find X11 headers")
         Exit(1)
 
-    lib_registry['X11'] = x11_flags
+    lib_registry.add_library('X11', x11_flags)
 
     # Check that GL is installed
     if not conf.CheckLibPlus('GL', gl_flags):
@@ -125,21 +125,21 @@ def do_configuration(env, lib_registry):
         print("Unable to find GL headers")
         Exit(1)
 
-    lib_registry['GL'] = gl_flags
+    lib_registry.add_library('GL', gl_flags)
 
     # Check that GTK+3 is installed
     if not conf.CheckLibPlus('GTK+3', gtk3_flags):
         print("Unable to find GTK+-3.0")
         Exit(1)
 
-    lib_registry['GTK+3'] = gtk3_flags
+    lib_registry.add_library('GTK+3', gtk3_flags)
 
     # Check that the correct version of wxWidgets is installed
     if not conf.CheckWxWidgets(wx_version, wx_flags):
         print('Unable to find wxWidgets 3.0.4 or later')
         Exit(1)
 
-    lib_registry['wxWidgets'] = wx_flags
+    lib_registry.add_library('wxWidgets', wx_flags)
 
     env = conf.Finish()
 
@@ -147,14 +147,16 @@ def do_configuration(env, lib_registry):
 # Utilize all cores on the machine
 SetOption('num_jobs', multiprocessing.cpu_count())
 
+lib_registry = LibraryRegistry()
 env = Environment()
 setup_environment(env)
 
-print('Building in %s mode' % env['build_type'])
+skip_config = GetOption('help') or GetOption('clean')
 
-lib_registry = {}
-do_configuration(env, lib_registry)
+if not skip_config:
+    print('Building in %s mode' % env['build_type'])
+    do_configuration(env, lib_registry)
 
 SConscript(['source/core/SConscript',
             'source/app/SConscript'],
-           exports=['env', 'lib_registry'])
+            exports=['env', 'lib_registry'])

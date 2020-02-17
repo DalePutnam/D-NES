@@ -7,6 +7,23 @@ from functools import wraps
 from SCons.Variables import PathVariable, EnumVariable
 
 
+class LibraryRegistry:
+    def __init__(self):
+        self.dict = {}
+
+    def has_library(self, libname):
+        return libname in self.dict
+
+    def add_library(self, libname, flags):
+        self.dict[libname] = flags
+
+    def get_library_build_flags(self, libname):
+        if libname not in self.dict:
+            return None
+        else:
+            return self.dict[libname]
+
+
 def add_library_variables(vars, libname, root_only=False):
     '''Add variables for finding the given library'''
     libname = libname.lower()

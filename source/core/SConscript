@@ -7,9 +7,9 @@ env = env.Clone()
 
 env.Append(CPPPATH = ['.', 'common'])
 
-env.MergeFlags(lib_registry['X11'])
-env.MergeFlags(lib_registry['GL'])
-env.MergeFlags(lib_registry['alsa'])
+env.MergeFlags(lib_registry.get_library_build_flags('X11'))
+env.MergeFlags(lib_registry.get_library_build_flags('GL'))
+env.MergeFlags(lib_registry.get_library_build_flags('alsa'))
 
 env.SharedLibrary('dnes', ['nes.cc',
                            'cpu.cc',
