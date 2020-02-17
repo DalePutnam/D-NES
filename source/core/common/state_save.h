@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include "../nes.h"
+#include "nes.h"
 
 class StateSave
 {

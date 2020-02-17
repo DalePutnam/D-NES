@@ -1,4 +1,4 @@
-#include "../nes.h"
+#include "nes.h"
 
 NesException::NesException(const std::string& component, const std::string& message)
     : _message(component + ": " + message)

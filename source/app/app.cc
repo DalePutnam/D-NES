@@ -3,7 +3,7 @@
 #include <string>
 #include <wx/cmdline.h>
 
-#include "dnes/nes.h"
+#include "nes.h"
 #include "app.h"
 #include "main_window.h"
 #include "utilities/app_settings.h"

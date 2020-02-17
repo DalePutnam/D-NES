@@ -1,6 +1,6 @@
 #include <fstream>
 
-#include "../nes.h"
+#include "nes.h"
 
 #include "ines.h"
 

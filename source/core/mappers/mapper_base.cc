@@ -2,7 +2,7 @@
 #include <exception>
 #include <cstring>
 
-#include "../nes.h"
+#include "nes.h"
 
 #include "cpu.h"
 #include "ppu.h"

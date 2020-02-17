@@ -10,7 +10,7 @@
 #include <wx/dir.h>
 #include <wx/wupdlock.h>
 
-#include "dnes/nes.h"
+#include "nes.h"
 #include "game_list.h"
 #include "main_window.h"
 #include "path_settings_window.h"

@@ -3,7 +3,7 @@
 
 #include "main_window.h"
 #include "settings_window_base.h"
-#include "dnes/nes.h"
+#include "nes.h"
 
 static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX & ~wxCLOSE_BOX;
 

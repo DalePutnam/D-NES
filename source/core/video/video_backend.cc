@@ -1,4 +1,4 @@
-#include "../nes.h"
+#include "nes.h"
 
 #include "video_backend.h"
 #include "osd_font.h"

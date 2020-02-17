@@ -11,7 +11,7 @@
 #include "path_settings_window.h"
 #include "utilities/app_settings.h"
 
-#include "dnes/nes.h"
+#include "nes.h"
 
 wxDEFINE_EVENT(EVT_PATH_WINDOW_CLOSED, wxCommandEvent);
 
