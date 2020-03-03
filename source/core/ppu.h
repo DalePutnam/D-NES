@@ -72,14 +72,6 @@ private:
     VideoBackend* VideoOut;
     NESCallback* Callback;
 
-    int FpsCounter;
-    std::atomic<int> CurrentFps;
-    std::chrono::steady_clock::time_point FrameCountStart;
-
-    std::atomic<bool> RequestTurboMode;
-    bool TurboModeEnabled;
-    int TurboFrameSkip;
-
     uint64_t Clock;
     int32_t Dot;
     int32_t Line;
@@ -158,24 +150,16 @@ private:
     uint8_t SpriteAttribute[8];
     int16_t SpriteCounter[8];
 
-	uint32_t FrameBufferIndex;
-	uint32_t FrameBuffer[256 * 240];
+    uint32_t FrameBufferIndex;
+    uint32_t FrameBuffer[256 * 240];
 
     uint16_t PpuBusAddress;
-
-    bool NtscMode;
-    std::atomic<bool> RequestNtscMode;
-    float SignalLevels[256 * 8];
-
-    void RenderNtscPixel(int pixel);
-    void RenderNtscLine();
 
     void SpriteEvaluation();
     void RenderPixel();
     void RenderPixelIdle();
     void DecodePixel(uint16_t colour);
 
-    void MaybeChangeModes();
     void IncrementXScroll();
     void IncrementYScroll();
     void IncrementClock();
@@ -209,7 +193,4 @@ private:
     void WritePalette(uint8_t value, uint16_t address);
 
     uint8_t Peek(uint16_t address);
-
-    void UpdateFrameRate();
-    void UpdateFrameSkipCounters();
 };

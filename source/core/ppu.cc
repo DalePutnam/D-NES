@@ -26,12 +26,6 @@ PPU::PPU(VideoBackend* vout, NESCallback* callback)
     , Cartridge(nullptr)
     , VideoOut(vout)
     , Callback(callback)
-    , FpsCounter(0)
-    , CurrentFps(0)
-    , FrameCountStart(std::chrono::steady_clock::now())
-    , RequestTurboMode(false)
-    , TurboModeEnabled(false)
-    , TurboFrameSkip(0)
     , Clock(0)
     , Dot(1)
     , Line(241)
@@ -75,7 +69,6 @@ PPU::PPU(VideoBackend* vout, NESCallback* callback)
     , BackgroundAttribute(0)
     , SpriteCount(0)
 	, FrameBufferIndex(0)
-    , NtscMode(false)
 {
     memset(NameTable0, 0, sizeof(uint8_t) * 0x400);
     memset(NameTable1, 0, sizeof(uint8_t) * 0x400);
@@ -350,17 +343,12 @@ void PPU::Step()
             // Toggle even flag
             Even = !Even;
 
-            UpdateFrameSkipCounters();
-
-            // Update frame rate counter
-            UpdateFrameRate();
-
-            // Check if a change in rendering mode or turbo mode has been requested
-            MaybeChangeModes();
-
             FrameBufferIndex = 0;
 
-            VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
+            if (VideoOut != nullptr)
+            {
+                VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(FrameBuffer));
+            }
 
             if (Callback != nullptr) {
                 Callback->OnFrameComplete();
@@ -379,12 +367,10 @@ bool PPU::GetNMIActive()
 
 void PPU::SetTurboModeEnabled(bool enabled)
 {
-    RequestTurboMode = enabled;
 }
 
 void PPU::SetNtscDecodingEnabled(bool enabled)
 {
-    RequestNtscMode = enabled;
 }
 
 uint8_t PPU::ReadPPUStatus()
@@ -526,7 +512,7 @@ void PPU::WritePPUDATA(uint8_t M)
 
 int PPU::GetFrameRate()
 {
-    return CurrentFps;
+    return 0;
 }
 
 void PPU::GetNameTable(int table, uint8_t* pixels)
@@ -874,97 +860,6 @@ void PPU::WriteNameTable1(uint8_t M, uint16_t address)
     NameTable1[address] = M;
 }
 
-void PPU::RenderNtscPixel(int pixel)
-{
-    static constexpr float levels[16] =
-    {
-        // Normal Levels
-          -0.116f / 12.f, 0.000f / 12.f, 0.307f / 12.f, 0.714f / 12.f,
-           0.399f / 12.f, 0.684f / 12.f, 1.000f / 12.f, 1.000f / 12.f,
-           // Attenuated Levels
-          -0.087f / 12.f, 0.000f / 12.f, 0.229f / 12.f, 0.532f / 12.f,
-           0.298f / 12.f, 0.510f / 12.f, 0.746f / 12.f, 0.746f / 12.f
-    };
-
-    auto SignalLevel = [=](int phase)
-    {
-        // Decode the NES color.
-        int color = (pixel & 0x0F);    // 0..15 "cccc"
-        int level = (pixel >> 4) & 3;  // 0..3  "ll"
-        int emphasis = (pixel >> 6);   // 0..7  "eee"
-        if (color > 13) { level = 1; } // For colors 14..15, level 1 is forced.
-
-                                       // The square wave for this color alternates between these two voltages:
-        int low = level;
-        int high = level + 4;
-
-        if (color == 0) { low = high; } // For color 0, only high level is emitted
-        if (color > 12) { high = low; } // For colors 13..15, only low level is emitted
-
-         // Generate the square wave
-        auto InColorPhase = [=](int color) { return (color + phase) % 12 < 6; }; // Inline function
-        int index = InColorPhase(color) ? high : low;
-
-        // When de-emphasis bits are set, some parts of the signal are attenuated:
-        if (((emphasis & 1) && InColorPhase(0)) || ((emphasis & 2) && InColorPhase(4)) || ((emphasis & 4) && InColorPhase(8)))
-        {
-            return levels[index + 8];
-        }
-        else
-        {
-            return levels[index];
-        }
-    };
-
-    int phase = (Clock << 3) % 12;
-    for (int p = 0; p < 8; ++p) // Each pixel produces distinct 8 samples of NTSC signal.
-    {
-        int index = ((Dot - 1) << 3) + p;
-        SignalLevels[index] = SignalLevel((phase + p) % 12);
-    }
-}
-
-void PPU::RenderNtscLine()
-{
-    static constexpr int width = 256;
-    static constexpr float sineTable[12] =
-    {
-        0.89101f,  0.54464f,  0.05234f, -0.45399f, -0.83867f, -0.99863f,
-       -0.89101f, -0.54464f, -0.05234f,  0.45399f,  0.83867f,  0.99863f
-    };
-
-    int phase = ((Clock - width + 1) << 3) % 12;
-
-    for (unsigned int x = 0; x < width; ++x)
-    {
-        // Determine the region of scanline signal to sample. Take 12 samples.
-        int center = ((x * width * 8) / width) + 4;
-        int begin = center - 6; if (begin < 0) begin = 0;
-        int end = center + 6; if (end > (width << 3)) end = (width << 3);
-        float y = 0.f, i = 0.f, q = 0.f; // Calculate the color in YIQ.
-        for (int p = begin; p < end; ++p) // Collect and accumulate samples
-        {
-            float level = SignalLevels[p];
-            y = y + level;
-            i = i + level * sineTable[(phase + p + 3) % 12];
-            q = q + level * sineTable[(phase + p) % 12];
-        }
-
-        auto clamp = [](float v) { return (v > 255.0f) ? 255.0f : ((v < 0.0f) ? 0.0f : v); };
-
-        int red = static_cast<int>(clamp(255.95f * (y + 0.946882f*i + 0.623557f*q)));
-        int green = static_cast<int>(clamp(255.95f * (y + -0.274788f*i + -0.635691f*q)));
-        int blue = static_cast<int>(clamp(255.95f * (y + -1.108545f*i + 1.709007f*q)));
-
-        if (VideoOut != nullptr)
-        {
-            uint32_t pixel = (red << 16) | (green << 8) | blue | 0xFF000000;
-			FrameBuffer[FrameBufferIndex++] = pixel;
-        }
-        
-    }
-}
-
 // This is sort of a bastardized version of the PPU sprite evaluation
 // It is not cycle accurate unfortunately, but I don't suspect that will
 // cause any issues (but what do I know really?)
@@ -1112,62 +1007,23 @@ void PPU::RenderPixel()
 
 void PPU::RenderPixelIdle()
 {
-    if (TurboFrameSkip == 0)
+    uint16_t colour;
+
+    if (PpuAddress >= 0x3F00 && PpuAddress <= 0x3FFF)
     {
-        uint16_t colour;
-
-        if (PpuAddress >= 0x3F00 && PpuAddress <= 0x3FFF)
-        {
-            colour = ReadPalette(PpuAddress);
-        }
-        else
-        {
-            colour = ReadPalette(0x3F00);
-        }
-
-        DecodePixel(colour);
+        colour = ReadPalette(PpuAddress);
     }
+    else
+    {
+        colour = ReadPalette(0x3F00);
+    }
+
+    DecodePixel(colour);
 }
 
 void PPU::DecodePixel(uint16_t colour)
 {
-    if (TurboFrameSkip == 0)
-    {
-        // NTSC rendering is not supported in turbo mode
-        if (!TurboModeEnabled && NtscMode)
-        {
-            uint16_t pixel = colour & 0x3F;
-            pixel = pixel | (IntenseRed << 6);
-            pixel = pixel | (IntenseGreen << 7);
-            pixel = pixel | (IntenseBlue << 8);
-
-            RenderNtscPixel(pixel);
-            if (Dot == 256) RenderNtscLine();
-        }
-        else
-        {
-            if (VideoOut != nullptr)
-            {
-                FrameBuffer[FrameBufferIndex++] = RgbLookupTable[colour];
-            }
-        }
-    }
-}
-
-void PPU::MaybeChangeModes()
-{
-    if (TurboModeEnabled != RequestTurboMode)
-    {
-        TurboModeEnabled = RequestTurboMode;
-        if (!TurboModeEnabled)
-        {
-            TurboFrameSkip = 0;
-        }
-    }
-    else if (NtscMode != RequestNtscMode)
-    {
-        NtscMode = RequestNtscMode;
-    }
+    FrameBuffer[FrameBufferIndex++] = RgbLookupTable[colour];
 }
 
 void PPU::IncrementXScroll()
@@ -1462,43 +1318,5 @@ uint8_t PPU::Peek(uint16_t address)
     else
     {
         return ReadPalette(address);
-    }
-}
-
-void PPU::UpdateFrameRate()
-{
-    using namespace std::chrono;
-
-    steady_clock::time_point now = steady_clock::now();
-    microseconds time_span = duration_cast<microseconds>(now - FrameCountStart);
-    if (time_span.count() >= 1000000)
-    {
-        CurrentFps = FpsCounter;
-        FpsCounter = 0;
-        FrameCountStart = steady_clock::now();
-
-        if (VideoOut != nullptr)
-        {
-            VideoOut->SetFps(CurrentFps);
-        }
-    }
-    else
-    {
-        FpsCounter++;
-    }
-}
-
-void PPU::UpdateFrameSkipCounters()
-{
-    if (TurboModeEnabled)
-    {
-        if (TurboFrameSkip == 0)
-        {
-            TurboFrameSkip = 20;
-        }
-        else
-        {
-            TurboFrameSkip--;
-        }
     }
 }

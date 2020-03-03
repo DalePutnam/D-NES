@@ -180,17 +180,26 @@ void NES::SetNtscDecoderEnabled(bool enabled)
 
 void NES::SetFpsDisplayEnabled(bool enabled)
 {
-    VideoOut->ShowFps(enabled);
+    if (VideoOut != nullptr)
+    {
+        VideoOut->ShowFps(enabled);
+    }
 }
 
 void NES::SetOverscanEnabled(bool enabled)
 {
-    VideoOut->SetOverscanEnabled(enabled);
+    if (VideoOut != nullptr)
+    {
+        VideoOut->SetOverscanEnabled(enabled);
+    }
 }
 
 void NES::ShowMessage(const std::string& message, uint32_t duration)
 {
-    VideoOut->ShowMessage(message, duration);
+    if (VideoOut != nullptr)
+    {
+        VideoOut->ShowMessage(message, duration);
+    }
 }
 
 void NES::SetAudioEnabled(bool enabled)
@@ -274,14 +283,22 @@ void NES::Run()
 {
     try
     {
-		VideoOut->Prepare();
+        if (VideoOut != nullptr)
+        {
+            VideoOut->Prepare();
+        }
+
         Cartridge->LoadNativeSave();
 
         CurrentState = State::Running;
         Cpu->Run();
 
         Cartridge->SaveNativeSave();
-		VideoOut->Finalize();
+
+        if (VideoOut != nullptr)
+        {
+            VideoOut->Finalize();
+        }
     }
     catch (NesException&)
     {
@@ -369,7 +386,10 @@ void NES::SaveState(int slot)
     saveStream.write(reinterpret_cast<char*>(&componentStateSize), sizeof(size_t));
     saveStream.write(componentState->GetBuffer(), componentStateSize);
 
-    VideoOut->ShowMessage("Saved State " + std::to_string(slot), 5);
+    if (VideoOut != nullptr)
+    {
+        VideoOut->ShowMessage("Saved State " + std::to_string(slot), 5);
+    }
 
     Resume();
 }
@@ -415,7 +435,10 @@ void NES::LoadState(int slot)
 
     Cartridge->LoadState(StateSave::New(componentState, componentStateSize));
 
-    VideoOut->ShowMessage("Loaded State " + std::to_string(slot), 5);
+    if (VideoOut != nullptr)
+    {
+        VideoOut->ShowMessage("Loaded State " + std::to_string(slot), 5);
+    }
 
     Resume();
 }
