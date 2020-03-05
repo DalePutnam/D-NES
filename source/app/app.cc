@@ -1,6 +1,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <chrono>
+#include <thread>
 #include <wx/cmdline.h>
 
 #include "nes.h"
@@ -29,66 +31,113 @@ static void InitConsole()
 // App Implementation
 bool NESApp::OnInit()
 {
-//     wxCmdLineParser parser(wxApp::argc, wxApp::argv);
-//     parser.AddOption("p", "profile");
+    wxCmdLineParser parser(wxApp::argc, wxApp::argv);
+    parser.AddOption("p", "profile");
 
-//     parser.Parse();
+    parser.Parse();
 
-//     wxString game;
-//     if (parser.Found("p", &game))
-//     {
-// #ifdef _WIN32
-//         InitConsole();
-// #endif
-//         std::cout << "D-NES Profile Mode" << std::endl;
+    wxString game;
+    if (parser.Found("p", &game))
+    {
+#ifdef _WIN32
+        InitConsole();
+#endif
+        class CallbackImpl : public NESCallback
+        {
+            using steady_clock = std::chrono::steady_clock;
+            using time_point = std::chrono::time_point<steady_clock>;
+            using seconds = std::chrono::seconds;
 
-//         {
-//             NesParams params;
-//             params.RomPath = game;
-//             params.TurboModeEnabled = true;
-//             params.HeadlessMode = true;
+        public:
+            CallbackImpl() = default;
 
-//             try 
-//             {
-//                 std::cout << "Loading ROM " << params.RomPath << std::flush;
-//                 NES nes(params);
+            void OnFrameComplete()
+            {
+                using namespace std::chrono_literals;
 
-//                 std::cout << ": Success!" << std::endl;
+                if (frameCounter == -1)
+                {
+                    frameCounter = 0;
+                    periodStart = steady_clock::now();
 
-//                 auto UpdateFps = [&nes]()
-//                 {
-//                     std::cout << "\rFPS: " << nes.GetFrameRate() << std::flush;
-//                 };
+                    return;
+                }
 
-//                 nes.BindFrameCallback(UpdateFps);
+                if (std::chrono::duration_cast<seconds>(steady_clock::now() - periodStart) >= 1s)
+                {
+                    std::cout << "\rFPS: " << frameCounter << std::flush;
 
-//                 std::cout << "Starting Emulator. Press ENTER to Terminate." << std::endl;
+                    fpsAccumulator += frameCounter;
+                    numFpsRecords++;
+                    frameCounter = 0;
+                    periodStart = steady_clock::now();
 
-//                 nes.Start();
+                    return;
+                }
 
-//                 std::cin.get();
+                frameCounter++;
+            };
+            void OnError(std::exception_ptr eptr) {};
 
-//                 nes.Stop();
-//             } 
-//             catch (...)
-//             {
-//                 std::cout << ": Failed!" << std::endl;
-//                 std::cout << "Press Enter to Terminate." << std::endl;
+            double GetAverageFps() {
+                return static_cast<double>(fpsAccumulator) / numFpsRecords;
+            }
+
+            ~CallbackImpl() = default;
+        private:
+            int32_t frameCounter{-1};
+            uint64_t fpsAccumulator{0};
+            uint64_t numFpsRecords{0};
+
+            time_point periodStart{time_point::min()};
+        };
+
+        std::cout << "D-NES Profile Mode" << std::endl;
+
+        {
+            try 
+            {
+                using namespace std::chrono_literals;
+
+                CallbackImpl callback;
+
+                std::cout << "Loading ROM " << game << std::flush;
+                NES nes(game.ToStdString(), "", nullptr, &callback);
+                nes.SetAudioEnabled(false);
+
+                std::cout << ": Success!" << std::endl;
+
+                std::cout << "Starting Emulator. Running 30 second test." << std::endl;
+
+                nes.Start();
+
+
+                std::this_thread::sleep_for(30s);
+                //std::cin.get();
+
+                nes.Stop();
+
+                std::cout << "\nAverage FPS: " << callback.GetAverageFps() << std::endl;
+            } 
+            catch (...)
+            {
+                std::cout << ": Failed!" << std::endl;
+                std::cout << "Press Enter to Terminate." << std::endl;
                 
-//                 std::cin.get();
-//             }
-//         }
+                std::cin.get();
+            }
+        }
 
-// #ifdef _WIN32
-//         FreeConsole();
-// #endif
-//         exit(0);
-//     }
-//     else
-//     {
+#ifdef _WIN32
+        FreeConsole();
+#endif
+        exit(0);
+    }
+    else
+    {
         MainWindow* window = new MainWindow();
         window->Show(true);
-//    }
+   }
 
     return true;
 }
