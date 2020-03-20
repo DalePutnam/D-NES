@@ -21,6 +21,8 @@ static constexpr uint32_t RgbLookupTable[64] =
 
 static constexpr uint32_t ResetDelay = 88974;
 
+static constexpr uint16_t SecondaryOamOffset = 0x100;
+
 PPU::PPU(VideoBackend* vout, NESCallback* callback)
     : Cpu(nullptr)
     , Cartridge(nullptr)
@@ -49,8 +51,11 @@ PPU::PPU(VideoBackend* vout, NESCallback* callback)
     , SpriteOverflowFlag(false)
     , SpriteZeroHitFlag(false)
     , NmiOccuredFlag(false)
-    , SpriteZeroSecondaryOamFlag(false)
+    , SpriteZeroOnNextLine(false)
+    , SpriteZeroOnCurrentLine(false)
     , OamAddress(0)
+    , OamData(0)
+    , SecondaryOamIndex(0)
     , PpuAddress(0)
     , PpuTempAddress(0)
     , FineXScroll(0)
@@ -69,11 +74,13 @@ PPU::PPU(VideoBackend* vout, NESCallback* callback)
     , BackgroundAttribute(0)
     , SpriteCount(0)
 	, FrameBufferIndex(0)
+    , SpriteEvaluationCopyCycles(0)
+    , SpriteEvaluationRunning(true)
+    , SpriteEvaluationSpriteZero(true)
 {
     memset(NameTable0, 0, sizeof(uint8_t) * 0x400);
     memset(NameTable1, 0, sizeof(uint8_t) * 0x400);
-    memset(PrimaryOam, 0, sizeof(uint8_t) * 0x100);
-    memset(SecondaryOam, 0, sizeof(uint8_t) * 0x20);
+    memset(Oam, 0, sizeof(uint8_t) * 0x120);
     memset(PaletteTable, 0, sizeof(uint8_t) * 0x20);
     memset(SpriteShift0, 0, sizeof(uint8_t) * 8);
     memset(SpriteShift1, 0, sizeof(uint8_t) * 8);
@@ -148,11 +155,22 @@ void PPU::Step()
     // Visible Lines and Pre-Render Line
     if ((Line >= 0 && Line <= 239) || Line == 261)
     {
-        if (Line == 261 && Dot == 1)
+        if (Dot == 1)
         {
-            NmiOccuredFlag = false;
-            InterruptActive = false;
-            SpriteZeroHitFlag = false;
+            if (Line == 261)
+            {
+                NmiOccuredFlag = false;
+                InterruptActive = false;
+                SpriteZeroHitFlag = false;
+                SpriteOverflowFlag = false;
+            }
+
+            SpriteCount = 0;
+            SpriteZeroOnCurrentLine = SpriteZeroOnNextLine;
+            SpriteZeroOnNextLine = false;
+            SpriteEvaluationRunning = true;
+            SpriteEvaluationSpriteZero = true;
+            SecondaryOamIndex = 0;
         }
 
         if (RenderingEnabled)
@@ -241,6 +259,8 @@ void PPU::Step()
                     PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
                 }
 
+                OamAddress = 0;
+
                 uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
@@ -325,9 +345,9 @@ void PPU::Step()
         }
     }
 
-    if (Line < 240 && Dot == 257)
+    if (RenderingEnabled && Line < 240 && Dot >= 1 && Dot <= 256)
     {
-        SpriteEvaluation();
+        StepSpriteEvaluation();
     }
 
     RenderingEnabled = RenderStateDelaySlot;
@@ -397,7 +417,8 @@ uint8_t PPU::ReadPPUStatus()
 
 uint8_t PPU::ReadOAMData()
 {
-    return PrimaryOam[OamAddress];
+    //return Oam[OamAddress];
+    return OamData;
 }
 
 uint8_t PPU::ReadPPUData()
@@ -450,12 +471,21 @@ void PPU::WritePPUMASK(uint8_t M)
 void PPU::WriteOAMADDR(uint8_t M)
 {
     OamAddress = M;
+    OamData = Oam[OamAddress];
     LowerBits = (0x1F & OamAddress);
 }
 
 void PPU::WriteOAMDATA(uint8_t M)
 {
-    PrimaryOam[OamAddress++] = M;
+    if (RenderingEnabled && (Line < 240 || Line == 261))
+    {
+        return;
+    }
+
+    OamData = M;
+    Oam[OamAddress] = M;
+    OamAddress = (OamAddress + 1) % 0x100;
+
     LowerBits = (0x1F & M);
 }
 
@@ -676,8 +706,8 @@ void PPU::GetPalette(int palette, uint8_t* pixels)
 
 void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 {
-    uint8_t byteOne = PrimaryOam[(0x4 * sprite) + 1];
-    uint8_t byteTwo = PrimaryOam[(0x4 * sprite) + 2];
+    uint8_t byteOne = Oam[(0x4 * sprite) + 1];
+    uint8_t byteTwo = Oam[(0x4 * sprite) + 2];
 
     uint16_t tableIndex = BaseSpriteTableAddress;
     uint16_t patternIndex = byteOne * 16;
@@ -710,134 +740,132 @@ StateSave::Ptr PPU::SaveState()
 {
     StateSave::Ptr state = StateSave::New();
 
-    state->StoreValue(Clock);
-    state->StoreValue(Dot);
-    state->StoreValue(Line);
-    state->StoreValue(BaseSpriteTableAddress);
-    state->StoreValue(BaseBackgroundTableAddress);
-    state->StoreValue(LowerBits);
-    state->StoreValue(OamAddress);
-    state->StoreValue(PpuAddress);
-    state->StoreValue(PpuTempAddress);
-    state->StoreValue(FineXScroll);
-    state->StoreValue(DataBuffer);
-    state->StoreValue(PrimaryOam);
-    state->StoreValue(SecondaryOam);
-    state->StoreValue(NameTable0);
-    state->StoreValue(NameTable1);
-    state->StoreValue(PaletteTable);
-    state->StoreValue(NameTableByte);
-    state->StoreValue(AttributeByte);
-    state->StoreValue(TileBitmapLow);
-    state->StoreValue(TileBitmapHigh);
-    state->StoreValue(BackgroundShift0);
-    state->StoreValue(BackgroundShift1);
-    state->StoreValue(BackgroundAttributeShift0);
-    state->StoreValue(BackgroundAttributeShift1);
-    state->StoreValue(BackgroundAttribute);
-    state->StoreValue(SpriteCount);
-    state->StoreValue(SpriteShift0);
-    state->StoreValue(SpriteShift1);
-    state->StoreValue(SpriteAttribute);
-    state->StoreValue(SpriteCounter);
-    state->StoreValue(FrameBufferIndex);
+    // state->StoreValue(Clock);
+    // state->StoreValue(Dot);
+    // state->StoreValue(Line);
+    // state->StoreValue(BaseSpriteTableAddress);
+    // state->StoreValue(BaseBackgroundTableAddress);
+    // state->StoreValue(LowerBits);
+    // state->StoreValue(OamAddress);
+    // state->StoreValue(PpuAddress);
+    // state->StoreValue(PpuTempAddress);
+    // state->StoreValue(FineXScroll);
+    // state->StoreValue(DataBuffer);
+    // state->StoreValue(Oam);
+    // state->StoreValue(NameTable0);
+    // state->StoreValue(NameTable1);
+    // state->StoreValue(PaletteTable);
+    // state->StoreValue(NameTableByte);
+    // state->StoreValue(AttributeByte);
+    // state->StoreValue(TileBitmapLow);
+    // state->StoreValue(TileBitmapHigh);
+    // state->StoreValue(BackgroundShift0);
+    // state->StoreValue(BackgroundShift1);
+    // state->StoreValue(BackgroundAttributeShift0);
+    // state->StoreValue(BackgroundAttributeShift1);
+    // state->StoreValue(BackgroundAttribute);
+    // state->StoreValue(SpriteCount);
+    // state->StoreValue(SpriteShift0);
+    // state->StoreValue(SpriteShift1);
+    // state->StoreValue(SpriteAttribute);
+    // state->StoreValue(SpriteCounter);
+    // state->StoreValue(FrameBufferIndex);
 
-    state->StorePackedValues(
-        Even, 
-        SuppressNmi,
-        InterruptActive,
-        PpuAddressIncrement,
-        SpriteSizeSwitch,
-        NmiEnabled,
-        GrayScaleEnabled,
-        ShowBackgroundLeft
-    );
+    // state->StorePackedValues(
+    //     Even, 
+    //     SuppressNmi,
+    //     InterruptActive,
+    //     PpuAddressIncrement,
+    //     SpriteSizeSwitch,
+    //     NmiEnabled,
+    //     GrayScaleEnabled,
+    //     ShowBackgroundLeft
+    // );
 
-    state->StorePackedValues(
-        ShowSpritesLeft,
-        ShowBackground,
-        ShowSprites,
-        IntenseRed,
-        IntenseGreen,
-        IntenseBlue,
-        SpriteOverflowFlag,
-        SpriteZeroHitFlag
-    );
+    // state->StorePackedValues(
+    //     ShowSpritesLeft,
+    //     ShowBackground,
+    //     ShowSprites,
+    //     IntenseRed,
+    //     IntenseGreen,
+    //     IntenseBlue,
+    //     SpriteOverflowFlag,
+    //     SpriteZeroHitFlag
+    // );
 
-    state->StorePackedValues(
-        NmiOccuredFlag,
-        SpriteZeroSecondaryOamFlag,
-        AddressLatch,
-        RenderingEnabled,
-        RenderStateDelaySlot
-    );
+    // state->StorePackedValues(
+    //     NmiOccuredFlag,
+    //     SpriteZeroSecondaryOamFlag,
+    //     AddressLatch,
+    //     RenderingEnabled,
+    //     RenderStateDelaySlot
+    // );
 
     return state;
 }
 
 void PPU::LoadState(const StateSave::Ptr& state)
 {
-    state->ExtractValue(Clock);
-    state->ExtractValue(Dot);
-    state->ExtractValue(Line);
-    state->ExtractValue(BaseSpriteTableAddress);
-    state->ExtractValue(BaseBackgroundTableAddress);
-    state->ExtractValue(LowerBits);
-    state->ExtractValue(OamAddress);
-    state->ExtractValue(PpuAddress);
-    state->ExtractValue(PpuTempAddress);
-    state->ExtractValue(FineXScroll);
-    state->ExtractValue(DataBuffer);
-    state->ExtractValue(PrimaryOam);
-    state->ExtractValue(SecondaryOam);
-    state->ExtractValue(NameTable0);
-    state->ExtractValue(NameTable1);
-    state->ExtractValue(PaletteTable);
-    state->ExtractValue(NameTableByte);
-    state->ExtractValue(AttributeByte);
-    state->ExtractValue(TileBitmapLow);
-    state->ExtractValue(TileBitmapHigh);
-    state->ExtractValue(BackgroundShift0);
-    state->ExtractValue(BackgroundShift1);
-    state->ExtractValue(BackgroundAttributeShift0);
-    state->ExtractValue(BackgroundAttributeShift1);
-    state->ExtractValue(BackgroundAttribute);
-    state->ExtractValue(SpriteCount);
-    state->ExtractValue(SpriteShift0);
-    state->ExtractValue(SpriteShift1);
-    state->ExtractValue(SpriteAttribute);
-    state->ExtractValue(SpriteCounter);
-    state->ExtractValue(FrameBufferIndex);
+    // state->ExtractValue(Clock);
+    // state->ExtractValue(Dot);
+    // state->ExtractValue(Line);
+    // state->ExtractValue(BaseSpriteTableAddress);
+    // state->ExtractValue(BaseBackgroundTableAddress);
+    // state->ExtractValue(LowerBits);
+    // state->ExtractValue(OamAddress);
+    // state->ExtractValue(PpuAddress);
+    // state->ExtractValue(PpuTempAddress);
+    // state->ExtractValue(FineXScroll);
+    // state->ExtractValue(DataBuffer);
+    // state->ExtractValue(Oam);
+    // state->ExtractValue(NameTable0);
+    // state->ExtractValue(NameTable1);
+    // state->ExtractValue(PaletteTable);
+    // state->ExtractValue(NameTableByte);
+    // state->ExtractValue(AttributeByte);
+    // state->ExtractValue(TileBitmapLow);
+    // state->ExtractValue(TileBitmapHigh);
+    // state->ExtractValue(BackgroundShift0);
+    // state->ExtractValue(BackgroundShift1);
+    // state->ExtractValue(BackgroundAttributeShift0);
+    // state->ExtractValue(BackgroundAttributeShift1);
+    // state->ExtractValue(BackgroundAttribute);
+    // state->ExtractValue(SpriteCount);
+    // state->ExtractValue(SpriteShift0);
+    // state->ExtractValue(SpriteShift1);
+    // state->ExtractValue(SpriteAttribute);
+    // state->ExtractValue(SpriteCounter);
+    // state->ExtractValue(FrameBufferIndex);
 
-    state->ExtractPackedValues(
-        Even, 
-        SuppressNmi,
-        InterruptActive,
-        PpuAddressIncrement,
-        SpriteSizeSwitch,
-        NmiEnabled,
-        GrayScaleEnabled,
-        ShowBackgroundLeft
-    );
+    // state->ExtractPackedValues(
+    //     Even, 
+    //     SuppressNmi,
+    //     InterruptActive,
+    //     PpuAddressIncrement,
+    //     SpriteSizeSwitch,
+    //     NmiEnabled,
+    //     GrayScaleEnabled,
+    //     ShowBackgroundLeft
+    // );
 
-    state->ExtractPackedValues(
-        ShowSpritesLeft,
-        ShowBackground,
-        ShowSprites,
-        IntenseRed,
-        IntenseGreen,
-        IntenseBlue,
-        SpriteOverflowFlag,
-        SpriteZeroHitFlag
-    );
+    // state->ExtractPackedValues(
+    //     ShowSpritesLeft,
+    //     ShowBackground,
+    //     ShowSprites,
+    //     IntenseRed,
+    //     IntenseGreen,
+    //     IntenseBlue,
+    //     SpriteOverflowFlag,
+    //     SpriteZeroHitFlag
+    // );
 
-    state->ExtractPackedValues(
-        NmiOccuredFlag,
-        SpriteZeroSecondaryOamFlag,
-        AddressLatch,
-        RenderingEnabled,
-        RenderStateDelaySlot
-    );
+    // state->ExtractPackedValues(
+    //     NmiOccuredFlag,
+    //     SpriteZeroSecondaryOamFlag,
+    //     AddressLatch,
+    //     RenderingEnabled,
+    //     RenderStateDelaySlot
+    // );
 }
 
 uint8_t PPU::ReadNameTable0(uint16_t address)
@@ -860,57 +888,99 @@ void PPU::WriteNameTable1(uint8_t M, uint16_t address)
     NameTable1[address] = M;
 }
 
-// This is sort of a bastardized version of the PPU sprite evaluation
-// It is not cycle accurate unfortunately, but I don't suspect that will
-// cause any issues (but what do I know really?)
-void PPU::SpriteEvaluation()
+void PPU::StepSpriteEvaluation()
 {
-    uint8_t glitchCount = 0;
-    SpriteCount = 0;
-    SpriteZeroSecondaryOamFlag = false;
-
-    for (int i = 0; i < 8; ++i)
+    if (Dot <= 64)
     {
-        uint8_t index = i * 4;
-        SecondaryOam[index] = 0xFF;
-        SecondaryOam[index + 1] = 0xFF;
-        SecondaryOam[index + 2] = 0xFF;
-        SecondaryOam[index + 3] = 0xFF;
-    }
-
-    for (int i = 0; i < 64; ++i)
-    {
-        uint8_t size = SpriteSizeSwitch ? 16 : 8;
-        uint8_t index = i * 4; // Index of one of 64 sprites in Primary OAM
-        uint8_t spriteY = PrimaryOam[index + glitchCount]; // The sprites Y coordinate, glitchCount is used to replicate a hardware glitch
-
-        if (SpriteCount < 8) // If fewer than 8 sprites have been found
+        if ((Dot % 2) != 0)
         {
-            // If a sprite is in range, copy it to the next spot in secondary OAM
-            if (spriteY <= Line && spriteY + size > Line && Line != 239)
+            OamData = 0xFF;
+        }
+        else
+        {
+            Oam[SecondaryOamOffset + SecondaryOamIndex] = OamData;
+            SecondaryOamIndex = (SecondaryOamIndex + 1) % 32;
+        }
+    }
+    else
+    {
+        if ((Dot % 2) != 0)
+        {
+            OamData = Oam[OamAddress];
+        }
+        else
+        {
+            if (SpriteEvaluationRunning)
             {
-                if (index == 0)
+                uint8_t size = SpriteSizeSwitch ? 16 : 8;
+                if (SpriteEvaluationCopyCycles == 0 && OamData <= Line && OamData + size > Line)
                 {
-                    SpriteZeroSecondaryOamFlag = true;
+                    if (SpriteCount == 8)
+                    {
+                        SpriteOverflowFlag = true;
+                    }
+
+                    if (SpriteEvaluationSpriteZero)
+                    {
+                        SpriteZeroOnNextLine = true;
+                    }
+
+                    SpriteEvaluationCopyCycles = 4;
+                }
+                
+                SpriteEvaluationSpriteZero = false;
+
+                if (SpriteCount < 8)
+                {
+                    Oam[SecondaryOamOffset + SecondaryOamIndex] = OamData;
+                }
+                else
+                {
+                    OamData = Oam[SecondaryOamOffset + SecondaryOamIndex];
                 }
 
-                SecondaryOam[SpriteCount * 4] = PrimaryOam[index];
-                SecondaryOam[(SpriteCount * 4) + 1] = PrimaryOam[index + 1];
-                SecondaryOam[(SpriteCount * 4) + 2] = PrimaryOam[index + 2];
-                SecondaryOam[(SpriteCount * 4) + 3] = PrimaryOam[index + 3];
-                SpriteCount++;
+                if (SpriteEvaluationCopyCycles == 0)
+                {
+                    OamAddress += 4;
+                    if (SpriteCount == 8)
+                    {
+                        OamAddress = (OamAddress & ~3) | ((OamAddress + 1) & 3);
+                    }
+                }
+                else
+                {
+                    SpriteEvaluationCopyCycles--;
+
+                    OamAddress++;
+
+                    if (SpriteCount < 8)
+                    {
+                        SecondaryOamIndex = (SecondaryOamIndex + 1) % 32;
+                        if (SpriteEvaluationCopyCycles == 0)
+                        {
+                            SpriteCount++;
+                        }
+                    }
+                    else if (SpriteEvaluationCopyCycles == 0)
+                    {
+                        SpriteEvaluationRunning = false;
+                    }
+
+                    if (OamAddress >= 0x100)
+                    {
+                        SpriteEvaluationCopyCycles = 0;
+                    }
+                }
+
+                if (SpriteEvaluationCopyCycles == 0 && !SpriteEvaluationRunning)
+                {
+                    OamAddress = 0;
+                }
             }
-        }
-        else // 8 sprites have already been found
-        {
-            // If the sprite is in range, set the sprite overflow, due to glitch Count this may actually be incorrect
-            if (spriteY <= Line && spriteY + size > Line && !SpriteOverflowFlag)
+            else
             {
-                SpriteOverflowFlag = true;
-            }
-            else if (!SpriteOverflowFlag) // If no sprite in range the increment glitchCount
-            {
-                glitchCount++;
+                OamAddress = (OamAddress + 4) % 0x100;
+                OamData = Oam[SecondaryOamOffset + SecondaryOamIndex];
             }
         }
     }
@@ -960,7 +1030,7 @@ void PPU::RenderPixel()
                     spPriority = !!(spAttribute & 0x20);
                     spPaletteIndex |= ((spAttribute & 0x03) << 2) | spPixel;
 
-                    if (SpriteZeroSecondaryOamFlag && !SpriteZeroHitFlag && i == 0)
+                    if (SpriteZeroOnCurrentLine && !SpriteZeroHitFlag && i == 0)
                     {
                         SpriteZeroHitFlag = (Dot > 1) & (Dot != 256) & (spPixel != 0) & (bgPixel != 0);
                     }
@@ -1151,13 +1221,13 @@ void PPU::DoBackgroundHighByteFetch()
 void PPU::DoSpriteAttributeFetch()
 {
     uint8_t sprite = (Dot - 257) / 8;
-    SpriteAttribute[sprite] = SecondaryOam[(sprite * 4) + 2];
+    SpriteAttribute[sprite] = Oam[SecondaryOamOffset + (sprite * 4) + 2];
 }
 
 void PPU::DoSpriteXCoordinateFetch()
 {
     uint8_t sprite = (Dot - 257) / 8;
-    SpriteCounter[sprite] = SecondaryOam[(sprite * 4) + 3];
+    SpriteCounter[sprite] = Oam[SecondaryOamOffset + (sprite * 4) + 3];
 }
 
 void PPU::SetSpriteLowByteAddress()
@@ -1166,12 +1236,12 @@ void PPU::SetSpriteLowByteAddress()
     if (sprite < SpriteCount)
     {
         bool flipVertical = !!(0x80 & SpriteAttribute[sprite]);
-        uint8_t spriteY = SecondaryOam[sprite * 4];
+        uint8_t spriteY = Oam[SecondaryOamOffset + (sprite * 4)];
 
         if (SpriteSizeSwitch) // if spriteSize is 8x16
         {
-            uint16_t base = (0x1 & SecondaryOam[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-            uint16_t patternIndex = base + ((SecondaryOam[(sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
+            uint16_t base = (0x1 & Oam[SecondaryOamOffset + (sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+            uint16_t patternIndex = base + ((Oam[SecondaryOamOffset + (sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
@@ -1179,7 +1249,7 @@ void PPU::SetSpriteLowByteAddress()
         }
         else
         {
-            uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
+            uint16_t patternIndex = BaseSpriteTableAddress + (Oam[SecondaryOamOffset + (sprite * 4) + 1] << 4); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
             SetBusAddress(patternIndex + offset);
@@ -1212,12 +1282,12 @@ void PPU::SetSpriteHighByteAddress()
     if (sprite < SpriteCount)
     {
         bool flipVertical = !!(0x80 & SpriteAttribute[sprite]);
-        uint8_t spriteY = SecondaryOam[sprite * 4];
+        uint8_t spriteY = Oam[SecondaryOamOffset + (sprite * 4)];
 
         if (SpriteSizeSwitch) // if spriteSize is 8x16
         {
-            uint16_t base = (0x1 & SecondaryOam[(sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-            uint16_t patternIndex = base + ((SecondaryOam[(sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
+            uint16_t base = (0x1 & Oam[SecondaryOamOffset + (sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+            uint16_t patternIndex = base + ((Oam[SecondaryOamOffset + (sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
@@ -1225,7 +1295,7 @@ void PPU::SetSpriteHighByteAddress()
         }
         else
         {
-            uint16_t patternIndex = BaseSpriteTableAddress + (SecondaryOam[(sprite * 4) + 1] << 4); // Index of the beginning of the pattern
+            uint16_t patternIndex = BaseSpriteTableAddress + (Oam[SecondaryOamOffset + (sprite * 4) + 1] << 4); // Index of the beginning of the pattern
             uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
             SetBusAddress(patternIndex + offset + 8);

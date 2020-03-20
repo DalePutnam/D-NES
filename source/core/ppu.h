@@ -103,9 +103,10 @@ private:
     bool SpriteOverflowFlag;
     bool SpriteZeroHitFlag;
     bool NmiOccuredFlag;
-    bool SpriteZeroSecondaryOamFlag;
+    bool SpriteZeroOnNextLine;
+    bool SpriteZeroOnCurrentLine;
 
-    uint8_t OamAddress;
+    uint16_t OamAddress;
     uint16_t PpuAddress;
     uint16_t PpuTempAddress;
     uint8_t FineXScroll;
@@ -118,11 +119,12 @@ private:
     // PPU Data Read Buffer
     uint8_t DataBuffer;
 
-    // Primary Object Attribute Memory (OAM)
-    uint8_t PrimaryOam[0x100];
+    // Oam Data Bus
+    uint8_t OamData;
+    uint8_t SecondaryOamIndex;
 
-    // Secondary Object Attribute Memory (OAM)
-    uint8_t SecondaryOam[0x20];
+    // Object Attribute Memory (OAM)
+    uint8_t Oam[0x120];
 
     // Name Table RAM
     uint8_t NameTable0[0x400];
@@ -155,7 +157,11 @@ private:
 
     uint16_t PpuBusAddress;
 
-    void SpriteEvaluation();
+    uint8_t SpriteEvaluationCopyCycles;
+    bool SpriteEvaluationRunning;
+    bool SpriteEvaluationSpriteZero;
+
+    void StepSpriteEvaluation();
     void RenderPixel();
     void RenderPixelIdle();
     void DecodePixel(uint16_t colour);
