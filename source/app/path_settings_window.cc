@@ -152,7 +152,7 @@ void PathSettingsWindow::DoOk()
 
     if (Nes != nullptr)
     {
-        Nes->SetNativeSaveDirectory(newSavePath);
+        Nes->SetNativeSaveDirectory(newSavePath.c_str());
     }
 
     Close();

@@ -135,9 +135,12 @@ void MainWindow::StartEmulator(const std::string& filename)
             wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         }
 
-        // try
-        // {
-            Nes = std::unique_ptr<NES>(NES::Create(filename, nativeSavePath.ToStdString(), windowHandle, this));
+        Nes = std::unique_ptr<NES>(NES::Create());
+
+        if (Nes->Initialize(filename.c_str(), windowHandle))
+        {
+            Nes->SetCallback(this);
+            Nes->SetNativeSaveDirectory(nativeSavePath.c_str());
 
             Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
             Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
@@ -172,37 +175,38 @@ void MainWindow::StartEmulator(const std::string& filename)
             Nes->SetOverscanEnabled(overscanEnabled);
             Nes->SetNtscDecoderEnabled(ntscDecodingEnabled);
 
-            Nes->SetStateSaveDirectory(stateSavePath.ToStdString());
-        // }
-        // catch (NesException& e)
-        // {
-        //     wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
-        //     message.ShowModal();
+            Nes->SetStateSaveDirectory(stateSavePath.c_str());
 
-        //     Nes.reset();
 
-        //     RenderSurface->Hide();
-        //     RomList->SetFocus();
+            GameMenuSize.SetWidth(GetSize().GetWidth());
+            GameMenuSize.SetHeight(GetSize().GetHeight());
 
-        //     return;
-        // }
+            VerticalBox->Hide(RomList);
+            SetTitle(Nes->GetGameName());
+            SetClientSize(GameWindowSize);
 
-        GameMenuSize.SetWidth(GetSize().GetWidth());
-        GameMenuSize.SetHeight(GetSize().GetHeight());
+            SetMinClientSize(GameWindowSize);
+            SetMaxClientSize(GameWindowSize);
 
-        VerticalBox->Hide(RomList);
-        SetTitle(Nes->GetGameName());
-        SetClientSize(GameWindowSize);
+            RenderSurface->SetSize(GetClientSize());
+            RenderSurface->SetFocus();
 
-        SetMinClientSize(GameWindowSize);
-        SetMaxClientSize(GameWindowSize);
+            PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
 
-        RenderSurface->SetSize(GetClientSize());
-        RenderSurface->SetFocus();
+            Nes->Start();
+        }
+        else
+        {
+            wxMessageDialog message(nullptr, Nes->GetErrorMessage(), "Error", wxOK | wxICON_ERROR);
+            message.ShowModal();
 
-        PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
+            Nes.reset();
 
-        Nes->Start();
+            RenderSurface->Hide();
+            RomList->SetFocus();
+
+            return;
+        }
     }
     else
     {
@@ -312,17 +316,14 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        // try
-        // {
-            int slot = event.GetId() % 10;
-            Nes->SaveState(slot + 1);
-        // }
-        // catch (NesException& e)
-        // {
-        //     wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
-        //     message.ShowModal();
-        // }
+        int slot = event.GetId() % 10;
+        const char* result = Nes->SaveState(slot + 1);
 
+        if (result != nullptr)
+        {
+            wxMessageDialog message(nullptr, result, "Error", wxOK | wxICON_ERROR);
+            message.ShowModal();
+        }
     }
 }
 
@@ -330,15 +331,14 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        // try
-        // {
-            int slot = event.GetId() % 10;
-            Nes->LoadState(slot + 1);
-        // }
-        // catch (NesException&)
-        // {
-        //     // Just quietly discard the exception
-        // }
+        int slot = event.GetId() % 10;
+        const char* result = Nes->LoadState(slot + 1);
+
+        if (result != nullptr)
+        {
+            wxMessageDialog message(nullptr, result, "Error", wxOK | wxICON_ERROR);
+            message.ShowModal();
+        }
     }
 }
 

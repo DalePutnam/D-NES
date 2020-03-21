@@ -1,10 +1,3 @@
-/*
- * nes.cc
- *
- *  Created on: Aug 28, 2014
- *      Author: Dale
- */
-
 #include <fstream>
 #include <exception>
 #include <iostream>
@@ -22,29 +15,38 @@
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 
-NES* NES::Create(const std::string& gamePath,
-                    const std::string& nativeSavePath,
-                    void* windowHandle,
-                    NESCallback* callback)
+NES* NES::Create()
 {
-    return new NESImpl(gamePath, nativeSavePath, windowHandle, callback);
+    return new NESImpl();
 }
 
-NESImpl::NESImpl(const std::string& gamePath, const std::string& savePath,
-                 void* windowHandle, NESCallback* callback)
+NESImpl::NESImpl()
     : Apu(nullptr)
     , Cpu(nullptr)
     , Ppu(nullptr)
     , Cartridge(nullptr)
     , VideoOut(nullptr)
     , AudioOut(nullptr)
-    , Callback(callback)
+{
+}
+
+NESImpl::~NESImpl()
+{
+    delete Apu;
+    delete Cpu;
+    delete Ppu;
+    delete Cartridge;
+    delete VideoOut;
+    delete AudioOut;
+}
+
+bool NESImpl::Initialize(const char* path, void* handle)
 {
     try
     {
-        if (windowHandle != nullptr)
+        if (handle != nullptr)
         {
-            VideoOut = new VideoBackend(windowHandle);
+            VideoOut = new VideoBackend(handle);
         }
 
         AudioOut = new AudioBackend();
@@ -52,8 +54,7 @@ NESImpl::NESImpl(const std::string& gamePath, const std::string& savePath,
         Cpu = new CPU;
         Ppu = new PPU(VideoOut, Callback); // Will be nullptr in HeadlessMode
         Apu = new APU(AudioOut);
-        Cartridge = new Cart(gamePath);
-        Cartridge->SetSaveDirectory(savePath);
+        Cartridge = new Cart(path);
     }
     catch (NesException& e)
     {
@@ -64,7 +65,10 @@ NESImpl::NESImpl(const std::string& gamePath, const std::string& savePath,
         delete VideoOut;
         delete AudioOut;
 
-        throw e;
+        CurrentState = State::Error;
+        ErrorMessage = e.what();
+
+        return false;
     }
 
     if (VideoOut != nullptr)
@@ -102,21 +106,18 @@ NESImpl::NESImpl(const std::string& gamePath, const std::string& savePath,
     Apu->SetDmcVolume(1.f);
 
     CurrentState = State::Ready;
+
+    return true;
 }
 
-NESImpl::~NESImpl()
+void NESImpl::SetCallback(NESCallback* callback)
 {
-    delete Apu;
-    delete Cpu;
-    delete Ppu;
-    delete Cartridge;
-    delete VideoOut;
-    delete AudioOut;
+    Callback = callback;
 }
 
-const std::string& NESImpl::GetGameName()
+const char* NESImpl::GetGameName()
 {
-    return Cartridge->GetGameName();
+    return Cartridge->GetGameName().c_str();
 }
 
 void NESImpl::SetControllerOneState(uint8_t state)
@@ -134,12 +135,12 @@ void NESImpl::SetCpuLogEnabled(bool enabled)
     Cpu->SetLogEnabled(enabled);
 }
 
-void NESImpl::SetNativeSaveDirectory(const std::string& saveDir)
+void NESImpl::SetNativeSaveDirectory(const char* saveDir)
 {
     Cartridge->SetSaveDirectory(saveDir);
 }
 
-void NESImpl::SetStateSaveDirectory(const std::string& saveDir)
+void NESImpl::SetStateSaveDirectory(const char* saveDir)
 {
 
     StateSaveDirectory = saveDir;
@@ -201,7 +202,7 @@ void NESImpl::SetOverscanEnabled(bool enabled)
     }
 }
 
-void NESImpl::ShowMessage(const std::string& message, uint32_t duration)
+void NESImpl::ShowMessage(const char* message, uint32_t duration)
 {
     if (VideoOut != nullptr)
     {
@@ -278,11 +279,8 @@ void NESImpl::Start()
 {
     if (!NesThread.joinable())
     {
+        CurrentState = State::Running;
         NesThread = std::thread(&NESImpl::Run, this);
-    }
-    else
-    {
-        throw NesException("NES", "There is already a thread running on this NES instance");
     }
 }
 
@@ -394,7 +392,7 @@ void NESImpl::Pause()
 
 void NESImpl::Reset() {}
 
-void NESImpl::SaveState(int slot)
+const char* NESImpl::SaveState(int slot)
 {
 
     std::string extension = "state" + std::to_string(slot);
@@ -403,7 +401,7 @@ void NESImpl::SaveState(int slot)
 
     if (!saveStream.good())
     {
-        throw NesException("NES", "Failed to open state save file");
+        return "Failed to open state save file";
     }
 
     // Pause the emulator and bring the PPU up to date with the CPU
@@ -442,9 +440,11 @@ void NESImpl::SaveState(int slot)
     }
 
     Resume();
+
+    return nullptr;
 }
 
-void NESImpl::LoadState(int slot)
+const char*  NESImpl::LoadState(int slot)
 {
     std::string extension = "state" + std::to_string(slot);
     std::string fileName = file::createFullPath(GetGameName(), extension, StateSaveDirectory);
@@ -452,7 +452,7 @@ void NESImpl::LoadState(int slot)
 
     if (!saveStream.good())
     {
-        throw NesException("NES", "Failed to open state save file");
+        return "Failed to open state save file";
     }
 
     // Pause the emulator and bring the PPU up to date with the CPU
@@ -491,6 +491,8 @@ void NESImpl::LoadState(int slot)
     }
 
     Resume();
+
+    return nullptr;
 }
 
 const char* NESImpl::GetErrorMessage()

@@ -94,42 +94,41 @@ bool NESApp::OnInit()
 
         std::cout << "D-NES Profile Mode" << std::endl;
 
+        using namespace std::chrono_literals;
+
+        CallbackImpl callback;
+
+        std::cout << "Loading ROM " << game << std::flush;
+        NES* nes = NES::Create();
+
+        if (nes->Initialize(game.c_str()))
         {
-            try 
-            {
-                using namespace std::chrono_literals;
+            nes->SetCallback(&callback);
 
-                CallbackImpl callback;
+            nes->SetAudioEnabled(false);
 
-                std::cout << "Loading ROM " << game << std::flush;
-                //NES nes(game.ToStdString(), "", nullptr, &callback);
-                NES* nes = NES::Create(game.ToStdString(), "", nullptr, &callback);
+            std::cout << ": Success!" << std::endl;
 
-                nes->SetAudioEnabled(false);
+            std::cout << "Starting Emulator. Running 30 second test." << std::endl;
 
-                std::cout << ": Success!" << std::endl;
-
-                std::cout << "Starting Emulator. Running 30 second test." << std::endl;
-
-                nes->Start();
+            nes->Start();
 
 
-                std::this_thread::sleep_for(30s);
-                //std::cin.get();
+            std::this_thread::sleep_for(30s);
+            //std::cin.get();
 
-                nes->Stop();
+            nes->Stop();
 
-                delete nes;
+            delete nes;
 
-                std::cout << "\nAverage FPS: " << callback.GetAverageFps() << std::endl;
-            } 
-            catch (...)
-            {
-                std::cout << ": Failed!" << std::endl;
-                std::cout << "Press Enter to Terminate." << std::endl;
-                
-                std::cin.get();
-            }
+            std::cout << "\nAverage FPS: " << callback.GetAverageFps() << std::endl;
+        } 
+        else
+        {
+            std::cout << ": Failed!" << std::endl;
+            std::cout << "Press Enter to Terminate." << std::endl;
+            
+            std::cin.get();
         }
 
 #ifdef _WIN32

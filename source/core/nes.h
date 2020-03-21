@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
 
 class NES;
 
@@ -19,6 +18,7 @@ class NES
 public:
     enum State
     {
+        Created,
         Ready,
         Running,
         Paused,
@@ -26,10 +26,13 @@ public:
         Error
     };
 
-    static NES* Create(const std::string& gamePath, const std::string& nativeSavePath = "",
-                       void* windowHandle = nullptr, NESCallback* callback = nullptr);
+    static NES* Create();
 
-    virtual const std::string& GetGameName() = 0;
+    virtual bool Initialize(const char* path, void* handle = nullptr) = 0;
+
+    virtual void SetCallback(NESCallback* callback) = 0;
+
+    virtual const char* GetGameName() = 0;
 
     virtual State GetState() = 0;
 
@@ -37,8 +40,8 @@ public:
     virtual uint8_t GetControllerOneState() = 0;
 
     virtual void SetCpuLogEnabled(bool enabled) = 0;
-    virtual void SetNativeSaveDirectory(const std::string& saveDir) = 0;
-    virtual void SetStateSaveDirectory(const std::string& saveDir) = 0;
+    virtual void SetNativeSaveDirectory(const char* saveDir) = 0;
+    virtual void SetStateSaveDirectory(const char* saveDir) = 0;
 
     void virtual SetTargetFrameRate(uint32_t rate) = 0;
     virtual void SetTurboModeEnabled(bool enabled) = 0;
@@ -52,7 +55,7 @@ public:
     virtual void SetFpsDisplayEnabled(bool enabled) = 0;
     virtual void SetOverscanEnabled(bool enabled) = 0;
 
-    virtual void ShowMessage(const std::string& message, uint32_t duration) = 0;
+    virtual void ShowMessage(const char*, uint32_t duration) = 0;
 
     virtual void SetAudioEnabled(bool enabled) = 0;
     virtual void SetMasterVolume(float volume) = 0;
@@ -80,8 +83,8 @@ public:
     virtual void Pause() = 0;
     virtual void Reset() = 0;
 
-    virtual void SaveState(int slot) = 0;
-    virtual void LoadState(int slot) = 0;
+    virtual const char* SaveState(int slot) = 0;
+    virtual const char* LoadState(int slot) = 0;
 
     virtual const char* GetErrorMessage() = 0;
 

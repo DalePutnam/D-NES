@@ -18,11 +18,14 @@ class AudioBackend;
 class NESImpl : public NES
 {
 public:
-    NESImpl(const std::string& gamePath, const std::string& nativeSavePath = "",
-            void* windowHandle = nullptr, NESCallback* callback = nullptr);
+    NESImpl();
     ~NESImpl();
 
-    const std::string& GetGameName();
+    bool Initialize(const char* path, void* handle = nullptr);
+
+    void SetCallback(NESCallback* callback);
+
+    const char* GetGameName();
 
     State GetState();
 
@@ -30,8 +33,8 @@ public:
     uint8_t GetControllerOneState();
 
     void SetCpuLogEnabled(bool enabled);
-    void SetNativeSaveDirectory(const std::string& saveDir);
-    void SetStateSaveDirectory(const std::string& saveDir);
+    void SetNativeSaveDirectory(const char* saveDir);
+    void SetStateSaveDirectory(const char* saveDir);
 
     void SetTargetFrameRate(uint32_t rate);
     void SetTurboModeEnabled(bool enabled);
@@ -45,7 +48,7 @@ public:
     void SetFpsDisplayEnabled(bool enabled);
     void SetOverscanEnabled(bool enabled);
 
-    void ShowMessage(const std::string& message, uint32_t duration);
+    void ShowMessage(const char* message, uint32_t duration);
 
     void SetAudioEnabled(bool enabled);
     void SetMasterVolume(float volume);
@@ -73,8 +76,8 @@ public:
     void Pause();
     void Reset();
 
-    void SaveState(int slot);
-    void LoadState(int slot);
+    const char* SaveState(int slot);
+    const char* LoadState(int slot);
 
     const char* GetErrorMessage();
 
