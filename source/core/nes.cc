@@ -70,7 +70,6 @@ NES::NES(const std::string& gamePath, const std::string& savePath,
     Cpu->AttachCart(Cartridge);
 
     Ppu->AttachCPU(Cpu);
-    Ppu->AttachAPU(Apu);
     Ppu->AttachCart(Cartridge);
 
     Cartridge->AttachCPU(Cpu);
@@ -80,8 +79,6 @@ NES::NES(const std::string& gamePath, const std::string& savePath,
     Cpu->SetLogEnabled(false);
 
     // PPU Settings
-    Ppu->SetTurboModeEnabled(false);
-    Ppu->SetNtscDecodingEnabled(false);
 
     // APU Settings
     Apu->SetTurboModeEnabled(false);
@@ -144,7 +141,6 @@ void NES::SetTargetFrameRate(uint32_t rate)
 
 void NES::SetTurboModeEnabled(bool enabled)
 {
-    Ppu->SetTurboModeEnabled(enabled);
     Apu->SetTurboModeEnabled(enabled);
 }
 
@@ -175,7 +171,7 @@ void NES::GetSprite(int sprite, uint8_t* pixels)
 
 void NES::SetNtscDecoderEnabled(bool enabled)
 {
-    Ppu->SetNtscDecodingEnabled(enabled);
+
 }
 
 void NES::SetFpsDisplayEnabled(bool enabled)
