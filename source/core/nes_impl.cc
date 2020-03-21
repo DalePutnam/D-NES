@@ -10,6 +10,7 @@
 #include <iostream>
 
 #include "nes.h"
+#include "nes_impl.h"
 
 #include "cpu.h"
 #include "apu.h"
@@ -20,8 +21,16 @@
 #include "video/video_backend.h"
 #include "audio/audio_backend.h"
 
-NES::NES(const std::string& gamePath, const std::string& savePath,
-            void* windowHandle, NESCallback* callback)
+NES* NES::Create(const std::string& gamePath,
+                    const std::string& nativeSavePath,
+                    void* windowHandle,
+                    NESCallback* callback)
+{
+    return new NESImpl(gamePath, nativeSavePath, windowHandle, callback);
+}
+
+NESImpl::NESImpl(const std::string& gamePath, const std::string& savePath,
+                 void* windowHandle, NESCallback* callback)
     : Apu(nullptr)
     , Cpu(nullptr)
     , Ppu(nullptr)
@@ -94,7 +103,7 @@ NES::NES(const std::string& gamePath, const std::string& savePath,
     CurrentState = State::Ready;
 }
 
-NES::~NES()
+NESImpl::~NESImpl()
 {
     delete Apu;
     delete Cpu;
@@ -104,78 +113,78 @@ NES::~NES()
     delete AudioOut;
 }
 
-const std::string& NES::GetGameName()
+const std::string& NESImpl::GetGameName()
 {
     return Cartridge->GetGameName();
 }
 
-void NES::SetControllerOneState(uint8_t state)
+void NESImpl::SetControllerOneState(uint8_t state)
 {
     Cpu->SetControllerOneState(state);
 }
 
-uint8_t NES::GetControllerOneState()
+uint8_t NESImpl::GetControllerOneState()
 {
     return Cpu->GetControllerOneState();
 }
 
-void NES::SetCpuLogEnabled(bool enabled)
+void NESImpl::SetCpuLogEnabled(bool enabled)
 {
     Cpu->SetLogEnabled(enabled);
 }
 
-void NES::SetNativeSaveDirectory(const std::string& saveDir)
+void NESImpl::SetNativeSaveDirectory(const std::string& saveDir)
 {
     Cartridge->SetSaveDirectory(saveDir);
 }
 
-void NES::SetStateSaveDirectory(const std::string& saveDir)
+void NESImpl::SetStateSaveDirectory(const std::string& saveDir)
 {
 
     StateSaveDirectory = saveDir;
 }
 
-void NES::SetTargetFrameRate(uint32_t rate)
+void NESImpl::SetTargetFrameRate(uint32_t rate)
 {
     Apu->SetTargetFrameRate(rate);
 }
 
-void NES::SetTurboModeEnabled(bool enabled)
+void NESImpl::SetTurboModeEnabled(bool enabled)
 {
     Apu->SetTurboModeEnabled(enabled);
 }
 
-int NES::GetFrameRate()
+int NESImpl::GetFrameRate()
 {
     return Ppu->GetFrameRate();
 }
 
-void NES::GetNameTable(int table, uint8_t* pixels)
+void NESImpl::GetNameTable(int table, uint8_t* pixels)
 {
     Ppu->GetNameTable(table, pixels);
 }
 
-void NES::GetPatternTable(int table, int palette, uint8_t* pixels)
+void NESImpl::GetPatternTable(int table, int palette, uint8_t* pixels)
 {
     Ppu->GetPatternTable(table, palette, pixels);
 }
 
-void NES::GetPalette(int palette, uint8_t* pixels)
+void NESImpl::GetPalette(int palette, uint8_t* pixels)
 {
     Ppu->GetPalette(palette, pixels);
 }
 
-void NES::GetSprite(int sprite, uint8_t* pixels)
+void NESImpl::GetSprite(int sprite, uint8_t* pixels)
 {
     Ppu->GetPrimaryOAM(sprite, pixels);
 }
 
-void NES::SetNtscDecoderEnabled(bool enabled)
+void NESImpl::SetNtscDecoderEnabled(bool enabled)
 {
 
 }
 
-void NES::SetFpsDisplayEnabled(bool enabled)
+void NESImpl::SetFpsDisplayEnabled(bool enabled)
 {
     if (VideoOut != nullptr)
     {
@@ -183,7 +192,7 @@ void NES::SetFpsDisplayEnabled(bool enabled)
     }
 }
 
-void NES::SetOverscanEnabled(bool enabled)
+void NESImpl::SetOverscanEnabled(bool enabled)
 {
     if (VideoOut != nullptr)
     {
@@ -191,7 +200,7 @@ void NES::SetOverscanEnabled(bool enabled)
     }
 }
 
-void NES::ShowMessage(const std::string& message, uint32_t duration)
+void NESImpl::ShowMessage(const std::string& message, uint32_t duration)
 {
     if (VideoOut != nullptr)
     {
@@ -199,76 +208,76 @@ void NES::ShowMessage(const std::string& message, uint32_t duration)
     }
 }
 
-void NES::SetAudioEnabled(bool enabled)
+void NESImpl::SetAudioEnabled(bool enabled)
 {
     Apu->SetAudioEnabled(enabled);
 }
 
-void NES::SetMasterVolume(float volume)
+void NESImpl::SetMasterVolume(float volume)
 {
     Apu->SetMasterVolume(volume);
 }
 
-void NES::SetPulseOneVolume(float volume)
+void NESImpl::SetPulseOneVolume(float volume)
 {
     Apu->SetPulseOneVolume(volume);
 }
 
-float NES::GetPulseOneVolume()
+float NESImpl::GetPulseOneVolume()
 {
     return Apu->GetPulseOneVolume();
 }
 
-void NES::SetPulseTwoVolume(float volume)
+void NESImpl::SetPulseTwoVolume(float volume)
 {
     Apu->SetPulseTwoVolume(volume);
 }
 
-float NES::GetPulseTwoVolume()
+float NESImpl::GetPulseTwoVolume()
 {
     return Apu->GetPulseTwoVolume();
 }
 
-void NES::SetTriangleVolume(float volume)
+void NESImpl::SetTriangleVolume(float volume)
 {
     Apu->SetTriangleVolume(volume);
 }
 
-float NES::GetTriangleVolume()
+float NESImpl::GetTriangleVolume()
 {
     return Apu->GetTriangleVolume();
 }
 
-void NES::SetNoiseVolume(float volume)
+void NESImpl::SetNoiseVolume(float volume)
 {
     Apu->SetNoiseVolume(volume);
 }
 
-float NES::GetNoiseVolume()
+float NESImpl::GetNoiseVolume()
 {
     return Apu->GetNoiseVolume();
 }
 
-void NES::SetDmcVolume(float volume)
+void NESImpl::SetDmcVolume(float volume)
 {
     Apu->SetDmcVolume(volume);
 }
 
-float NES::GetDmcVolume()
+float NESImpl::GetDmcVolume()
 {
     return Apu->GetDmcVolume();
 }
 
-NES::State NES::GetState()
+NESImpl::State NESImpl::GetState()
 {
     return CurrentState;
 }
 
-void NES::Start()
+void NESImpl::Start()
 {
     if (!NesThread.joinable())
     {
-        NesThread = std::thread(&NES::Run, this);
+        NesThread = std::thread(&NESImpl::Run, this);
     }
     else
     {
@@ -276,7 +285,7 @@ void NES::Start()
     }
 }
 
-void NES::Run()
+void NESImpl::Run()
 {
     try
     {
@@ -324,7 +333,7 @@ void NES::Run()
     }
 }
 
-void NES::Stop()
+void NESImpl::Stop()
 {
     if (NesThread.joinable())
     {
@@ -349,7 +358,7 @@ void NES::Stop()
     }
 }
 
-void NES::Resume()
+void NESImpl::Resume()
 {
     std::unique_lock<std::mutex> lock(PauseMutex);
 
@@ -363,7 +372,7 @@ void NES::Resume()
     //Cpu->Resume();
 }
 
-void NES::Pause()
+void NESImpl::Pause()
 {
     std::unique_lock<std::mutex> lock(PauseMutex);
 
@@ -378,9 +387,9 @@ void NES::Pause()
     PauseVariable.wait(lock);
 }
 
-void NES::Reset() {}
+void NESImpl::Reset() {}
 
-void NES::SaveState(int slot)
+void NESImpl::SaveState(int slot)
 {
 
     std::string extension = "state" + std::to_string(slot);
@@ -430,7 +439,7 @@ void NES::SaveState(int slot)
     Resume();
 }
 
-void NES::LoadState(int slot)
+void NESImpl::LoadState(int slot)
 {
     std::string extension = "state" + std::to_string(slot);
     std::string fileName = file::createFullPath(GetGameName(), extension, StateSaveDirectory);

@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 #include <memory>
+#include <functional>
 
 #include <wx/menu.h>
 #include <wx/event.h>

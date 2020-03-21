@@ -12,6 +12,7 @@ env.MergeFlags(lib_registry.get_library_build_flags('GL'))
 env.MergeFlags(lib_registry.get_library_build_flags('alsa'))
 
 env.SharedLibrary('dnes', ['nes.cc',
+                           'nes_impl.cc',
                            'cpu.cc',
                            'ppu.cc',
                            'apu.cc',

@@ -102,20 +102,24 @@ bool NESApp::OnInit()
                 CallbackImpl callback;
 
                 std::cout << "Loading ROM " << game << std::flush;
-                NES nes(game.ToStdString(), "", nullptr, &callback);
-                nes.SetAudioEnabled(false);
+                //NES nes(game.ToStdString(), "", nullptr, &callback);
+                NES* nes = NES::CreateNES(game.ToStdString(), "", nullptr, &callback);
+
+                nes->SetAudioEnabled(false);
 
                 std::cout << ": Success!" << std::endl;
 
                 std::cout << "Starting Emulator. Running 30 second test." << std::endl;
 
-                nes.Start();
+                nes->Start();
 
 
                 std::this_thread::sleep_for(30s);
                 //std::cin.get();
 
-                nes.Stop();
+                nes->Stop();
+
+                delete nes;
 
                 std::cout << "\nAverage FPS: " << callback.GetAverageFps() << std::endl;
             } 

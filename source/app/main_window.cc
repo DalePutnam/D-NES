@@ -137,7 +137,7 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         try
         {
-            Nes = std::make_unique<NES>(filename, nativeSavePath.ToStdString(), windowHandle, this);
+            Nes = std::unique_ptr<NES>(NES::CreateNES(filename, nativeSavePath.ToStdString(), windowHandle, this));
 
             Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
             Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
