@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <exception>
+#include <iostream>
 
 #include "nes.h"
 
@@ -287,7 +288,23 @@ void NES::Run()
         Cartridge->LoadNativeSave();
 
         CurrentState = State::Running;
-        Cpu->Run();
+
+        while (CurrentState != State::Stopped)
+        {
+            while (!Ppu->EndOfFrame())
+            {
+                Cpu->Step();
+            }
+
+            {
+                std::unique_lock<std::mutex> lock(PauseMutex);
+                if (CurrentState == State::Paused)
+                {
+                    PauseVariable.notify_all();
+                    PauseVariable.wait(lock);
+                }
+            }
+        }
 
         Cartridge->SaveNativeSave();
 
@@ -311,31 +328,54 @@ void NES::Stop()
 {
     if (NesThread.joinable())
     {
-        Cpu->Stop();
-
         if (std::this_thread::get_id() == NesThread.get_id())
         {
             throw NesException("NES", "NES Thread tried to stop itself");
         }
 
-        NesThread.join();
+        {
+            std::unique_lock<std::mutex> lock(PauseMutex);
 
-        CurrentState = State::Stopped;
-    } else {
+            CurrentState = State::Stopped;
+
+            PauseVariable.notify_all();
+        }
+
+        NesThread.join();
+    }
+    else
+    {
         throw NesException("NES", "Cannot restart a stopped NES instance");
     }
 }
 
 void NES::Resume()
 {
+    std::unique_lock<std::mutex> lock(PauseMutex);
+
+    if (CurrentState == State::Stopped)
+    {
+        return;
+    }
+
     CurrentState = State::Running;
-    Cpu->Resume();
+    PauseVariable.notify_all();
+    //Cpu->Resume();
 }
 
 void NES::Pause()
 {
-    Cpu->Pause();
+    std::unique_lock<std::mutex> lock(PauseMutex);
+
+    if (CurrentState == State::Stopped)
+    {
+        return;
+    }
+
+    //Cpu->Pause();
     CurrentState = State::Paused;
+
+    PauseVariable.wait(lock);
 }
 
 void NES::Reset() {}

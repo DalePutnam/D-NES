@@ -20,9 +20,9 @@ static constexpr uint16_t SecondaryOamOffset = 0x100;
 struct PPUState
 {
     uint64_t Clock{0};
-    int32_t Dot{1};
-    int32_t Line{241};
-    bool Even{true};
+    uint32_t Dot{1};
+    uint32_t Line{241};
+    bool Even{false};
     bool SuppressNmi{false};
     bool InterruptActive{false};
 
@@ -1051,6 +1051,8 @@ void PPU::Step()
 
     if (_ppuState->Line == 240 && _ppuState->Dot == 0)
     {
+        _frameEnd = true;
+
         if (VideoOut != nullptr)
         {
             VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(_frameBuffer.get()));
@@ -1445,4 +1447,12 @@ void PPU::LoadState(const StateSave::Ptr& state)
     //     RenderingEnabled,
     //     RenderStateDelaySlot
     // );
+}
+
+bool PPU::EndOfFrame()
+{
+    bool frameEnd = _frameEnd;
+    _frameEnd = false;
+
+    return frameEnd;
 }

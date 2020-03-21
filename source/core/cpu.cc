@@ -1905,6 +1905,7 @@ void CPU::AttachAPU(APU* apu)
 void CPU::AttachCart(Cart* cart)
 {
     Cartridge = cart;
+    PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
 }
 
 bool CPU::IsLogEnabled()

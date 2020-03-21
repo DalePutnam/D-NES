@@ -10,6 +10,8 @@
 #include <atomic>
 #include <string>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 class CPU;
 class APU;
@@ -112,6 +114,9 @@ private:
     void Run();
 
     std::atomic<State> CurrentState;
+
+    std::mutex PauseMutex;
+    std::condition_variable PauseVariable;
 
     std::thread NesThread;
     std::string StateSaveDirectory;

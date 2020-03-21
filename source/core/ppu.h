@@ -56,6 +56,8 @@ public:
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);
 
+    bool EndOfFrame();
+
 private:
     VideoBackend* VideoOut;
     NESCallback* Callback;
@@ -63,4 +65,6 @@ private:
     Cart* _cart;
     std::unique_ptr<PPUState> _ppuState;
     std::unique_ptr<uint32_t[]> _frameBuffer;
+
+    bool _frameEnd{0};
 };

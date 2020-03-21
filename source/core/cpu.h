@@ -40,6 +40,7 @@ public:
     uint8_t GetControllerOneState();
 
     void Run(); // Run CPU
+    void Step(); // Execute next instruction
     void Stop();
 
     void Reset(); // Reset the CPU to starting conditions
@@ -258,7 +259,7 @@ private:
     void DoOamDMA(uint8_t page);
     void DoDmcDMA();
 
-    void Step(); // Execute next instruction
+
 
     void SetControllerStrobe(bool strobe);
     uint8_t GetControllerOneShift();
