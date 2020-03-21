@@ -28,6 +28,7 @@ struct PPUState
     Cart* Cartridge{nullptr};
 
     uint64_t Clock{0};
+    uint32_t ResetCountDown{ResetDelay};
     int32_t Dot{1};
     int32_t Line{241};
     bool Even{true};
@@ -80,10 +81,6 @@ struct PPUState
 
     // Object Attribute Memory (OAM)
     uint8_t Oam[0x120]{0};
-
-    // Name Table RAM
-    uint8_t NameTable0[0x400]{0};
-    uint8_t NameTable1[0x400]{0};
 
     // Palette RAM
     uint8_t PaletteTable[0x20]{0};
@@ -437,29 +434,6 @@ void IncrementYScroll(PPUState* ppuState)
     }
 }
 
-void IncrementClock(PPUState* ppuState)
-{
-    if (ppuState->Line == 261 && !ppuState->Even && (ppuState->ShowSprites || ppuState->ShowBackground) && ppuState->Dot == 339)
-    {
-        ppuState->Dot = ppuState->Line = 0;
-    }
-    else if (ppuState->Line == 261 && ppuState->Dot == 340)
-    {
-        ppuState->Dot = ppuState->Line = 0;
-    }
-    else if (ppuState->Dot == 340)
-    {
-        ppuState->Dot = 0;
-        ++ppuState->Line;
-    }
-    else
-    {
-        ++ppuState->Dot;
-    }
-
-    ++ppuState->Clock;
-}
-
 void LoadBackgroundShiftRegisters(PPUState* ppuState)
 {
     ppuState->BackgroundShift0 = ppuState->BackgroundShift0 | ppuState->TileBitmapLow;
@@ -800,7 +774,7 @@ void Step(PPUState* ppuState)
     // VBlank Lines
     else if (ppuState->Line >= 241 && ppuState->Line <= 260)
     {
-        if (ppuState->Line == 241 && ppuState->Dot == 1 && ppuState->Clock > ResetDelay)
+        if (ppuState->Line == 241 && ppuState->Dot == 1 && ppuState->ResetCountDown == 0)
         {
             if (!ppuState->SuppressNmi)
             {
@@ -827,89 +801,175 @@ void Step(PPUState* ppuState)
     ppuState->Dot = (ppuState->Dot + 1) % 341;
     ++ppuState->Clock;
 
+    if (ppuState->ResetCountDown > 0)
+    {
+        ppuState->ResetCountDown--;
+    }
+}
 
+uint8_t ReadPPUStatus(PPUState* ppuState)
+{
+    uint8_t vB = static_cast<uint8_t>(ppuState->NmiOccuredFlag);
+    uint8_t sp0 = static_cast<uint8_t>(ppuState->SpriteZeroHitFlag);
+    uint8_t spOv = static_cast<uint8_t>(ppuState->SpriteOverflowFlag);
 
-    
+    if (ppuState->Line == 241 && ppuState->Dot == 1)
+    {
+        ppuState->SuppressNmi = true; // Suppress interrupt
+    }
+
+    if (ppuState->Line == 241 && ppuState->Dot >= 2 && ppuState->Dot <= 3)
+    {
+        ppuState->InterruptActive = false;
+    }
+
+    ppuState->NmiOccuredFlag = false;
+    ppuState->AddressLatch = false;
+
+    return  (vB << 7) | (sp0 << 6) | (spOv << 5) | ppuState->LowerBits;
+}
+
+uint8_t ReadOAMData(PPUState* ppuState)
+{
+    return ppuState->OamData;
+}
+
+uint8_t ReadPPUData(PPUState* ppuState)
+{
+    uint8_t value = ppuState->DataBuffer;
+    ppuState->DataBuffer = Read(ppuState);
+    ppuState->PpuAddressIncrement ? ppuState->PpuAddress = (ppuState->PpuAddress + 32) & 0x7FFF : ppuState->PpuAddress = (ppuState->PpuAddress + 1) & 0x7FFF;
+    SetBusAddress(ppuState, ppuState->PpuAddress);
+
+    return value;
+}
+
+void WritePPUCTRL(PPUState* ppuState, uint8_t M)
+{
+    if (ppuState->ResetCountDown == 0)
+    {
+        ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(M)) << 10); // High bits of NameTable address
+        ppuState->PpuAddressIncrement = ((0x4 & M) >> 2) != 0;
+        ppuState->BaseSpriteTableAddress = 0x1000 * ((0x8 & M) >> 3);
+        ppuState->BaseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
+        ppuState->SpriteSizeSwitch = ((0x20 & M) >> 5) != 0;
+        ppuState->NmiEnabled = ((0x80 & M) >> 7) != 0;
+
+        if (ppuState->NmiEnabled == false && ppuState->Line == 241 && (ppuState->Dot - 1) == 1)
+        {
+            ppuState->InterruptActive = false;
+        }
+    }
+
+    ppuState->LowerBits = (0x1F & M);
+}
+
+void WritePPUMASK(PPUState* ppuState, uint8_t M)
+{
+    if (ppuState->ResetCountDown == 0)
+    {
+        ppuState->GrayScaleEnabled = (0x1 & M);
+        ppuState->ShowBackgroundLeft = ((0x2 & M) >> 1) != 0;
+        ppuState->ShowSpritesLeft = ((0x4 & M) >> 2) != 0;
+        ppuState->ShowBackground = ((0x8 & M) >> 3) != 0;
+        ppuState->ShowSprites = ((0x10 & M) >> 4) != 0;
+        ppuState->IntenseRed = ((0x20 & M) >> 5) != 0;
+        ppuState->IntenseGreen = ((0x40 & M) >> 6) != 0;
+        ppuState->IntenseBlue = ((0x80 & M) >> 7) != 0;
+    }
+
+    ppuState->LowerBits = (0x1F & M);
+}
+
+void WriteOAMADDR(PPUState* ppuState, uint8_t M)
+{
+    ppuState->OamAddress = M;
+    ppuState->OamData = ppuState->Oam[ppuState->OamAddress];
+    ppuState->LowerBits = (0x1F & ppuState->OamAddress);
+}
+
+void WriteOAMDATA(PPUState* ppuState, uint8_t M)
+{
+    if (ppuState->RenderingEnabled && (ppuState->Line < 240 || ppuState->Line == 261))
+    {
+        return;
+    }
+
+    ppuState->OamData = M;
+    ppuState->Oam[ppuState->OamAddress] = M;
+    ppuState->OamAddress = (ppuState->OamAddress + 1) % 0x100;
+
+    ppuState->LowerBits = (0x1F & M);
+}
+
+void WritePPUSCROLL(PPUState* ppuState, uint8_t M)
+{
+    if (ppuState->ResetCountDown == 0)
+    {
+        if (ppuState->AddressLatch)
+        {
+            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x0FFF) | ((0x7 & M) << 12);
+            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7C1F) | ((0xF8 & M) << 2);
+        }
+        else
+        {
+            ppuState->FineXScroll = static_cast<uint8_t>(0x7 & M);
+            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
+        }
+
+        ppuState->AddressLatch = !ppuState->AddressLatch;
+    }
+
+    ppuState->LowerBits = static_cast<uint8_t>(0x1F & M);
+}
+
+void WritePPUADDR(PPUState* ppuState, uint8_t M)
+{
+    if (ppuState->ResetCountDown == 0)
+    {      
+        if (ppuState->AddressLatch)
+        {
+            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7F00) | M;
+            ppuState->PpuAddress = ppuState->PpuTempAddress;
+            SetBusAddress(ppuState, ppuState->PpuAddress);
+        }
+        else
+        {
+            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
+        }
+        
+        ppuState->AddressLatch = !ppuState->AddressLatch;
+    }
+
+    ppuState->LowerBits = static_cast<uint8_t>(0x1F & M);
+}
+
+void WritePPUDATA(PPUState* ppuState, uint8_t M)
+{
+    Write(ppuState, M);
+    ppuState->PpuAddressIncrement ? ppuState->PpuAddress = (ppuState->PpuAddress + 32) & 0x7FFF : ppuState->PpuAddress = (ppuState->PpuAddress + 1) & 0x7FFF;
+    SetBusAddress(ppuState, ppuState->PpuAddress);
+
+    ppuState->LowerBits = (0x1F & M);
 }
 
 
 PPU::PPU(VideoBackend* vout, NESCallback* callback)
-    : Cpu(nullptr)
-    , Cartridge(nullptr)
-    , VideoOut(vout)
+    : VideoOut(vout)
     , Callback(callback)
-    , ppuState(new PPUState)
-    // , Clock(0)
-    // , Dot(1)
-    // , Line(241)
-    // , Even(true)
-    // , SuppressNmi(false)
-    // , InterruptActive(false)
-    // , PpuAddressIncrement(false)
-    // , BaseSpriteTableAddress(0)
-    // , BaseBackgroundTableAddress(0)
-    // , SpriteSizeSwitch(false)
-    // , NmiEnabled(false)
-    // , GrayScaleEnabled(false)
-    // , ShowBackgroundLeft(0)
-    // , ShowSpritesLeft(0)
-    // , ShowBackground(0)
-    // , ShowSprites(0)
-    // , IntenseRed(0)
-    // , IntenseGreen(0)
-    // , IntenseBlue(0)
-    // , LowerBits(0x06)
-    // , SpriteOverflowFlag(false)
-    // , SpriteZeroHitFlag(false)
-    // , NmiOccuredFlag(false)
-    // , SpriteZeroOnNextLine(false)
-    // , SpriteZeroOnCurrentLine(false)
-    // , OamAddress(0)
-    // , OamData(0)
-    // , SecondaryOamIndex(0)
-    // , PpuAddress(0)
-    // , PpuTempAddress(0)
-    // , FineXScroll(0)
-    // , AddressLatch(false)
-    // , RenderingEnabled(false)
-    // , RenderStateDelaySlot(false)
-    // , DataBuffer(0)
-    // , NameTableByte(0)
-    // , AttributeByte(0)
-    // , TileBitmapLow(0)
-    // , TileBitmapHigh(0)
-    // , BackgroundShift0(0)
-    // , BackgroundShift1(0)
-    // , BackgroundAttributeShift0(0)
-    // , BackgroundAttributeShift1(0)
-    // , BackgroundAttribute(0)
-    // , SpriteCount(0)
-	// , FrameBufferIndex(0)
-    // , SpriteEvaluationCopyCycles(0)
-    // , SpriteEvaluationRunning(true)
-    // , SpriteEvaluationSpriteZero(true)
+    , ppuState(new PPUState())
 {
-    // memset(NameTable0, 0, sizeof(uint8_t) * 0x400);
-    // memset(NameTable1, 0, sizeof(uint8_t) * 0x400);
-    // memset(Oam, 0, sizeof(uint8_t) * 0x120);
-    // memset(PaletteTable, 0, sizeof(uint8_t) * 0x20);
-    // memset(SpriteShift0, 0, sizeof(uint8_t) * 8);
-    // memset(SpriteShift1, 0, sizeof(uint8_t) * 8);
-    // memset(SpriteAttribute, 0, sizeof(uint8_t) * 8);
-    // memset(SpriteCounter, 0, sizeof(uint8_t) * 8);
 }
 
-PPU::~PPU() { delete ppuState; }
+PPU::~PPU() = default;
 
 void PPU::AttachCPU(CPU* cpu)
 {
-    Cpu = cpu;
 }
 
 void PPU::AttachCart(Cart* cart)
 {
-    Cartridge = cart;
-    ppuState->Cartridge = Cartridge;
+    ppuState->Cartridge = cart;
 }
 
 int32_t PPU::GetCurrentDot()
@@ -959,7 +1019,7 @@ uint64_t PPU::GetClock()
 
 void PPU::Step()
 {
-    ::Step(ppuState);
+    ::Step(ppuState.get());
 
     if (ppuState->Dot == 0)
     {
@@ -991,149 +1051,52 @@ bool PPU::GetNMIActive()
 
 uint8_t PPU::ReadPPUStatus()
 {
-    uint8_t vB = static_cast<uint8_t>(ppuState->NmiOccuredFlag);
-    uint8_t sp0 = static_cast<uint8_t>(ppuState->SpriteZeroHitFlag);
-    uint8_t spOv = static_cast<uint8_t>(ppuState->SpriteOverflowFlag);
-
-    if (ppuState->Line == 241 && ppuState->Dot == 1)
-    {
-        ppuState->SuppressNmi = true; // Suppress interrupt
-    }
-
-    if (ppuState->Line == 241 && ppuState->Dot >= 2 && ppuState->Dot <= 3)
-    {
-        ppuState->InterruptActive = false;
-    }
-
-    ppuState->NmiOccuredFlag = false;
-    ppuState->AddressLatch = false;
-
-    return  (vB << 7) | (sp0 << 6) | (spOv << 5) | ppuState->LowerBits;
+    return ::ReadPPUStatus(ppuState.get());
 }
 
 uint8_t PPU::ReadOAMData()
 {
-    //return Oam[OamAddress];
-    return ppuState->OamData;
+    return ::ReadOAMData(ppuState.get());
 }
 
 uint8_t PPU::ReadPPUData()
 {
-    uint8_t value = ppuState->DataBuffer;
-    ppuState->DataBuffer = Read(ppuState);
-    ppuState->PpuAddressIncrement ? ppuState->PpuAddress = (ppuState->PpuAddress + 32) & 0x7FFF : ppuState->PpuAddress = (ppuState->PpuAddress + 1) & 0x7FFF;
-    SetBusAddress(ppuState, ppuState->PpuAddress);
-
-    return value;
+    return ::ReadPPUData(ppuState.get());
 }
 
 void PPU::WritePPUCTRL(uint8_t M)
 {
-    if (Cpu->GetClock() > ResetDelay)
-    {
-        ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(M)) << 10); // High bits of NameTable address
-        ppuState->PpuAddressIncrement = ((0x4 & M) >> 2) != 0;
-        ppuState->BaseSpriteTableAddress = 0x1000 * ((0x8 & M) >> 3);
-        ppuState->BaseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
-        ppuState->SpriteSizeSwitch = ((0x20 & M) >> 5) != 0;
-        ppuState->NmiEnabled = ((0x80 & M) >> 7) != 0;
-
-        if (ppuState->NmiEnabled == false && ppuState->Line == 241 && (ppuState->Dot - 1) == 1)
-        {
-            ppuState->InterruptActive = false;
-        }
-    }
-
-    ppuState->LowerBits = (0x1F & M);
+    ::WritePPUCTRL(ppuState.get(), M);
 }
 
 void PPU::WritePPUMASK(uint8_t M)
 {
-    if (Cpu->GetClock() > ResetDelay)
-    {
-        ppuState->GrayScaleEnabled = (0x1 & M);
-        ppuState->ShowBackgroundLeft = ((0x2 & M) >> 1) != 0;
-        ppuState->ShowSpritesLeft = ((0x4 & M) >> 2) != 0;
-        ppuState->ShowBackground = ((0x8 & M) >> 3) != 0;
-        ppuState->ShowSprites = ((0x10 & M) >> 4) != 0;
-        ppuState->IntenseRed = ((0x20 & M) >> 5) != 0;
-        ppuState->IntenseGreen = ((0x40 & M) >> 6) != 0;
-        ppuState->IntenseBlue = ((0x80 & M) >> 7) != 0;
-    }
-
-    ppuState->LowerBits = (0x1F & M);
+    ::WritePPUMASK(ppuState.get(), M);
 }
 
 void PPU::WriteOAMADDR(uint8_t M)
 {
-    ppuState->OamAddress = M;
-    ppuState->OamData = ppuState->Oam[ppuState->OamAddress];
-    ppuState->LowerBits = (0x1F & ppuState->OamAddress);
+    ::WriteOAMADDR(ppuState.get(), M);
 }
 
 void PPU::WriteOAMDATA(uint8_t M)
 {
-    if (ppuState->RenderingEnabled && (ppuState->Line < 240 || ppuState->Line == 261))
-    {
-        return;
-    }
-
-    ppuState->OamData = M;
-    ppuState->Oam[ppuState->OamAddress] = M;
-    ppuState->OamAddress = (ppuState->OamAddress + 1) % 0x100;
-
-    ppuState->LowerBits = (0x1F & M);
+    ::WriteOAMDATA(ppuState.get(), M);
 }
 
 void PPU::WritePPUSCROLL(uint8_t M)
 {
-    if (Cpu->GetClock() > ResetDelay)
-    {
-        if (ppuState->AddressLatch)
-        {
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x0FFF) | ((0x7 & M) << 12);
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7C1F) | ((0xF8 & M) << 2);
-        }
-        else
-        {
-            ppuState->FineXScroll = static_cast<uint8_t>(0x7 & M);
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
-        }
-
-        ppuState->AddressLatch = !ppuState->AddressLatch;
-    }
-
-    ppuState->LowerBits = static_cast<uint8_t>(0x1F & M);
+    ::WritePPUSCROLL(ppuState.get(), M);
 }
 
 void PPU::WritePPUADDR(uint8_t M)
 {
-    if (Cpu->GetClock() > ResetDelay)
-    {      
-        if (ppuState->AddressLatch)
-        {
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7F00) | M;
-            ppuState->PpuAddress = ppuState->PpuTempAddress;
-            SetBusAddress(ppuState, ppuState->PpuAddress);
-        }
-        else
-        {
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
-        }
-        
-        ppuState->AddressLatch = !ppuState->AddressLatch;
-    }
-
-    ppuState->LowerBits = static_cast<uint8_t>(0x1F & M);
+    ::WritePPUADDR(ppuState.get(), M);
 }
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-    Write(ppuState, M);
-    ppuState->PpuAddressIncrement ? ppuState->PpuAddress = (ppuState->PpuAddress + 32) & 0x7FFF : ppuState->PpuAddress = (ppuState->PpuAddress + 1) & 0x7FFF;
-    SetBusAddress(ppuState, ppuState->PpuAddress);
-
-    ppuState->LowerBits = (0x1F & M);
+    ::WritePPUDATA(ppuState.get(), M);
 }
 
 int PPU::GetFrameRate()
@@ -1166,23 +1129,23 @@ void PPU::GetNameTable(int table, uint8_t* pixels)
         for (uint32_t f = 0; f < 32; ++f)
         {
             uint16_t address = (tableIndex | (i << 5) | f);
-            uint8_t ntByte = Peek(ppuState, 0x2000 | address);
+            uint8_t ntByte = Peek(ppuState.get(), 0x2000 | address);
             uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
-            uint8_t atByte = Peek(ppuState, 0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
+            uint8_t atByte = Peek(ppuState.get(), 0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
             atByte = (atByte >> atShift) & 0x3;
             uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
 
             for (uint32_t h = 0; h < 8; ++h)
             {
-                uint8_t tileLow = Peek(ppuState, ppuState->BaseBackgroundTableAddress + patternAddress + h);
-                uint8_t tileHigh = Peek(ppuState, ppuState->BaseBackgroundTableAddress + patternAddress + h + 8);
+                uint8_t tileLow = Peek(ppuState.get(), ppuState->BaseBackgroundTableAddress + patternAddress + h);
+                uint8_t tileHigh = Peek(ppuState.get(), ppuState->BaseBackgroundTableAddress + patternAddress + h + 8);
 
                 for (uint32_t g = 0; g < 8; ++g)
                 {
                     uint16_t pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
                     uint16_t paletteIndex = 0x3F00 | (atByte << 2) | pixel;
                     if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
-                    uint32_t rgb = RgbLookupTable[Peek(ppuState, paletteIndex)];
+                    uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteIndex)];
                     uint8_t red = (rgb & 0xFF0000) >> 16;
                     uint8_t green = (rgb & 0x00FF00) >> 8;
                     uint8_t blue = (rgb & 0x0000FF);
@@ -1218,14 +1181,14 @@ void PPU::GetPatternTable(int table, int palette, uint8_t* pixels)
 
             for (uint32_t g = 0; g < 8; ++g)
             {
-                uint8_t tileLow = Peek(ppuState, tableIndex + patternIndex + g);
-                uint8_t tileHigh = Peek(ppuState, tableIndex + patternIndex + g + 8);
+                uint8_t tileLow = Peek(ppuState.get(), tableIndex + patternIndex + g);
+                uint8_t tileHigh = Peek(ppuState.get(), tableIndex + patternIndex + g + 8);
 
                 for (uint32_t h = 0; h < 8; ++h)
                 {
                     uint16_t pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
                     uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-                    uint32_t rgb = RgbLookupTable[Peek(ppuState, paletteIndex)];
+                    uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteIndex)];
                     uint8_t red = (rgb & 0xFF0000) >> 16;
                     uint8_t green = (rgb & 0x00FF00) >> 8;
                     uint8_t blue = (rgb & 0x0000FF);
@@ -1285,7 +1248,7 @@ void PPU::GetPalette(int palette, uint8_t* pixels)
         {
             for (uint32_t h = 0; h < 16; ++h)
             {
-                uint32_t rgb = RgbLookupTable[Peek(ppuState, paletteAddress)];
+                uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteAddress)];
                 uint8_t red = (rgb & 0xFF0000) >> 16;
                 uint8_t green = (rgb & 0x00FF00) >> 8;
                 uint8_t blue = (rgb & 0x0000FF);
@@ -1311,14 +1274,14 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 
     for (uint32_t i = 0; i < 8; ++i)
     {
-        uint8_t tileLow = Peek(ppuState, tableIndex + patternIndex + i);
-        uint8_t tileHigh = Peek(ppuState, tableIndex + patternIndex + i + 8);
+        uint8_t tileLow = Peek(ppuState.get(), tableIndex + patternIndex + i);
+        uint8_t tileHigh = Peek(ppuState.get(), tableIndex + patternIndex + i + 8);
 
         for (uint32_t f = 0; f < 8; ++f)
         {
             uint16_t pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
             uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-            uint32_t rgb = RgbLookupTable[Peek(ppuState, paletteIndex)];
+            uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteIndex)];
             uint8_t red = (rgb & 0xFF0000) >> 16;
             uint8_t green = (rgb & 0x00FF00) >> 8;
             uint8_t blue = (rgb & 0x0000FF);
@@ -1462,24 +1425,4 @@ void PPU::LoadState(const StateSave::Ptr& state)
     //     RenderingEnabled,
     //     RenderStateDelaySlot
     // );
-}
-
-uint8_t PPU::ReadNameTable0(uint16_t address)
-{
-    return ppuState->NameTable0[address];
-}
-
-uint8_t PPU::ReadNameTable1(uint16_t address)
-{
-    return ppuState->NameTable1[address];
-}
-
-void PPU::WriteNameTable0(uint8_t M, uint16_t address)
-{
-    ppuState->NameTable0[address] = M;
-}
-
-void PPU::WriteNameTable1(uint8_t M, uint16_t address)
-{
-    ppuState->NameTable1[address] = M;
 }

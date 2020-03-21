@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
 #include "nes.h"
 #include "state_save.h"
@@ -22,6 +23,7 @@ class PPU
 {
 public:
     PPU(VideoBackend* vb, NESCallback* callback);
+
     ~PPU();
 
     void AttachCPU(CPU* cpu);
@@ -54,16 +56,8 @@ public:
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);
 
-    uint8_t ReadNameTable0(uint16_t address);
-    uint8_t ReadNameTable1(uint16_t address);
-    void WriteNameTable0(uint8_t M, uint16_t address);
-    void WriteNameTable1(uint8_t M, uint16_t address);
-
 private:
-    CPU* Cpu;
-    Cart* Cartridge;
     VideoBackend* VideoOut;
     NESCallback* Callback;
-
-    PPUState* ppuState;
+    std::unique_ptr<PPUState> ppuState;
 };
