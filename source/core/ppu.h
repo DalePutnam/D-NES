@@ -59,5 +59,8 @@ public:
 private:
     VideoBackend* VideoOut;
     NESCallback* Callback;
-    std::unique_ptr<PPUState> ppuState;
+
+    Cart* _cart;
+    std::unique_ptr<PPUState> _ppuState;
+    std::unique_ptr<uint32_t[]> _frameBuffer;
 };

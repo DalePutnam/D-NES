@@ -1,11 +1,5 @@
-/*
- * ppu.cc
- *
- *  Created on: Oct 9, 2014
- *      Author: Dale
- */
-
 #include <cstring>
+
 #include "ppu.h"
 #include "cpu.h"
 #include "apu.h"
@@ -25,10 +19,7 @@ static constexpr uint16_t SecondaryOamOffset = 0x100;
 
 struct PPUState
 {
-    Cart* Cartridge{nullptr};
-
     uint64_t Clock{0};
-    uint32_t ResetCountDown{ResetDelay};
     int32_t Dot{1};
     int32_t Line{241};
     bool Even{true};
@@ -103,39 +94,63 @@ struct PPUState
     uint8_t SpriteShift1[8]{0};
     uint8_t SpriteAttribute[8]{0};
     int16_t SpriteCounter[8]{0};
-
-    uint32_t FrameBufferIndex{0};
-    uint32_t FrameBuffer[256 * 240]{0};
-
     uint16_t PpuBusAddress{0};
 
     uint8_t SpriteEvaluationCopyCycles{0};
     bool SpriteEvaluationRunning{true};
     bool SpriteEvaluationSpriteZero{true};
+
+    void SetBusAddress(Cart* cart, uint16_t address);
+    uint8_t ReadPalette(uint16_t address);
+    void WritePalette(uint8_t value, uint16_t address);
+    uint8_t Read(Cart* cart);
+    void Write(Cart* cart, uint8_t value);
+    uint8_t Peek(Cart* cart, uint16_t address);
+    void StepSpriteEvaluation();
+    uint32_t DecodePixel(uint16_t colour);
+    uint32_t RenderPixel();
+    uint32_t RenderPixelIdle();
+    void IncrementXScroll();
+    void IncrementYScroll();
+    void LoadBackgroundShiftRegisters();
+    void SetNameTableAddress(Cart* cart);
+    void DoNameTableFetch(Cart* cart);
+    void SetBackgroundAttributeAddress(Cart* cart);
+    void DoBackgroundAttributeFetch(Cart* cart);
+    void SetBackgroundLowByteAddress(Cart* cart);
+    void DoBackgroundLowByteFetch(Cart* cart);
+    void SetBackgroundHighByteAddress(Cart* cart);
+    void DoBackgroundHighByteFetch(Cart* cart);
+    void DoSpriteAttributeFetch();
+    void DoSpriteXCoordinateFetch();
+    void SetSpriteLowByteAddress(Cart* cart);
+    void DoSpriteLowByteFetch(Cart* cart);
+    void SetSpriteHighByteAddress(Cart* cart);
+    void DoSpriteHighByteFetch(Cart* cart);
+    void Step(uint32_t* frameBuffer, Cart* cart);
+    uint8_t ReadPPUStatus();
+    uint8_t ReadOAMData();
+    uint8_t ReadPPUData(Cart* cart);
+    void WritePPUCTRL(uint8_t M);
+    void WritePPUMASK(uint8_t M);
+    void WriteOAMADDR(uint8_t M);
+    void WriteOAMDATA(uint8_t M);
+    void WritePPUSCROLL(uint8_t M);
+    void WritePPUADDR(Cart* cart, uint8_t M);
+    void WritePPUDATA(Cart* cart, uint8_t M);
 };
 
-void SetBusAddress(PPUState* ppuState, uint16_t address)
+void PPUState::SetBusAddress(Cart* cart, uint16_t address)
 {
-    ppuState->PpuBusAddress = address & 0x3FFF;
+    PpuBusAddress = address & 0x3FFF;
 
-    if (ppuState->PpuBusAddress < 0x3F00)
+    if (PpuBusAddress < 0x3F00)
     {
-        ppuState->Cartridge->SetPpuAddress(ppuState->PpuBusAddress);
+        cart->SetPpuAddress(PpuBusAddress);
     }
 }
 
-uint8_t ReadPalette(PPUState* ppuState, uint16_t address)
-{
-    // Ignore second nibble if addr is a multiple of 4
-    if (address % 4 == 0)
-    {
-        address &= 0xFF0F;
-    }
-
-    return ppuState->PaletteTable[address % 0x20];
-}
-
-void WritePalette(PPUState* ppuState, uint8_t value, uint16_t address)
+uint8_t PPUState::ReadPalette(uint16_t address)
 {
     // Ignore second nibble if addr is a multiple of 4
     if (address % 4 == 0)
@@ -143,158 +158,170 @@ void WritePalette(PPUState* ppuState, uint8_t value, uint16_t address)
         address &= 0xFF0F;
     }
 
-    ppuState->PaletteTable[address % 0x20] = value & 0x3F; // Ignore bits 6 and 7
+    return PaletteTable[address % 0x20];
 }
 
-uint8_t Read(PPUState* ppuState)
+void PPUState::WritePalette(uint8_t value, uint16_t address)
 {
-    if (ppuState->PpuBusAddress < 0x3F00)
+    // Ignore second nibble if addr is a multiple of 4
+    if (address % 4 == 0)
     {
-        return ppuState->Cartridge->PpuRead();
+        address &= 0xFF0F;
+    }
+
+    PaletteTable[address % 0x20] = value & 0x3F; // Ignore bits 6 and 7
+}
+
+uint8_t PPUState::Read(Cart* cart)
+{
+    if (PpuBusAddress < 0x3F00)
+    {
+        return cart->PpuRead();
     }
     else
     {
-        return ReadPalette(ppuState, ppuState->PpuBusAddress);
+        return ReadPalette(PpuBusAddress);
     }
 }
 
-void Write(PPUState* ppuState, uint8_t value)
+void PPUState::Write(Cart* cart, uint8_t value)
 {
-    if (ppuState->PpuBusAddress < 0x3F00)
+    if (PpuBusAddress < 0x3F00)
     {
-        ppuState->Cartridge->PpuWrite(value);
+        cart->PpuWrite(value);
     }
     else
     {
-        WritePalette(ppuState, value, ppuState->PpuBusAddress);
+        WritePalette(value, PpuBusAddress);
     }
 }
 
-uint8_t Peek(PPUState* ppuState, uint16_t address)
+uint8_t PPUState::Peek(Cart* cart, uint16_t address)
 {
     if (address < 0x3F00)
     {
-        return ppuState->Cartridge->PpuPeek(address);
+        return cart->PpuPeek(address);
     }
     else
     {
-        return ReadPalette(ppuState, address);
+        return ReadPalette(address);
     }
 }
 
 
-void StepSpriteEvaluation(PPUState* ppuState)
+void PPUState::StepSpriteEvaluation()
 {
-    if (ppuState->Dot <= 64)
+    if (Dot <= 64)
     {
-        if ((ppuState->Dot % 2) != 0)
+        if ((Dot % 2) != 0)
         {
-            ppuState->OamData = 0xFF;
+            OamData = 0xFF;
         }
         else
         {
-            ppuState->Oam[SecondaryOamOffset + ppuState->SecondaryOamIndex] = ppuState->OamData;
-            ppuState->SecondaryOamIndex = (ppuState->SecondaryOamIndex + 1) % 32;
+            Oam[SecondaryOamOffset + SecondaryOamIndex] = OamData;
+            SecondaryOamIndex = (SecondaryOamIndex + 1) % 32;
         }
     }
     else
     {
-        if ((ppuState->Dot % 2) != 0)
+        if ((Dot % 2) != 0)
         {
-            ppuState->OamData = ppuState->Oam[ppuState->OamAddress];
+            OamData = Oam[OamAddress];
         }
         else
         {
-            if (ppuState->SpriteEvaluationRunning)
+            if (SpriteEvaluationRunning)
             {
-                uint8_t size = ppuState->SpriteSizeSwitch ? 16 : 8;
-                if (ppuState->SpriteEvaluationCopyCycles == 0 && ppuState->OamData <= ppuState->Line && ppuState->OamData + size > ppuState->Line)
+                uint8_t size = SpriteSizeSwitch ? 16 : 8;
+                if (SpriteEvaluationCopyCycles == 0 && OamData <= Line && OamData + size > Line)
                 {
-                    if (ppuState->SpriteCount == 8)
+                    if (SpriteCount == 8)
                     {
-                        ppuState->SpriteOverflowFlag = true;
+                        SpriteOverflowFlag = true;
                     }
 
-                    if (ppuState->SpriteEvaluationSpriteZero)
+                    if (SpriteEvaluationSpriteZero)
                     {
-                        ppuState->SpriteZeroOnNextLine = true;
+                        SpriteZeroOnNextLine = true;
                     }
 
-                    ppuState->SpriteEvaluationCopyCycles = 4;
+                    SpriteEvaluationCopyCycles = 4;
                 }
                 
-                ppuState->SpriteEvaluationSpriteZero = false;
+                SpriteEvaluationSpriteZero = false;
 
-                if (ppuState->SpriteCount < 8)
+                if (SpriteCount < 8)
                 {
-                    ppuState->Oam[SecondaryOamOffset + ppuState->SecondaryOamIndex] = ppuState->OamData;
+                    Oam[SecondaryOamOffset + SecondaryOamIndex] = OamData;
                 }
                 else
                 {
-                    ppuState->OamData = ppuState->Oam[SecondaryOamOffset + ppuState->SecondaryOamIndex];
+                    OamData = Oam[SecondaryOamOffset + SecondaryOamIndex];
                 }
 
-                if (ppuState->SpriteEvaluationCopyCycles == 0)
+                if (SpriteEvaluationCopyCycles == 0)
                 {
-                    ppuState->OamAddress += 4;
-                    if (ppuState->SpriteCount == 8)
+                    OamAddress += 4;
+                    if (SpriteCount == 8)
                     {
-                        ppuState->OamAddress = (ppuState->OamAddress & ~3) | ((ppuState->OamAddress + 1) & 3);
+                        OamAddress = (OamAddress & ~3) | ((OamAddress + 1) & 3);
                     }
                 }
                 else
                 {
-                    ppuState->SpriteEvaluationCopyCycles--;
+                    SpriteEvaluationCopyCycles--;
 
-                    ppuState->OamAddress++;
+                    OamAddress++;
 
-                    if (ppuState->SpriteCount < 8)
+                    if (SpriteCount < 8)
                     {
-                        ppuState->SecondaryOamIndex = (ppuState->SecondaryOamIndex + 1) % 32;
-                        if (ppuState->SpriteEvaluationCopyCycles == 0)
+                        SecondaryOamIndex = (SecondaryOamIndex + 1) % 32;
+                        if (SpriteEvaluationCopyCycles == 0)
                         {
-                            ppuState->SpriteCount++;
+                            SpriteCount++;
                         }
                     }
-                    else if (ppuState->SpriteEvaluationCopyCycles == 0)
+                    else if (SpriteEvaluationCopyCycles == 0)
                     {
-                        ppuState->SpriteEvaluationRunning = false;
+                        SpriteEvaluationRunning = false;
                     }
 
-                    if (ppuState->OamAddress >= 0x100)
+                    if (OamAddress >= 0x100)
                     {
-                        ppuState->SpriteEvaluationCopyCycles = 0;
+                        SpriteEvaluationCopyCycles = 0;
                     }
                 }
 
-                if (ppuState->SpriteEvaluationCopyCycles == 0 && !ppuState->SpriteEvaluationRunning)
+                if (SpriteEvaluationCopyCycles == 0 && !SpriteEvaluationRunning)
                 {
-                    ppuState->OamAddress = 0;
+                    OamAddress = 0;
                 }
             }
             else
             {
-                ppuState->OamAddress = (ppuState->OamAddress + 4) % 0x100;
-                ppuState->OamData = ppuState->Oam[SecondaryOamOffset + ppuState->SecondaryOamIndex];
+                OamAddress = (OamAddress + 4) % 0x100;
+                OamData = Oam[SecondaryOamOffset + SecondaryOamIndex];
             }
         }
     }
 }
 
-void DecodePixel(PPUState* ppuState, uint16_t colour)
+uint32_t PPUState::DecodePixel(uint16_t colour)
 {
-   ppuState->FrameBuffer[ppuState->FrameBufferIndex++] = RgbLookupTable[colour];
+   //FrameBuffer[FrameBufferIndex++] = RgbLookupTable[colour];
+    return RgbLookupTable[colour];
 }
 
-void RenderPixel(PPUState* ppuState)
+uint32_t PPUState::RenderPixel()
 {
     uint16_t bgPixel = 0;
     uint16_t bgPaletteIndex = 0x3F00;
 
-    if (ppuState->ShowBackground && (ppuState->ShowBackgroundLeft || ppuState->Dot > 8))
+    if (ShowBackground && (ShowBackgroundLeft || Dot > 8))
     {
-        uint16_t bgAttribute = (((ppuState->BackgroundAttributeShift0 << ppuState->FineXScroll) & 0x8000) >> 13) | (((ppuState->BackgroundAttributeShift1 << ppuState->FineXScroll) & 0x8000) >> 12);
-        bgPixel = (((ppuState->BackgroundShift0 << ppuState->FineXScroll) & 0x8000) >> 15) | (((ppuState->BackgroundShift1 << ppuState->FineXScroll) & 0x8000) >> 14);
+        uint16_t bgAttribute = (((BackgroundAttributeShift0 << FineXScroll) & 0x8000) >> 13) | (((BackgroundAttributeShift1 << FineXScroll) & 0x8000) >> 12);
+        bgPixel = (((BackgroundShift0 << FineXScroll) & 0x8000) >> 15) | (((BackgroundShift1 << FineXScroll) & 0x8000) >> 14);
         bgPaletteIndex |= bgAttribute | bgPixel;
     }
 
@@ -304,15 +331,15 @@ void RenderPixel(PPUState* ppuState)
     bool spriteFound = false;
 
 
-    if (ppuState->ShowSprites && (ppuState->ShowSpritesLeft || ppuState->Dot > 8))
+    if (ShowSprites && (ShowSpritesLeft || Dot > 8))
     {
         for (int i = 0; i < 8; ++i)
         {
-            if (ppuState->SpriteCounter[i] <= 0 && ppuState->SpriteCounter[i] >= -7)
+            if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
             {
-                uint8_t spShift0 = ppuState->SpriteShift0[i];
-                uint8_t spShift1 = ppuState->SpriteShift1[i];
-                uint8_t spAttribute = ppuState->SpriteAttribute[i];
+                uint8_t spShift0 = SpriteShift0[i];
+                uint8_t spShift1 = SpriteShift1[i];
+                uint8_t spAttribute = SpriteAttribute[i];
 
                 uint16_t pixel;
                 if (spAttribute & 0x40)
@@ -330,9 +357,9 @@ void RenderPixel(PPUState* ppuState)
                     spPriority = !!(spAttribute & 0x20);
                     spPaletteIndex |= ((spAttribute & 0x03) << 2) | spPixel;
 
-                    if (ppuState->SpriteZeroOnCurrentLine && !ppuState->SpriteZeroHitFlag && i == 0)
+                    if (SpriteZeroOnCurrentLine && !SpriteZeroHitFlag && i == 0)
                     {
-                        ppuState->SpriteZeroHitFlag = (ppuState->Dot > 1) & (ppuState->Dot != 256) & (spPixel != 0) & (bgPixel != 0);
+                        SpriteZeroHitFlag = (Dot > 1) & (Dot != 256) & (spPixel != 0) & (bgPixel != 0);
                     }
 
                     break;
@@ -370,56 +397,56 @@ void RenderPixel(PPUState* ppuState)
         paletteIndex = 0x3F00;
     }
 
-    colour = ReadPalette(ppuState, paletteIndex);
+    colour = ReadPalette(paletteIndex);
 
-    DecodePixel(ppuState, colour);
+    return DecodePixel(colour);
 }
 
-void RenderPixelIdle(PPUState* ppuState)
+uint32_t  PPUState::RenderPixelIdle()
 {
     uint16_t colour;
 
-    if (ppuState->PpuAddress >= 0x3F00 && ppuState->PpuAddress <= 0x3FFF)
+    if (PpuAddress >= 0x3F00 && PpuAddress <= 0x3FFF)
     {
-        colour = ReadPalette(ppuState, ppuState->PpuAddress);
+        colour = ReadPalette(PpuAddress);
     }
     else
     {
-        colour = ReadPalette(ppuState, 0x3F00);
+        colour = ReadPalette(0x3F00);
     }
 
-    DecodePixel(ppuState, colour);
+    return DecodePixel(colour);
 }
 
 
-void IncrementXScroll(PPUState* ppuState)
+void PPUState::IncrementXScroll()
 {
-    if ((ppuState->PpuAddress & 0x001F) == 31) // Reach end of Name Table
+    if ((PpuAddress & 0x001F) == 31) // Reach end of Name Table
     {
-        ppuState->PpuAddress &= 0xFFE0; // Set Coarse X to 0
-        ppuState->PpuAddress ^= 0x400; // Switch horizontal Name Table
+        PpuAddress &= 0xFFE0; // Set Coarse X to 0
+        PpuAddress ^= 0x400; // Switch horizontal Name Table
     }
     else
     {
-        ppuState->PpuAddress++; // Increment Coarse X
+        PpuAddress++; // Increment Coarse X
     }
 }
 
-void IncrementYScroll(PPUState* ppuState)
+void PPUState::IncrementYScroll()
 {
-    if ((ppuState->PpuAddress & 0x7000) != 0x7000) // if the fine Y < 7
+    if ((PpuAddress & 0x7000) != 0x7000) // if the fine Y < 7
     {
-        ppuState->PpuAddress += 0x1000; // increment fine Y
+        PpuAddress += 0x1000; // increment fine Y
     }
     else
     {
-        ppuState->PpuAddress &= 0x8FFF; // Set fine Y to 0
-        uint16_t coarseY = (ppuState->PpuAddress & 0x03E0) >> 5; // get coarse Y
+        PpuAddress &= 0x8FFF; // Set fine Y to 0
+        uint16_t coarseY = (PpuAddress & 0x03E0) >> 5; // get coarse Y
 
         if (coarseY == 29) // End of name table
         {
             coarseY = 0; // set coarse Y to 0
-            ppuState->PpuAddress ^= 0x0800; // Switch Name Table
+            PpuAddress ^= 0x0800; // Switch Name Table
         }
         else if (coarseY == 31) // End of attribute table
         {
@@ -430,534 +457,535 @@ void IncrementYScroll(PPUState* ppuState)
             coarseY++; // Increment coarse Y
         }
 
-        ppuState->PpuAddress = (ppuState->PpuAddress & 0xFC1F) | (coarseY << 5); // Combine values into new address
+        PpuAddress = (PpuAddress & 0xFC1F) | (coarseY << 5); // Combine values into new address
     }
 }
 
-void LoadBackgroundShiftRegisters(PPUState* ppuState)
+void PPUState::LoadBackgroundShiftRegisters()
 {
-    ppuState->BackgroundShift0 = ppuState->BackgroundShift0 | ppuState->TileBitmapLow;
-    ppuState->BackgroundShift1 = ppuState->BackgroundShift1 | ppuState->TileBitmapHigh;
-    ppuState->BackgroundAttributeShift0 = ppuState->BackgroundAttributeShift0 | ((ppuState->AttributeByte & 0x1) ? 0xFF : 0x00);
-    ppuState->BackgroundAttributeShift1 = ppuState->BackgroundAttributeShift1 | ((ppuState->AttributeByte & 0x2) ? 0xFF : 0x00);
+    BackgroundShift0 = BackgroundShift0 | TileBitmapLow;
+    BackgroundShift1 = BackgroundShift1 | TileBitmapHigh;
+    BackgroundAttributeShift0 = BackgroundAttributeShift0 | ((AttributeByte & 0x1) ? 0xFF : 0x00);
+    BackgroundAttributeShift1 = BackgroundAttributeShift1 | ((AttributeByte & 0x2) ? 0xFF : 0x00);
 }
 
-void SetNameTableAddress(PPUState* ppuState)
+void PPUState::SetNameTableAddress(Cart* cart)
 {
-    SetBusAddress(ppuState, 0x2000 | (ppuState->PpuAddress & 0x0FFF));
+    SetBusAddress(cart, 0x2000 | (PpuAddress & 0x0FFF));
 }
 
-void DoNameTableFetch(PPUState* ppuState)
+void PPUState::DoNameTableFetch(Cart* cart)
 {
-    ppuState->NameTableByte = Read(ppuState);
+    NameTableByte = Read(cart);
 }
 
-void SetBackgroundAttributeAddress(PPUState* ppuState)
+void PPUState::SetBackgroundAttributeAddress(Cart* cart)
 {
-    SetBusAddress(ppuState, 0x23C0 | (ppuState->PpuAddress & 0x0C00) | ((ppuState->PpuAddress >> 4) & 0x38) | ((ppuState->PpuAddress >> 2) & 0x07));
+    SetBusAddress(cart, 0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
 }
 
-void DoBackgroundAttributeFetch(PPUState* ppuState)
+void PPUState::DoBackgroundAttributeFetch(Cart* cart)
 {
     // Get the attribute byte, determines the palette to use when rendering
-    ppuState->AttributeByte = Read(ppuState);
-    uint8_t attributeShift = (((ppuState->PpuAddress & 0x0002) >> 1) | ((ppuState->PpuAddress & 0x0040) >> 5)) << 1;
-    ppuState->AttributeByte = (ppuState->AttributeByte >> attributeShift) & 0x3;
+    AttributeByte = Read(cart);
+    uint8_t attributeShift = (((PpuAddress & 0x0002) >> 1) | ((PpuAddress & 0x0040) >> 5)) << 1;
+    AttributeByte = (AttributeByte >> attributeShift) & 0x3;
 }
 
-void SetBackgroundLowByteAddress(PPUState* ppuState)
+void PPUState::SetBackgroundLowByteAddress(Cart* cart)
 {
-    uint8_t fineY = ppuState->PpuAddress >> 12; // Get fine y scroll bits from address
-    uint16_t patternAddress = static_cast<uint16_t>(ppuState->NameTableByte) << 4; // Get pattern address, independent of the table
+    uint8_t fineY = PpuAddress >> 12; // Get fine y scroll bits from address
+    uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
 
-    SetBusAddress(ppuState, ppuState->BaseBackgroundTableAddress + patternAddress + fineY);
+    SetBusAddress(cart, BaseBackgroundTableAddress + patternAddress + fineY);
 }
 
-void DoBackgroundLowByteFetch(PPUState* ppuState)
+void PPUState::DoBackgroundLowByteFetch(Cart* cart)
 {
-    ppuState->TileBitmapLow = Read(ppuState);
+    TileBitmapLow = Read(cart);
 }
 
-void SetBackgroundHighByteAddress(PPUState* ppuState)
+void PPUState::SetBackgroundHighByteAddress(Cart* cart)
 {
-    uint8_t fineY = ppuState->PpuAddress >> 12; // Get fine y scroll
-    uint16_t patternAddress = static_cast<uint16_t>(ppuState->NameTableByte) << 4; // Get pattern address, independent of the table
+    uint8_t fineY = PpuAddress >> 12; // Get fine y scroll
+    uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
 
-    SetBusAddress(ppuState, ppuState->BaseBackgroundTableAddress + patternAddress + fineY + 8);
+    SetBusAddress(cart, BaseBackgroundTableAddress + patternAddress + fineY + 8);
 }
 
-void DoBackgroundHighByteFetch(PPUState* ppuState)
+void PPUState::DoBackgroundHighByteFetch(Cart* cart)
 {
-    ppuState->TileBitmapHigh = Read(ppuState);
+    TileBitmapHigh = Read(cart);
 }
 
-void DoSpriteAttributeFetch(PPUState* ppuState)
+void PPUState::DoSpriteAttributeFetch()
 {
-    uint8_t sprite = (ppuState->Dot - 257) / 8;
-    ppuState->SpriteAttribute[sprite] = ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 2];
+    uint8_t sprite = (Dot - 257) / 8;
+    SpriteAttribute[sprite] = Oam[SecondaryOamOffset + (sprite * 4) + 2];
 }
 
-void DoSpriteXCoordinateFetch(PPUState* ppuState)
+void PPUState::DoSpriteXCoordinateFetch()
 {
-    uint8_t sprite = (ppuState->Dot - 257) / 8;
-    ppuState->SpriteCounter[sprite] = ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 3];
+    uint8_t sprite = (Dot - 257) / 8;
+    SpriteCounter[sprite] = Oam[SecondaryOamOffset + (sprite * 4) + 3];
 }
 
-void SetSpriteLowByteAddress(PPUState* ppuState)
+void PPUState::SetSpriteLowByteAddress(Cart* cart)
 {
-    uint8_t sprite = (ppuState->Dot - 257) / 8;
-    if (sprite < ppuState->SpriteCount)
+    uint8_t sprite = (Dot - 257) / 8;
+    if (sprite < SpriteCount)
     {
-        bool flipVertical = !!(0x80 & ppuState->SpriteAttribute[sprite]);
-        uint8_t spriteY = ppuState->Oam[SecondaryOamOffset + (sprite * 4)];
+        bool flipVertical = !!(0x80 & SpriteAttribute[sprite]);
+        uint8_t spriteY = Oam[SecondaryOamOffset + (sprite * 4)];
 
-        if (ppuState->SpriteSizeSwitch) // if spriteSize is 8x16
+        if (SpriteSizeSwitch) // if spriteSize is 8x16
         {
-            uint16_t base = (0x1 & ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-            uint16_t patternIndex = base + ((ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
-            uint16_t offset = flipVertical ? 15 - (ppuState->Line - spriteY) : (ppuState->Line - spriteY); // Offset from base index
+            uint16_t base = (0x1 & Oam[SecondaryOamOffset + (sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+            uint16_t patternIndex = base + ((Oam[SecondaryOamOffset + (sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
+            uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
-            SetBusAddress(ppuState, patternIndex + offset);
+            SetBusAddress(cart, patternIndex + offset);
         }
         else
         {
-            uint16_t patternIndex = ppuState->BaseSpriteTableAddress + (ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 1] << 4); // Index of the beginning of the pattern
-            uint16_t offset = flipVertical ? 7 - (ppuState->Line - spriteY) : (ppuState->Line - spriteY); // Offset from base index
+            uint16_t patternIndex = BaseSpriteTableAddress + (Oam[SecondaryOamOffset + (sprite * 4) + 1] << 4); // Index of the beginning of the pattern
+            uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
-            SetBusAddress(ppuState, patternIndex + offset);
+            SetBusAddress(cart, patternIndex + offset);
         }
     }
     else
     {
-        if (ppuState->SpriteSizeSwitch)
+        if (SpriteSizeSwitch)
         {
-            SetBusAddress(ppuState, 0x1FF0);
+            SetBusAddress(cart, 0x1FF0);
         }
         else
         {
-            SetBusAddress(ppuState, ppuState->BaseSpriteTableAddress + 0xFF0);
+            SetBusAddress(cart, BaseSpriteTableAddress + 0xFF0);
         }
     }
 }
 
-void DoSpriteLowByteFetch(PPUState* ppuState)
+void PPUState::DoSpriteLowByteFetch(Cart* cart)
 {
-    uint8_t sprite = (ppuState->Dot - 257) / 8;
-    uint8_t bitmap = Read(ppuState);
+    uint8_t sprite = (Dot - 257) / 8;
+    uint8_t bitmap = Read(cart);
 
-    ppuState->SpriteShift0[sprite] = sprite < ppuState->SpriteCount ? bitmap : 0x00; 
+    SpriteShift0[sprite] = sprite < SpriteCount ? bitmap : 0x00; 
 }
 
-void SetSpriteHighByteAddress(PPUState* ppuState)
+void PPUState::SetSpriteHighByteAddress(Cart* cart)
 {
-    uint8_t sprite = (ppuState->Dot - 257) / 8;
-    if (sprite < ppuState->SpriteCount)
+    uint8_t sprite = (Dot - 257) / 8;
+    if (sprite < SpriteCount)
     {
-        bool flipVertical = !!(0x80 & ppuState->SpriteAttribute[sprite]);
-        uint8_t spriteY = ppuState->Oam[SecondaryOamOffset + (sprite * 4)];
+        bool flipVertical = !!(0x80 & SpriteAttribute[sprite]);
+        uint8_t spriteY = Oam[SecondaryOamOffset + (sprite * 4)];
 
-        if (ppuState->SpriteSizeSwitch) // if spriteSize is 8x16
+        if (SpriteSizeSwitch) // if spriteSize is 8x16
         {
-            uint16_t base = (0x1 & ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
-            uint16_t patternIndex = base + ((ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
-            uint16_t offset = flipVertical ? 15 - (ppuState->Line - spriteY) : (ppuState->Line - spriteY); // Offset from base index
+            uint16_t base = (0x1 & Oam[SecondaryOamOffset + (sprite * 4) + 1]) ? 0x1000 : 0; // Get base pattern table from bit 0 of pattern address
+            uint16_t patternIndex = base + ((Oam[SecondaryOamOffset + (sprite * 4) + 1] >> 1) << 5); // Index of the beginning of the pattern
+            uint16_t offset = flipVertical ? 15 - (Line - spriteY) : (Line - spriteY); // Offset from base index
             if (offset >= 8) offset += 8;
 
-            SetBusAddress(ppuState, patternIndex + offset + 8);
+            SetBusAddress(cart, patternIndex + offset + 8);
         }
         else
         {
-            uint16_t patternIndex = ppuState->BaseSpriteTableAddress + (ppuState->Oam[SecondaryOamOffset + (sprite * 4) + 1] << 4); // Index of the beginning of the pattern
-            uint16_t offset = flipVertical ? 7 - (ppuState->Line - spriteY) : (ppuState->Line - spriteY); // Offset from base index
+            uint16_t patternIndex = BaseSpriteTableAddress + (Oam[SecondaryOamOffset + (sprite * 4) + 1] << 4); // Index of the beginning of the pattern
+            uint16_t offset = flipVertical ? 7 - (Line - spriteY) : (Line - spriteY); // Offset from base index
 
-            SetBusAddress(ppuState, patternIndex + offset + 8);
+            SetBusAddress(cart, patternIndex + offset + 8);
         }
     }
     else
     {
-        if (ppuState->SpriteSizeSwitch)
+        if (SpriteSizeSwitch)
         {
-            SetBusAddress(ppuState, 0x1FF0);
+            SetBusAddress(cart, 0x1FF0);
         }
         else
         {
-            SetBusAddress(ppuState, ppuState->BaseSpriteTableAddress + 0xFF0);
+            SetBusAddress(cart, BaseSpriteTableAddress + 0xFF0);
         }
     }
 }
 
-void DoSpriteHighByteFetch(PPUState* ppuState)
+void PPUState::DoSpriteHighByteFetch(Cart* cart)
 {
-    uint8_t sprite = (ppuState->Dot - 257) / 8;
-    uint8_t bitmap = Read(ppuState);
+    uint8_t sprite = (Dot - 257) / 8;
+    uint8_t bitmap = Read(cart);
 
-    ppuState->SpriteShift1[sprite] = sprite < ppuState->SpriteCount ? bitmap : 0x00; 
+    SpriteShift1[sprite] = sprite < SpriteCount ? bitmap : 0x00; 
 }
 
-void Step(PPUState* ppuState)
+void PPUState::Step(uint32_t* frameBuffer, Cart* cart)
 {
     // Visible Lines and Pre-Render Line
-    if ((ppuState->Line >= 0 && ppuState->Line <= 239) || ppuState->Line == 261)
+    if ((Line >= 0 && Line <= 239) || Line == 261)
     {
-        if (ppuState->Dot == 1)
+        if (Dot == 1)
         {
-            if (ppuState->Line == 261)
+            if (Line == 261)
             {
-                ppuState->NmiOccuredFlag = false;
-                ppuState->InterruptActive = false;
-                ppuState->SpriteZeroHitFlag = false;
-                ppuState->SpriteOverflowFlag = false;
+                NmiOccuredFlag = false;
+                InterruptActive = false;
+                SpriteZeroHitFlag = false;
+                SpriteOverflowFlag = false;
+                Even = !Even;
             }
 
-            ppuState->SpriteCount = 0;
-            ppuState->SpriteZeroOnCurrentLine = ppuState->SpriteZeroOnNextLine;
-            ppuState->SpriteZeroOnNextLine = false;
-            ppuState->SpriteEvaluationRunning = true;
-            ppuState->SpriteEvaluationSpriteZero = true;
-            ppuState->SecondaryOamIndex = 0;
+            SpriteCount = 0;
+            SpriteZeroOnCurrentLine = SpriteZeroOnNextLine;
+            SpriteZeroOnNextLine = false;
+            SpriteEvaluationRunning = true;
+            SpriteEvaluationSpriteZero = true;
+            SecondaryOamIndex = 0;
         }
 
-        if (ppuState->RenderingEnabled)
+        if (RenderingEnabled)
         {
-            if ((ppuState->Dot >= 2 && ppuState->Dot <= 257) || (ppuState->Dot >= 322 && ppuState->Dot <= 337))
+            if ((Dot >= 2 && Dot <= 257) || (Dot >= 322 && Dot <= 337))
             {
-                ppuState->BackgroundShift0 <<= 1;
-                ppuState->BackgroundShift1 <<= 1;
-                ppuState->BackgroundAttributeShift0 <<= 1;
-                ppuState->BackgroundAttributeShift1 <<= 1;
+                BackgroundShift0 <<= 1;
+                BackgroundShift1 <<= 1;
+                BackgroundAttributeShift0 <<= 1;
+                BackgroundAttributeShift1 <<= 1;
 
-                if ((ppuState->Dot - 1) % 8 == 0)
+                if ((Dot - 1) % 8 == 0)
                 {
-                    LoadBackgroundShiftRegisters(ppuState);
+                    LoadBackgroundShiftRegisters();
                 }
 
-                if (ppuState->Dot <= 257)
+                if (Dot <= 257)
                 {
                     for (int i = 0; i < 8; ++i)
                     {
-                        if (ppuState->SpriteCounter[i] <= 0 && ppuState->SpriteCounter[i] >= -7)
+                        if (SpriteCounter[i] <= 0 && SpriteCounter[i] >= -7)
                         {
-                            if (ppuState->SpriteAttribute[i] & 0x40)
+                            if (SpriteAttribute[i] & 0x40)
                             {
-                                ppuState->SpriteShift0[i] >>= 1;
-                                ppuState->SpriteShift1[i] >>= 1;
+                                SpriteShift0[i] >>= 1;
+                                SpriteShift1[i] >>= 1;
                             }
                             else
                             {
-                                ppuState->SpriteShift0[i] <<= 1;
-                                ppuState->SpriteShift1[i] <<= 1;
+                                SpriteShift0[i] <<= 1;
+                                SpriteShift1[i] <<= 1;
                             }
                         }
 
-                        --(ppuState->SpriteCounter[i]);
+                        --SpriteCounter[i];
                     }
                 }
             }
 
-            if ((ppuState->Dot >= 1 && ppuState->Dot <= 256) || (ppuState->Dot >= 321 && ppuState->Dot <= 336))
+            if ((Dot >= 1 && Dot <= 256) || (Dot >= 321 && Dot <= 336))
             {
-                uint8_t cycle = (ppuState->Dot - 1) % 8;
+                uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
                 case 0:
-                    SetNameTableAddress(ppuState);
+                    SetNameTableAddress(cart);
                     break;
                 case 1:
-                    DoNameTableFetch(ppuState);
+                    DoNameTableFetch(cart);
                     break;
                 case 2:
-                    SetBackgroundAttributeAddress(ppuState);
+                    SetBackgroundAttributeAddress(cart);
                     break;
                 case 3:
-                    DoBackgroundAttributeFetch(ppuState);
+                    DoBackgroundAttributeFetch(cart);
                     break;
                 case 4:
-                    SetBackgroundLowByteAddress(ppuState);
+                    SetBackgroundLowByteAddress(cart);
                     break;
                 case 5:
-                    DoBackgroundLowByteFetch(ppuState);
+                    DoBackgroundLowByteFetch(cart);
                     break;
                 case 6:
-                    SetBackgroundHighByteAddress(ppuState);
+                    SetBackgroundHighByteAddress(cart);
                     break;
                 case 7:
-                    DoBackgroundHighByteFetch(ppuState);
-                    IncrementXScroll(ppuState);
+                    DoBackgroundHighByteFetch(cart);
+                    IncrementXScroll();
                     break;
                 }
 
-                if (ppuState->Dot == 256)
+                if (Dot == 256)
                 {
-                    IncrementYScroll(ppuState);
+                    IncrementYScroll();
                 }
 
-                if (ppuState->Line != 261 && ppuState->Dot <= 256)
+                if (Line != 261 && Dot <= 256)
                 {
-                    RenderPixel(ppuState);
+                    frameBuffer[(Line * 256) + (Dot - 1)] = RenderPixel();
                 }
             }
-            else if (ppuState->Dot >= 257 && ppuState->Dot <= 320)
+            else if (Dot >= 257 && Dot <= 320)
             {
-                if (ppuState->Dot == 257)
+                if (Dot == 257)
                 {
-                    ppuState->PpuAddress = (ppuState->PpuAddress & 0x7BE0) | (ppuState->PpuTempAddress & 0x041F);
+                    PpuAddress = (PpuAddress & 0x7BE0) | (PpuTempAddress & 0x041F);
                 }
 
-                ppuState->OamAddress = 0;
+                OamAddress = 0;
 
-                uint8_t cycle = (ppuState->Dot - 1) % 8;
+                uint8_t cycle = (Dot - 1) % 8;
                 switch (cycle)
                 {
                 case 0:
-                    SetNameTableAddress(ppuState);
+                    SetNameTableAddress(cart);
                     break;
                 case 1:
-                    DoNameTableFetch(ppuState);
+                    DoNameTableFetch(cart);
                     break;
                 case 2:
-                    SetBackgroundAttributeAddress(ppuState);
-                    DoSpriteAttributeFetch(ppuState);
+                    SetBackgroundAttributeAddress(cart);
+                    DoSpriteAttributeFetch();
                     break;
                 case 3:
-                    DoBackgroundAttributeFetch(ppuState);
-                    DoSpriteXCoordinateFetch(ppuState);
+                    DoBackgroundAttributeFetch(cart);
+                    DoSpriteXCoordinateFetch();
                     break;
                 case 4:
-                    SetSpriteLowByteAddress(ppuState);
+                    SetSpriteLowByteAddress(cart);
                     break;
                 case 5:
-                    DoSpriteLowByteFetch(ppuState);
+                    DoSpriteLowByteFetch(cart);
                     break;
                 case 6:
-                    SetSpriteHighByteAddress(ppuState);
+                    SetSpriteHighByteAddress(cart);
                     break;
                 case 7:
-                    DoSpriteHighByteFetch(ppuState);
+                    DoSpriteHighByteFetch(cart);
                     break;
                 }
             }
-            else if (ppuState->Dot >= 337 && ppuState->Dot <= 340)
+            else if (Dot >= 337 && Dot <= 340)
             {
-                uint8_t cycle = (ppuState->Dot - 1) % 4;
+                uint8_t cycle = (Dot - 1) % 4;
                 switch (cycle)
                 {
                     case 0: case 2:
-                        SetNameTableAddress(ppuState);
+                        SetNameTableAddress(cart);
                         break;
                     case 1: case 3:
-                        DoNameTableFetch(ppuState);
+                        DoNameTableFetch(cart);
                         break;
                 }
             }
 
             // From dot 280 to 304 of the pre-render line copy all vertical position bits to ppuAddress from ppuTempAddress
-            if (ppuState->Line == 261 && ppuState->Dot >= 280 && ppuState->Dot <= 304)
+            if (Line == 261 && Dot >= 280 && Dot <= 304)
             {
-                ppuState->PpuAddress = (ppuState->PpuAddress & 0x041F) | (ppuState->PpuTempAddress & 0x7BE0);
+                PpuAddress = (PpuAddress & 0x041F) | (PpuTempAddress & 0x7BE0);
             }
 
             // Skip the last cycle of the pre-render line on odd frames
-            if (!ppuState->Even && ppuState->Line == 261 && ppuState->Dot == 339)
+            if (!Even && Line == 261 && Dot == 339)
             {
-                ++(ppuState->Dot);
+                ++Dot;
             }
         }
         else
         {
-            if (ppuState->Line != 261 && ppuState->Dot >= 1 && ppuState->Dot <= 256)
+            if (Line != 261 && Dot >= 1 && Dot <= 256)
             {
-                RenderPixelIdle(ppuState);
+                frameBuffer[(Line * 256) + (Dot - 1)] = RenderPixelIdle();
             }
         }
     }
     // VBlank Lines
-    else if (ppuState->Line >= 241 && ppuState->Line <= 260)
+    else if (Line >= 241 && Line <= 260)
     {
-        if (ppuState->Line == 241 && ppuState->Dot == 1 && ppuState->ResetCountDown == 0)
+        if (Line == 241 && Dot == 1 && Clock > ResetDelay)
         {
-            if (!ppuState->SuppressNmi)
+            if (!SuppressNmi)
             {
-                ppuState->NmiOccuredFlag = true;
+                NmiOccuredFlag = true;
             }
 
-            ppuState->SuppressNmi = false;
+            SuppressNmi = false;
         }
 
-        if (ppuState->Line != 241 || ppuState->Dot != 0)
+        if (Line != 241 || Dot != 0)
         {
-            ppuState->InterruptActive = ppuState->NmiOccuredFlag && ppuState->NmiEnabled;
+            InterruptActive = NmiOccuredFlag && NmiEnabled;
         }
     }
 
-    if (ppuState->RenderingEnabled && ppuState->Line < 240 && ppuState->Dot >= 1 && ppuState->Dot <= 256)
+    if (RenderingEnabled && Line < 240 && Dot >= 1 && Dot <= 256)
     {
-        StepSpriteEvaluation(ppuState);
+        StepSpriteEvaluation();
     }
 
-    ppuState->RenderingEnabled = ppuState->RenderStateDelaySlot;
-    ppuState->RenderStateDelaySlot = ppuState->ShowBackground || ppuState->ShowSprites;
+    RenderingEnabled = RenderStateDelaySlot;
+    RenderStateDelaySlot = ShowBackground || ShowSprites;
 
-    ppuState->Dot = (ppuState->Dot + 1) % 341;
-    ++ppuState->Clock;
-
-    if (ppuState->ResetCountDown > 0)
+    Dot = (Dot + 1) % 341;
+    if (Dot == 0)
     {
-        ppuState->ResetCountDown--;
+       Line = (Line + 1) % 262;
     }
+
+    ++Clock;
 }
 
-uint8_t ReadPPUStatus(PPUState* ppuState)
+uint8_t PPUState::ReadPPUStatus()
 {
-    uint8_t vB = static_cast<uint8_t>(ppuState->NmiOccuredFlag);
-    uint8_t sp0 = static_cast<uint8_t>(ppuState->SpriteZeroHitFlag);
-    uint8_t spOv = static_cast<uint8_t>(ppuState->SpriteOverflowFlag);
+    uint8_t vB = static_cast<uint8_t>(NmiOccuredFlag);
+    uint8_t sp0 = static_cast<uint8_t>(SpriteZeroHitFlag);
+    uint8_t spOv = static_cast<uint8_t>(SpriteOverflowFlag);
 
-    if (ppuState->Line == 241 && ppuState->Dot == 1)
+    if (Line == 241 && Dot == 1)
     {
-        ppuState->SuppressNmi = true; // Suppress interrupt
+        SuppressNmi = true; // Suppress interrupt
     }
 
-    if (ppuState->Line == 241 && ppuState->Dot >= 2 && ppuState->Dot <= 3)
+    if (Line == 241 && Dot >= 2 && Dot <= 3)
     {
-        ppuState->InterruptActive = false;
+        InterruptActive = false;
     }
 
-    ppuState->NmiOccuredFlag = false;
-    ppuState->AddressLatch = false;
+    NmiOccuredFlag = false;
+    AddressLatch = false;
 
-    return  (vB << 7) | (sp0 << 6) | (spOv << 5) | ppuState->LowerBits;
+    return  (vB << 7) | (sp0 << 6) | (spOv << 5) | LowerBits;
 }
 
-uint8_t ReadOAMData(PPUState* ppuState)
+uint8_t PPUState::ReadOAMData()
 {
-    return ppuState->OamData;
+    return OamData;
 }
 
-uint8_t ReadPPUData(PPUState* ppuState)
+uint8_t PPUState::ReadPPUData(Cart* cart)
 {
-    uint8_t value = ppuState->DataBuffer;
-    ppuState->DataBuffer = Read(ppuState);
-    ppuState->PpuAddressIncrement ? ppuState->PpuAddress = (ppuState->PpuAddress + 32) & 0x7FFF : ppuState->PpuAddress = (ppuState->PpuAddress + 1) & 0x7FFF;
-    SetBusAddress(ppuState, ppuState->PpuAddress);
+    uint8_t value = DataBuffer;
+    DataBuffer = Read(cart);
+    PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
+    SetBusAddress(cart, PpuAddress);
 
     return value;
 }
 
-void WritePPUCTRL(PPUState* ppuState, uint8_t M)
+void PPUState::WritePPUCTRL(uint8_t M)
 {
-    if (ppuState->ResetCountDown == 0)
+    if (Clock > ResetDelay)
     {
-        ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(M)) << 10); // High bits of NameTable address
-        ppuState->PpuAddressIncrement = ((0x4 & M) >> 2) != 0;
-        ppuState->BaseSpriteTableAddress = 0x1000 * ((0x8 & M) >> 3);
-        ppuState->BaseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
-        ppuState->SpriteSizeSwitch = ((0x20 & M) >> 5) != 0;
-        ppuState->NmiEnabled = ((0x80 & M) >> 7) != 0;
+        PpuTempAddress = (PpuTempAddress & 0x73FF) | ((0x3 & static_cast<uint16_t>(M)) << 10); // High bits of NameTable address
+        PpuAddressIncrement = ((0x4 & M) >> 2) != 0;
+        BaseSpriteTableAddress = 0x1000 * ((0x8 & M) >> 3);
+        BaseBackgroundTableAddress = 0x1000 * ((0x10 & M) >> 4);
+        SpriteSizeSwitch = ((0x20 & M) >> 5) != 0;
+        NmiEnabled = ((0x80 & M) >> 7) != 0;
 
-        if (ppuState->NmiEnabled == false && ppuState->Line == 241 && (ppuState->Dot - 1) == 1)
+        if (NmiEnabled == false && Line == 241 && (Dot - 1) == 1)
         {
-            ppuState->InterruptActive = false;
+            InterruptActive = false;
         }
     }
 
-    ppuState->LowerBits = (0x1F & M);
+    LowerBits = (0x1F & M);
 }
 
-void WritePPUMASK(PPUState* ppuState, uint8_t M)
+void PPUState::WritePPUMASK(uint8_t M)
 {
-    if (ppuState->ResetCountDown == 0)
+    if (Clock > ResetDelay)
     {
-        ppuState->GrayScaleEnabled = (0x1 & M);
-        ppuState->ShowBackgroundLeft = ((0x2 & M) >> 1) != 0;
-        ppuState->ShowSpritesLeft = ((0x4 & M) >> 2) != 0;
-        ppuState->ShowBackground = ((0x8 & M) >> 3) != 0;
-        ppuState->ShowSprites = ((0x10 & M) >> 4) != 0;
-        ppuState->IntenseRed = ((0x20 & M) >> 5) != 0;
-        ppuState->IntenseGreen = ((0x40 & M) >> 6) != 0;
-        ppuState->IntenseBlue = ((0x80 & M) >> 7) != 0;
+        GrayScaleEnabled = (0x1 & M);
+        ShowBackgroundLeft = ((0x2 & M) >> 1) != 0;
+        ShowSpritesLeft = ((0x4 & M) >> 2) != 0;
+        ShowBackground = ((0x8 & M) >> 3) != 0;
+        ShowSprites = ((0x10 & M) >> 4) != 0;
+        IntenseRed = ((0x20 & M) >> 5) != 0;
+        IntenseGreen = ((0x40 & M) >> 6) != 0;
+        IntenseBlue = ((0x80 & M) >> 7) != 0;
     }
 
-    ppuState->LowerBits = (0x1F & M);
+    LowerBits = (0x1F & M);
 }
 
-void WriteOAMADDR(PPUState* ppuState, uint8_t M)
+void PPUState::WriteOAMADDR(uint8_t M)
 {
-    ppuState->OamAddress = M;
-    ppuState->OamData = ppuState->Oam[ppuState->OamAddress];
-    ppuState->LowerBits = (0x1F & ppuState->OamAddress);
+    OamAddress = M;
+    OamData = Oam[OamAddress];
+    LowerBits = (0x1F & OamAddress);
 }
 
-void WriteOAMDATA(PPUState* ppuState, uint8_t M)
+void PPUState::WriteOAMDATA(uint8_t M)
 {
-    if (ppuState->RenderingEnabled && (ppuState->Line < 240 || ppuState->Line == 261))
+    if (RenderingEnabled && (Line < 240 || Line == 261))
     {
         return;
     }
 
-    ppuState->OamData = M;
-    ppuState->Oam[ppuState->OamAddress] = M;
-    ppuState->OamAddress = (ppuState->OamAddress + 1) % 0x100;
+    OamData = M;
+    Oam[OamAddress] = M;
+    OamAddress = (OamAddress + 1) % 0x100;
 
-    ppuState->LowerBits = (0x1F & M);
+    LowerBits = (0x1F & M);
 }
 
-void WritePPUSCROLL(PPUState* ppuState, uint8_t M)
+void PPUState::WritePPUSCROLL(uint8_t M)
 {
-    if (ppuState->ResetCountDown == 0)
+    if (Clock > ResetDelay)
     {
-        if (ppuState->AddressLatch)
+        if (AddressLatch)
         {
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x0FFF) | ((0x7 & M) << 12);
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7C1F) | ((0xF8 & M) << 2);
+            PpuTempAddress = (PpuTempAddress & 0x0FFF) | ((0x7 & M) << 12);
+            PpuTempAddress = (PpuTempAddress & 0x7C1F) | ((0xF8 & M) << 2);
         }
         else
         {
-            ppuState->FineXScroll = static_cast<uint8_t>(0x7 & M);
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
+            FineXScroll = static_cast<uint8_t>(0x7 & M);
+            PpuTempAddress = (PpuTempAddress & 0x7FE0) | ((0xF8 & M) >> 3);
         }
 
-        ppuState->AddressLatch = !ppuState->AddressLatch;
+        AddressLatch = !AddressLatch;
     }
 
-    ppuState->LowerBits = static_cast<uint8_t>(0x1F & M);
+    LowerBits = static_cast<uint8_t>(0x1F & M);
 }
 
-void WritePPUADDR(PPUState* ppuState, uint8_t M)
+void PPUState::WritePPUADDR(Cart* cart, uint8_t M)
 {
-    if (ppuState->ResetCountDown == 0)
+    if (Clock > ResetDelay)
     {      
-        if (ppuState->AddressLatch)
+        if (AddressLatch)
         {
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x7F00) | M;
-            ppuState->PpuAddress = ppuState->PpuTempAddress;
-            SetBusAddress(ppuState, ppuState->PpuAddress);
+            PpuTempAddress = (PpuTempAddress & 0x7F00) | M;
+            PpuAddress = PpuTempAddress;
+            SetBusAddress(cart, PpuAddress);
         }
         else
         {
-            ppuState->PpuTempAddress = (ppuState->PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
+            PpuTempAddress = (PpuTempAddress & 0x00FF) | ((0x3F & M) << 8);
         }
         
-        ppuState->AddressLatch = !ppuState->AddressLatch;
+        AddressLatch = !AddressLatch;
     }
 
-    ppuState->LowerBits = static_cast<uint8_t>(0x1F & M);
+    LowerBits = static_cast<uint8_t>(0x1F & M);
 }
 
-void WritePPUDATA(PPUState* ppuState, uint8_t M)
+void PPUState::WritePPUDATA(Cart* cart, uint8_t M)
 {
-    Write(ppuState, M);
-    ppuState->PpuAddressIncrement ? ppuState->PpuAddress = (ppuState->PpuAddress + 32) & 0x7FFF : ppuState->PpuAddress = (ppuState->PpuAddress + 1) & 0x7FFF;
-    SetBusAddress(ppuState, ppuState->PpuAddress);
+    Write(cart, M);
+    PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
+    SetBusAddress(cart, PpuAddress);
 
-    ppuState->LowerBits = (0x1F & M);
+    LowerBits = (0x1F & M);
 }
-
 
 PPU::PPU(VideoBackend* vout, NESCallback* callback)
     : VideoOut(vout)
     , Callback(callback)
-    , ppuState(new PPUState())
+    , _ppuState(new PPUState())
+    , _frameBuffer(new uint32_t[256 * 240])
 {
 }
 
@@ -969,76 +997,68 @@ void PPU::AttachCPU(CPU* cpu)
 
 void PPU::AttachCart(Cart* cart)
 {
-    ppuState->Cartridge = cart;
+    _cart = cart;
 }
 
 int32_t PPU::GetCurrentDot()
 {
     // Adjust the value of Dot to match Nintedulator's logs
-    if (ppuState->Dot == 0)
+    if (_ppuState->Dot == 0)
     {
         return 340;
     }
     else
     {
-        return ppuState->Dot - 1;
+        return _ppuState->Dot - 1;
     }
 }
 
 int32_t PPU::GetCurrentScanline()
 {
     // Adjust the value of Line to match Nintedulator's logs
-    if (ppuState->Dot == 0)
+    if (_ppuState->Dot == 0)
     {
-        if (ppuState->Line == 0)
+        if (_ppuState->Line == 0)
         {
             return -1;
         }
         else
         {
-            return ppuState->Line - 1;
+            return _ppuState->Line - 1;
         }
     }
     else
     {
-        if (ppuState->Line == 261)
+        if (_ppuState->Line == 261)
         {
             return -1;
         }
         else 
         {
-            return ppuState->Line - 1;
+            return _ppuState->Line - 1;
         }
     }
 }
 
 uint64_t PPU::GetClock()
 {
-    return ppuState->Clock;
+    return _ppuState->Clock;
 }
 
 void PPU::Step()
 {
-    ::Step(ppuState.get());
+    _ppuState->Step(_frameBuffer.get(), _cart);
 
-    if (ppuState->Dot == 0)
+    if (_ppuState->Line == 240 && _ppuState->Dot == 0)
     {
-        ppuState->Line = (ppuState->Line + 1) % 262;
+        if (VideoOut != nullptr)
+        {
+            VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(_frameBuffer.get()));
+        }
 
-        if (ppuState->Line == 0) {
-            // Toggle even flag
-            ppuState->Even = !ppuState->Even;
-
-            ppuState->FrameBufferIndex = 0;
-
-            if (VideoOut != nullptr)
-            {
-                VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(ppuState->FrameBuffer));
-            }
-
-            if (Callback != nullptr) {
-                Callback->OnFrameComplete();
-            }
+        if (Callback != nullptr)
+        {
+            Callback->OnFrameComplete();
         }
     }
 }
@@ -1046,57 +1066,57 @@ void PPU::Step()
 
 bool PPU::GetNMIActive()
 {
-    return ppuState->InterruptActive;
+    return _ppuState->InterruptActive;
 }
 
 uint8_t PPU::ReadPPUStatus()
 {
-    return ::ReadPPUStatus(ppuState.get());
+    return _ppuState->ReadPPUStatus();
 }
 
 uint8_t PPU::ReadOAMData()
 {
-    return ::ReadOAMData(ppuState.get());
+    return _ppuState->ReadOAMData();
 }
 
 uint8_t PPU::ReadPPUData()
 {
-    return ::ReadPPUData(ppuState.get());
+    return _ppuState->ReadPPUData(_cart);
 }
 
 void PPU::WritePPUCTRL(uint8_t M)
 {
-    ::WritePPUCTRL(ppuState.get(), M);
+    _ppuState->WritePPUCTRL(M);
 }
 
 void PPU::WritePPUMASK(uint8_t M)
 {
-    ::WritePPUMASK(ppuState.get(), M);
+    _ppuState->WritePPUMASK(M);
 }
 
 void PPU::WriteOAMADDR(uint8_t M)
 {
-    ::WriteOAMADDR(ppuState.get(), M);
+    _ppuState->WriteOAMADDR(M);
 }
 
 void PPU::WriteOAMDATA(uint8_t M)
 {
-    ::WriteOAMDATA(ppuState.get(), M);
+    _ppuState->WriteOAMDATA(M);
 }
 
 void PPU::WritePPUSCROLL(uint8_t M)
 {
-    ::WritePPUSCROLL(ppuState.get(), M);
+    _ppuState->WritePPUSCROLL(M);
 }
 
 void PPU::WritePPUADDR(uint8_t M)
 {
-    ::WritePPUADDR(ppuState.get(), M);
+    _ppuState->WritePPUADDR(_cart, M);
 }
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-    ::WritePPUDATA(ppuState.get(), M);
+    _ppuState->WritePPUDATA(_cart, M);
 }
 
 int PPU::GetFrameRate()
@@ -1129,23 +1149,23 @@ void PPU::GetNameTable(int table, uint8_t* pixels)
         for (uint32_t f = 0; f < 32; ++f)
         {
             uint16_t address = (tableIndex | (i << 5) | f);
-            uint8_t ntByte = Peek(ppuState.get(), 0x2000 | address);
+            uint8_t ntByte = _ppuState->Peek(_cart, 0x2000 | address);
             uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
-            uint8_t atByte = Peek(ppuState.get(), 0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
+            uint8_t atByte = _ppuState->Peek(_cart, 0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
             atByte = (atByte >> atShift) & 0x3;
             uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
 
             for (uint32_t h = 0; h < 8; ++h)
             {
-                uint8_t tileLow = Peek(ppuState.get(), ppuState->BaseBackgroundTableAddress + patternAddress + h);
-                uint8_t tileHigh = Peek(ppuState.get(), ppuState->BaseBackgroundTableAddress + patternAddress + h + 8);
+                uint8_t tileLow = _ppuState->Peek(_cart, _ppuState->BaseBackgroundTableAddress + patternAddress + h);
+                uint8_t tileHigh = _ppuState->Peek(_cart, _ppuState->BaseBackgroundTableAddress + patternAddress + h + 8);
 
                 for (uint32_t g = 0; g < 8; ++g)
                 {
                     uint16_t pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
                     uint16_t paletteIndex = 0x3F00 | (atByte << 2) | pixel;
                     if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
-                    uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteIndex)];
+                    uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteIndex)];
                     uint8_t red = (rgb & 0xFF0000) >> 16;
                     uint8_t green = (rgb & 0x00FF00) >> 8;
                     uint8_t blue = (rgb & 0x0000FF);
@@ -1181,14 +1201,14 @@ void PPU::GetPatternTable(int table, int palette, uint8_t* pixels)
 
             for (uint32_t g = 0; g < 8; ++g)
             {
-                uint8_t tileLow = Peek(ppuState.get(), tableIndex + patternIndex + g);
-                uint8_t tileHigh = Peek(ppuState.get(), tableIndex + patternIndex + g + 8);
+                uint8_t tileLow = _ppuState->Peek(_cart, tableIndex + patternIndex + g);
+                uint8_t tileHigh = _ppuState->Peek(_cart, tableIndex + patternIndex + g + 8);
 
                 for (uint32_t h = 0; h < 8; ++h)
                 {
                     uint16_t pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
                     uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-                    uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteIndex)];
+                    uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteIndex)];
                     uint8_t red = (rgb & 0xFF0000) >> 16;
                     uint8_t green = (rgb & 0x00FF00) >> 8;
                     uint8_t blue = (rgb & 0x0000FF);
@@ -1248,7 +1268,7 @@ void PPU::GetPalette(int palette, uint8_t* pixels)
         {
             for (uint32_t h = 0; h < 16; ++h)
             {
-                uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteAddress)];
+                uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteAddress)];
                 uint8_t red = (rgb & 0xFF0000) >> 16;
                 uint8_t green = (rgb & 0x00FF00) >> 8;
                 uint8_t blue = (rgb & 0x0000FF);
@@ -1265,23 +1285,23 @@ void PPU::GetPalette(int palette, uint8_t* pixels)
 
 void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 {
-    uint8_t byteOne = ppuState->Oam[(0x4 * sprite) + 1];
-    uint8_t byteTwo = ppuState->Oam[(0x4 * sprite) + 2];
+    uint8_t byteOne = _ppuState->Oam[(0x4 * sprite) + 1];
+    uint8_t byteTwo = _ppuState->Oam[(0x4 * sprite) + 2];
 
-    uint16_t tableIndex = ppuState->BaseSpriteTableAddress;
+    uint16_t tableIndex = _ppuState->BaseSpriteTableAddress;
     uint16_t patternIndex = byteOne * 16;
     uint8_t palette = (byteTwo & 0x03) + 4;
 
     for (uint32_t i = 0; i < 8; ++i)
     {
-        uint8_t tileLow = Peek(ppuState.get(), tableIndex + patternIndex + i);
-        uint8_t tileHigh = Peek(ppuState.get(), tableIndex + patternIndex + i + 8);
+        uint8_t tileLow = _ppuState->Peek(_cart, tableIndex + patternIndex + i);
+        uint8_t tileHigh = _ppuState->Peek(_cart, tableIndex + patternIndex + i + 8);
 
         for (uint32_t f = 0; f < 8; ++f)
         {
             uint16_t pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
             uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-            uint32_t rgb = RgbLookupTable[Peek(ppuState.get(), paletteIndex)];
+            uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteIndex)];
             uint8_t red = (rgb & 0xFF0000) >> 16;
             uint8_t green = (rgb & 0x00FF00) >> 8;
             uint8_t blue = (rgb & 0x0000FF);
