@@ -1,6 +1,6 @@
 #if defined(__linux)
 
-#include "nes.h"
+#include "nes_exception.h"
 
 #include "alsa_platform.h"
 #include <cstring>

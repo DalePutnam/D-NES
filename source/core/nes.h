@@ -2,23 +2,14 @@
 
 #include <cstdint>
 #include <string>
-#include <exception>
 
-class NesException : public std::exception
-{
-public:
-    explicit NesException(const std::string& component, const std::string& message);
-    const char* what() const noexcept override;
-
-private:
-    std::string _message;
-};
+class NES;
 
 class NESCallback
 {
 public:
-    virtual void OnFrameComplete() = 0;
-    virtual void OnError(std::exception_ptr eptr) = 0;
+    virtual void OnFrameComplete(NES* nes) = 0;
+    virtual void OnError(NES* nes) = 0;
 
     virtual ~NESCallback() = default;
 };
@@ -91,6 +82,8 @@ public:
 
     virtual void SaveState(int slot) = 0;
     virtual void LoadState(int slot) = 0;
+
+    virtual const char* GetErrorMessage() = 0;
 
     virtual ~NES() = default;
 };

@@ -9,7 +9,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "nes.h"
+#include "nes_exception.h"
 
 #include "cpu.h"
 #include "ppu.h"

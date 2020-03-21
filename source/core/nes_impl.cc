@@ -11,6 +11,7 @@
 
 #include "nes.h"
 #include "nes_impl.h"
+#include "nes_exception.h"
 
 #include "cpu.h"
 #include "apu.h"
@@ -305,6 +306,8 @@ void NESImpl::Run()
                 Cpu->Step();
             }
 
+            Callback->OnFrameComplete(this);
+
             {
                 std::unique_lock<std::mutex> lock(PauseMutex);
                 if (CurrentState == State::Paused)
@@ -322,13 +325,15 @@ void NESImpl::Run()
             VideoOut->Finalize();
         }
     }
-    catch (NesException&)
+    catch (NesException& ex)
     {
         CurrentState = State::Error;
 
+        ErrorMessage = ex.what();
+
         if (Callback != nullptr)
         {
-            Callback->OnError(std::current_exception());
+            Callback->OnError(this);
         }
     }
 }
@@ -486,4 +491,9 @@ void NESImpl::LoadState(int slot)
     }
 
     Resume();
+}
+
+const char* NESImpl::GetErrorMessage()
+{
+    return ErrorMessage.c_str();
 }

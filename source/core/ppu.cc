@@ -1057,11 +1057,6 @@ void PPU::Step()
         {
             VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(_frameBuffer.get()));
         }
-
-        if (Callback != nullptr)
-        {
-            Callback->OnFrameComplete();
-        }
     }
 }
 

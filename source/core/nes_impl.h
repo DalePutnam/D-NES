@@ -76,6 +76,8 @@ public:
     void SaveState(int slot);
     void LoadState(int slot);
 
+    const char* GetErrorMessage();
+
 private:
     // Main run function, launched in a new thread by NES::Start
     void Run();
@@ -87,6 +89,7 @@ private:
 
     std::thread NesThread;
     std::string StateSaveDirectory;
+    std::string ErrorMessage;
 
     APU* Apu;
     CPU* Cpu;

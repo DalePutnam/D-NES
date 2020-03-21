@@ -51,7 +51,7 @@ bool NESApp::OnInit()
         public:
             CallbackImpl() = default;
 
-            void OnFrameComplete()
+            void OnFrameComplete(NES* nes)
             {
                 using namespace std::chrono_literals;
 
@@ -77,7 +77,7 @@ bool NESApp::OnInit()
 
                 frameCounter++;
             };
-            void OnError(std::exception_ptr eptr) {};
+            void OnError(NES* nes) {};
 
             double GetAverageFps() {
                 return static_cast<double>(fpsAccumulator) / numFpsRecords;
@@ -103,7 +103,7 @@ bool NESApp::OnInit()
 
                 std::cout << "Loading ROM " << game << std::flush;
                 //NES nes(game.ToStdString(), "", nullptr, &callback);
-                NES* nes = NES::CreateNES(game.ToStdString(), "", nullptr, &callback);
+                NES* nes = NES::Create(game.ToStdString(), "", nullptr, &callback);
 
                 nes->SetAudioEnabled(false);
 

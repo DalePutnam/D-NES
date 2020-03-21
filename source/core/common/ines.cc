@@ -1,7 +1,6 @@
 #include <fstream>
 
-#include "nes.h"
-
+#include "nes_exception.h"
 #include "ines.h"
 
 // Read header

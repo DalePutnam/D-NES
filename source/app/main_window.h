@@ -111,8 +111,8 @@ private:
 
     // NESCallback functions
 
-    void OnFrameComplete() override;
-    void OnError(std::exception_ptr eptr) override;
+    void OnFrameComplete(NES* nes) override;
+    void OnError(NES* nes) override;
 };
 
 wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);

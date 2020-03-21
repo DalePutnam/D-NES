@@ -45,7 +45,7 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
     { wxSize(1024, 960), wxSize(1024, 896) },
 };
 
-void MainWindow::OnFrameComplete()
+void MainWindow::OnFrameComplete(NES* nes)
 {
 	std::unique_lock<std::mutex> lock(PpuViewerMutex);
     
@@ -98,10 +98,10 @@ void MainWindow::OnVideoSettingsClosed(wxCommandEvent& event)
     }
 }
 
-void MainWindow::OnError(std::exception_ptr eptr)
+void MainWindow::OnError(NES* nes)
 {
     wxThreadEvent evt(EVT_NES_UNEXPECTED_SHUTDOWN);
-    evt.SetPayload(eptr);
+    evt.SetPayload(nes->GetErrorMessage());
 
     wxQueueEvent(this, evt.Clone());
     SetFocus();
@@ -135,9 +135,9 @@ void MainWindow::StartEmulator(const std::string& filename)
             wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         }
 
-        try
-        {
-            Nes = std::unique_ptr<NES>(NES::CreateNES(filename, nativeSavePath.ToStdString(), windowHandle, this));
+        // try
+        // {
+            Nes = std::unique_ptr<NES>(NES::Create(filename, nativeSavePath.ToStdString(), windowHandle, this));
 
             Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
             Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
@@ -173,19 +173,19 @@ void MainWindow::StartEmulator(const std::string& filename)
             Nes->SetNtscDecoderEnabled(ntscDecodingEnabled);
 
             Nes->SetStateSaveDirectory(stateSavePath.ToStdString());
-        }
-        catch (NesException& e)
-        {
-            wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
-            message.ShowModal();
+        // }
+        // catch (NesException& e)
+        // {
+        //     wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
+        //     message.ShowModal();
 
-            Nes.reset();
+        //     Nes.reset();
 
-            RenderSurface->Hide();
-            RomList->SetFocus();
+        //     RenderSurface->Hide();
+        //     RomList->SetFocus();
 
-            return;
-        }
+        //     return;
+        // }
 
         GameMenuSize.SetWidth(GetSize().GetWidth());
         GameMenuSize.SetHeight(GetSize().GetHeight());
@@ -312,16 +312,16 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        try
-        {
+        // try
+        // {
             int slot = event.GetId() % 10;
             Nes->SaveState(slot + 1);
-        }
-        catch (NesException& e)
-        {
-            wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
-            message.ShowModal();
-        }
+        // }
+        // catch (NesException& e)
+        // {
+        //     wxMessageDialog message(nullptr, e.what(), "Error", wxOK | wxICON_ERROR);
+        //     message.ShowModal();
+        // }
 
     }
 }
@@ -330,15 +330,15 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        try
-        {
+        // try
+        // {
             int slot = event.GetId() % 10;
             Nes->LoadState(slot + 1);
-        }
-        catch (NesException&)
-        {
-            // Just quietly discard the exception
-        }
+        // }
+        // catch (NesException&)
+        // {
+        //     // Just quietly discard the exception
+        // }
     }
 }
 
@@ -416,14 +416,7 @@ void MainWindow::OpenVideoSettings(wxCommandEvent& event)
 
 void MainWindow::OnUnexpectedShutdown(wxThreadEvent& event)
 {
-    std::exception_ptr eptr = event.GetPayload<std::exception_ptr>();
-
-    wxString errString;
-    try {
-        std::rethrow_exception(eptr);
-    } catch (NesException& e) {
-        errString = e.what();
-    }
+    wxString errString(event.GetPayload<const char*>());
 
     wxMessageDialog message(nullptr, errString, "Error", wxOK | wxICON_ERROR);
     message.ShowModal();
@@ -694,7 +687,7 @@ MainWindow::MainWindow()
     BindEvents();
 }
 
-MainWindow::~MainWindow()
+MainWindow::~MainWindow() noexcept
 {
     AppSettings& settings = AppSettings::GetInstance();
 
