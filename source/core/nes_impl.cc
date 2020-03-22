@@ -123,7 +123,15 @@ void NESImpl::SetCpuLogEnabled(bool enabled)
         return;
     }
 
-    Cpu->SetLogEnabled(enabled);
+    try
+    {
+        Pause();
+        Cpu->SetLogEnabled(enabled);
+        Resume();
+    }
+    catch (NesException& ex)
+    {
+    }
 }
 
 void NESImpl::SetNativeSaveDirectory(const char* saveDir)

@@ -60,7 +60,6 @@ private:
     uint8_t Memory[0x800];
 
     bool LogEnabled;
-    std::atomic<bool> EnableLogFlag;
     std::FILE* LogFile;
 
     // Debug Strings

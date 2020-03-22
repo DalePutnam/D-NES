@@ -1856,7 +1856,6 @@ CPU::CPU()
     , Cartridge(nullptr)
     , Clock(0)
     , LogEnabled(false)
-    , EnableLogFlag(false)
     , LogFile(nullptr)
     , ControllerStrobe(0)
     , ControllerOneShift(0)
@@ -1930,7 +1929,27 @@ uint8_t CPU::GetControllerOneState()
 
 void CPU::SetLogEnabled(bool enabled)
 {
-    EnableLogFlag = enabled;
+    LogEnabled = enabled;
+
+    if (LogEnabled)
+    {
+        long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        std::string logName = Cartridge->GetGameName() + "_" + std::to_string(time) + ".log";
+        LogFile = fopen(logName.c_str(), "w");
+
+        if (LogFile == nullptr)
+        {
+            std::string message = "Failed to open log file. ";
+            message += logName;
+
+            throw NesException("CPU", message);
+        }
+    }
+    else if (LogFile != nullptr)
+    {
+        fclose(LogFile);
+        LogFile = nullptr;
+    }
 }
 
 StateSave::Ptr CPU::SaveState()
@@ -1969,71 +1988,6 @@ void CPU::Reset()
 {
 
 }
-
-// Run the CPU
-// void CPU::Run()
-// {
-//     if (Ppu == nullptr)
-//     {
-//         throw NesException("CPU", "Failed to start, no PPU attached");
-//     }
-//     else if (Apu == nullptr)
-//     {
-//         throw NesException("CPU", "Failed to start, no APU attached");
-//     }
-//     else if (Cartridge == nullptr)
-//     {
-//         throw NesException("CPU", "Failed to start, no Cartidge attached");
-//     }
-//     else
-//     {
-//         // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-//         PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
-//     }
-
-//     while (!StopFlag) // Run stop command issued
-//     {
-//         if (EnableLogFlag != LogEnabled)
-//         {
-//             LogEnabled = EnableLogFlag;
-
-//             if (LogEnabled)
-//             {
-//                 long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-//                 std::string logName = Cartridge->GetGameName() + "_" + std::to_string(time) + ".log";
-//                 LogFile = fopen(logName.c_str(), "w");
-
-//                 if (LogFile == nullptr)
-//                 {
-//                     std::string message = "Failed to open log file. ";
-//                     message += logName;
-
-//                     throw NesException("CPU", message);
-//                 }
-//             }
-//             else
-//             {
-//                 fclose(LogFile);
-//                 LogFile = nullptr;
-//             }
-
-//         }
-
-//         Step();
-
-//         if (PauseFlag)
-//         {
-//             std::unique_lock<std::mutex> lock(PauseMutex);
-//             Paused = true;
-//             PauseFlag = false;
-
-//             PauseCv.notify_all();
-//             PauseCv.wait(lock);
-
-//             Paused = false;
-//         }
-//     }
-// }
 
 // Execute the next instruction at PC and return true
 // or return false if the next value is not an opcode
