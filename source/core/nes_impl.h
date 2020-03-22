@@ -14,12 +14,13 @@ class PPU;
 class Cart;
 class VideoBackend;
 class AudioBackend;
+class NesException;
 
 class NESImpl : public NES
 {
 public:
-    NESImpl();
-    ~NESImpl();
+    NESImpl() = default;
+    ~NESImpl() = default;
 
     bool Initialize(const char* path, void* handle = nullptr);
 
@@ -66,15 +67,15 @@ public:
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
-    void Start();
+    bool Start();
 
     // Instructs the emulator to stop and then blocks until it does.
     // Once this function returns this object may be safely deleted.
-    void Stop();
+    bool Stop();
 
     void Resume();
     void Pause();
-    void Reset();
+    bool Reset();
 
     const char* SaveState(int slot);
     const char* LoadState(int slot);
@@ -85,21 +86,27 @@ private:
     // Main run function, launched in a new thread by NES::Start
     void Run();
 
-    std::atomic<State> CurrentState;
+    void SetError(NesException& ex);
+    void SetError(const std::string& component, const std::string& message);
 
-    std::mutex PauseMutex;
-    std::condition_variable PauseVariable;
+    std::atomic<State> CurrentState{State::Created};
+
+    std::atomic<bool> StopRequested{false};
+    std::atomic<bool> PauseRequested{false};
+
+    std::mutex ControlMutex;
+    std::condition_variable ControlCv;
 
     std::thread NesThread;
     std::string StateSaveDirectory;
     std::string ErrorMessage;
 
-    APU* Apu;
-    CPU* Cpu;
-    PPU* Ppu;
-    Cart* Cartridge;
-    VideoBackend* VideoOut;
-    AudioBackend* AudioOut;
+    std::unique_ptr<APU> Apu;
+    std::unique_ptr<CPU> Cpu;
+    std::unique_ptr<PPU> Ppu;
+    std::unique_ptr<Cart> Cartridge;
+    std::unique_ptr<VideoBackend> VideoOut;
+    std::unique_ptr<AudioBackend> AudioOut;
 
-    NESCallback* Callback;
+    NESCallback* Callback{nullptr};
 };

@@ -16,7 +16,7 @@ public:
 class NES
 {
 public:
-    enum State
+    enum class State
     {
         Created,
         Ready,
@@ -73,15 +73,15 @@ public:
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
-    virtual void Start() = 0;
+    virtual bool Start() = 0;
 
     // Instructs the emulator to stop and then blocks until it does.
     // Once this function returns this object may be safely deleted.
-    virtual void Stop() = 0;
+    virtual bool Stop() = 0;
 
     virtual void Resume() = 0;
     virtual void Pause() = 0;
-    virtual void Reset() = 0;
+    virtual bool Reset() = 0;
 
     virtual const char* SaveState(int slot) = 0;
     virtual const char* LoadState(int slot) = 0;

@@ -981,9 +981,8 @@ void PPUState::WritePPUDATA(Cart* cart, uint8_t M)
     LowerBits = (0x1F & M);
 }
 
-PPU::PPU(VideoBackend* vout, NESCallback* callback)
+PPU::PPU(VideoBackend* vout)
     : VideoOut(vout)
-    , Callback(callback)
     , _ppuState(new PPUState())
     , _frameBuffer(new uint32_t[256 * 240])
 {

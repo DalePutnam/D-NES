@@ -39,15 +39,8 @@ public:
     void SetControllerOneState(uint8_t state);
     uint8_t GetControllerOneState();
 
-    void Run(); // Run CPU
     void Step(); // Execute next instruction
-    void Stop();
-
     void Reset(); // Reset the CPU to starting conditions
-    void Pause();
-    void Resume();
-
-    bool IsPaused();
 
     void SetLogEnabled(bool enabled);
 
@@ -66,13 +59,6 @@ private:
     // CPU Main Memory
     uint8_t Memory[0x800];
 
-    std::atomic<bool> StopFlag;
-
-    volatile bool Paused;
-    std::atomic<bool> PauseFlag;
-    std::mutex PauseMutex;
-    std::condition_variable PauseCv;
-
     bool LogEnabled;
     std::atomic<bool> EnableLogFlag;
     std::FILE* LogFile;
@@ -90,6 +76,8 @@ private:
     bool ControllerStrobe;
     uint8_t ControllerOneShift;
     std::atomic<uint8_t> ControllerOneState;
+
+    bool InReset;
 
     bool NmiLineStatus;
     bool NmiRaised;

@@ -1855,15 +1855,13 @@ CPU::CPU()
     , Apu(nullptr)
     , Cartridge(nullptr)
     , Clock(0)
-    , StopFlag(false)
-    , Paused(false)
-    , PauseFlag(false)
     , LogEnabled(false)
     , EnableLogFlag(false)
     , LogFile(nullptr)
     , ControllerStrobe(0)
     , ControllerOneShift(0)
     , ControllerOneState(0)
+    , InReset(true)
     , NmiLineStatus(false)
     , NmiRaised(false)
     , NmiPending(false)
@@ -1905,7 +1903,6 @@ void CPU::AttachAPU(APU* apu)
 void CPU::AttachCart(Cart* cart)
 {
     Cartridge = cart;
-    PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
 }
 
 bool CPU::IsLogEnabled()
@@ -1929,29 +1926,6 @@ void CPU::SetControllerOneState(uint8_t statePtr)
 uint8_t CPU::GetControllerOneState()
 {
     return ControllerOneState;
-}
-
-void CPU::Pause()
-{
-    std::unique_lock<std::mutex> lock(PauseMutex);
-
-    if (!Paused)
-    {
-        PauseFlag = true;
-        PauseCv.wait(lock);
-    }
-}
-
-void CPU::Resume()
-{
-    std::unique_lock<std::mutex> lock(PauseMutex);
-    PauseCv.notify_all();
-}
-
-bool CPU::IsPaused()
-{
-    std::unique_lock<std::mutex> lock(PauseMutex);
-    return Paused;
 }
 
 void CPU::SetLogEnabled(bool enabled)
@@ -1997,85 +1971,80 @@ void CPU::Reset()
 }
 
 // Run the CPU
-void CPU::Run()
-{
-    if (Ppu == nullptr)
-    {
-        throw NesException("CPU", "Failed to start, no PPU attached");
-    }
-    else if (Apu == nullptr)
-    {
-        throw NesException("CPU", "Failed to start, no APU attached");
-    }
-    else if (Cartridge == nullptr)
-    {
-        throw NesException("CPU", "Failed to start, no Cartidge attached");
-    }
-    else
-    {
-        // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
-        PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
-    }
+// void CPU::Run()
+// {
+//     if (Ppu == nullptr)
+//     {
+//         throw NesException("CPU", "Failed to start, no PPU attached");
+//     }
+//     else if (Apu == nullptr)
+//     {
+//         throw NesException("CPU", "Failed to start, no APU attached");
+//     }
+//     else if (Cartridge == nullptr)
+//     {
+//         throw NesException("CPU", "Failed to start, no Cartidge attached");
+//     }
+//     else
+//     {
+//         // Initialize PC to the address found at the reset vector (0xFFFC and 0xFFFD)
+//         PC = (static_cast<uint16_t>(Peek(0xFFFD)) << 8) + Peek(0xFFFC);
+//     }
 
-    while (!StopFlag) // Run stop command issued
-    {
-        if (EnableLogFlag != LogEnabled)
-        {
-            LogEnabled = EnableLogFlag;
+//     while (!StopFlag) // Run stop command issued
+//     {
+//         if (EnableLogFlag != LogEnabled)
+//         {
+//             LogEnabled = EnableLogFlag;
 
-            if (LogEnabled)
-            {
-                long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-                std::string logName = Cartridge->GetGameName() + "_" + std::to_string(time) + ".log";
-                LogFile = fopen(logName.c_str(), "w");
+//             if (LogEnabled)
+//             {
+//                 long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+//                 std::string logName = Cartridge->GetGameName() + "_" + std::to_string(time) + ".log";
+//                 LogFile = fopen(logName.c_str(), "w");
 
-                if (LogFile == nullptr)
-                {
-                    std::string message = "Failed to open log file. ";
-                    message += logName;
+//                 if (LogFile == nullptr)
+//                 {
+//                     std::string message = "Failed to open log file. ";
+//                     message += logName;
 
-                    throw NesException("CPU", message);
-                }
-            }
-            else
-            {
-                fclose(LogFile);
-                LogFile = nullptr;
-            }
+//                     throw NesException("CPU", message);
+//                 }
+//             }
+//             else
+//             {
+//                 fclose(LogFile);
+//                 LogFile = nullptr;
+//             }
 
-        }
+//         }
 
-        Step();
+//         Step();
 
-        if (PauseFlag)
-        {
-            std::unique_lock<std::mutex> lock(PauseMutex);
-            Paused = true;
-            PauseFlag = false;
+//         if (PauseFlag)
+//         {
+//             std::unique_lock<std::mutex> lock(PauseMutex);
+//             Paused = true;
+//             PauseFlag = false;
 
-            PauseCv.notify_all();
-            PauseCv.wait(lock);
+//             PauseCv.notify_all();
+//             PauseCv.wait(lock);
 
-            Paused = false;
-        }
-    }
-}
-
-void CPU::Stop()
-{
-    StopFlag = true;
-
-    // If pause, resume so that run exits
-    if (Paused)
-    {
-        Resume();
-    }
-}
+//             Paused = false;
+//         }
+//     }
+// }
 
 // Execute the next instruction at PC and return true
 // or return false if the next value is not an opcode
 void CPU::Step()
 {
+    if (InReset)
+    {
+        PC = (static_cast<uint16_t>(Read(0xFFFD)) << 8) + Read(0xFFFC);
+        InReset = false;
+    }
+
     if (NmiPending)
     {
         DoNMI();

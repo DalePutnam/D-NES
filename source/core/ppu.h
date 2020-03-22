@@ -22,7 +22,7 @@ struct PPUState;
 class PPU
 {
 public:
-    PPU(VideoBackend* vb, NESCallback* callback);
+    PPU(VideoBackend* vb);
 
     ~PPU();
 
@@ -60,11 +60,10 @@ public:
 
 private:
     VideoBackend* VideoOut;
-    NESCallback* Callback;
 
     Cart* _cart;
     std::unique_ptr<PPUState> _ppuState;
     std::unique_ptr<uint32_t[]> _frameBuffer;
 
-    bool _frameEnd{0};
+    bool _frameEnd{false};
 };
