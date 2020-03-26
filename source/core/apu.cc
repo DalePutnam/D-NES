@@ -971,7 +971,7 @@ void APU::MixerUnit::GenerateSample()
 	}
 
 	// Send final sample to the backend
-	float finalSample = (((pulse + tndOut) * Apu.MasterVolume) * 2.0f) - 1.0f;
+	float finalSample = ((pulse + tndOut) * Apu.MasterVolume) - 0.5f;
 	Apu.AudioOut->SubmitSample(finalSample);
 }
 
