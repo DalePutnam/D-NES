@@ -10,7 +10,8 @@
 #include <wx/dir.h>
 #include <wx/wupdlock.h>
 
-#include "nes.h"
+#include <dnes/dnes.h>
+
 #include "game_list.h"
 #include "main_window.h"
 #include "path_settings_window.h"
@@ -45,7 +46,7 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
     { wxSize(1024, 960), wxSize(1024, 896) },
 };
 
-void MainWindow::OnFrameComplete(NES* nes)
+void MainWindow::OnFrameComplete(dnes::NES* nes)
 {
 	std::unique_lock<std::mutex> lock(PpuViewerMutex);
     
@@ -98,7 +99,7 @@ void MainWindow::OnVideoSettingsClosed(wxCommandEvent& event)
     }
 }
 
-void MainWindow::OnError(NES* nes)
+void MainWindow::OnError(dnes::NES* nes)
 {
     wxThreadEvent evt(EVT_NES_UNEXPECTED_SHUTDOWN);
     evt.SetPayload(nes->GetErrorMessage());
@@ -135,7 +136,7 @@ void MainWindow::StartEmulator(const std::string& filename)
             wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         }
 
-        Nes = std::unique_ptr<NES>(NES::Create());
+        Nes = NESPtr(dnes::createNES());
 
         if (Nes->Initialize(filename.c_str(), windowHandle))
         {
@@ -299,7 +300,7 @@ void MainWindow::OnEmulatorSuspendResume(wxCommandEvent& WXUNUSED(event))
 {
     if (Nes != nullptr)
     {
-        if (Nes->GetState() == NES::State::Paused)
+        if (Nes->GetState() == dnes::NES::State::Paused)
         {
             PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
             Nes->Resume();

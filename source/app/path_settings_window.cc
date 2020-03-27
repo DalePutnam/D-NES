@@ -11,7 +11,7 @@
 #include "path_settings_window.h"
 #include "utilities/app_settings.h"
 
-#include "nes.h"
+#include <dnes/dnes.h>
 
 wxDEFINE_EVENT(EVT_PATH_WINDOW_CLOSED, wxCommandEvent);
 
@@ -58,7 +58,7 @@ void PathSettingsWindow::OnDirectorySelect(wxCommandEvent& event)
     }
 }
 
-PathSettingsWindow::PathSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes)
+PathSettingsWindow::PathSettingsWindow(MainWindow* parent, NESPtr& nes)
     : SettingsWindowBase(parent, nes, "Path Settings")
 {
     InitializeLayout();

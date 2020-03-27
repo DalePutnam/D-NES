@@ -5,9 +5,10 @@
 #include <wx/bitmap.h>
 #include <wx/dcclient.h>
 
+#include <dnes/dnes.h>
+
 #include "ppu_viewer_window.h"
 #include "main_window.h"
-#include "nes.h"
 
 static constexpr long FRAME_STYLE = (wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR) & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX;
 
@@ -26,7 +27,7 @@ void PPUViewerWindow::OnPaletteSelected(wxCommandEvent&)
     SelectedPalette = PaletteSelect->GetSelection();
 }
 
-PPUViewerWindow::PPUViewerWindow(wxWindow* parent, std::unique_ptr<NES>& nes)
+PPUViewerWindow::PPUViewerWindow(wxWindow* parent, NESPtr& nes)
     : wxFrame(parent, wxID_ANY, "PPU Viewer", wxDefaultPosition, wxDefaultSize, FRAME_STYLE)
     , Nes(nes)
     , SelectedPalette(0)

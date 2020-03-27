@@ -6,6 +6,10 @@
 #include <wx/panel.h>
 #include <wx/combobox.h>
 
+#include <dnes/dnes.h>
+
+#include "utilities/nes_ptr.h"
+
 #ifdef _WIN32
 #include <future>
 #endif
@@ -13,12 +17,10 @@
 wxDECLARE_EVENT(EVT_PPU_VIEWER_UPDATE, wxThreadEvent);
 wxDECLARE_EVENT(EVT_PPU_VIEWER_CLOSED, wxCommandEvent);
 
-class NES;
-
 class PPUViewerWindow : public wxFrame
 {
 public:
-    explicit PPUViewerWindow(wxWindow* parent, std::unique_ptr<NES>& nes);
+    explicit PPUViewerWindow(wxWindow* parent, NESPtr& nes);
     ~PPUViewerWindow() noexcept;
 
     void UpdatePanels();
@@ -41,7 +43,7 @@ private:
     wxPanel* Sprite[64];
     wxChoice* PaletteSelect;
 
-    std::unique_ptr<NES>& Nes;
+    NESPtr& Nes;
 
     int SelectedPalette;
     uint8_t* NameTableBuffers[4];

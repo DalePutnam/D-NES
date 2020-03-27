@@ -3,14 +3,17 @@
 #include <memory>
 #include <wx/dialog.h>
 
-class NES;
+#include <dnes/dnes.h>
+
+#include "utilities/nes_ptr.h"
+
 class wxPanel;
 class MainWindow;
 
 class SettingsWindowBase : public wxDialog
 {
 public:
-    SettingsWindowBase(MainWindow* parent, std::unique_ptr<NES>& nes, const std::string& title);
+    SettingsWindowBase(MainWindow* parent, NESPtr& nes, const std::string& title);
     virtual ~SettingsWindowBase() = default;
 
 protected:
@@ -18,7 +21,7 @@ protected:
     virtual void DoCancel() = 0;
     virtual void DoClose() = 0;
 
-    std::unique_ptr<NES>& Nes;
+    NESPtr& Nes;
     wxPanel* SettingsPanel;
 
 private:

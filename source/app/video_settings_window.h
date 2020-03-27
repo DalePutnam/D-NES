@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utilities/nes_ptr.h"
 #include "settings_window_base.h"
 
 class MainWindow;
@@ -11,7 +12,7 @@ wxDECLARE_EVENT(EVT_VIDEO_WINDOW_CLOSED, wxCommandEvent);
 class VideoSettingsWindow : public SettingsWindowBase
 {
 public:
-    VideoSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes);
+    VideoSettingsWindow(MainWindow* parent, NESPtr& nes);
 
 protected:
     virtual void DoOk() override;

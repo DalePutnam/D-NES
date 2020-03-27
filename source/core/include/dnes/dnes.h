@@ -2,7 +2,25 @@
 
 #include <cstdint>
 
+#ifdef _WIN32
+#   ifdef DNES_EXPORT
+#       define DNES_DLL __declspec( dllexport )
+#   else
+#        define DNES_DLL __declspec( dllimport )
+#   endif
+#elif defined (__GNUC__)
+#    define DNES_DLL __attribute__((visibility("default")))
+#else
+#    define DNES_DLL
+#endif
+
+namespace dnes
+{
+
 class NES;
+
+DNES_DLL NES* createNES();
+DNES_DLL void destroyNES(NES* nes);
 
 class NESCallback
 {
@@ -25,8 +43,6 @@ public:
         Stopped,
         Error
     };
-
-    static NES* Create();
 
     virtual bool Initialize(const char* path, void* handle = nullptr) = 0;
 
@@ -88,5 +104,8 @@ public:
 
     virtual const char* GetErrorMessage() = 0;
 
+protected:
     virtual ~NES() = default;
 };
+
+}; // namespace dnes

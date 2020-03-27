@@ -10,8 +10,6 @@
 #include <exception>
 #include <cstring>
 
-#include "nes.h"
-
 #include "cart.h"
 #include "ines.h"
 #include "file.h"

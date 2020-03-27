@@ -9,11 +9,11 @@
 #include "audio_settings_window.h"
 #include "utilities/app_settings.h"
 
-#include "nes.h"
+#include <dnes/dnes.h>
 
 wxDEFINE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 
-AudioSettingsWindow::AudioSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes)
+AudioSettingsWindow::AudioSettingsWindow(MainWindow* parent, NESPtr& nes)
     : SettingsWindowBase(parent, nes, "Audio Settings")
 {
     InitializeLayout();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utilities/nes_ptr.h"
 #include "settings_window_base.h"
 
 class NES;
@@ -13,7 +14,7 @@ wxDECLARE_EVENT(EVT_AUDIO_WINDOW_CLOSED, wxCommandEvent);
 class AudioSettingsWindow : public SettingsWindowBase
 {
 public:
-    AudioSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes);
+    AudioSettingsWindow(MainWindow* parent, NESPtr& nes);
 
 protected:
     virtual void DoOk() override;

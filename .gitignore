@@ -15,14 +15,5 @@ config.txt
 ROMs
 saves
 .vscode
-.sconsign.dblite
-.sconf_temp
-config.log
-scons.cfg
 compile_commands.json
-**/*.o
-**/*.os
-**/*.a
-**/*.so
-**/*.pyc
-build/**
+build

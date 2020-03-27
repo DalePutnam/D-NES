@@ -9,11 +9,11 @@
 #include "video_settings_window.h"
 #include "utilities/app_settings.h"
 
-#include "nes.h"
+#include <dnes/dnes.h>
 
 wxDEFINE_EVENT(EVT_VIDEO_WINDOW_CLOSED, wxCommandEvent);
 
-VideoSettingsWindow::VideoSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes)
+VideoSettingsWindow::VideoSettingsWindow(MainWindow* parent, NESPtr& nes)
     : SettingsWindowBase(parent, nes, "Video Settings")
 {
     InitializeLayout();

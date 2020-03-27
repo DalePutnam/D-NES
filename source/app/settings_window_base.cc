@@ -3,11 +3,10 @@
 
 #include "main_window.h"
 #include "settings_window_base.h"
-#include "nes.h"
 
 static constexpr long DIALOG_STYLE = wxDEFAULT_DIALOG_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX & ~wxMINIMIZE_BOX & ~wxCLOSE_BOX;
 
-SettingsWindowBase::SettingsWindowBase(MainWindow* parent, std::unique_ptr<NES>& nes, const std::string& title)
+SettingsWindowBase::SettingsWindowBase(MainWindow* parent, NESPtr& nes, const std::string& title)
     : wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, DIALOG_STYLE)
     , Nes(nes)
     , SettingsPanel(new wxPanel(this))

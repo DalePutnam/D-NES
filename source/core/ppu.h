@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <memory>
 
-#include "nes.h"
 #include "state_save.h"
 
 class CPU;

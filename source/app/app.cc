@@ -5,7 +5,8 @@
 #include <thread>
 #include <wx/cmdline.h>
 
-#include "nes.h"
+#include <dnes/dnes.h>
+
 #include "app.h"
 #include "main_window.h"
 #include "utilities/app_settings.h"
@@ -42,7 +43,7 @@ bool NESApp::OnInit()
 #ifdef _WIN32
         InitConsole();
 #endif
-        class CallbackImpl : public NESCallback
+        class CallbackImpl : public dnes::NESCallback
         {
             using steady_clock = std::chrono::steady_clock;
             using time_point = std::chrono::time_point<steady_clock>;
@@ -51,7 +52,7 @@ bool NESApp::OnInit()
         public:
             CallbackImpl() = default;
 
-            void OnFrameComplete(NES* nes)
+            void OnFrameComplete(dnes::NES* nes)
             {
                 using namespace std::chrono_literals;
 
@@ -77,7 +78,7 @@ bool NESApp::OnInit()
 
                 frameCounter++;
             };
-            void OnError(NES* nes) {};
+            void OnError(dnes::NES* nes) {};
 
             double GetAverageFps() {
                 return static_cast<double>(fpsAccumulator) / numFpsRecords;
@@ -99,7 +100,7 @@ bool NESApp::OnInit()
         CallbackImpl callback;
 
         std::cout << "Loading ROM " << game << std::flush;
-        NES* nes = NES::Create();
+        dnes::NES* nes = dnes::createNES();
 
         if (nes->Initialize(game.c_str()))
         {
@@ -119,7 +120,7 @@ bool NESApp::OnInit()
 
             nes->Stop();
 
-            delete nes;
+            dnes::destroyNES(nes);
 
             std::cout << "\nAverage FPS: " << callback.GetAverageFps() << std::endl;
         } 

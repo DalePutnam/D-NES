@@ -16,7 +16,9 @@
 #include <wx/listctrl.h>
 #include <wx/bitmap.h>
 
-#include "nes.h"
+#include <dnes/dnes.h>
+
+#include "utilities/nes_ptr.h"
 
 class GameList;
 class PPUViewerWindow;
@@ -33,7 +35,7 @@ enum GameResolutions
     NUM_RESOLUTIONS
 };
 
-class MainWindow : public wxFrame, public NESCallback
+class MainWindow : public wxFrame, public dnes::NESCallback
 {
 public:
     MainWindow();
@@ -45,7 +47,7 @@ public:
 private:
     static std::vector<std::pair<wxSize, wxSize>> ResolutionsList;
 
-    std::unique_ptr<NES> Nes;
+    NESPtr Nes;
 
     std::mutex PpuViewerMutex;
     PPUViewerWindow* PpuWindow;
@@ -111,8 +113,8 @@ private:
 
     // NESCallback functions
 
-    void OnFrameComplete(NES* nes) override;
-    void OnError(NES* nes) override;
+    void OnFrameComplete(dnes::NES* nes) override;
+    void OnError(dnes::NES* nes) override;
 };
 
 wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);

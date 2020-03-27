@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utilities/nes_ptr.h"
 #include "settings_window_base.h"
 
 class MainWindow;
@@ -11,7 +12,7 @@ wxDECLARE_EVENT(EVT_PATH_WINDOW_CLOSED, wxCommandEvent);
 class PathSettingsWindow : public SettingsWindowBase
 {
 public:
-    PathSettingsWindow(MainWindow* parent, std::unique_ptr<NES>& nes);
+    PathSettingsWindow(MainWindow* parent, NESPtr& nes);
     void SaveSettings();
 
 protected:
