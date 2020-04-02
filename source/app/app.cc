@@ -102,10 +102,9 @@ bool NESApp::OnInit()
         std::cout << "Loading ROM " << game << std::flush;
         dnes::NES* nes = dnes::createNES();
 
-        if (nes->Initialize(game.c_str()))
+        if (nes->LoadGame(game.c_str()) == dnes::SUCCESS)
         {
             nes->SetCallback(&callback);
-
             nes->SetAudioEnabled(false);
 
             std::cout << ": Success!" << std::endl;

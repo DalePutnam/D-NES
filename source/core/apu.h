@@ -14,11 +14,12 @@ class VideoBackend;
 class APU
 {
 public:
-	APU(AudioBackend* aout);
+	APU();
     ~APU();
 
     void AttachCPU(CPU* cpu);
     void AttachCart(Cart* cart);
+    void SetBackend(AudioBackend* backend);
 
     void Step();
     bool CheckIRQ();

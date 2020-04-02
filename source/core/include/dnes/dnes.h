@@ -19,6 +19,7 @@ namespace dnes
 
 class NES;
 
+constexpr int SUCCESS = 0;
 DNES_DLL NES* createNES();
 DNES_DLL void destroyNES(NES* nes);
 
@@ -36,7 +37,6 @@ class NES
 public:
     enum class State
     {
-        Created,
         Ready,
         Running,
         Paused,
@@ -44,9 +44,11 @@ public:
         Error
     };
 
-    virtual bool Initialize(const char* path, void* handle = nullptr) = 0;
+    virtual int LoadGame(const char* path) = 0;
 
-    virtual void SetCallback(NESCallback* callback) = 0;
+    virtual int SetWindowHandle(void* handle) = 0;
+
+    virtual int SetCallback(NESCallback* callback) = 0;
 
     virtual const char* GetGameName() = 0;
 

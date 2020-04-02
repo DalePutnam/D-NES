@@ -23,13 +23,12 @@ public:
     ~Cart();
 
     const std::string& GetGameName();
-    void SetSaveDirectory(const std::string& saveDir);
 
     void AttachCPU(CPU* cpu);
     void AttachPPU(PPU* ppu);
     
-    void SaveNativeSave();
-    void LoadNativeSave();
+    void SaveNativeSave(const std::string& saveDir);
+    void LoadNativeSave(const std::string& saveDir);
 
     uint8_t CpuRead(uint16_t address);
     void CpuWrite(uint8_t M, uint16_t address);
@@ -47,7 +46,6 @@ public:
 
 private:
     std::string _gameName;
-    std::string _saveDirectory;
 
     std::unique_ptr<MapperBase> _mapper;
 };

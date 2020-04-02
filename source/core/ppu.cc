@@ -981,8 +981,8 @@ void PPUState::WritePPUDATA(Cart* cart, uint8_t M)
     LowerBits = (0x1F & M);
 }
 
-PPU::PPU(VideoBackend* vout)
-    : VideoOut(vout)
+PPU::PPU()
+    : VideoOut(nullptr)
     , _ppuState(new PPUState())
     , _frameBuffer(new uint32_t[256 * 240])
 {
@@ -997,6 +997,11 @@ void PPU::AttachCPU(CPU* cpu)
 void PPU::AttachCart(Cart* cart)
 {
     _cart = cart;
+}
+
+void PPU::SetBackend(VideoBackend* backend)
+{
+    VideoOut = backend;
 }
 
 int32_t PPU::GetCurrentDot()

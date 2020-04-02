@@ -21,12 +21,13 @@ struct PPUState;
 class PPU
 {
 public:
-    PPU(VideoBackend* vb);
+    PPU();
 
     ~PPU();
 
     void AttachCPU(CPU* cpu);
     void AttachCart(Cart* cart);
+    void SetBackend(VideoBackend* backend);
 
     int32_t GetCurrentDot();
     int32_t GetCurrentScanline();

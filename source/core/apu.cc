@@ -879,7 +879,6 @@ APU::MixerUnit::MixerUnit(APU& apu)
 	, SamplesPerFrame(0)
 	, FrameSampleCount(0)
 {
-	SetTargetFrameRate(60);
 }
 
 void APU::MixerUnit::Clock()
@@ -1039,10 +1038,10 @@ void APU::MixerUnit::UpdateMode()
 // APU Main Unit
 //**********************************************************************
 
-APU::APU(AudioBackend* aout)
+APU::APU()
 	: Cpu(nullptr)
 	, Cartridge(nullptr)
-	, AudioOut(aout)
+	, AudioOut(nullptr)
 	, PulseOne(true)
 	, PulseTwo(false)
 	, Dmc(*this)
@@ -1077,6 +1076,12 @@ void APU::AttachCPU(CPU* cpu)
 void APU::AttachCart(Cart* cart)
 {
     this->Cartridge = cart;
+}
+
+void APU::SetBackend(AudioBackend* backend)
+{
+    AudioOut = backend;
+    SetTargetFrameRate(60);
 }
 
 void APU::SetTargetFrameRate(uint32_t rate)

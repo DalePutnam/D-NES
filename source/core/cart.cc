@@ -64,11 +64,6 @@ const string& Cart::GetGameName()
     return _gameName;
 }
 
-void Cart::SetSaveDirectory(const std::string& saveDir)
-{
-    _saveDirectory = saveDir;
-}
-
 void Cart::AttachCPU(CPU* cpu)
 {
     _mapper->AttachCPU(cpu);
@@ -79,9 +74,9 @@ void Cart::AttachPPU(PPU* ppu)
     _mapper->AttachPPU(ppu);
 }
 
-void Cart::SaveNativeSave()
+void Cart::SaveNativeSave(const std::string& saveDir)
 {
-    std::string saveFile = file::createFullPath(_gameName, "sav", _saveDirectory);
+    std::string saveFile = file::createFullPath(_gameName, "sav", saveDir);
     std::ofstream saveStream(saveFile.c_str(), std::ofstream::out | std::ofstream::binary);
 
     if (saveStream.good())
@@ -94,9 +89,9 @@ void Cart::SaveNativeSave()
     }
 }
 
-void Cart::LoadNativeSave()
+void Cart::LoadNativeSave(const std::string& saveDir)
 {
-    std::string saveFile = file::createFullPath(_gameName, "sav", _saveDirectory);
+    std::string saveFile = file::createFullPath(_gameName, "sav", saveDir);
     std::ifstream saveStream(saveFile.c_str(), std::ifstream::in | std::ofstream::binary);
 
     if (saveStream.good())

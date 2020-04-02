@@ -138,65 +138,8 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         Nes = NESPtr(dnes::createNES());
 
-        if (Nes->Initialize(filename.c_str(), windowHandle))
-        {
-            Nes->SetCallback(this);
-            Nes->SetNativeSaveDirectory(nativeSavePath.c_str());
-
-            Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
-            Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
-
-            bool audioEnabled;
-            appSettings.Read("/Audio/Enabled", &audioEnabled);
-
-            Nes->SetAudioEnabled(audioEnabled);
-
-            int master, pulseOne, pulseTwo, triangle, noise, dmc;
-            appSettings.Read("/Audio/MasterVolume", &master);
-            appSettings.Read("/Audio/PulseOneVolume", &pulseOne);
-            appSettings.Read("/Audio/PulseTwoVolume", &pulseTwo);
-            appSettings.Read("/Audio/TriangleVolume", &triangle);
-            appSettings.Read("/Audio/NoiseVolume", &noise);
-            appSettings.Read("/Audio/DmcVolume", &dmc);
-
-            Nes->SetMasterVolume(master / 100.f);
-            Nes->SetPulseOneVolume(pulseOne / 100.f);
-            Nes->SetPulseTwoVolume(pulseTwo / 100.f);
-            Nes->SetTriangleVolume(triangle / 100.f);
-            Nes->SetNoiseVolume(noise / 100.f);
-            Nes->SetDmcVolume(dmc / 100.f);
-
-
-            bool fpsEnabled, overscanEnabled, ntscDecodingEnabled;
-            appSettings.Read("/Video/ShowFps", &fpsEnabled);
-            appSettings.Read("/Video/Overscan", &overscanEnabled);
-            appSettings.Read("/Video/NtscDecoding", &ntscDecodingEnabled);
-
-            Nes->SetFpsDisplayEnabled(fpsEnabled);
-            Nes->SetOverscanEnabled(overscanEnabled);
-            Nes->SetNtscDecoderEnabled(ntscDecodingEnabled);
-
-            Nes->SetStateSaveDirectory(stateSavePath.c_str());
-
-
-            GameMenuSize.SetWidth(GetSize().GetWidth());
-            GameMenuSize.SetHeight(GetSize().GetHeight());
-
-            VerticalBox->Hide(RomList);
-            SetTitle(Nes->GetGameName());
-            SetClientSize(GameWindowSize);
-
-            SetMinClientSize(GameWindowSize);
-            SetMaxClientSize(GameWindowSize);
-
-            RenderSurface->SetSize(GetClientSize());
-            RenderSurface->SetFocus();
-
-            PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
-
-            Nes->Start();
-        }
-        else
+        int result = Nes->LoadGame(filename.c_str());
+        if (result != dnes::SUCCESS)
         {
             wxMessageDialog message(nullptr, Nes->GetErrorMessage(), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
@@ -208,6 +151,63 @@ void MainWindow::StartEmulator(const std::string& filename)
 
             return;
         }
+
+        Nes->SetWindowHandle(windowHandle);
+        Nes->SetCallback(this);
+        Nes->SetNativeSaveDirectory(nativeSavePath.c_str());
+
+        Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
+        Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
+
+        bool audioEnabled;
+        appSettings.Read("/Audio/Enabled", &audioEnabled);
+
+        Nes->SetAudioEnabled(audioEnabled);
+
+        int master, pulseOne, pulseTwo, triangle, noise, dmc;
+        appSettings.Read("/Audio/MasterVolume", &master);
+        appSettings.Read("/Audio/PulseOneVolume", &pulseOne);
+        appSettings.Read("/Audio/PulseTwoVolume", &pulseTwo);
+        appSettings.Read("/Audio/TriangleVolume", &triangle);
+        appSettings.Read("/Audio/NoiseVolume", &noise);
+        appSettings.Read("/Audio/DmcVolume", &dmc);
+
+        Nes->SetMasterVolume(master / 100.f);
+        Nes->SetPulseOneVolume(pulseOne / 100.f);
+        Nes->SetPulseTwoVolume(pulseTwo / 100.f);
+        Nes->SetTriangleVolume(triangle / 100.f);
+        Nes->SetNoiseVolume(noise / 100.f);
+        Nes->SetDmcVolume(dmc / 100.f);
+
+
+        bool fpsEnabled, overscanEnabled, ntscDecodingEnabled;
+        appSettings.Read("/Video/ShowFps", &fpsEnabled);
+        appSettings.Read("/Video/Overscan", &overscanEnabled);
+        appSettings.Read("/Video/NtscDecoding", &ntscDecodingEnabled);
+
+        Nes->SetFpsDisplayEnabled(fpsEnabled);
+        Nes->SetOverscanEnabled(overscanEnabled);
+        Nes->SetNtscDecoderEnabled(ntscDecodingEnabled);
+
+        Nes->SetStateSaveDirectory(stateSavePath.c_str());
+
+
+        GameMenuSize.SetWidth(GetSize().GetWidth());
+        GameMenuSize.SetHeight(GetSize().GetHeight());
+
+        VerticalBox->Hide(RomList);
+        SetTitle(Nes->GetGameName());
+        SetClientSize(GameWindowSize);
+
+        SetMinClientSize(GameWindowSize);
+        SetMaxClientSize(GameWindowSize);
+
+        RenderSurface->SetSize(GetClientSize());
+        RenderSurface->SetFocus();
+
+        PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
+
+        Nes->Start();
     }
     else
     {

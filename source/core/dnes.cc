@@ -19,68 +19,70 @@
 class NESImpl : public dnes::NES
 {
 public:
-    NESImpl() = default;
+    NESImpl();
     ~NESImpl() = default;
 
-    bool Initialize(const char* path, void* handle = nullptr);
+    int LoadGame(const char* path) override;
 
-    void SetCallback(dnes::NESCallback* callback);
+    int SetWindowHandle(void* handle) override;
 
-    const char* GetGameName();
+    int SetCallback(dnes::NESCallback* callback) override;
 
-    State GetState();
+    const char* GetGameName() override;
 
-    void SetControllerOneState(uint8_t state);
-    uint8_t GetControllerOneState();
+    State GetState() override;
 
-    void SetCpuLogEnabled(bool enabled);
-    void SetNativeSaveDirectory(const char* saveDir);
-    void SetStateSaveDirectory(const char* saveDir);
+    void SetControllerOneState(uint8_t state) override;
+    uint8_t GetControllerOneState() override;
 
-    void SetTargetFrameRate(uint32_t rate);
-    void SetTurboModeEnabled(bool enabled);
+    void SetCpuLogEnabled(bool enabled) override;
+    void SetNativeSaveDirectory(const char* saveDir) override;
+    void SetStateSaveDirectory(const char* saveDir) override;
 
-    int GetFrameRate();
-    void GetNameTable(int table, uint8_t* pixels);
-    void GetPatternTable(int table, int palette, uint8_t* pixels);
-    void GetPalette(int palette, uint8_t* pixels);
-    void GetSprite(int sprite, uint8_t* pixels);
-    void SetNtscDecoderEnabled(bool enabled);
-    void SetFpsDisplayEnabled(bool enabled);
-    void SetOverscanEnabled(bool enabled);
+    void SetTargetFrameRate(uint32_t rate) override;
+    void SetTurboModeEnabled(bool enabled) override;
 
-    void ShowMessage(const char* message, uint32_t duration);
+    int GetFrameRate() override;
+    void GetNameTable(int table, uint8_t* pixels) override;
+    void GetPatternTable(int table, int palette, uint8_t* pixels) override;
+    void GetPalette(int palette, uint8_t* pixels) override;
+    void GetSprite(int sprite, uint8_t* pixels) override;
+    void SetNtscDecoderEnabled(bool enabled) override;
+    void SetFpsDisplayEnabled(bool enabled) override;
+    void SetOverscanEnabled(bool enabled) override;
 
-    void SetAudioEnabled(bool enabled);
-    void SetMasterVolume(float volume);
+    void ShowMessage(const char* message, uint32_t duration) override;
 
-    void SetPulseOneVolume(float volume);
-    float GetPulseOneVolume();
-    void SetPulseTwoVolume(float volume);
-    float GetPulseTwoVolume();
-    void SetTriangleVolume(float volume);
-    float GetTriangleVolume();
-    void SetNoiseVolume(float volume);
-    float GetNoiseVolume();
-    void SetDmcVolume(float volume);
-    float GetDmcVolume();
+    void SetAudioEnabled(bool enabled) override;
+    void SetMasterVolume(float volume) override;
+
+    void SetPulseOneVolume(float volume) override;
+    float GetPulseOneVolume() override;
+    void SetPulseTwoVolume(float volume) override;
+    float GetPulseTwoVolume() override;
+    void SetTriangleVolume(float volume) override;
+    float GetTriangleVolume() override;
+    void SetNoiseVolume(float volume) override;
+    float GetNoiseVolume() override;
+    void SetDmcVolume(float volume) override;
+    float GetDmcVolume() override;
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
-    bool Start();
+    bool Start() override;
 
     // Instructs the emulator to stop and then blocks until it does.
     // Once this function returns this object may be safely deleted.
-    bool Stop();
+    bool Stop() override;
 
-    void Resume();
-    void Pause();
-    bool Reset();
+    void Resume() override;
+    void Pause() override;
+    bool Reset() override;
 
-    const char* SaveState(int slot);
-    const char* LoadState(int slot);
+    const char* SaveState(int slot) override;
+    const char* LoadState(int slot) override;
 
-    const char* GetErrorMessage();
+    const char* GetErrorMessage() override;
 
 private:
     // Main run function, launched in a new thread by NES::Start
@@ -89,7 +91,7 @@ private:
     void SetError(NesException& ex);
     void SetError(const std::string& component, const std::string& message);
 
-    std::atomic<State> CurrentState{State::Created};
+    std::atomic<State> CurrentState{State::Ready};
 
     std::atomic<bool> StopRequested{false};
     std::atomic<bool> PauseRequested{false};
@@ -108,49 +110,29 @@ private:
     std::unique_ptr<VideoBackend> VideoOut;
     std::unique_ptr<AudioBackend> AudioOut;
 
+    void* WindowHandle{nullptr};
+
     dnes::NESCallback* Callback{nullptr};
+
+    std::atomic<bool> ShowFps{false};
+    std::atomic<bool> OverscanEnabled{true};
+    std::atomic<uint32_t> TargetFrameRate{60};
+
+    std::string NativeSaveDirectory;
 };
 
-bool NESImpl::Initialize(const char* path, void* handle)
+NESImpl::NESImpl()
 {
-    try
-    {
-        if (handle != nullptr)
-        {
-            VideoOut = std::make_unique<VideoBackend>(handle);
-        }
+    Cpu = std::make_unique<CPU>();
+    Ppu = std::make_unique<PPU>(/*VideoOut.get()*/);
+    Apu = std::make_unique<APU>(/*AudioOut.get()*/);
 
-        AudioOut = std::make_unique<AudioBackend>();
-        
-        Cpu = std::make_unique<CPU>();
-        Ppu = std::make_unique<PPU>(VideoOut.get());
-        Apu = std::make_unique<APU>(AudioOut.get());
-        Cartridge = std::make_unique<Cart>(path);
-    }
-    catch (NesException& e)
-    {
-        SetError(e);
-        return false;
-    }
-
-    if (VideoOut != nullptr)
-    {
-        VideoOut->ShowFps(false);
-        VideoOut->SetOverscanEnabled(true);
-    }
-    
     Apu->AttachCPU(Cpu.get());
-    Apu->AttachCart(Cartridge.get());
 
     Cpu->AttachPPU(Ppu.get());
     Cpu->AttachAPU(Apu.get());
-    Cpu->AttachCart(Cartridge.get());
 
     Ppu->AttachCPU(Cpu.get());
-    Ppu->AttachCart(Cartridge.get());
-
-    Cartridge->AttachCPU(Cpu.get());
-    Cartridge->AttachPPU(Ppu.get());
 
     // CPU Settings
     Cpu->SetLogEnabled(false);
@@ -168,13 +150,56 @@ bool NESImpl::Initialize(const char* path, void* handle)
     Apu->SetDmcVolume(1.f);
 
     CurrentState = State::Ready;
-
-    return true;
 }
 
-void NESImpl::SetCallback(dnes::NESCallback* callback)
+int NESImpl::LoadGame(const char* path)
 {
+    if (CurrentState != State::Ready)
+    {
+        return 1;
+    }
+
+    try
+    {
+        Cartridge = std::make_unique<Cart>(path);
+    }
+    catch (NesException& e)
+    {
+        return 1;
+    }
+
+    Cpu->AttachCart(Cartridge.get());
+    Apu->AttachCart(Cartridge.get());
+    Ppu->AttachCart(Cartridge.get());
+
+    Cartridge->AttachCPU(Cpu.get());
+    Cartridge->AttachPPU(Ppu.get());
+
+    return 0;
+}
+
+int NESImpl::SetWindowHandle(void* handle)
+{
+    if (CurrentState != State::Ready)
+    {
+        return 1;
+    }
+
+    WindowHandle = handle;
+
+    return 0;
+}
+
+int NESImpl::SetCallback(dnes::NESCallback* callback)
+{
+    if (CurrentState != State::Ready)
+    {
+        return 1;
+    }
+
     Callback = callback;
+
+    return 0;
 }
 
 const char* NESImpl::GetGameName()
@@ -227,12 +252,7 @@ void NESImpl::SetCpuLogEnabled(bool enabled)
 
 void NESImpl::SetNativeSaveDirectory(const char* saveDir)
 {
-    if (!Cartridge)
-    {
-        return;
-    }
-
-    Cartridge->SetSaveDirectory(saveDir);
+    NativeSaveDirectory = saveDir;
 }
 
 void NESImpl::SetStateSaveDirectory(const char* saveDir)
@@ -242,12 +262,12 @@ void NESImpl::SetStateSaveDirectory(const char* saveDir)
 
 void NESImpl::SetTargetFrameRate(uint32_t rate)
 {
-    if (!Apu)
-    {
-        return;
-    }
+    TargetFrameRate = rate;
 
-    Apu->SetTargetFrameRate(rate);
+    if (AudioOut)
+    {
+        Apu->SetTargetFrameRate(TargetFrameRate);
+    }
 }
 
 void NESImpl::SetTurboModeEnabled(bool enabled)
@@ -317,22 +337,22 @@ void NESImpl::SetNtscDecoderEnabled(bool enabled)
 
 void NESImpl::SetFpsDisplayEnabled(bool enabled)
 {
-    if (!VideoOut)
-    {
-        return;
-    }
+    ShowFps = enabled;
 
-    VideoOut->ShowFps(enabled);
+    if (VideoOut)
+    {
+        VideoOut->ShowFps(ShowFps);
+    }
 }
 
 void NESImpl::SetOverscanEnabled(bool enabled)
 {
-    if (!VideoOut)
-    {
-        return;
-    }
+    OverscanEnabled = enabled;
 
-    VideoOut->SetOverscanEnabled(enabled);
+    if (VideoOut)
+    {
+        VideoOut->SetOverscanEnabled(OverscanEnabled);
+    }
 }
 
 void NESImpl::ShowMessage(const char* message, uint32_t duration)
@@ -472,9 +492,9 @@ NESImpl::State NESImpl::GetState()
 
 bool NESImpl::Start()
 {
-    if (CurrentState == State::Created)
+    if (!Cartridge)
     {
-        SetError("NES", "This NES instance has not been initialized");
+        SetError("NES", "A game has not yet beed loaded");
         return false;
     }
 
@@ -503,12 +523,6 @@ bool NESImpl::Start()
 
 bool NESImpl::Stop()
 {
-    if (CurrentState == State::Created || CurrentState == State::Ready)
-    {
-        SetError("NES", "This NES instance has not been started");
-        return false;
-    }
-
     if (CurrentState == State::Stopped)
     {
         SetError("NES", "This NES instance is already stopped");
@@ -680,12 +694,23 @@ void NESImpl::Run()
 {
     try
     {
-        if (VideoOut != nullptr)
+
+        if (WindowHandle != nullptr)
         {
+            VideoOut = std::make_unique<VideoBackend>(WindowHandle);
             VideoOut->Prepare();
+
+            VideoOut->ShowFps(ShowFps);
+            VideoOut->SetOverscanEnabled(OverscanEnabled);
+
+            Ppu->SetBackend(VideoOut.get());
         }
 
-        Cartridge->LoadNativeSave();
+        AudioOut = std::make_unique<AudioBackend>();
+        Apu->SetBackend(AudioOut.get());
+        Apu->SetTargetFrameRate(TargetFrameRate);
+
+        Cartridge->LoadNativeSave(NativeSaveDirectory);
 
         CurrentState = State::Running;
 
@@ -715,7 +740,7 @@ void NESImpl::Run()
         StopRequested = false;
         CurrentState = State::Stopped;
 
-        Cartridge->SaveNativeSave();
+        Cartridge->SaveNativeSave(NativeSaveDirectory);
 
         if (VideoOut != nullptr)
         {
