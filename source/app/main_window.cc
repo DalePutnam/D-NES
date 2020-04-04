@@ -102,7 +102,7 @@ void MainWindow::OnVideoSettingsClosed(wxCommandEvent& event)
 void MainWindow::OnError(dnes::NES* nes)
 {
     wxThreadEvent evt(EVT_NES_UNEXPECTED_SHUTDOWN);
-    evt.SetPayload(nes->GetErrorMessage());
+    evt.SetPayload(dnes::GetErrorMessageFromCode(nes->GetCurrentErrorCode()));
 
     wxQueueEvent(this, evt.Clone());
     SetFocus();
@@ -136,12 +136,12 @@ void MainWindow::StartEmulator(const std::string& filename)
             wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         }
 
-        Nes = NESPtr(dnes::createNES());
+        Nes = NESPtr(dnes::CreateNES());
 
         int result = Nes->LoadGame(filename.c_str());
         if (result != dnes::SUCCESS)
         {
-            wxMessageDialog message(nullptr, Nes->GetErrorMessage(), "Error", wxOK | wxICON_ERROR);
+            wxMessageDialog message(nullptr, dnes::GetErrorMessageFromCode(result), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
 
             Nes.reset();
@@ -300,7 +300,7 @@ void MainWindow::OnEmulatorSuspendResume(wxCommandEvent& WXUNUSED(event))
 {
     if (Nes != nullptr)
     {
-        if (Nes->GetState() == dnes::NES::State::Paused)
+        if (Nes->GetState() == dnes::NES::State::PAUSED)
         {
             PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
             Nes->Resume();
@@ -318,11 +318,11 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
     if (Nes != nullptr)
     {
         int slot = event.GetId() % 10;
-        const char* result = Nes->SaveState(slot + 1);
+        int result = Nes->SaveState(slot + 1);
 
-        if (result != nullptr)
+        if (result != dnes::SUCCESS)
         {
-            wxMessageDialog message(nullptr, result, "Error", wxOK | wxICON_ERROR);
+            wxMessageDialog message(nullptr, dnes::GetErrorMessageFromCode(result), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
         }
     }
@@ -333,11 +333,11 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
     if (Nes != nullptr)
     {
         int slot = event.GetId() % 10;
-        const char* result = Nes->LoadState(slot + 1);
+        int result = Nes->LoadState(slot + 1);
 
-        if (result != nullptr)
+        if (result != dnes::SUCCESS)
         {
-            wxMessageDialog message(nullptr, result, "Error", wxOK | wxICON_ERROR);
+            wxMessageDialog message(nullptr, dnes::GetErrorMessageFromCode(result), "Error", wxOK | wxICON_ERROR);
             message.ShowModal();
         }
     }

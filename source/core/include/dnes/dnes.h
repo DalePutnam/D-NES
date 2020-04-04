@@ -20,8 +20,11 @@ namespace dnes
 class NES;
 
 constexpr int SUCCESS = 0;
-DNES_DLL NES* createNES();
-DNES_DLL void destroyNES(NES* nes);
+
+DNES_DLL NES* CreateNES();
+DNES_DLL void DestroyNES(NES* nes);
+
+DNES_DLL const char* GetErrorMessageFromCode(int code);
 
 class NESCallback
 {
@@ -37,11 +40,11 @@ class NES
 public:
     enum class State
     {
-        Ready,
-        Running,
-        Paused,
-        Stopped,
-        Error
+        READY,
+        RUNNING,
+        PAUSED,
+        STOPPED,
+        ERROR
     };
 
     virtual int LoadGame(const char* path) = 0;
@@ -57,11 +60,11 @@ public:
     virtual void SetControllerOneState(uint8_t state) = 0;
     virtual uint8_t GetControllerOneState() = 0;
 
-    virtual void SetCpuLogEnabled(bool enabled) = 0;
+    virtual int SetCpuLogEnabled(bool enabled) = 0;
     virtual void SetNativeSaveDirectory(const char* saveDir) = 0;
     virtual void SetStateSaveDirectory(const char* saveDir) = 0;
 
-    void virtual SetTargetFrameRate(uint32_t rate) = 0;
+    virtual void SetTargetFrameRate(uint32_t rate) = 0;
     virtual void SetTurboModeEnabled(bool enabled) = 0;
 
     virtual int GetFrameRate() = 0;
@@ -73,7 +76,7 @@ public:
     virtual void SetFpsDisplayEnabled(bool enabled) = 0;
     virtual void SetOverscanEnabled(bool enabled) = 0;
 
-    virtual void ShowMessage(const char*, uint32_t duration) = 0;
+    virtual void ShowMessage(const char* msg, uint32_t duration) = 0;
 
     virtual void SetAudioEnabled(bool enabled) = 0;
     virtual void SetMasterVolume(float volume) = 0;
@@ -91,20 +94,20 @@ public:
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
-    virtual bool Start() = 0;
+    virtual int Start() = 0;
 
     // Instructs the emulator to stop and then blocks until it does.
     // Once this function returns this object may be safely deleted.
-    virtual bool Stop() = 0;
+    virtual int Stop() = 0;
 
     virtual void Resume() = 0;
     virtual void Pause() = 0;
-    virtual bool Reset() = 0;
+    virtual int Reset() = 0;
 
-    virtual const char* SaveState(int slot) = 0;
-    virtual const char* LoadState(int slot) = 0;
+    virtual int SaveState(int slot) = 0;
+    virtual int LoadState(int slot) = 0;
 
-    virtual const char* GetErrorMessage() = 0;
+    virtual int GetCurrentErrorCode() = 0;
 
 protected:
     virtual ~NES() = default;

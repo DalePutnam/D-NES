@@ -9,7 +9,7 @@ class NESDeleter
 public:
     void operator()(dnes::NES* nes)
     {
-        dnes::destroyNES(nes);
+        dnes::DestroyNES(nes);
     }
 };
 

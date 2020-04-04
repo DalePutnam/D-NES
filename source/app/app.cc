@@ -100,7 +100,7 @@ bool NESApp::OnInit()
         CallbackImpl callback;
 
         std::cout << "Loading ROM " << game << std::flush;
-        dnes::NES* nes = dnes::createNES();
+        dnes::NES* nes = dnes::CreateNES();
 
         if (nes->LoadGame(game.c_str()) == dnes::SUCCESS)
         {
@@ -119,7 +119,7 @@ bool NESApp::OnInit()
 
             nes->Stop();
 
-            dnes::destroyNES(nes);
+            dnes::DestroyNES(nes);
 
             std::cout << "\nAverage FPS: " << callback.GetAverageFps() << std::endl;
         } 

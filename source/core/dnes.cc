@@ -15,6 +15,7 @@
 #include "audio/audio_backend.h"
 #include "common/state_save.h"
 #include "common/file.h"
+#include "common/error_handling.h"
 
 class NESImpl : public dnes::NES
 {
@@ -35,7 +36,7 @@ public:
     void SetControllerOneState(uint8_t state) override;
     uint8_t GetControllerOneState() override;
 
-    void SetCpuLogEnabled(bool enabled) override;
+    int SetCpuLogEnabled(bool enabled) override;
     void SetNativeSaveDirectory(const char* saveDir) override;
     void SetStateSaveDirectory(const char* saveDir) override;
 
@@ -69,29 +70,28 @@ public:
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
-    bool Start() override;
+    int Start() override;
 
     // Instructs the emulator to stop and then blocks until it does.
     // Once this function returns this object may be safely deleted.
-    bool Stop() override;
+    int Stop() override;
 
     void Resume() override;
     void Pause() override;
-    bool Reset() override;
+    int Reset() override;
 
-    const char* SaveState(int slot) override;
-    const char* LoadState(int slot) override;
+    int SaveState(int slot) override;
+    int LoadState(int slot) override;
 
-    const char* GetErrorMessage() override;
+    int GetCurrentErrorCode() override;
 
 private:
     // Main run function, launched in a new thread by NES::Start
     void Run();
 
-    void SetError(NesException& ex);
-    void SetError(const std::string& component, const std::string& message);
+    void SetErrorCode(int code);
 
-    std::atomic<State> CurrentState{State::Ready};
+    std::atomic<State> CurrentState{State::READY};
 
     std::atomic<bool> StopRequested{false};
     std::atomic<bool> PauseRequested{false};
@@ -101,7 +101,7 @@ private:
 
     std::thread NesThread;
     std::string StateSaveDirectory;
-    std::string ErrorMessage;
+    std::atomic<int> CurrentErrorCode;
 
     std::unique_ptr<APU> Apu;
     std::unique_ptr<CPU> Cpu;
@@ -149,14 +149,14 @@ NESImpl::NESImpl()
     Apu->SetNoiseVolume(1.f);
     Apu->SetDmcVolume(1.f);
 
-    CurrentState = State::Ready;
+    CurrentState = State::READY;
 }
 
 int NESImpl::LoadGame(const char* path)
 {
-    if (CurrentState != State::Ready)
+    if (CurrentState != State::READY)
     {
-        return 1;
+        return ERROR_LOAD_GAME_AFTER_START;
     }
 
     try
@@ -165,7 +165,7 @@ int NESImpl::LoadGame(const char* path)
     }
     catch (NesException& e)
     {
-        return 1;
+        return ERROR_LOAD_GAME_FAILED;
     }
 
     Cpu->AttachCart(Cartridge.get());
@@ -175,31 +175,31 @@ int NESImpl::LoadGame(const char* path)
     Cartridge->AttachCPU(Cpu.get());
     Cartridge->AttachPPU(Ppu.get());
 
-    return 0;
+    return dnes::SUCCESS;
 }
 
 int NESImpl::SetWindowHandle(void* handle)
 {
-    if (CurrentState != State::Ready)
+    if (CurrentState != State::READY)
     {
-        return 1;
+        return ERROR_SET_WINDOW_HANDLE_AFTER_START;
     }
 
     WindowHandle = handle;
 
-    return 0;
+    return dnes::SUCCESS;
 }
 
 int NESImpl::SetCallback(dnes::NESCallback* callback)
 {
-    if (CurrentState != State::Ready)
+    if (CurrentState != State::READY)
     {
-        return 1;
+        return ERROR_SET_CALLBACK_AFTER_START;
     }
 
     Callback = callback;
 
-    return 0;
+    return dnes::SUCCESS;
 }
 
 const char* NESImpl::GetGameName()
@@ -214,31 +214,16 @@ const char* NESImpl::GetGameName()
 
 void NESImpl::SetControllerOneState(uint8_t state)
 {
-    if (!Cpu)
-    {
-        return;
-    }
-
     Cpu->SetControllerOneState(state);
 }
 
 uint8_t NESImpl::GetControllerOneState()
 {
-    if (!Cpu)
-    {
-        return 0;
-    }
-
     return Cpu->GetControllerOneState();
 }
 
-void NESImpl::SetCpuLogEnabled(bool enabled)
+int NESImpl::SetCpuLogEnabled(bool enabled)
 {
-    if (!Cpu)
-    {
-        return;
-    }
-
     try
     {
         Pause();
@@ -247,7 +232,10 @@ void NESImpl::SetCpuLogEnabled(bool enabled)
     }
     catch (NesException& ex)
     {
+        return ERROR_FAILED_TO_OPEN_CPU_LOG_FILE;
     }
+
+    return dnes::SUCCESS;
 }
 
 void NESImpl::SetNativeSaveDirectory(const char* saveDir)
@@ -272,61 +260,31 @@ void NESImpl::SetTargetFrameRate(uint32_t rate)
 
 void NESImpl::SetTurboModeEnabled(bool enabled)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetTurboModeEnabled(enabled);
 }
 
 int NESImpl::GetFrameRate()
 {
-    if (!Ppu)
-    {
-        return 0;
-    }
-
     return Ppu->GetFrameRate();
 }
 
 void NESImpl::GetNameTable(int table, uint8_t* pixels)
 {
-    if (!Ppu)
-    {
-        return;
-    }
-
     Ppu->GetNameTable(table, pixels);
 }
 
 void NESImpl::GetPatternTable(int table, int palette, uint8_t* pixels)
 {
-    if (!Ppu)
-    {
-        return;
-    }
-
     Ppu->GetPatternTable(table, palette, pixels);
 }
 
 void NESImpl::GetPalette(int palette, uint8_t* pixels)
 {
-    if (!Ppu)
-    {
-        return;
-    }
-
     Ppu->GetPalette(palette, pixels);
 }
 
 void NESImpl::GetSprite(int sprite, uint8_t* pixels)
 {
-    if (!Ppu)
-    {
-        return;
-    }
-
     Ppu->GetPrimaryOAM(sprite, pixels);
 }
 
@@ -367,121 +325,61 @@ void NESImpl::ShowMessage(const char* message, uint32_t duration)
 
 void NESImpl::SetAudioEnabled(bool enabled)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetAudioEnabled(enabled);
 }
 
 void NESImpl::SetMasterVolume(float volume)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetMasterVolume(volume);
 }
 
 void NESImpl::SetPulseOneVolume(float volume)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetPulseOneVolume(volume);
 }
 
 float NESImpl::GetPulseOneVolume()
 {
-    if (!Apu)
-    {
-        return 0.f;
-    }
-
     return Apu->GetPulseOneVolume();
 }
 
 void NESImpl::SetPulseTwoVolume(float volume)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetPulseTwoVolume(volume);
 }
 
 float NESImpl::GetPulseTwoVolume()
 {
-    if (!Apu)
-    {
-        return 0.f;
-    }
-
     return Apu->GetPulseTwoVolume();
 }
 
 void NESImpl::SetTriangleVolume(float volume)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetTriangleVolume(volume);
 }
 
 float NESImpl::GetTriangleVolume()
 {
-    if (!Apu)
-    {
-        return 0.f;
-    }
-
     return Apu->GetTriangleVolume();
 }
 
 void NESImpl::SetNoiseVolume(float volume)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetNoiseVolume(volume);
 }
 
 float NESImpl::GetNoiseVolume()
 {
-    if (!Apu)
-    {
-        return 0.f;
-    }
-
     return Apu->GetNoiseVolume();
 }
 
 void NESImpl::SetDmcVolume(float volume)
 {
-    if (!Apu)
-    {
-        return;
-    }
-
     Apu->SetDmcVolume(volume);
 }
 
 float NESImpl::GetDmcVolume()
 {
-    if (!Apu)
-    {
-        return 0.f;
-    }
-
     return Apu->GetDmcVolume();
 }
 
@@ -490,65 +388,63 @@ NESImpl::State NESImpl::GetState()
     return CurrentState;
 }
 
-bool NESImpl::Start()
+int NESImpl::Start()
 {
     if (!Cartridge)
     {
-        SetError("NES", "A game has not yet beed loaded");
-        return false;
+        return ERROR_START_WITHOUT_GAME_LOADED;
     }
 
-    if (CurrentState == State::Running || CurrentState == State::Paused)
+    if (CurrentState == State::RUNNING || CurrentState == State::PAUSED)
     {
-        SetError("NES", "This NES instance is already running");
-        return false;
+        return ERROR_START_ALREADY_STARTED;
     }
 
-    if (CurrentState == State::Stopped)
+    if (CurrentState == State::STOPPED)
     {
-        SetError("NES", "A stopped NES instance cannot be started again");
-        return false;
+        return ERROR_START_AFTER_STOP;
     }
 
-    if (CurrentState == State::Error)
+    if (CurrentState == State::ERROR)
     {
-        // Return false, but don't overwrite the current error
-        return false;
+        return ERROR_START_AFTER_ERROR;
     }
 
     NesThread = std::thread(&NESImpl::Run, this);
 
-    return true;
+    return dnes::SUCCESS;
 }
 
-bool NESImpl::Stop()
+int NESImpl::Stop()
 {
-    if (CurrentState == State::Stopped)
+    if (CurrentState == State::READY)
     {
-        SetError("NES", "This NES instance is already stopped");
-        return false;
+        return ERROR_STOP_NOT_STARTED;
     }
 
-    if (CurrentState == State::Error)
+    if (CurrentState == State::STOPPED)
     {
-        // Return false, but don't overwrite the current error
-        return false;
+        return ERROR_STOP_ALREADY_STOPPED;
     }
 
+    if (CurrentState == State::ERROR)
+    {
+        return ERROR_STOP_AFTER_ERROR;
+    }
 
     StopRequested = true;
     Resume();
 
     NesThread.join();
 
-    return true;
+    return dnes::SUCCESS;
 }
 
 void NESImpl::Resume()
 {
     std::unique_lock<std::mutex> lock(ControlMutex);
 
-    if (CurrentState != State::Paused)
+    if (CurrentState != State::PAUSED)
     {
         return;
     }
@@ -560,7 +456,7 @@ void NESImpl::Pause()
 {
     std::unique_lock<std::mutex> lock(ControlMutex);
 
-    if (CurrentState != State::Running)
+    if (CurrentState != State::RUNNING)
     {
         return;
     }
@@ -570,16 +466,16 @@ void NESImpl::Pause()
     ControlCv.wait(lock);
 }
 
-bool NESImpl::Reset()
+int NESImpl::Reset()
 {
-    return false;
+    return ERROR_UNIMPLEMENTED;
 }
 
-const char* NESImpl::SaveState(int slot)
+int NESImpl::SaveState(int slot)
 {
-    if (CurrentState != State::Running && CurrentState != State::Paused)
+    if (CurrentState != State::RUNNING && CurrentState != State::PAUSED)
     {
-        return "Emulator not running, cannot save state";
+        return ERROR_STATE_SAVE_NOT_RUNNING;
     }
 
     std::string extension = "state" + std::to_string(slot);
@@ -588,7 +484,7 @@ const char* NESImpl::SaveState(int slot)
 
     if (!saveStream.good())
     {
-        return "Failed to open state save file";
+        return ERROR_STATE_SAVE_LOAD_FILE_ERROR;
     }
 
     Pause();
@@ -627,14 +523,14 @@ const char* NESImpl::SaveState(int slot)
 
     Resume();
 
-    return nullptr;
+    return dnes::SUCCESS;
 }
 
-const char*  NESImpl::LoadState(int slot)
+int NESImpl::LoadState(int slot)
 {
-    if (CurrentState != State::Running && CurrentState != State::Paused)
+    if (CurrentState != State::RUNNING && CurrentState != State::PAUSED)
     {
-        return "Emulator not running, cannot load state";
+        return ERROR_STATE_LOAD_NOT_RUNNING;
     }
 
     std::string extension = "state" + std::to_string(slot);
@@ -643,7 +539,7 @@ const char*  NESImpl::LoadState(int slot)
 
     if (!saveStream.good())
     {
-        return "Failed to open state save file";
+        return ERROR_STATE_SAVE_LOAD_FILE_ERROR;
     }
 
     Pause();
@@ -682,12 +578,12 @@ const char*  NESImpl::LoadState(int slot)
 
     Resume();
 
-    return nullptr;
+    return dnes::SUCCESS;
 }
 
-const char* NESImpl::GetErrorMessage()
+int NESImpl::GetCurrentErrorCode()
 {
-    return ErrorMessage.c_str();
+    return CurrentErrorCode;
 }
 
 void NESImpl::Run()
@@ -712,7 +608,7 @@ void NESImpl::Run()
 
         Cartridge->LoadNativeSave(NativeSaveDirectory);
 
-        CurrentState = State::Running;
+        CurrentState = State::RUNNING;
 
         while (!StopRequested)
         {
@@ -728,17 +624,17 @@ void NESImpl::Run()
                 std::unique_lock<std::mutex> lock(ControlMutex);
 
                 PauseRequested = false;
-                CurrentState = State::Paused;
+                CurrentState = State::PAUSED;
 
                 ControlCv.notify_all();
                 ControlCv.wait(lock);
 
-                CurrentState = State::Running;
+                CurrentState = State::RUNNING;
             }
         }
 
         StopRequested = false;
-        CurrentState = State::Stopped;
+        CurrentState = State::STOPPED;
 
         Cartridge->SaveNativeSave(NativeSaveDirectory);
 
@@ -749,7 +645,7 @@ void NESImpl::Run()
     }
     catch (NesException& ex)
     {
-        SetError(ex);
+        SetErrorCode(ERROR_RUNTIME_ERROR);
 
         if (Callback != nullptr)
         {
@@ -761,32 +657,37 @@ void NESImpl::Run()
     ControlCv.notify_all();
 }
 
-void NESImpl::SetError(NesException& ex)
+void NESImpl::SetErrorCode(int code)
 {
-    CurrentState = State::Error;
-    ErrorMessage = ex.what();   
-}
-
-void NESImpl::SetError(const std::string& component, const std::string& message)
-{
-    NesException ex(component, message);
-    SetError(ex);
+    CurrentErrorCode = code;
 }
 
 namespace dnes
 {
 
-NES* createNES()
+NES* CreateNES()
 {
     return new NESImpl();
 }
 
-void destroyNES(NES* nes)
+void DestroyNES(NES* nes)
 {
     if (NESImpl* nesimpl = dynamic_cast<NESImpl*>(nes))
     {
         delete nesimpl;
     }
+}
+
+const char* GetErrorMessageFromCode(int code)
+{
+    auto it = ERROR_CODE_TO_MESSAGE_MAP.find(code);
+
+    if (it == ERROR_CODE_TO_MESSAGE_MAP.end())
+    {
+        return "Unrecognized error code";
+    }
+
+    return it->second.c_str();
 }
 
 }; // namespace dnes
