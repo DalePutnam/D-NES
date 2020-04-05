@@ -1,128 +1,82 @@
-#include <atomic>
-#include <string>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
 #include <fstream>
 
-#include "dnes/dnes.h"
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
+#include "nes_impl.h"
 
 #include "cpu.h"
 #include "ppu.h"
 #include "apu.h"
 #include "cart.h"
-#include "video/video_backend.h"
 #include "audio/audio_backend.h"
-#include "common/state_save.h"
-#include "common/file.h"
+#include "video/video_backend.h"
 #include "common/error_handling.h"
+#include "common/file.h"
 
-class NESImpl : public dnes::NES
+namespace
 {
-public:
-    NESImpl();
-    ~NESImpl() = default;
+constexpr const char* DEFAULT_LOG_PATTERN = "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v";
 
-    int LoadGame(const char* path) override;
+std::shared_ptr<spdlog::logger> createStderrLoggerHelper()
+{
+    static auto logger = []() -> auto {
+        auto logger = spdlog::stderr_color_mt("stderr_log");
+        spdlog::drop("stderr_log");
 
-    int SetWindowHandle(void* handle) override;
+        return logger;
+    }();
 
-    int SetCallback(dnes::NESCallback* callback) override;
+    return logger;
+}
 
-    const char* GetGameName() override;
+std::shared_ptr<spdlog::logger> createFileLoggerHelper(const std::string& fileName)
+{
+    auto logger = spdlog::basic_logger_mt("file", fileName, true);
+    spdlog::drop("file");
 
-    State GetState() override;
+    return logger;
+}
 
-    void SetControllerOneState(uint8_t state) override;
-    uint8_t GetControllerOneState() override;
+std::shared_ptr<spdlog::logger> createCallbackLoggerHelper(dnes::NESLogCallback* callback)
+{
+    class CallbackSink : public spdlog::sinks::base_sink<std::mutex>
+    {
+        using base_sink = spdlog::sinks::base_sink<std::mutex>;
 
-    int SetCpuLogEnabled(bool enabled) override;
-    void SetNativeSaveDirectory(const char* saveDir) override;
-    void SetStateSaveDirectory(const char* saveDir) override;
+    public:
+        CallbackSink(dnes::NESLogCallback* callback) : _callback(callback) {}
 
-    void SetTargetFrameRate(uint32_t rate) override;
-    void SetTurboModeEnabled(bool enabled) override;
+    protected:
+        void sink_it_(const spdlog::details::log_msg& msg) override
+        {
+            spdlog::memory_buf_t formatted;
+            base_sink::formatter_->format(msg, formatted);
+            
+            _callback->LogMessage(static_cast<dnes::LogLevel>(msg.level), fmt::to_string(formatted).c_str());
+        }
 
-    int GetFrameRate() override;
-    void GetNameTable(int table, uint8_t* pixels) override;
-    void GetPatternTable(int table, int palette, uint8_t* pixels) override;
-    void GetPalette(int palette, uint8_t* pixels) override;
-    void GetSprite(int sprite, uint8_t* pixels) override;
-    void SetNtscDecoderEnabled(bool enabled) override;
-    void SetFpsDisplayEnabled(bool enabled) override;
-    void SetOverscanEnabled(bool enabled) override;
+        void flush_() override {}
 
-    void ShowMessage(const char* message, uint32_t duration) override;
+    private:
+        dnes::NESLogCallback* _callback;
+    };
 
-    void SetAudioEnabled(bool enabled) override;
-    void SetMasterVolume(float volume) override;
+    auto logger = spdlog::create<CallbackSink>("callback", callback);
+    spdlog::drop("callback");
 
-    void SetPulseOneVolume(float volume) override;
-    float GetPulseOneVolume() override;
-    void SetPulseTwoVolume(float volume) override;
-    float GetPulseTwoVolume() override;
-    void SetTriangleVolume(float volume) override;
-    float GetTriangleVolume() override;
-    void SetNoiseVolume(float volume) override;
-    float GetNoiseVolume() override;
-    void SetDmcVolume(float volume) override;
-    float GetDmcVolume() override;
+    return logger;
+}
 
-    // Launch the emulator on a new thread.
-    // This function returns immediately.
-    int Start() override;
-
-    // Instructs the emulator to stop and then blocks until it does.
-    // Once this function returns this object may be safely deleted.
-    int Stop() override;
-
-    void Resume() override;
-    void Pause() override;
-    int Reset() override;
-
-    int SaveState(int slot) override;
-    int LoadState(int slot) override;
-
-    int GetCurrentErrorCode() override;
-
-private:
-    // Main run function, launched in a new thread by NES::Start
-    void Run();
-
-    void SetErrorCode(int code);
-
-    std::atomic<State> CurrentState{State::READY};
-
-    std::atomic<bool> StopRequested{false};
-    std::atomic<bool> PauseRequested{false};
-
-    std::mutex ControlMutex;
-    std::condition_variable ControlCv;
-
-    std::thread NesThread;
-    std::string StateSaveDirectory;
-    std::atomic<int> CurrentErrorCode;
-
-    std::unique_ptr<APU> Apu;
-    std::unique_ptr<CPU> Cpu;
-    std::unique_ptr<PPU> Ppu;
-    std::unique_ptr<Cart> Cartridge;
-    std::unique_ptr<VideoBackend> VideoOut;
-    std::unique_ptr<AudioBackend> AudioOut;
-
-    void* WindowHandle{nullptr};
-
-    dnes::NESCallback* Callback{nullptr};
-
-    std::atomic<bool> ShowFps{false};
-    std::atomic<bool> OverscanEnabled{true};
-    std::atomic<uint32_t> TargetFrameRate{60};
-
-    std::string NativeSaveDirectory;
-};
+}; // anonymous namespace
 
 NESImpl::NESImpl()
+    : Logger(createStderrLoggerHelper())
 {
+    SetLogLevel(dnes::LogLevel::ERROR);
+    SetLogPattern(DEFAULT_LOG_PATTERN);
+
     Cpu = std::make_unique<CPU>();
     Ppu = std::make_unique<PPU>(/*VideoOut.get()*/);
     Apu = std::make_unique<APU>(/*AudioOut.get()*/);
@@ -150,6 +104,11 @@ NESImpl::NESImpl()
     Apu->SetDmcVolume(1.f);
 
     CurrentState = State::READY;
+}
+
+NESImpl::~NESImpl()
+{
+    GetLogger()->flush();
 }
 
 int NESImpl::LoadGame(const char* path)
@@ -198,6 +157,76 @@ int NESImpl::SetCallback(dnes::NESCallback* callback)
     }
 
     Callback = callback;
+
+    return dnes::SUCCESS;
+}
+
+void NESImpl::SetLogLevel(dnes::LogLevel level)
+{
+    LogLevel = level;
+    Logger->set_level(static_cast<spdlog::level::level_enum>(LogLevel));
+}
+
+void NESImpl::SetLogPattern(const char* pattern)
+{
+    LogPattern = pattern;
+    Logger->set_pattern(LogPattern);
+}
+
+int NESImpl::SetLogFile(const char* file)
+{
+    if (CurrentState != State::READY)
+    {
+        return ERROR_SET_LOG_FILE_AFTER_START;
+    }
+
+    Logger->flush();
+
+    if (file == nullptr)
+    {
+        Logger = createStderrLoggerHelper();
+        Logger->set_level(static_cast<spdlog::level::level_enum>(LogLevel));
+        Logger->set_pattern(LogPattern);
+
+        return dnes::SUCCESS;
+    }
+
+    try
+    {
+        Logger = createFileLoggerHelper(file);
+        Logger->set_level(static_cast<spdlog::level::level_enum>(LogLevel));
+        Logger->set_pattern(LogPattern);
+
+        return dnes::SUCCESS;
+    }
+    catch (spdlog::spdlog_ex& ex)
+    {
+        SPDLOG_LOGGER_ERROR(GetLogger(), ex.what());
+        return ERROR_OPEN_LOG_FILE_FAILED; 
+    }
+}
+
+int NESImpl::SetLogCallback(dnes::NESLogCallback* callback)
+{
+    if (CurrentState != State::READY)
+    {
+        return ERROR_SET_LOG_CALLBACK_AFTER_START;
+    }
+
+    Logger->flush();
+
+    if (callback == nullptr)
+    {
+        Logger = createStderrLoggerHelper();
+        Logger->set_level(static_cast<spdlog::level::level_enum>(LogLevel));
+        Logger->set_pattern(LogPattern);
+
+        return dnes::SUCCESS;
+    }
+
+    Logger = createCallbackLoggerHelper(callback);
+    Logger->set_level(static_cast<spdlog::level::level_enum>(LogLevel));
+    Logger->set_pattern(LogPattern);
 
     return dnes::SUCCESS;
 }

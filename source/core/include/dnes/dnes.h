@@ -35,6 +35,25 @@ public:
     virtual ~NESCallback() = default;
 };
 
+enum class LogLevel
+{
+    TRACE = 0,
+    DEBUG = 1,
+    INFO = 2,
+    WARN = 3,
+    ERROR = 4,
+    CRITICAL = 6,
+    NONE = 7
+};
+
+class NESLogCallback
+{
+public:
+    virtual void LogMessage(LogLevel level, const char* message) = 0;
+
+    virtual ~NESLogCallback() = default;
+};
+
 class NES
 {
 public:
@@ -52,6 +71,11 @@ public:
     virtual int SetWindowHandle(void* handle) = 0;
 
     virtual int SetCallback(NESCallback* callback) = 0;
+
+    virtual void SetLogLevel(LogLevel level) = 0;
+    virtual void SetLogPattern(const char* pattern) = 0;
+    virtual int SetLogFile(const char* file) = 0;
+    virtual int SetLogCallback(NESLogCallback* callback) = 0;
 
     virtual const char* GetGameName() = 0;
 
