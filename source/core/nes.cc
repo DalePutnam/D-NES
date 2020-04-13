@@ -4,7 +4,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#include "nes_impl.h"
+#include "nes.h"
 
 #include "cpu.h"
 #include "ppu.h"
@@ -71,7 +71,7 @@ std::shared_ptr<spdlog::logger> createCallbackLoggerHelper(dnes::INESLogCallback
 
 }; // anonymous namespace
 
-NESImpl::NESImpl()
+NES::NES()
     : Logger(createStderrLoggerHelper())
 {
     SetLogLevel(dnes::LogLevel::ERROR);
@@ -106,12 +106,12 @@ NESImpl::NESImpl()
     CurrentState = State::READY;
 }
 
-NESImpl::~NESImpl()
+NES::~NES()
 {
     GetLogger()->flush();
 }
 
-int NESImpl::LoadGame(const char* path)
+int NES::LoadGame(const char* path)
 {
     if (CurrentState != State::READY)
     {
@@ -137,7 +137,7 @@ int NESImpl::LoadGame(const char* path)
     return dnes::SUCCESS;
 }
 
-int NESImpl::SetWindowHandle(void* handle)
+int NES::SetWindowHandle(void* handle)
 {
     if (CurrentState != State::READY)
     {
@@ -149,7 +149,7 @@ int NESImpl::SetWindowHandle(void* handle)
     return dnes::SUCCESS;
 }
 
-int NESImpl::SetCallback(dnes::INESCallback* callback)
+int NES::SetCallback(dnes::INESCallback* callback)
 {
     if (CurrentState != State::READY)
     {
@@ -161,19 +161,19 @@ int NESImpl::SetCallback(dnes::INESCallback* callback)
     return dnes::SUCCESS;
 }
 
-void NESImpl::SetLogLevel(dnes::LogLevel level)
+void NES::SetLogLevel(dnes::LogLevel level)
 {
     LogLevel = level;
     Logger->set_level(static_cast<spdlog::level::level_enum>(LogLevel));
 }
 
-void NESImpl::SetLogPattern(const char* pattern)
+void NES::SetLogPattern(const char* pattern)
 {
     LogPattern = pattern;
     Logger->set_pattern(LogPattern);
 }
 
-int NESImpl::SetLogFile(const char* file)
+int NES::SetLogFile(const char* file)
 {
     if (CurrentState != State::READY)
     {
@@ -206,7 +206,7 @@ int NESImpl::SetLogFile(const char* file)
     }
 }
 
-int NESImpl::SetLogCallback(dnes::INESLogCallback* callback)
+int NES::SetLogCallback(dnes::INESLogCallback* callback)
 {
     if (CurrentState != State::READY)
     {
@@ -231,7 +231,7 @@ int NESImpl::SetLogCallback(dnes::INESLogCallback* callback)
     return dnes::SUCCESS;
 }
 
-const char* NESImpl::GetGameName()
+const char* NES::GetGameName()
 {
     if (!Cartridge)
     {
@@ -241,17 +241,17 @@ const char* NESImpl::GetGameName()
     return Cartridge->GetGameName().c_str();
 }
 
-void NESImpl::SetControllerOneState(uint8_t state)
+void NES::SetControllerOneState(uint8_t state)
 {
     Cpu->SetControllerOneState(state);
 }
 
-uint8_t NESImpl::GetControllerOneState()
+uint8_t NES::GetControllerOneState()
 {
     return Cpu->GetControllerOneState();
 }
 
-int NESImpl::SetCpuLogEnabled(bool enabled)
+int NES::SetCpuLogEnabled(bool enabled)
 {
     try
     {
@@ -267,17 +267,17 @@ int NESImpl::SetCpuLogEnabled(bool enabled)
     return dnes::SUCCESS;
 }
 
-void NESImpl::SetNativeSaveDirectory(const char* saveDir)
+void NES::SetNativeSaveDirectory(const char* saveDir)
 {
     NativeSaveDirectory = saveDir;
 }
 
-void NESImpl::SetStateSaveDirectory(const char* saveDir)
+void NES::SetStateSaveDirectory(const char* saveDir)
 {
     StateSaveDirectory = saveDir;
 }
 
-void NESImpl::SetTargetFrameRate(uint32_t rate)
+void NES::SetTargetFrameRate(uint32_t rate)
 {
     TargetFrameRate = rate;
 
@@ -287,42 +287,42 @@ void NESImpl::SetTargetFrameRate(uint32_t rate)
     }
 }
 
-void NESImpl::SetTurboModeEnabled(bool enabled)
+void NES::SetTurboModeEnabled(bool enabled)
 {
     Apu->SetTurboModeEnabled(enabled);
 }
 
-int NESImpl::GetFrameRate()
+int NES::GetFrameRate()
 {
     return Ppu->GetFrameRate();
 }
 
-void NESImpl::GetNameTable(int table, uint8_t* pixels)
+void NES::GetNameTable(int table, uint8_t* pixels)
 {
     Ppu->GetNameTable(table, pixels);
 }
 
-void NESImpl::GetPatternTable(int table, int palette, uint8_t* pixels)
+void NES::GetPatternTable(int table, int palette, uint8_t* pixels)
 {
     Ppu->GetPatternTable(table, palette, pixels);
 }
 
-void NESImpl::GetPalette(int palette, uint8_t* pixels)
+void NES::GetPalette(int palette, uint8_t* pixels)
 {
     Ppu->GetPalette(palette, pixels);
 }
 
-void NESImpl::GetSprite(int sprite, uint8_t* pixels)
+void NES::GetSprite(int sprite, uint8_t* pixels)
 {
     Ppu->GetPrimaryOAM(sprite, pixels);
 }
 
-void NESImpl::SetNtscDecoderEnabled(bool enabled)
+void NES::SetNtscDecoderEnabled(bool enabled)
 {
 
 }
 
-void NESImpl::SetFpsDisplayEnabled(bool enabled)
+void NES::SetFpsDisplayEnabled(bool enabled)
 {
     ShowFps = enabled;
 
@@ -332,7 +332,7 @@ void NESImpl::SetFpsDisplayEnabled(bool enabled)
     }
 }
 
-void NESImpl::SetOverscanEnabled(bool enabled)
+void NES::SetOverscanEnabled(bool enabled)
 {
     OverscanEnabled = enabled;
 
@@ -342,7 +342,7 @@ void NESImpl::SetOverscanEnabled(bool enabled)
     }
 }
 
-void NESImpl::ShowMessage(const char* message, uint32_t duration)
+void NES::ShowMessage(const char* message, uint32_t duration)
 {
     if (!VideoOut)
     {
@@ -352,72 +352,72 @@ void NESImpl::ShowMessage(const char* message, uint32_t duration)
     VideoOut->ShowMessage(message, duration);
 }
 
-void NESImpl::SetAudioEnabled(bool enabled)
+void NES::SetAudioEnabled(bool enabled)
 {
     Apu->SetAudioEnabled(enabled);
 }
 
-void NESImpl::SetMasterVolume(float volume)
+void NES::SetMasterVolume(float volume)
 {
     Apu->SetMasterVolume(volume);
 }
 
-void NESImpl::SetPulseOneVolume(float volume)
+void NES::SetPulseOneVolume(float volume)
 {
     Apu->SetPulseOneVolume(volume);
 }
 
-float NESImpl::GetPulseOneVolume()
+float NES::GetPulseOneVolume()
 {
     return Apu->GetPulseOneVolume();
 }
 
-void NESImpl::SetPulseTwoVolume(float volume)
+void NES::SetPulseTwoVolume(float volume)
 {
     Apu->SetPulseTwoVolume(volume);
 }
 
-float NESImpl::GetPulseTwoVolume()
+float NES::GetPulseTwoVolume()
 {
     return Apu->GetPulseTwoVolume();
 }
 
-void NESImpl::SetTriangleVolume(float volume)
+void NES::SetTriangleVolume(float volume)
 {
     Apu->SetTriangleVolume(volume);
 }
 
-float NESImpl::GetTriangleVolume()
+float NES::GetTriangleVolume()
 {
     return Apu->GetTriangleVolume();
 }
 
-void NESImpl::SetNoiseVolume(float volume)
+void NES::SetNoiseVolume(float volume)
 {
     Apu->SetNoiseVolume(volume);
 }
 
-float NESImpl::GetNoiseVolume()
+float NES::GetNoiseVolume()
 {
     return Apu->GetNoiseVolume();
 }
 
-void NESImpl::SetDmcVolume(float volume)
+void NES::SetDmcVolume(float volume)
 {
     Apu->SetDmcVolume(volume);
 }
 
-float NESImpl::GetDmcVolume()
+float NES::GetDmcVolume()
 {
     return Apu->GetDmcVolume();
 }
 
-NESImpl::State NESImpl::GetState()
+NES::State NES::GetState()
 {
     return CurrentState;
 }
 
-int NESImpl::Start()
+int NES::Start()
 {
     if (!Cartridge)
     {
@@ -439,12 +439,12 @@ int NESImpl::Start()
         return ERROR_START_AFTER_ERROR;
     }
 
-    NesThread = std::thread(&NESImpl::Run, this);
+    NesThread = std::thread(&NES::Run, this);
 
     return dnes::SUCCESS;
 }
 
-int NESImpl::Stop()
+int NES::Stop()
 {
     if (CurrentState == State::READY)
     {
@@ -469,7 +469,7 @@ int NESImpl::Stop()
     return dnes::SUCCESS;
 }
 
-void NESImpl::Resume()
+void NES::Resume()
 {
     std::unique_lock<std::mutex> lock(ControlMutex);
 
@@ -481,7 +481,7 @@ void NESImpl::Resume()
     ControlCv.notify_all();
 }
 
-void NESImpl::Pause()
+void NES::Pause()
 {
     std::unique_lock<std::mutex> lock(ControlMutex);
 
@@ -495,12 +495,12 @@ void NESImpl::Pause()
     ControlCv.wait(lock);
 }
 
-int NESImpl::Reset()
+int NES::Reset()
 {
     return ERROR_UNIMPLEMENTED;
 }
 
-int NESImpl::SaveState(int slot)
+int NES::SaveState(int slot)
 {
     if (CurrentState != State::RUNNING && CurrentState != State::PAUSED)
     {
@@ -555,7 +555,7 @@ int NESImpl::SaveState(int slot)
     return dnes::SUCCESS;
 }
 
-int NESImpl::LoadState(int slot)
+int NES::LoadState(int slot)
 {
     if (CurrentState != State::RUNNING && CurrentState != State::PAUSED)
     {
@@ -610,12 +610,12 @@ int NESImpl::LoadState(int slot)
     return dnes::SUCCESS;
 }
 
-int NESImpl::GetCurrentErrorCode()
+int NES::GetCurrentErrorCode()
 {
     return CurrentErrorCode;
 }
 
-void NESImpl::Run()
+void NES::Run()
 {
     try
     {
@@ -686,7 +686,7 @@ void NESImpl::Run()
     ControlCv.notify_all();
 }
 
-void NESImpl::SetErrorCode(int code)
+void NES::SetErrorCode(int code)
 {
     CurrentErrorCode = code;
 }
@@ -696,12 +696,12 @@ namespace dnes
 
 INES* CreateNES()
 {
-    return new NESImpl();
+    return new NES();
 }
 
 void DestroyNES(INES* nes)
 {
-    if (NESImpl* nesimpl = dynamic_cast<NESImpl*>(nes))
+    if (NES* nesimpl = dynamic_cast<NES*>(nes))
     {
         delete nesimpl;
     }

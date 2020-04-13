@@ -19,7 +19,7 @@ class Cart;
 class VideoBackend;
 class AudioBackend;
 
-class NESImpl : public dnes::INES
+class NES : public dnes::INES
 {
 public:
     // External interface
@@ -89,8 +89,8 @@ public:
 public:
     // Internal interface
 
-    NESImpl();
-    ~NESImpl();
+    NES();
+    ~NES();
 
     spdlog::logger* GetLogger()
     {

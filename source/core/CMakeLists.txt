@@ -5,7 +5,7 @@ project(dnes)
 include_directories(mappers audio video common .)
 
 add_library(dnes SHARED
-    nes_impl.cc
+    nes.cc
     cpu.cc
     ppu.cc
     apu.cc
