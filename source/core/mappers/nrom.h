@@ -12,7 +12,7 @@
 class NROM : public MapperBase
 {
 public:
-    NROM(iNesFile& file);
+    NROM(NES& nes, iNesFile& file);
 
     uint8_t CpuRead(uint16_t address) override;
     void CpuWrite(uint8_t M, uint16_t address) override;

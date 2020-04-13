@@ -27,7 +27,7 @@ class APU;
 class CPU
 {
 public:
-    CPU();
+    CPU(NES& nes);
     ~CPU();
 
     void AttachPPU(PPU* ppu);
@@ -50,6 +50,7 @@ public:
     static constexpr uint32_t NTSC_FREQUENCY = 1789773;
 
 private:
+    NES& Nes;
     PPU* Ppu;
     APU* Apu;
     Cart* Cartridge;

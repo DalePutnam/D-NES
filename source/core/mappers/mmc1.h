@@ -7,7 +7,7 @@ class CPU;
 class MMC1 : public MapperBase
 {
 public:
-    MMC1(iNesFile& file);
+    MMC1(NES& nes, iNesFile& file);
 
     void SaveState(StateSave::Ptr& state) override;
     void LoadState(const StateSave::Ptr& state) override;

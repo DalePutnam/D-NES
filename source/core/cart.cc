@@ -20,63 +20,49 @@
 #include "mappers/cnrom.h"
 #include "mappers/mmc3.h"
 
-using namespace std;
+#include "error_handling.h"
 
-
-Cart::Cart(const string& fileName)
+Cart::Cart(NES& nes)
+    : _nes(nes)
 {
-    _gameName = file::stripExtension(file::getNameFromPath(fileName));
-
-    iNesFile file(fileName);
-
-    uint16_t mapperNumber = file.GetMapperNumber();
-
-    switch (mapperNumber)
-    {
-    case 0x00:
-        _mapper = std::make_unique<NROM>(file);
-        break;
-    case 0x01:
-        _mapper = std::make_unique<MMC1>(file);
-        break;
-    case 0x02:
-        _mapper = std::make_unique<UXROM>(file);
-        break;
-    case 0x03:
-        _mapper = std::make_unique<CNROM>(file);
-        break;
-    case 0x04:
-        _mapper = std::make_unique<MMC3>(file);
-        break;
-    default:
-        ostringstream oss;
-        oss << "Cart: Mapper " << static_cast<int>(mapperNumber) << " specified by " << fileName << " does not exist or is not supported.";
-        throw NesException("Cart", oss.str());
-    }
 }
 
 Cart::~Cart()
 {
 }
 
-const string& Cart::GetGameName()
+int Cart::Initialize(iNesFile* file)
 {
-    return _gameName;
-}
+    _iNesFile = file;
 
-void Cart::AttachCPU(CPU* cpu)
-{
-    _mapper->AttachCPU(cpu);
-}
+    switch (_iNesFile->GetMapperNumber())
+    {
+    case 0x00:
+        _mapper = std::make_unique<NROM>(_nes, *_iNesFile);
+        break;
+    case 0x01:
+        _mapper = std::make_unique<MMC1>(_nes, *_iNesFile);
+        break;
+    case 0x02:
+        _mapper = std::make_unique<UXROM>(_nes, *_iNesFile);
+        break;
+    case 0x03:
+        _mapper = std::make_unique<CNROM>(_nes, *_iNesFile);
+        break;
+    case 0x04:
+        _mapper = std::make_unique<MMC3>(_nes, *_iNesFile);
+        break;
+    default:
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Cart: Mapper {} is unsupported", _iNesFile->GetMapperNumber());
+        return ERROR_UNSUPPORTED_MAPPER;
+    }
 
-void Cart::AttachPPU(PPU* ppu)
-{
-    _mapper->AttachPPU(ppu);
+    return dnes::SUCCESS;
 }
 
 void Cart::SaveNativeSave(const std::string& saveDir)
 {
-    std::string saveFile = file::createFullPath(_gameName, "sav", saveDir);
+    std::string saveFile = file::createFullPath(_nes.GetGameName(), "sav", saveDir);
     std::ofstream saveStream(saveFile.c_str(), std::ofstream::out | std::ofstream::binary);
 
     if (saveStream.good())
@@ -91,7 +77,7 @@ void Cart::SaveNativeSave(const std::string& saveDir)
 
 void Cart::LoadNativeSave(const std::string& saveDir)
 {
-    std::string saveFile = file::createFullPath(_gameName, "sav", saveDir);
+    std::string saveFile = file::createFullPath(_nes.GetGameName(), "sav", saveDir);
     std::ifstream saveStream(saveFile.c_str(), std::ifstream::in | std::ofstream::binary);
 
     if (saveStream.good())

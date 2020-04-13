@@ -10,6 +10,8 @@
 #include <string>
 #include <memory>
 
+#include "nes.h"
+#include "ines.h"
 #include "state_save.h"
 
 class CPU;
@@ -19,14 +21,11 @@ class MapperBase;
 class Cart
 {
 public:
-    Cart(const std::string& fileName);
+    Cart(NES& nes);
     ~Cart();
 
-    const std::string& GetGameName();
+    int Initialize(iNesFile* file);
 
-    void AttachCPU(CPU* cpu);
-    void AttachPPU(PPU* ppu);
-    
     void SaveNativeSave(const std::string& saveDir);
     void LoadNativeSave(const std::string& saveDir);
 
@@ -44,8 +43,10 @@ public:
 
     bool CheckIRQ();
 
-private:
-    std::string _gameName;
 
+
+private:
+    NES& _nes;
+    iNesFile* _iNesFile;
     std::unique_ptr<MapperBase> _mapper;
 };

@@ -1,7 +1,7 @@
 #include "uxrom.h"
 
-UXROM::UXROM(iNesFile& file)
-    : MapperBase(file)
+UXROM::UXROM(NES& nes, iNesFile& file)
+    : MapperBase(nes, file)
     , _register(0)
 {
 }

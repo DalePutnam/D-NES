@@ -5,6 +5,7 @@
 #include <mutex>
 
 #include "ines.h"
+#include "nes.h"
 #include "state_save.h"
 
 class CPU;
@@ -13,11 +14,8 @@ class PPU;
 class MapperBase
 {
 public:
-    MapperBase(iNesFile& file);
+    MapperBase(NES& nes, iNesFile& file);
     virtual ~MapperBase() = default;
-
-    void AttachCPU(CPU* cpu);
-    void AttachPPU(PPU* ppu);
 
     virtual void SaveNativeSave(std::ofstream& stream);
     virtual void LoadNativeSave(std::ifstream& stream);
@@ -40,6 +38,8 @@ protected:
     uint8_t DefaultNameTableRead(uint16_t address);
     void DefaultNameTableWrite(uint8_t M, uint16_t address);
 
+    NES& _nes;
+
     uint16_t _ppuAddress;
 
     uint32_t _prgRomSize;
@@ -60,7 +60,4 @@ protected:
     std::unique_ptr<uint8_t[]> _chrRam;
 
     std::unique_ptr<uint8_t[]> _vram;
-
-    CPU* _cpu;
-    PPU* _ppu;
 };

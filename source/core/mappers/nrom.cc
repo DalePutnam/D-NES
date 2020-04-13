@@ -64,8 +64,8 @@ uint8_t NROM::PpuPeek(uint16_t address)
 }
 
 
-NROM::NROM(iNesFile& file)
-    : MapperBase(file)
+NROM::NROM(NES& nes, iNesFile& file)
+    : MapperBase(nes, file)
     , _chr(_chrRomSize == 0 ? _chrRam.get() : _chrRom.get())
 {
 }

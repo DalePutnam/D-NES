@@ -1,7 +1,7 @@
 #include "cnrom.h"
 
-CNROM::CNROM(iNesFile& file)
-    : MapperBase(file)
+CNROM::CNROM(NES& nes, iNesFile& file)
+    : MapperBase(nes, file)
     , _register(0)
 {
 }

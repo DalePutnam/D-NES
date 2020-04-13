@@ -88,12 +88,12 @@ uint8_t MMC1::CpuRead(uint16_t address)
 
 void MMC1::CpuWrite(uint8_t M, uint16_t address)
 {
-    if (_cpu->GetClock() - _lastWriteCycle <= 6)
+    if (_nes.GetCpu()->GetClock() - _lastWriteCycle <= 6)
     {
         return;
     }
 
-    _lastWriteCycle = _cpu->GetClock();
+    _lastWriteCycle = _nes.GetCpu()->GetClock();
 
     if (address >= 0x6000 && address < 0x8000)
     {
@@ -347,8 +347,8 @@ void MMC1::UpdatePageOffsets()
 	
 }
 
-MMC1::MMC1(iNesFile& file)
-    : MapperBase(file)
+MMC1::MMC1(NES& nes, iNesFile& file)
+    : MapperBase(nes, file)
     , _lastWriteCycle(0)
     , _cycleCounter(0)
     , _tempRegister(0)

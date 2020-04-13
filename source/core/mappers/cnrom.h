@@ -5,7 +5,7 @@
 class CNROM : public MapperBase
 {
 public:
-    CNROM(iNesFile& file);
+    CNROM(NES& nes, iNesFile& file);
 
     void SaveState(StateSave::Ptr& state) override;
     void LoadState(const StateSave::Ptr& state) override;

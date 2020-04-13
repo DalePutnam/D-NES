@@ -9,9 +9,8 @@
 
 using namespace std;
 
-MapperBase::MapperBase(iNesFile& file)
-    : _cpu(nullptr)
-    , _ppu(nullptr)
+MapperBase::MapperBase(NES& nes, iNesFile& file)
+    : _nes(nes)
 {
     _prgRom = file.GetPrgRom();
     _prgRomSize = file.GetPrgRomSize();
@@ -45,16 +44,6 @@ MapperBase::MapperBase(iNesFile& file)
     {
         _vram = std::make_unique<uint8_t[]>(0x400 * 2);
     }
-}
-
-void MapperBase::AttachCPU(CPU* cpu)
-{
-    _cpu = cpu;
-}
-
-void MapperBase::AttachPPU(PPU* ppu)
-{
-    _ppu = ppu;
 }
 
 void MapperBase::SaveNativeSave(std::ofstream& stream)

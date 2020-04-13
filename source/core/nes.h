@@ -19,7 +19,7 @@ class Cart;
 class VideoBackend;
 class AudioBackend;
 
-class NES : public dnes::INES
+class NES final : public dnes::INES
 {
 public:
     // External interface
@@ -97,6 +97,12 @@ public:
         return Logger.get();
     }
 
+    CPU* GetCpu() { return Cpu.get(); }
+    PPU* GetPpu() { return Ppu.get(); }
+    APU* GetApu() { return Apu.get(); }
+    Cart* GetCart() { return Cartridge.get(); };
+
+
 private:
     // Main run function, launched in a new thread by NES::Start
     void Run();
@@ -112,6 +118,8 @@ private:
     std::condition_variable ControlCv;
 
     std::thread NesThread;
+
+    std::string GameName;
     std::string StateSaveDirectory;
     std::atomic<int> CurrentErrorCode;
 

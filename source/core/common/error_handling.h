@@ -22,6 +22,7 @@ constexpr int ERROR_STATE_SAVE_LOAD_FILE_ERROR = 17;
 constexpr int ERROR_OPEN_LOG_FILE_FAILED = 18;
 constexpr int ERROR_SET_LOG_FILE_AFTER_START = 19;
 constexpr int ERROR_SET_LOG_CALLBACK_AFTER_START = 20;
+constexpr int ERROR_UNSUPPORTED_MAPPER = 21;
 
 static const std::map<int, std::string> ERROR_CODE_TO_MESSAGE_MAP
 {
@@ -44,5 +45,6 @@ static const std::map<int, std::string> ERROR_CODE_TO_MESSAGE_MAP
     {ERROR_STATE_SAVE_LOAD_FILE_ERROR, "Failed to open save state file"},
     {ERROR_OPEN_LOG_FILE_FAILED, "Failed to open the requested log file"},
     {ERROR_SET_LOG_FILE_AFTER_START, "Cannot set the log file after the emulator has started"},
-    {ERROR_SET_LOG_CALLBACK_AFTER_START, "Cannot set the log callback after the emulator has started"}
+    {ERROR_SET_LOG_CALLBACK_AFTER_START, "Cannot set the log callback after the emulator has started"},
+    {ERROR_UNSUPPORTED_MAPPER, "Mapper specified in ROM file is unsupported"}
 };

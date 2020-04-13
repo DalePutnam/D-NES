@@ -77,16 +77,20 @@ NES::NES()
     SetLogLevel(dnes::LogLevel::ERROR);
     SetLogPattern(DEFAULT_LOG_PATTERN);
 
-    Cpu = std::make_unique<CPU>();
+    Cpu = std::make_unique<CPU>(*this);
     Ppu = std::make_unique<PPU>(/*VideoOut.get()*/);
     Apu = std::make_unique<APU>(/*AudioOut.get()*/);
+    Cartridge = std::make_unique<Cart>(*this);
 
     Apu->AttachCPU(Cpu.get());
+    Apu->AttachCart(Cartridge.get());
 
     Cpu->AttachPPU(Ppu.get());
     Cpu->AttachAPU(Apu.get());
+    Cpu->AttachCart(Cartridge.get());
 
     Ppu->AttachCPU(Cpu.get());
+    Ppu->AttachCart(Cartridge.get());
 
     // CPU Settings
     Cpu->SetLogEnabled(false);
@@ -115,24 +119,22 @@ int NES::LoadGame(const char* path)
 {
     if (CurrentState != State::READY)
     {
+        SPDLOG_LOGGER_ERROR(GetLogger(), "NES: Failed to load game, emulation has already started.");
         return ERROR_LOAD_GAME_AFTER_START;
     }
 
+    GameName = file::getNameFromPath(path);
+
     try
     {
-        Cartridge = std::make_unique<Cart>(path);
+        iNesFile romFile(path);
+        return Cartridge->Initialize(&romFile);
     }
-    catch (NesException& e)
+    catch (std::string& msg)
     {
+        SPDLOG_LOGGER_ERROR(GetLogger(), "iNesFile: {}", msg);
         return ERROR_LOAD_GAME_FAILED;
     }
-
-    Cpu->AttachCart(Cartridge.get());
-    Apu->AttachCart(Cartridge.get());
-    Ppu->AttachCart(Cartridge.get());
-
-    Cartridge->AttachCPU(Cpu.get());
-    Cartridge->AttachPPU(Ppu.get());
 
     return dnes::SUCCESS;
 }
@@ -233,12 +235,7 @@ int NES::SetLogCallback(dnes::INESLogCallback* callback)
 
 const char* NES::GetGameName()
 {
-    if (!Cartridge)
-    {
-        return nullptr;
-    }
-
-    return Cartridge->GetGameName().c_str();
+    return GameName.c_str();
 }
 
 void NES::SetControllerOneState(uint8_t state)

@@ -1850,8 +1850,9 @@ uint8_t CPU::GetControllerOneShift()
     return result;
 }
 
-CPU::CPU()
-    : Ppu(nullptr)
+CPU::CPU(NES& nes)
+    : Nes(nes)
+    , Ppu(nullptr)
     , Apu(nullptr)
     , Cartridge(nullptr)
     , Clock(0)
@@ -1934,7 +1935,7 @@ void CPU::SetLogEnabled(bool enabled)
     if (LogEnabled)
     {
         long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        std::string logName = Cartridge->GetGameName() + "_" + std::to_string(time) + ".log";
+        std::string logName = std::string(Nes.GetGameName()) + "_" + std::to_string(time) + ".log";
         LogFile = fopen(logName.c_str(), "w");
 
         if (LogFile == nullptr)

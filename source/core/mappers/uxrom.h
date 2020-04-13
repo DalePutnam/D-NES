@@ -5,7 +5,7 @@
 class UXROM : public MapperBase
 {
 public:
-    UXROM(iNesFile& file);
+    UXROM(NES& nes, iNesFile& file);
 
     void SaveState(StateSave::Ptr& state) override;
     void LoadState(const StateSave::Ptr& state) override;

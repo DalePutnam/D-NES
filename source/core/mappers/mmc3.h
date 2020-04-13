@@ -5,7 +5,7 @@
 class MMC3 : public MapperBase
 {
 public:
-    MMC3(iNesFile& file);
+    MMC3(NES& nes, iNesFile& file);
 
     void SaveState(StateSave::Ptr& state) override;
     void LoadState(const StateSave::Ptr& state) override;
