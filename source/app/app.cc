@@ -43,7 +43,7 @@ bool NESApp::OnInit()
 #ifdef _WIN32
         InitConsole();
 #endif
-        class CallbackImpl : public dnes::NESCallback
+        class CallbackImpl : public dnes::INESCallback
         {
             using steady_clock = std::chrono::steady_clock;
             using time_point = std::chrono::time_point<steady_clock>;
@@ -52,7 +52,7 @@ bool NESApp::OnInit()
         public:
             CallbackImpl() = default;
 
-            void OnFrameComplete(dnes::NES* nes)
+            void OnFrameComplete(dnes::INES* nes)
             {
                 using namespace std::chrono_literals;
 
@@ -78,7 +78,7 @@ bool NESApp::OnInit()
 
                 frameCounter++;
             };
-            void OnError(dnes::NES* nes) {};
+            void OnError(dnes::INES* nes) {};
 
             double GetAverageFps() {
                 return static_cast<double>(fpsAccumulator) / numFpsRecords;
@@ -100,7 +100,7 @@ bool NESApp::OnInit()
         CallbackImpl callback;
 
         std::cout << "Loading ROM " << game << std::flush;
-        dnes::NES* nes = dnes::CreateNES();
+        dnes::INES* nes = dnes::CreateNES();
 
         if (nes->LoadGame(game.c_str()) == dnes::SUCCESS)
         {

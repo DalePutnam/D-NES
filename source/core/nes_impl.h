@@ -19,7 +19,7 @@ class Cart;
 class VideoBackend;
 class AudioBackend;
 
-class NESImpl : public dnes::NES
+class NESImpl : public dnes::INES
 {
 public:
     // External interface
@@ -28,12 +28,12 @@ public:
 
     int SetWindowHandle(void* handle) override;
 
-    int SetCallback(dnes::NESCallback* callback) override;
+    int SetCallback(dnes::INESCallback* callback) override;
 
     void SetLogLevel(dnes::LogLevel level) override;
     void SetLogPattern(const char* pattern) override;
     int SetLogFile(const char* file) override;
-    int SetLogCallback(dnes::NESLogCallback* callback) override;
+    int SetLogCallback(dnes::INESLogCallback* callback) override;
 
     const char* GetGameName() override;
 
@@ -124,7 +124,7 @@ private:
 
     void* WindowHandle{nullptr};
 
-    dnes::NESCallback* Callback{nullptr};
+    dnes::INESCallback* Callback{nullptr};
 
     std::atomic<bool> ShowFps{false};
     std::atomic<bool> OverscanEnabled{true};
@@ -136,5 +136,5 @@ private:
     dnes::LogLevel LogLevel{dnes::LogLevel::ERROR};
     std::string LogPattern;
 
-    std::unique_ptr<dnes::NESLogCallback> LogCallback{};
+    std::unique_ptr<dnes::INESLogCallback> LogCallback{};
 };

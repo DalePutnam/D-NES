@@ -39,14 +39,14 @@ std::shared_ptr<spdlog::logger> createFileLoggerHelper(const std::string& fileNa
     return logger;
 }
 
-std::shared_ptr<spdlog::logger> createCallbackLoggerHelper(dnes::NESLogCallback* callback)
+std::shared_ptr<spdlog::logger> createCallbackLoggerHelper(dnes::INESLogCallback* callback)
 {
     class CallbackSink : public spdlog::sinks::base_sink<std::mutex>
     {
         using base_sink = spdlog::sinks::base_sink<std::mutex>;
 
     public:
-        CallbackSink(dnes::NESLogCallback* callback) : _callback(callback) {}
+        CallbackSink(dnes::INESLogCallback* callback) : _callback(callback) {}
 
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) override
@@ -60,7 +60,7 @@ std::shared_ptr<spdlog::logger> createCallbackLoggerHelper(dnes::NESLogCallback*
         void flush_() override {}
 
     private:
-        dnes::NESLogCallback* _callback;
+        dnes::INESLogCallback* _callback;
     };
 
     auto logger = spdlog::create<CallbackSink>("callback", callback);
@@ -149,7 +149,7 @@ int NESImpl::SetWindowHandle(void* handle)
     return dnes::SUCCESS;
 }
 
-int NESImpl::SetCallback(dnes::NESCallback* callback)
+int NESImpl::SetCallback(dnes::INESCallback* callback)
 {
     if (CurrentState != State::READY)
     {
@@ -206,7 +206,7 @@ int NESImpl::SetLogFile(const char* file)
     }
 }
 
-int NESImpl::SetLogCallback(dnes::NESLogCallback* callback)
+int NESImpl::SetLogCallback(dnes::INESLogCallback* callback)
 {
     if (CurrentState != State::READY)
     {
@@ -694,12 +694,12 @@ void NESImpl::SetErrorCode(int code)
 namespace dnes
 {
 
-NES* CreateNES()
+INES* CreateNES()
 {
     return new NESImpl();
 }
 
-void DestroyNES(NES* nes)
+void DestroyNES(INES* nes)
 {
     if (NESImpl* nesimpl = dynamic_cast<NESImpl*>(nes))
     {

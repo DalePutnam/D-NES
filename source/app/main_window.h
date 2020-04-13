@@ -35,7 +35,7 @@ enum GameResolutions
     NUM_RESOLUTIONS
 };
 
-class MainWindow : public wxFrame, public dnes::NESCallback
+class MainWindow : public wxFrame, public dnes::INESCallback
 {
 public:
     MainWindow();
@@ -113,8 +113,8 @@ private:
 
     // NESCallback functions
 
-    void OnFrameComplete(dnes::NES* nes) override;
-    void OnError(dnes::NES* nes) override;
+    void OnFrameComplete(dnes::INES* nes) override;
+    void OnError(dnes::INES* nes) override;
 };
 
 wxDECLARE_EVENT(EVT_NES_UNEXPECTED_SHUTDOWN, wxThreadEvent);

@@ -17,22 +17,22 @@
 namespace dnes
 {
 
-class NES;
+class INES;
 
 constexpr int SUCCESS = 0;
 
-DNES_DLL NES* CreateNES();
-DNES_DLL void DestroyNES(NES* nes);
+DNES_DLL INES* CreateNES();
+DNES_DLL void DestroyNES(INES* nes);
 
 DNES_DLL const char* GetErrorMessageFromCode(int code);
 
-class NESCallback
+class INESCallback
 {
 public:
-    virtual void OnFrameComplete(NES* nes) = 0;
-    virtual void OnError(NES* nes) = 0;
+    virtual void OnFrameComplete(INES* nes) = 0;
+    virtual void OnError(INES* nes) = 0;
 
-    virtual ~NESCallback() = default;
+    virtual ~INESCallback() = default;
 };
 
 enum class LogLevel
@@ -46,15 +46,15 @@ enum class LogLevel
     NONE = 7
 };
 
-class NESLogCallback
+class INESLogCallback
 {
 public:
     virtual void LogMessage(LogLevel level, const char* message) = 0;
 
-    virtual ~NESLogCallback() = default;
+    virtual ~INESLogCallback() = default;
 };
 
-class NES
+class INES
 {
 public:
     enum class State
@@ -70,12 +70,12 @@ public:
 
     virtual int SetWindowHandle(void* handle) = 0;
 
-    virtual int SetCallback(NESCallback* callback) = 0;
+    virtual int SetCallback(INESCallback* callback) = 0;
 
     virtual void SetLogLevel(LogLevel level) = 0;
     virtual void SetLogPattern(const char* pattern) = 0;
     virtual int SetLogFile(const char* file) = 0;
-    virtual int SetLogCallback(NESLogCallback* callback) = 0;
+    virtual int SetLogCallback(INESLogCallback* callback) = 0;
 
     virtual const char* GetGameName() = 0;
 
@@ -134,7 +134,7 @@ public:
     virtual int GetCurrentErrorCode() = 0;
 
 protected:
-    virtual ~NES() = default;
+    virtual ~INES() = default;
 };
 
 }; // namespace dnes

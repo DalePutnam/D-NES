@@ -46,7 +46,7 @@ std::vector<std::pair<wxSize, wxSize> > MainWindow::ResolutionsList =
     { wxSize(1024, 960), wxSize(1024, 896) },
 };
 
-void MainWindow::OnFrameComplete(dnes::NES* nes)
+void MainWindow::OnFrameComplete(dnes::INES* nes)
 {
 	std::unique_lock<std::mutex> lock(PpuViewerMutex);
     
@@ -99,7 +99,7 @@ void MainWindow::OnVideoSettingsClosed(wxCommandEvent& event)
     }
 }
 
-void MainWindow::OnError(dnes::NES* nes)
+void MainWindow::OnError(dnes::INES* nes)
 {
     wxThreadEvent evt(EVT_NES_UNEXPECTED_SHUTDOWN);
     evt.SetPayload(dnes::GetErrorMessageFromCode(nes->GetCurrentErrorCode()));
@@ -300,7 +300,7 @@ void MainWindow::OnEmulatorSuspendResume(wxCommandEvent& WXUNUSED(event))
 {
     if (Nes != nullptr)
     {
-        if (Nes->GetState() == dnes::NES::State::PAUSED)
+        if (Nes->GetState() == dnes::INES::State::PAUSED)
         {
             PlayPauseMenuItem->SetItemLabel(wxT("&Pause"));
             Nes->Resume();

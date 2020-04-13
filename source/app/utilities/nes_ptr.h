@@ -7,10 +7,10 @@
 class NESDeleter
 {
 public:
-    void operator()(dnes::NES* nes)
+    void operator()(dnes::INES* nes)
     {
         dnes::DestroyNES(nes);
     }
 };
 
-using NESPtr = std::unique_ptr<dnes::NES, NESDeleter>;
+using NESPtr = std::unique_ptr<dnes::INES, NESDeleter>;
