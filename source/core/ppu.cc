@@ -3,7 +3,7 @@
 #include "ppu.h"
 #include "cpu.h"
 #include "apu.h"
-#include "video/video_backend.h"
+#include "video/video_manager.h"
 
 static constexpr uint32_t RgbLookupTable[64] =
 {
@@ -981,8 +981,8 @@ void PPUState::WritePPUDATA(Cart* cart, uint8_t M)
     LowerBits = (0x1F & M);
 }
 
-PPU::PPU()
-    : VideoOut(nullptr)
+PPU::PPU(VideoManager& videoOut)
+    : VideoOut(videoOut)
     , _ppuState(new PPUState())
     , _frameBuffer(new uint32_t[256 * 240])
 {
@@ -997,11 +997,6 @@ void PPU::AttachCPU(CPU* cpu)
 void PPU::AttachCart(Cart* cart)
 {
     _cart = cart;
-}
-
-void PPU::SetBackend(VideoBackend* backend)
-{
-    VideoOut = backend;
 }
 
 int32_t PPU::GetCurrentDot()
@@ -1057,10 +1052,7 @@ void PPU::Step()
     {
         _frameEnd = true;
 
-        if (VideoOut != nullptr)
-        {
-            VideoOut->SubmitFrame(reinterpret_cast<uint8_t*>(_frameBuffer.get()));
-        }
+        VideoOut.SubmitFrame(reinterpret_cast<uint8_t*>(_frameBuffer.get()));
     }
 }
 

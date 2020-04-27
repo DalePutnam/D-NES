@@ -16,8 +16,8 @@ class CPU;
 class PPU;
 class APU;
 class Cart;
-class VideoBackend;
 class AudioBackend;
+class VideoManager;
 
 class NES final : public dnes::INES
 {
@@ -127,8 +127,8 @@ private:
     std::unique_ptr<CPU> Cpu;
     std::unique_ptr<PPU> Ppu;
     std::unique_ptr<Cart> Cartridge;
-    std::unique_ptr<VideoBackend> VideoOut;
     std::unique_ptr<AudioBackend> AudioOut;
+    std::unique_ptr<VideoManager> VideoOut;
 
     void* WindowHandle{nullptr};
 

@@ -9,7 +9,6 @@ class NES;
 class CPU;
 class Cart;
 class AudioBackend;
-class VideoBackend;
 
 class APU
 {

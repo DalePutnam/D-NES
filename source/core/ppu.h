@@ -14,20 +14,19 @@
 
 class CPU;
 class Cart;
-class VideoBackend;
+class VideoManager;
 
 struct PPUState;
 
 class PPU
 {
 public:
-    PPU();
+    PPU(VideoManager& videoOut);
 
     ~PPU();
 
     void AttachCPU(CPU* cpu);
     void AttachCart(Cart* cart);
-    void SetBackend(VideoBackend* backend);
 
     int32_t GetCurrentDot();
     int32_t GetCurrentScanline();
@@ -59,7 +58,7 @@ public:
     bool EndOfFrame();
 
 private:
-    VideoBackend* VideoOut;
+    VideoManager& VideoOut;
 
     Cart* _cart;
     std::unique_ptr<PPUState> _ppuState;

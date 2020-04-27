@@ -23,7 +23,8 @@ add_library(dnes SHARED
     audio/iaudio_platform.cc
     audio/alsa_platform.cc
     video/gl_util.cc
-    video/video_backend.cc
+    video/opengl_backend.cc
+    video/video_manager.cc
     video/igl_platform.cc
     video/glx_platform.cc
 )

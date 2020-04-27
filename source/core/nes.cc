@@ -11,7 +11,8 @@
 #include "apu.h"
 #include "cart.h"
 #include "audio/audio_backend.h"
-#include "video/video_backend.h"
+#include "video/opengl_backend.h"
+#include "video/video_manager.h"
 #include "common/error_handling.h"
 #include "common/file.h"
 
@@ -77,8 +78,10 @@ NES::NES()
     SetLogLevel(dnes::LogLevel::ERROR);
     SetLogPattern(DEFAULT_LOG_PATTERN);
 
+    VideoOut = std::make_unique<VideoManager>();
+
     Cpu = std::make_unique<CPU>(*this);
-    Ppu = std::make_unique<PPU>(/*VideoOut.get()*/);
+    Ppu = std::make_unique<PPU>(*VideoOut);
     Apu = std::make_unique<APU>(/*AudioOut.get()*/);
     Cartridge = std::make_unique<Cart>(*this);
 
@@ -146,7 +149,7 @@ int NES::SetWindowHandle(void* handle)
         return ERROR_SET_WINDOW_HANDLE_AFTER_START;
     }
 
-    WindowHandle = handle;
+    VideoOut->SetBackend(std::make_unique<OpenGLBackend>(*VideoOut, handle));
 
     return dnes::SUCCESS;
 }
@@ -325,7 +328,7 @@ void NES::SetFpsDisplayEnabled(bool enabled)
 
     if (VideoOut)
     {
-        VideoOut->ShowFps(ShowFps);
+        VideoOut->SetShowFps(enabled);
     }
 }
 
@@ -335,7 +338,7 @@ void NES::SetOverscanEnabled(bool enabled)
 
     if (VideoOut)
     {
-        VideoOut->SetOverscanEnabled(OverscanEnabled);
+        VideoOut->SetOverscanEnabled(enabled);
     }
 }
 
@@ -616,17 +619,7 @@ void NES::Run()
 {
     try
     {
-
-        if (WindowHandle != nullptr)
-        {
-            VideoOut = std::make_unique<VideoBackend>(WindowHandle);
-            VideoOut->Prepare();
-
-            VideoOut->ShowFps(ShowFps);
-            VideoOut->SetOverscanEnabled(OverscanEnabled);
-
-            Ppu->SetBackend(VideoOut.get());
-        }
+        VideoOut->Prepare();
 
         AudioOut = std::make_unique<AudioBackend>();
         Apu->SetBackend(AudioOut.get());
@@ -664,10 +657,7 @@ void NES::Run()
 
         Cartridge->SaveNativeSave(NativeSaveDirectory);
 
-        if (VideoOut != nullptr)
-        {
-            VideoOut->Finalize();
-        }
+        VideoOut->Finalize();
     }
     catch (NesException& ex)
     {
