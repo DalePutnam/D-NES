@@ -10,9 +10,10 @@
 #include "ppu.h"
 #include "apu.h"
 #include "cart.h"
-#include "audio/audio_backend.h"
+#include "audio/alsa_backend.h"
+#include "audio/null_audio_backend.h"
 #include "video/opengl_backend.h"
-#include "video/video_manager.h"
+#include "video/null_video_backend.h"
 #include "common/error_handling.h"
 #include "common/file.h"
 
@@ -78,11 +79,12 @@ NES::NES()
     SetLogLevel(dnes::LogLevel::ERROR);
     SetLogPattern(DEFAULT_LOG_PATTERN);
 
-    VideoOut = std::make_unique<VideoManager>();
+    VideoOut = std::make_unique<NullVideoBackend>();
+    AudioOut = std::make_unique<NullAudioBackend>();
 
     Cpu = std::make_unique<CPU>(*this);
-    Ppu = std::make_unique<PPU>(*VideoOut);
-    Apu = std::make_unique<APU>(/*AudioOut.get()*/);
+    Ppu = std::make_unique<PPU>(*this);
+    Apu = std::make_unique<APU>(*this);
     Cartridge = std::make_unique<Cart>(*this);
 
     Apu->AttachCPU(Cpu.get());
@@ -149,7 +151,15 @@ int NES::SetWindowHandle(void* handle)
         return ERROR_SET_WINDOW_HANDLE_AFTER_START;
     }
 
-    VideoOut->SetBackend(std::make_unique<OpenGLBackend>(*VideoOut, handle));
+    auto newBackend = std::make_unique<OpenGLBackend>(handle);
+    newBackend->SwapSettings(*VideoOut);
+
+    VideoOut = std::move(newBackend);
+
+    auto newAudioBackend = std::make_unique<AlsaBackend>();
+    newAudioBackend->SwapSettings(*AudioOut);
+
+    AudioOut = std::move(newAudioBackend);
 
     return dnes::SUCCESS;
 }
@@ -279,12 +289,7 @@ void NES::SetStateSaveDirectory(const char* saveDir)
 
 void NES::SetTargetFrameRate(uint32_t rate)
 {
-    TargetFrameRate = rate;
-
-    if (AudioOut)
-    {
-        Apu->SetTargetFrameRate(TargetFrameRate);
-    }
+    Apu->SetTargetFrameRate(rate);
 }
 
 void NES::SetTurboModeEnabled(bool enabled)
@@ -324,31 +329,16 @@ void NES::SetNtscDecoderEnabled(bool enabled)
 
 void NES::SetFpsDisplayEnabled(bool enabled)
 {
-    ShowFps = enabled;
-
-    if (VideoOut)
-    {
-        VideoOut->SetShowFps(enabled);
-    }
+    VideoOut->SetShowFps(enabled);
 }
 
 void NES::SetOverscanEnabled(bool enabled)
 {
-    OverscanEnabled = enabled;
-
-    if (VideoOut)
-    {
-        VideoOut->SetOverscanEnabled(enabled);
-    }
+    VideoOut->SetOverscanEnabled(enabled);
 }
 
 void NES::ShowMessage(const char* message, uint32_t duration)
 {
-    if (!VideoOut)
-    {
-        return;
-    }
-
     VideoOut->ShowMessage(message, duration);
 }
 
@@ -619,11 +609,8 @@ void NES::Run()
 {
     try
     {
+        AudioOut->Initialize();
         VideoOut->Prepare();
-
-        AudioOut = std::make_unique<AudioBackend>();
-        Apu->SetBackend(AudioOut.get());
-        Apu->SetTargetFrameRate(TargetFrameRate);
 
         Cartridge->LoadNativeSave(NativeSaveDirectory);
 
@@ -658,6 +645,7 @@ void NES::Run()
         Cartridge->SaveNativeSave(NativeSaveDirectory);
 
         VideoOut->Finalize();
+        AudioOut->CleanUp();
     }
     catch (NesException& ex)
     {

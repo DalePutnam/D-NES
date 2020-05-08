@@ -3,13 +3,10 @@
 #include <cstdint>
 #include <string>
 
-#include "video_manager.h"
-
 class VideoBackendBase
 {
 public:
-    VideoBackendBase(VideoManager& videoOutput)
-        : _videoOutput(videoOutput) {} 
+    VideoBackendBase() = default;
     virtual ~VideoBackendBase() = default;
 
     virtual int Prepare() = 0;
@@ -19,8 +16,17 @@ public:
     virtual void ShowMessage(const std::string& message, uint32_t duration) = 0;
 
 protected:
-    VideoManager& GetVideoOutput() { return _videoOutput; }
+    bool _overscanEnabled{false};
+    bool _showFps{false};
 
-private:
-    VideoManager& _videoOutput;
+public:
+    void SetOverscanEnabled(bool enabled) { _overscanEnabled = enabled; }
+
+    void SetShowFps(bool show) { _showFps = show; }
+
+    void SwapSettings(VideoBackendBase& other)
+    {
+        std::swap(_overscanEnabled, other._overscanEnabled);
+        std::swap(_showFps, other._showFps);
+    }
 };

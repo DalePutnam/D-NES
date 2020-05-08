@@ -177,19 +177,18 @@ void compileShaders(const std::string& vertexShader, const std::string& fragment
 }
 }
 
-OpenGLBackend::OpenGLBackend(VideoManager& videoOutput, void* windowHandle)
-    : VideoBackendBase(videoOutput)
+OpenGLBackend::OpenGLBackend(void* windowHandle)
+    : _windowHandle(windowHandle)
 {
     _glPlatform = IGLPlatform::CreateGLPlatform();
-    _glPlatform->InitializeWindow(windowHandle);
 }
 
 OpenGLBackend::~OpenGLBackend()
 {
-    _glPlatform->DestroyWindow();
 }
 int OpenGLBackend::Prepare()
 {
+    _glPlatform->InitializeWindow(_windowHandle);
     _glPlatform->InitializeContext();
 
     InitializeGLFunctions();
@@ -245,12 +244,13 @@ int OpenGLBackend::Prepare()
 void OpenGLBackend::Finalize()
 {
     _glPlatform->DestroyContext();
+    _glPlatform->DestroyWindow();
 }
 
 void OpenGLBackend::SubmitFrame(uint8_t * fb)
 {
-    bool overscanEnabled = GetVideoOutput().GetOverscanEnabled();
-    bool showingFps = GetVideoOutput().GetShowFps();
+    bool overscanEnabled = _overscanEnabled;
+    bool showingFps = _showFps;
     uint32_t currentFps = _currentFps;
 
     UpdateSurfaceSize();

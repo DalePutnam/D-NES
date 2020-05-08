@@ -5,9 +5,8 @@
 class NullVideoBackend final : public VideoBackendBase
 {
 public:
-    NullVideoBackend(VideoManager& videoOutput)
-        : VideoBackendBase(videoOutput)
-    {}
+    NullVideoBackend() = default;
+    ~NullVideoBackend() = default;
 
     int Prepare() { return 0; }
     void Finalize() {}

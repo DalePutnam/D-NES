@@ -1,14 +1,12 @@
-#if defined(__linux)
-
 #include "nes_exception.h"
 
-#include "alsa_platform.h"
+#include "alsa_backend.h"
 #include <cstring>
 
 static constexpr uint32_t NUM_PERIODS = 4;
 static constexpr uint32_t STANDARD_FRAME_RATE = 60;
 
-void AlsaPlatform::Initialize(uint32_t sampleRate)
+void AlsaBackend::Initialize()
 {
     int32_t rc;
     snd_pcm_hw_params_t* alsaHwParams = nullptr;
@@ -16,7 +14,6 @@ void AlsaPlatform::Initialize(uint32_t sampleRate)
     snd_pcm_uframes_t bufferSize, periodSize;
 
     _alsaHandle = nullptr;
-    _sampleRate = sampleRate;
     _numOutputBuffers = NUM_PERIODS;
 
     rc = snd_pcm_open(&_alsaHandle, "default", SND_PCM_STREAM_PLAYBACK, 0);
@@ -36,7 +33,7 @@ void AlsaPlatform::Initialize(uint32_t sampleRate)
     rc = snd_pcm_hw_params_set_format(_alsaHandle, alsaHwParams, SND_PCM_FORMAT_FLOAT);
     if (rc < 0) goto FailedExit;
 
-    rc = snd_pcm_hw_params_set_rate_near(_alsaHandle, alsaHwParams, &_sampleRate, nullptr);
+    rc = snd_pcm_hw_params_set_rate(_alsaHandle, alsaHwParams, _sampleRate, 0);
     if (rc < 0) goto FailedExit;
 
     rc = snd_pcm_hw_params_set_channels(_alsaHandle, alsaHwParams, 2);
@@ -78,10 +75,10 @@ void AlsaPlatform::Initialize(uint32_t sampleRate)
     _sampleBufferSize = periodSize * 2;
 
     _outputBuffers = new float*[_numOutputBuffers];
-	for (size_t i = 0; i < _numOutputBuffers; ++i)
-	{
-		_outputBuffers[i] = new float[_sampleBufferSize];
-	}
+    for (size_t i = 0; i < _numOutputBuffers; ++i)
+    {
+        _outputBuffers[i] = new float[_sampleBufferSize];
+    }
 
     _sampleBufferIndex = 0;
 
@@ -92,7 +89,7 @@ void AlsaPlatform::Initialize(uint32_t sampleRate)
     _overlapped = false;
 
     _running = true;
-    _thread = std::thread(&AlsaPlatform::StreamWorker, this);
+    _thread = std::thread(&AlsaBackend::StreamWorker, this);
 
     return;
 
@@ -101,10 +98,10 @@ FailedExit:
     if (alsaHwParams) snd_pcm_hw_params_free(alsaHwParams);
     if (alsaSwParams) snd_pcm_sw_params_free(alsaSwParams);
     
-    throw NesException("AlsaPlatform", std::string{"Failed to initialize. "} + snd_strerror(rc));
+    throw NesException("AlsaBackend", std::string{"Failed to initialize. "} + snd_strerror(rc));
 }
 
-void AlsaPlatform::CleanUp()
+void AlsaBackend::CleanUp()
 {
     _running = false;
     _cv.notify_all();
@@ -113,15 +110,15 @@ void AlsaPlatform::CleanUp()
     snd_pcm_drop(_alsaHandle);
     
     for (size_t i = 0; i < _numOutputBuffers; ++i)
-	{
-		delete[] _outputBuffers[i];
-	}
-	delete[] _outputBuffers;
+    {
+        delete[] _outputBuffers[i];
+    }
+    delete[] _outputBuffers;
 
     snd_pcm_close(_alsaHandle);
 }
 
-void AlsaPlatform::Reset()
+void AlsaBackend::Reset()
 {
     std::unique_lock<std::mutex> lock(_mutex);
 
@@ -138,14 +135,7 @@ void AlsaPlatform::Reset()
     _cv.notify_all();
 }
 
-uint32_t AlsaPlatform::GetNumPendingSamples()
-{
-    std::unique_lock<std::mutex> lock(_mutex);
-
-    return _sampleBufferIndex;
-}
-
-void AlsaPlatform::SubmitSample(float sample)
+void AlsaBackend::SubmitSample(float sample)
 {
     std::unique_lock<std::mutex> lock(_mutex);
 
@@ -155,31 +145,26 @@ void AlsaPlatform::SubmitSample(float sample)
     buffer[_sampleBufferIndex++] = sample;
 
     if (_sampleBufferIndex == _sampleBufferSize)
-	{
-		_writeIndex++;
-		if (_writeIndex >= _numOutputBuffers)
-		{
-			_overlapped = true;
-			_writeIndex = 0;
-		}
+    {
+        _writeIndex++;
+        if (_writeIndex >= _numOutputBuffers)
+        {
+            _overlapped = true;
+            _writeIndex = 0;
+        }
 
         _cv.notify_all();
 
-		if (_writeIndex == _readIndex && _overlapped)
-		{
-			_cv.wait(lock);
-		}
+        if (_writeIndex == _readIndex && _overlapped)
+        {
+            _cv.wait(lock);
+        }
 
-		_sampleBufferIndex = 0;
-	}
+        _sampleBufferIndex = 0;
+    }
 }
 
-uint32_t AlsaPlatform::GetSampleRate()
-{
-    return _sampleRate;
-}
-
-void AlsaPlatform::StreamWorker()
+void AlsaBackend::StreamWorker()
 {
     float* localBuffer = new float[_sampleBufferSize];
 
@@ -224,5 +209,3 @@ void AlsaPlatform::StreamWorker()
 
     delete [] localBuffer;
 }
-
-#endif

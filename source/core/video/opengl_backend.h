@@ -11,7 +11,7 @@
 class OpenGLBackend final : public VideoBackendBase
 {
 public:
-    OpenGLBackend(VideoManager& videoOutput, void* windowHandle);
+    OpenGLBackend(void* windowHandle);
     ~OpenGLBackend();
 
     int Prepare() override;
@@ -28,6 +28,8 @@ private:
     void UpdateSurfaceSize();
     void SwapFrameBuffers();
 
+
+    void* _windowHandle;
     uint32_t _windowWidth;
     uint32_t _windowHeight;
     uint32_t _currentFps{0};

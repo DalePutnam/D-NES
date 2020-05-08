@@ -19,12 +19,9 @@ add_library(dnes SHARED
     mappers/uxrom.cc
     mappers/cnrom.cc
     mappers/mmc3.cc
-    audio/audio_backend.cc
-    audio/iaudio_platform.cc
-    audio/alsa_platform.cc
+    audio/alsa_backend.cc
     video/gl_util.cc
     video/opengl_backend.cc
-    video/video_manager.cc
     video/igl_platform.cc
     video/glx_platform.cc
 )

@@ -12,16 +12,16 @@
 
 #include "state_save.h"
 
+class NES;
 class CPU;
 class Cart;
-class VideoManager;
 
 struct PPUState;
 
 class PPU
 {
 public:
-    PPU(VideoManager& videoOut);
+    PPU(NES& nes);
 
     ~PPU();
 
@@ -58,7 +58,7 @@ public:
     bool EndOfFrame();
 
 private:
-    VideoManager& VideoOut;
+    NES& _nes;
 
     Cart* _cart;
     std::unique_ptr<PPUState> _ppuState;

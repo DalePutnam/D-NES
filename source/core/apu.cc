@@ -2,9 +2,10 @@
 #include <cstring>
 #include <cmath>
 
+#include "nes.h"
 #include "apu.h"
 #include "cpu.h"
-#include "audio/audio_backend.h"
+#include "audio/audio_backend_base.h"
 
 namespace
 {
@@ -894,9 +895,9 @@ void APU::MixerUnit::Clock()
 	{
 		ExtraCount += CycleRemainder;
 
-		if (ExtraCount > Apu.AudioOut->GetSampleRate())
+		if (ExtraCount > Apu.SampleRate)
 		{
-			ExtraCount = ExtraCount - Apu.AudioOut->GetSampleRate();
+			ExtraCount = ExtraCount - Apu.SampleRate;
 		}
 		else
 		{
@@ -968,7 +969,7 @@ void APU::MixerUnit::GenerateSample()
 
 	// Send final sample to the backend
 	float finalSample = ((pulse + tndOut) * Apu.MasterVolume) - 0.5f;
-	Apu.AudioOut->SubmitSample(finalSample);
+	Apu.Nes.GetAudioBackend().SubmitSample(finalSample);
 }
 
 void APU::MixerUnit::Reset()
@@ -982,7 +983,7 @@ void APU::MixerUnit::Reset()
 	NoiseAccumulator = 0;
 	DmcAccumulator = 0;
 
-    Apu.AudioOut->Reset();
+    Apu.Nes.GetAudioBackend().Reset();
 }
 
 void APU::MixerUnit::SetTargetFrameRate(uint32_t rate)
@@ -995,16 +996,16 @@ void APU::MixerUnit::SetTargetFrameRate(uint32_t rate)
 	if (rate == 60)
 	{
 		TargetCpuFrequency = CPU::NTSC_FREQUENCY;
-		CyclesPerSample = CPU::NTSC_FREQUENCY / Apu.AudioOut->GetSampleRate();
-		CycleRemainder = CPU::NTSC_FREQUENCY % Apu.AudioOut->GetSampleRate();
-		SamplesPerFrame = Apu.AudioOut->GetSampleRate() / rate;
+		CyclesPerSample = CPU::NTSC_FREQUENCY / Apu.SampleRate;
+		CycleRemainder = CPU::NTSC_FREQUENCY % Apu.SampleRate;
+		SamplesPerFrame = Apu.SampleRate / rate;
 	}
 	else
 	{
 		TargetCpuFrequency = static_cast<uint32_t>(static_cast<double>(CPU::NTSC_FREQUENCY) * (static_cast<double>(rate) / 60.0));
-		CyclesPerSample = TargetCpuFrequency / Apu.AudioOut->GetSampleRate();
-		CycleRemainder = TargetCpuFrequency % Apu.AudioOut->GetSampleRate();
-		SamplesPerFrame = Apu.AudioOut->GetSampleRate() / rate;
+		CyclesPerSample = TargetCpuFrequency / Apu.SampleRate;
+		CycleRemainder = TargetCpuFrequency % Apu.SampleRate;
+		SamplesPerFrame = Apu.SampleRate / rate;
 	}
 
 	Reset();
@@ -1037,10 +1038,10 @@ void APU::MixerUnit::UpdateMode()
 // APU Main Unit
 //**********************************************************************
 
-APU::APU()
-	: Cpu(nullptr)
+APU::APU(NES& nes)
+	: Nes(nes)
+    , Cpu(nullptr)
 	, Cartridge(nullptr)
-	, AudioOut(nullptr)
 	, PulseOne(true)
 	, PulseTwo(false)
 	, Dmc(*this)
@@ -1052,6 +1053,7 @@ APU::APU()
     , FrameInterruptFlag(false)
     , FrameResetFlag(false)
     , FrameResetCountdown(0)
+    , SampleRate(AudioBackendBase::DEFAULT_SAMPLE_RATE)
     , TurboModeEnabled(false)
 	, AudioEnabled(true)
     , MasterVolume(1.0f)
@@ -1061,6 +1063,7 @@ APU::APU()
     , NoiseVolume(1.0f)
     , DmcVolume(1.0f)
 {
+    SetTargetFrameRate(60);
 }
 
 APU::~APU()
@@ -1075,12 +1078,6 @@ void APU::AttachCPU(CPU* cpu)
 void APU::AttachCart(Cart* cart)
 {
     this->Cartridge = cart;
-}
-
-void APU::SetBackend(AudioBackend* backend)
-{
-    AudioOut = backend;
-    SetTargetFrameRate(60);
 }
 
 void APU::SetTargetFrameRate(uint32_t rate)

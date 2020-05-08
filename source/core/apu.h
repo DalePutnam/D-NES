@@ -13,12 +13,11 @@ class AudioBackend;
 class APU
 {
 public:
-	APU();
+	APU(NES& nes);
     ~APU();
 
     void AttachCPU(CPU* cpu);
     void AttachCart(Cart* cart);
-    void SetBackend(AudioBackend* backend);
 
     void Step();
     bool CheckIRQ();
@@ -27,6 +26,7 @@ public:
     void WriteDmaByte(uint8_t byte);
 
     void SetTargetFrameRate(uint32_t rate);
+    void SetSampleRate(uint32_t rate);
 
     void WritePulseOneRegister(uint8_t reg, uint8_t value);
     void WritePulseTwoRegister(uint8_t reg, uint8_t value);
@@ -250,9 +250,9 @@ private:
 		uint32_t FrameSampleCount;
 	};
 
+    NES& Nes;
     CPU* Cpu;
     Cart* Cartridge;
-    AudioBackend* AudioOut;
 
     PulseUnit PulseOne;
     PulseUnit PulseTwo;
@@ -269,6 +269,8 @@ private:
     bool FrameInterruptFlag;
     bool FrameResetFlag;
     uint8_t FrameResetCountdown;
+
+    uint32_t SampleRate;
 
     std::atomic<bool> TurboModeEnabled;
 	std::atomic<bool> AudioEnabled;

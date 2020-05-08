@@ -16,8 +16,8 @@ class CPU;
 class PPU;
 class APU;
 class Cart;
-class AudioBackend;
-class VideoManager;
+class AudioBackendBase;
+class VideoBackendBase;
 
 class NES final : public dnes::INES
 {
@@ -102,6 +102,9 @@ public:
     APU* GetApu() { return Apu.get(); }
     Cart* GetCart() { return Cartridge.get(); };
 
+    VideoBackendBase& GetVideoBackend() { return *VideoOut; }
+    AudioBackendBase& GetAudioBackend() { return *AudioOut; }
+
 
 private:
     // Main run function, launched in a new thread by NES::Start
@@ -127,16 +130,12 @@ private:
     std::unique_ptr<CPU> Cpu;
     std::unique_ptr<PPU> Ppu;
     std::unique_ptr<Cart> Cartridge;
-    std::unique_ptr<AudioBackend> AudioOut;
-    std::unique_ptr<VideoManager> VideoOut;
+    std::unique_ptr<AudioBackendBase> AudioOut;
+    std::unique_ptr<VideoBackendBase> VideoOut;
 
     void* WindowHandle{nullptr};
 
     dnes::INESCallback* Callback{nullptr};
-
-    std::atomic<bool> ShowFps{false};
-    std::atomic<bool> OverscanEnabled{true};
-    std::atomic<uint32_t> TargetFrameRate{60};
 
     std::string NativeSaveDirectory;
 
