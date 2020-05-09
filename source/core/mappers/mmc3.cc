@@ -310,7 +310,7 @@ void MMC3::ClockIRQCounter(uint16_t address)
 {
     if ((address & 0x1000) != 0)
     {
-        if (!_lastReadHigh && _nes.GetPpu()->GetClock() - _lastRiseCycle >= 16)
+        if (!_lastReadHigh && _nes.GetPpu().GetClock() - _lastRiseCycle >= 16)
         {
             if (_irqCounter == 0)
             {
@@ -329,7 +329,7 @@ void MMC3::ClockIRQCounter(uint16_t address)
 
         if (!_lastReadHigh)
         {
-            _lastRiseCycle = _nes.GetPpu()->GetClock();
+            _lastRiseCycle = _nes.GetPpu().GetClock();
         }
         
         _lastReadHigh = true;   

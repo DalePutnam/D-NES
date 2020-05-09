@@ -88,12 +88,12 @@ uint8_t MMC1::CpuRead(uint16_t address)
 
 void MMC1::CpuWrite(uint8_t M, uint16_t address)
 {
-    if (_nes.GetCpu()->GetClock() - _lastWriteCycle <= 6)
+    if (_nes.GetCpu().GetClock() - _lastWriteCycle <= 6)
     {
         return;
     }
 
-    _lastWriteCycle = _nes.GetCpu()->GetClock();
+    _lastWriteCycle = _nes.GetCpu().GetClock();
 
     if (address >= 0x6000 && address < 0x8000)
     {

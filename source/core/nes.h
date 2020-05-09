@@ -88,10 +88,10 @@ public:
         return Logger.get();
     }
 
-    CPU* GetCpu() { return Cpu.get(); }
-    PPU* GetPpu() { return Ppu.get(); }
-    APU* GetApu() { return Apu.get(); }
-    Cart* GetCart() { return Cartridge.get(); };
+    CPU& GetCpu() { return *Cpu; }
+    PPU& GetPpu() { return *Ppu; }
+    APU& GetApu() { return *Apu; }
+    Cart& GetCart() { return *Cartridge; };
 
     VideoBackendBase& GetVideoBackend() { return *VideoOut; }
     AudioBackendBase& GetAudioBackend() { return *AudioOut; }
