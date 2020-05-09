@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _DNES_H_
+#define _DNES_H_
 
 #include <cstdint>
 
@@ -66,7 +67,7 @@ public:
         ERROR
     };
 
-    virtual int LoadGame(const char* path) = 0;
+    virtual int LoadGame(const char* romFile, const char* saveFile = nullptr) = 0;
 
     virtual int SetWindowHandle(void* handle) = 0;
 
@@ -77,16 +78,12 @@ public:
     virtual int SetLogFile(const char* file) = 0;
     virtual int SetLogCallback(INESLogCallback* callback) = 0;
 
-    virtual const char* GetGameName() = 0;
-
     virtual State GetState() = 0;
 
     virtual void SetControllerOneState(uint8_t state) = 0;
     virtual uint8_t GetControllerOneState() = 0;
 
     virtual int SetCpuLogEnabled(bool enabled) = 0;
-    virtual void SetNativeSaveDirectory(const char* saveDir) = 0;
-    virtual void SetStateSaveDirectory(const char* saveDir) = 0;
 
     virtual void SetTargetFrameRate(uint32_t rate) = 0;
     virtual void SetTurboModeEnabled(bool enabled) = 0;
@@ -103,18 +100,13 @@ public:
     virtual void ShowMessage(const char* msg, uint32_t duration) = 0;
 
     virtual void SetAudioEnabled(bool enabled) = 0;
-    virtual void SetMasterVolume(float volume) = 0;
 
+    virtual void SetMasterVolume(float volume) = 0;
     virtual void SetPulseOneVolume(float volume) = 0;
-    virtual float GetPulseOneVolume() = 0;
     virtual void SetPulseTwoVolume(float volume) = 0;
-    virtual float GetPulseTwoVolume() = 0;
     virtual void SetTriangleVolume(float volume) = 0;
-    virtual float GetTriangleVolume() = 0;
     virtual void SetNoiseVolume(float volume) = 0;
-    virtual float GetNoiseVolume() = 0;
     virtual void SetDmcVolume(float volume) = 0;
-    virtual float GetDmcVolume() = 0;
 
     // Launch the emulator on a new thread.
     // This function returns immediately.
@@ -128,8 +120,8 @@ public:
     virtual void Pause() = 0;
     virtual int Reset() = 0;
 
-    virtual int SaveState(int slot) = 0;
-    virtual int LoadState(int slot) = 0;
+    virtual int SaveState(const char* file) = 0;
+    virtual int LoadState(const char* file) = 0;
 
     virtual int GetCurrentErrorCode() = 0;
 
@@ -138,3 +130,5 @@ protected:
 };
 
 }; // namespace dnes
+
+#endif // _DNES_H_

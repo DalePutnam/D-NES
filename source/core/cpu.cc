@@ -1932,25 +1932,25 @@ void CPU::SetLogEnabled(bool enabled)
 {
     LogEnabled = enabled;
 
-    if (LogEnabled)
-    {
-        long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        std::string logName = std::string(Nes.GetGameName()) + "_" + std::to_string(time) + ".log";
-        LogFile = fopen(logName.c_str(), "w");
+    // if (LogEnabled)
+    // {
+    //     long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    //     std::string logName = std::string(Nes.GetGameName()) + "_" + std::to_string(time) + ".log";
+    //     LogFile = fopen(logName.c_str(), "w");
 
-        if (LogFile == nullptr)
-        {
-            std::string message = "Failed to open log file. ";
-            message += logName;
+    //     if (LogFile == nullptr)
+    //     {
+    //         std::string message = "Failed to open log file. ";
+    //         message += logName;
 
-            throw NesException("CPU", message);
-        }
-    }
-    else if (LogFile != nullptr)
-    {
-        fclose(LogFile);
-        LogFile = nullptr;
-    }
+    //         throw NesException("CPU", message);
+    //     }
+    // }
+    // else if (LogFile != nullptr)
+    // {
+    //     fclose(LogFile);
+    //     LogFile = nullptr;
+    // }
 }
 
 StateSave::Ptr CPU::SaveState()

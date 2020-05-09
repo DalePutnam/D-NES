@@ -24,10 +24,10 @@ public:
     Cart(NES& nes);
     ~Cart();
 
-    int Initialize(iNesFile* file);
+    int Initialize(const char* romPath, const char* saveFile);
 
-    void SaveNativeSave(const std::string& saveDir);
-    void LoadNativeSave(const std::string& saveDir);
+    int SaveNvRam();
+    int LoadNvRam();
 
     uint8_t CpuRead(uint16_t address);
     void CpuWrite(uint8_t M, uint16_t address);
@@ -43,10 +43,9 @@ public:
 
     bool CheckIRQ();
 
-
-
 private:
     NES& _nes;
-    iNesFile* _iNesFile;
+    std::string _saveFile;
+    std::unique_ptr<iNesFile> _iNesFile;
     std::unique_ptr<MapperBase> _mapper;
 };

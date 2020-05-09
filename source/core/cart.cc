@@ -31,9 +31,10 @@ Cart::~Cart()
 {
 }
 
-int Cart::Initialize(iNesFile* file)
+int Cart::Initialize(const char* romFile, const char* saveFile)
 {
-    _iNesFile = file;
+    _iNesFile = std::make_unique<iNesFile>(romFile);
+    _saveFile = saveFile;
 
     switch (_iNesFile->GetMapperNumber())
     {
@@ -60,32 +61,38 @@ int Cart::Initialize(iNesFile* file)
     return dnes::SUCCESS;
 }
 
-void Cart::SaveNativeSave(const std::string& saveDir)
+int Cart::SaveNvRam()
 {
-    std::string saveFile = file::createFullPath(_nes.GetGameName(), "sav", saveDir);
-    std::ofstream saveStream(saveFile.c_str(), std::ofstream::out | std::ofstream::binary);
+    if (_saveFile.empty())
+    {
+        return 0;
+    }
+
+    std::ofstream saveStream(_saveFile.c_str(), std::ofstream::out | std::ofstream::binary);
 
     if (saveStream.good())
     {
         _mapper->SaveNativeSave(saveStream);
     }
-    else
-    {
-        throw NesException("Cart", "Failed to open save file for writing");
-    }
+
+    return 0;
 }
 
-void Cart::LoadNativeSave(const std::string& saveDir)
+int Cart::LoadNvRam()
 {
-    std::string saveFile = file::createFullPath(_nes.GetGameName(), "sav", saveDir);
-    std::ifstream saveStream(saveFile.c_str(), std::ifstream::in | std::ofstream::binary);
+    if (_saveFile.empty())
+    {
+        return 0;
+    }
+
+    std::ifstream saveStream(_saveFile.c_str(), std::ifstream::in | std::ofstream::binary);
 
     if (saveStream.good())
     {
         _mapper->LoadNativeSave(saveStream);
     }
 
-    // If the file didn't open just assume save data doesn't exist
+    return 0;
 }
 
 uint8_t Cart::CpuRead(uint16_t address)

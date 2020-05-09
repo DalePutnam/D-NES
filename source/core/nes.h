@@ -24,7 +24,7 @@ class NES final : public dnes::INES
 public:
     // External interface
 
-    int LoadGame(const char* path) override;
+    int LoadGame(const char* romFile, const char* saveFile = nullptr) override;
 
     int SetWindowHandle(void* handle) override;
 
@@ -35,16 +35,12 @@ public:
     int SetLogFile(const char* file) override;
     int SetLogCallback(dnes::INESLogCallback* callback) override;
 
-    const char* GetGameName() override;
-
     State GetState() override;
 
     void SetControllerOneState(uint8_t state) override;
     uint8_t GetControllerOneState() override;
 
     int SetCpuLogEnabled(bool enabled) override;
-    void SetNativeSaveDirectory(const char* saveDir) override;
-    void SetStateSaveDirectory(const char* saveDir) override;
 
     void SetTargetFrameRate(uint32_t rate) override;
     void SetTurboModeEnabled(bool enabled) override;
@@ -61,18 +57,13 @@ public:
     void ShowMessage(const char* message, uint32_t duration) override;
 
     void SetAudioEnabled(bool enabled) override;
-    void SetMasterVolume(float volume) override;
 
+    void SetMasterVolume(float volume) override;
     void SetPulseOneVolume(float volume) override;
-    float GetPulseOneVolume() override;
     void SetPulseTwoVolume(float volume) override;
-    float GetPulseTwoVolume() override;
     void SetTriangleVolume(float volume) override;
-    float GetTriangleVolume() override;
     void SetNoiseVolume(float volume) override;
-    float GetNoiseVolume() override;
     void SetDmcVolume(float volume) override;
-    float GetDmcVolume() override;
 
     int Start() override;
     int Stop() override;
@@ -81,8 +72,8 @@ public:
 
     int Reset() override;
 
-    int SaveState(int slot) override;
-    int LoadState(int slot) override;
+    int SaveState(const char* file) override;
+    int LoadState(const char* file) override;
 
     int GetCurrentErrorCode() override;
 
@@ -121,11 +112,9 @@ private:
     std::condition_variable ControlCv;
 
     std::thread NesThread;
-
-    std::string GameName;
-    std::string StateSaveDirectory;
     std::atomic<int> CurrentErrorCode;
 
+    // Emulator Components
     std::unique_ptr<APU> Apu;
     std::unique_ptr<CPU> Cpu;
     std::unique_ptr<PPU> Ppu;
@@ -133,15 +122,12 @@ private:
     std::unique_ptr<AudioBackendBase> AudioOut;
     std::unique_ptr<VideoBackendBase> VideoOut;
 
-    void* WindowHandle{nullptr};
-
-    dnes::INESCallback* Callback{nullptr};
-
-    std::string NativeSaveDirectory;
-
+    // Logging
     std::shared_ptr<spdlog::logger> Logger;
     dnes::LogLevel LogLevel{dnes::LogLevel::ERROR};
     std::string LogPattern;
 
-    std::unique_ptr<dnes::INESLogCallback> LogCallback{};
+    // Callbacks
+    dnes::INESCallback* Callback{nullptr};
+    dnes::INESLogCallback* LogCallback{nullptr};
 };

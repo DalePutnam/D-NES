@@ -150,11 +150,6 @@ void PathSettingsWindow::DoOk()
         wxDir::Make(newStatePath);
     }
 
-    if (Nes != nullptr)
-    {
-        Nes->SetNativeSaveDirectory(newSavePath.c_str());
-    }
-
     Close();
 }
 

@@ -120,7 +120,7 @@ NES::~NES()
     GetLogger()->flush();
 }
 
-int NES::LoadGame(const char* path)
+int NES::LoadGame(const char* romFile, const char* saveFile)
 {
     if (CurrentState != State::READY)
     {
@@ -128,12 +128,9 @@ int NES::LoadGame(const char* path)
         return ERROR_LOAD_GAME_AFTER_START;
     }
 
-    GameName = file::getNameFromPath(path);
-
     try
     {
-        iNesFile romFile(path);
-        return Cartridge->Initialize(&romFile);
+        return Cartridge->Initialize(romFile, saveFile);
     }
     catch (std::string& msg)
     {
@@ -246,11 +243,6 @@ int NES::SetLogCallback(dnes::INESLogCallback* callback)
     return dnes::SUCCESS;
 }
 
-const char* NES::GetGameName()
-{
-    return GameName.c_str();
-}
-
 void NES::SetControllerOneState(uint8_t state)
 {
     Cpu->SetControllerOneState(state);
@@ -275,16 +267,6 @@ int NES::SetCpuLogEnabled(bool enabled)
     }
 
     return dnes::SUCCESS;
-}
-
-void NES::SetNativeSaveDirectory(const char* saveDir)
-{
-    NativeSaveDirectory = saveDir;
-}
-
-void NES::SetStateSaveDirectory(const char* saveDir)
-{
-    StateSaveDirectory = saveDir;
 }
 
 void NES::SetTargetFrameRate(uint32_t rate)
@@ -357,29 +339,15 @@ void NES::SetPulseOneVolume(float volume)
     Apu->SetPulseOneVolume(volume);
 }
 
-float NES::GetPulseOneVolume()
-{
-    return Apu->GetPulseOneVolume();
-}
-
 void NES::SetPulseTwoVolume(float volume)
 {
     Apu->SetPulseTwoVolume(volume);
 }
 
-float NES::GetPulseTwoVolume()
-{
-    return Apu->GetPulseTwoVolume();
-}
 
 void NES::SetTriangleVolume(float volume)
 {
     Apu->SetTriangleVolume(volume);
-}
-
-float NES::GetTriangleVolume()
-{
-    return Apu->GetTriangleVolume();
 }
 
 void NES::SetNoiseVolume(float volume)
@@ -387,19 +355,9 @@ void NES::SetNoiseVolume(float volume)
     Apu->SetNoiseVolume(volume);
 }
 
-float NES::GetNoiseVolume()
-{
-    return Apu->GetNoiseVolume();
-}
-
 void NES::SetDmcVolume(float volume)
 {
     Apu->SetDmcVolume(volume);
-}
-
-float NES::GetDmcVolume()
-{
-    return Apu->GetDmcVolume();
 }
 
 NES::State NES::GetState()
@@ -490,16 +448,14 @@ int NES::Reset()
     return ERROR_UNIMPLEMENTED;
 }
 
-int NES::SaveState(int slot)
+int NES::SaveState(const char* file)
 {
     if (CurrentState != State::RUNNING && CurrentState != State::PAUSED)
     {
         return ERROR_STATE_SAVE_NOT_RUNNING;
     }
 
-    std::string extension = "state" + std::to_string(slot);
-    std::string fileName = file::createFullPath(GetGameName(), extension, StateSaveDirectory);
-    std::ofstream saveStream(fileName.c_str(), std::ofstream::out | std::ofstream::binary);
+    std::ofstream saveStream(file, std::ofstream::out | std::ofstream::binary);
 
     if (!saveStream.good())
     {
@@ -537,7 +493,7 @@ int NES::SaveState(int slot)
 
     if (VideoOut != nullptr)
     {
-        VideoOut->ShowMessage("Saved State " + std::to_string(slot), 5);
+        VideoOut->ShowMessage("Saved State", 5);
     }
 
     Resume();
@@ -545,16 +501,14 @@ int NES::SaveState(int slot)
     return dnes::SUCCESS;
 }
 
-int NES::LoadState(int slot)
+int NES::LoadState(const char* file)
 {
     if (CurrentState != State::RUNNING && CurrentState != State::PAUSED)
     {
         return ERROR_STATE_LOAD_NOT_RUNNING;
     }
 
-    std::string extension = "state" + std::to_string(slot);
-    std::string fileName = file::createFullPath(GetGameName(), extension, StateSaveDirectory);
-    std::ifstream saveStream(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
+    std::ifstream saveStream(file, std::ifstream::in | std::ifstream::binary);
 
     if (!saveStream.good())
     {
@@ -592,7 +546,7 @@ int NES::LoadState(int slot)
 
     if (VideoOut != nullptr)
     {
-        VideoOut->ShowMessage("Loaded State " + std::to_string(slot), 5);
+        VideoOut->ShowMessage("Loaded State", 5);
     }
 
     Resume();
@@ -612,7 +566,7 @@ void NES::Run()
         AudioOut->Initialize();
         VideoOut->Prepare();
 
-        Cartridge->LoadNativeSave(NativeSaveDirectory);
+        Cartridge->LoadNvRam();
 
         CurrentState = State::RUNNING;
 
@@ -642,7 +596,7 @@ void NES::Run()
         StopRequested = false;
         CurrentState = State::STOPPED;
 
-        Cartridge->SaveNativeSave(NativeSaveDirectory);
+        Cartridge->SaveNvRam();
 
         VideoOut->Finalize();
         AudioOut->CleanUp();

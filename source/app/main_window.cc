@@ -122,23 +122,22 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         AppSettings& appSettings = AppSettings::GetInstance();
 
-        wxString nativeSavePath, stateSavePath;
+        wxString nativeSavePath;
         appSettings.Read("/Paths/NativeSavePath", &nativeSavePath);
-        appSettings.Read("/Paths/StateSavePath", &stateSavePath);
+        
 
         if (!wxDir::Exists(nativeSavePath))
         {
             wxDir::Make(nativeSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         }    
 
-        if (!wxDir::Exists(stateSavePath))
-        {
-            wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-        }
-
         Nes = NESPtr(dnes::CreateNES());
 
-        int result = Nes->LoadGame(filename.c_str());
+        wxFileName saveFile(filename);
+        saveFile.SetPath(nativeSavePath);
+        saveFile.SetExt("sav");
+
+        int result = Nes->LoadGame(filename.c_str(), saveFile.GetFullPath().c_str());
         if (result != dnes::SUCCESS)
         {
             wxMessageDialog message(nullptr, dnes::GetErrorMessageFromCode(result), "Error", wxOK | wxICON_ERROR);
@@ -154,7 +153,6 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         Nes->SetWindowHandle(windowHandle);
         Nes->SetCallback(this);
-        Nes->SetNativeSaveDirectory(nativeSavePath.c_str());
 
         Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
         Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
@@ -189,14 +187,11 @@ void MainWindow::StartEmulator(const std::string& filename)
         Nes->SetOverscanEnabled(overscanEnabled);
         Nes->SetNtscDecoderEnabled(ntscDecodingEnabled);
 
-        Nes->SetStateSaveDirectory(stateSavePath.c_str());
-
-
         GameMenuSize.SetWidth(GetSize().GetWidth());
         GameMenuSize.SetHeight(GetSize().GetHeight());
 
         VerticalBox->Hide(RomList);
-        SetTitle(Nes->GetGameName());
+        SetTitle(wxFileName(filename).GetName());
         SetClientSize(GameWindowSize);
 
         SetMinClientSize(GameWindowSize);
@@ -317,8 +312,18 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        int slot = event.GetId() % 10;
-        int result = Nes->SaveState(slot + 1);
+        wxString stateSavePath;
+        AppSettings::GetInstance().Read("/Paths/StateSavePath", &stateSavePath);
+
+        if (!wxDir::Exists(stateSavePath))
+        {
+            wxDir::Make(stateSavePath, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+        }
+
+        int slot = (event.GetId() % 10) + 1;
+        wxFileName stateSaveFile(stateSavePath, GetTitle(), "state" + std::to_string(slot));
+
+        int result = Nes->SaveState(stateSaveFile.GetFullPath().c_str());
 
         if (result != dnes::SUCCESS)
         {
@@ -332,8 +337,13 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
 {
     if (Nes != nullptr)
     {
-        int slot = event.GetId() % 10;
-        int result = Nes->LoadState(slot + 1);
+        wxString stateSavePath;
+        AppSettings::GetInstance().Read("/Paths/StateSavePath", &stateSavePath);
+
+        int slot = (event.GetId() % 10) + 1;
+        wxFileName stateSaveFile(stateSavePath, GetTitle(), "state" + std::to_string(slot));
+
+        int result = Nes->LoadState(stateSaveFile.GetFullPath().c_str());
 
         if (result != dnes::SUCCESS)
         {
