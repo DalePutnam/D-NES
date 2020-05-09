@@ -15,6 +15,7 @@
 #include <wx/sizer.h>
 #include <wx/listctrl.h>
 #include <wx/bitmap.h>
+#include <wx/filename.h>
 
 #include <dnes/dnes.h>
 
@@ -72,6 +73,8 @@ private:
 
     wxSize GameWindowSize;
     wxSize GameMenuSize;
+
+    wxFileName GamePath;
 
     void InitializeMenus();
     void InitializeLayout();

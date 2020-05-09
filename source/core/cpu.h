@@ -42,7 +42,8 @@ public:
     void Step(); // Execute next instruction
     void Reset(); // Reset the CPU to starting conditions
 
-    void SetLogEnabled(bool enabled);
+    int StartLog(const std::string& logFile);
+    void StopLog();
 
     StateSave::Ptr SaveState();
     void LoadState(const StateSave::Ptr& state);

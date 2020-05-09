@@ -40,7 +40,8 @@ public:
     void SetControllerOneState(uint8_t state) override;
     uint8_t GetControllerOneState() override;
 
-    int SetCpuLogEnabled(bool enabled) override;
+    int StartCpuLog(const char* logFile) override;
+    void StopCpuLog() override;
 
     void SetTargetFrameRate(uint32_t rate) override;
     void SetTurboModeEnabled(bool enabled) override;

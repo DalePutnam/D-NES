@@ -2,6 +2,8 @@
 
 #include <map>
 
+constexpr int SUCCESS = 0;
+
 constexpr int ERROR_LOAD_GAME_AFTER_START = 1;
 constexpr int ERROR_LOAD_GAME_FAILED = 2;
 constexpr int ERROR_SET_WINDOW_HANDLE_AFTER_START = 3;

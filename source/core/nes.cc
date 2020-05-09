@@ -97,21 +97,6 @@ NES::NES()
     Ppu->AttachCPU(Cpu.get());
     Ppu->AttachCart(Cartridge.get());
 
-    // CPU Settings
-    Cpu->SetLogEnabled(false);
-
-    // PPU Settings
-
-    // APU Settings
-    Apu->SetTurboModeEnabled(false);
-    Apu->SetAudioEnabled(true);
-    Apu->SetMasterVolume(1.f);
-    Apu->SetPulseOneVolume(1.f);
-    Apu->SetPulseTwoVolume(1.f);
-    Apu->SetTriangleVolume(1.f);
-    Apu->SetNoiseVolume(1.f);
-    Apu->SetDmcVolume(1.f);
-
     CurrentState = State::READY;
 }
 
@@ -253,20 +238,24 @@ uint8_t NES::GetControllerOneState()
     return Cpu->GetControllerOneState();
 }
 
-int NES::SetCpuLogEnabled(bool enabled)
+int NES::StartCpuLog(const char* logFile)
 {
-    try
-    {
-        Pause();
-        Cpu->SetLogEnabled(enabled);
-        Resume();
-    }
-    catch (NesException& ex)
-    {
-        return ERROR_FAILED_TO_OPEN_CPU_LOG_FILE;
-    }
+    Pause();
 
-    return dnes::SUCCESS;
+    int result = Cpu->StartLog(logFile);
+
+    Resume();
+
+    return result;
+}
+
+void NES::StopCpuLog()
+{
+    Pause();
+
+    Cpu->StopLog();
+
+    Resume();
 }
 
 void NES::SetTargetFrameRate(uint32_t rate)

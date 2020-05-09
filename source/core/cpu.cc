@@ -15,6 +15,8 @@
 #include "ppu.h"
 #include "apu.h"
 
+#include "common/error_handling.h"
+
 // One of the headers on windows defines OVERFLOW
 #ifdef OVERFLOW
 #undef OVERFLOW
@@ -1912,10 +1914,7 @@ bool CPU::IsLogEnabled()
 
 CPU::~CPU()
 {
-    if (LogEnabled && LogFile != nullptr)
-    {
-        fclose(LogFile);
-    }
+    StopLog();
 }
 
 void CPU::SetControllerOneState(uint8_t statePtr)
@@ -1928,29 +1927,30 @@ uint8_t CPU::GetControllerOneState()
     return ControllerOneState;
 }
 
-void CPU::SetLogEnabled(bool enabled)
+int CPU::StartLog(const std::string& logFile)
 {
-    LogEnabled = enabled;
+    LogFile = fopen(logFile.c_str(), "w");
 
-    // if (LogEnabled)
-    // {
-    //     long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    //     std::string logName = std::string(Nes.GetGameName()) + "_" + std::to_string(time) + ".log";
-    //     LogFile = fopen(logName.c_str(), "w");
+    if (LogFile == nullptr)
+    {
+        return ERROR_FAILED_TO_OPEN_CPU_LOG_FILE;
+    }
 
-    //     if (LogFile == nullptr)
-    //     {
-    //         std::string message = "Failed to open log file. ";
-    //         message += logName;
+    LogEnabled = true;
 
-    //         throw NesException("CPU", message);
-    //     }
-    // }
-    // else if (LogFile != nullptr)
-    // {
-    //     fclose(LogFile);
-    //     LogFile = nullptr;
-    // }
+    return SUCCESS;
+}
+
+void CPU::StopLog()
+{
+    if (!LogEnabled)
+    {
+        return;
+    }
+
+    fclose(LogFile);
+    LogFile = nullptr;
+    LogEnabled = false;
 }
 
 StateSave::Ptr CPU::SaveState()

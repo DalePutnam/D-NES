@@ -112,6 +112,8 @@ void MainWindow::StartEmulator(const std::string& filename)
 {
     if (Nes == nullptr)
     {
+        GamePath.Assign(filename);
+
         RenderSurface->Show();
 
 #if defined(_WIN32)
@@ -133,7 +135,7 @@ void MainWindow::StartEmulator(const std::string& filename)
 
         Nes = NESPtr(dnes::CreateNES());
 
-        wxFileName saveFile(filename);
+        wxFileName saveFile(GamePath);
         saveFile.SetPath(nativeSavePath);
         saveFile.SetExt("sav");
 
@@ -154,7 +156,18 @@ void MainWindow::StartEmulator(const std::string& filename)
         Nes->SetWindowHandle(windowHandle);
         Nes->SetCallback(this);
 
-        Nes->SetCpuLogEnabled(SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked());
+        if (SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked())
+        {
+            wxFileName logFile(GamePath);
+            logFile.SetPath(wxFileName::GetCwd());
+            logFile.SetExt("log");
+
+            long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            logFile.SetName(logFile.GetName() + "_" + std::to_string(time));
+
+            Nes->StartCpuLog(logFile.GetFullPath().c_str());
+        }
+
         Nes->SetTurboModeEnabled(SettingsMenu->FindItem(ID_FRAME_LIMIT)->IsChecked());
 
         bool audioEnabled;
@@ -245,8 +258,21 @@ void MainWindow::ToggleCPULog(wxCommandEvent& WXUNUSED(event))
 {
     if (Nes != nullptr)
     {
-        bool logEnabled = SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked();
-        Nes->SetCpuLogEnabled(logEnabled);
+        if (SettingsMenu->FindItem(ID_CPU_LOG)->IsChecked())
+        {
+            wxFileName logFile(GamePath);
+            logFile.SetPath(wxFileName::GetCwd());
+            logFile.SetExt("log");
+
+            long long time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            logFile.SetName(logFile.GetName() + "_" + std::to_string(time));
+
+            Nes->StartCpuLog(logFile.GetFullPath().c_str());
+        }
+        else
+        {
+            Nes->StopCpuLog();
+        }
     }
 }
 
@@ -321,7 +347,7 @@ void MainWindow::OnSaveState(wxCommandEvent& event)
         }
 
         int slot = (event.GetId() % 10) + 1;
-        wxFileName stateSaveFile(stateSavePath, GetTitle(), "state" + std::to_string(slot));
+        wxFileName stateSaveFile(stateSavePath, GamePath.GetName(), "state" + std::to_string(slot));
 
         int result = Nes->SaveState(stateSaveFile.GetFullPath().c_str());
 
@@ -341,7 +367,7 @@ void MainWindow::OnLoadState(wxCommandEvent& event)
         AppSettings::GetInstance().Read("/Paths/StateSavePath", &stateSavePath);
 
         int slot = (event.GetId() % 10) + 1;
-        wxFileName stateSaveFile(stateSavePath, GetTitle(), "state" + std::to_string(slot));
+        wxFileName stateSaveFile(stateSavePath, GamePath.GetName(), "state" + std::to_string(slot));
 
         int result = Nes->LoadState(stateSaveFile.GetFullPath().c_str());
 

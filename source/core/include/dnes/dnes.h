@@ -83,7 +83,8 @@ public:
     virtual void SetControllerOneState(uint8_t state) = 0;
     virtual uint8_t GetControllerOneState() = 0;
 
-    virtual int SetCpuLogEnabled(bool enabled) = 0;
+    virtual int StartCpuLog(const char* logFile) = 0;
+    virtual void StopCpuLog() = 0;
 
     virtual void SetTargetFrameRate(uint32_t rate) = 0;
     virtual void SetTurboModeEnabled(bool enabled) = 0;
