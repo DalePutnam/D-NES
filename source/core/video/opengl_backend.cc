@@ -306,16 +306,6 @@ void OpenGLBackend::SwapFrameBuffers()
     _glPlatform->SwapBuffers();
 }
 
-// void OpenGLBackend::SetFps(uint32_t fps)
-// {
-//     _currentFps = fps;
-// }
-
-// void OpenGLBackend::ShowFps(bool show)
-// {
-//     _showingFps = show;
-// }
-
 void OpenGLBackend::ShowMessage(const std::string & message, uint32_t duration)
 {
     using namespace std::chrono;
@@ -325,11 +315,6 @@ void OpenGLBackend::ShowMessage(const std::string & message, uint32_t duration)
     steady_clock::time_point expires = steady_clock::now() + seconds(duration);
     _messages.push_back(std::make_pair(toUpperCase(message), expires));
 }
-
-// void OpenGLBackend::SetOverscanEnabled(bool enabled)
-// {
-//     _overscanEnabled = enabled;
-// }
 
 void OpenGLBackend::DrawFps(uint32_t fps)
 {

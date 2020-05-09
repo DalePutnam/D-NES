@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <atomic>
 
 class VideoBackendBase
 {
@@ -16,8 +17,8 @@ public:
     virtual void ShowMessage(const std::string& message, uint32_t duration) = 0;
 
 protected:
-    bool _overscanEnabled{false};
-    bool _showFps{false};
+    std::atomic<bool> _overscanEnabled{false};
+    std::atomic<bool> _showFps{false};
 
 public:
     void SetOverscanEnabled(bool enabled) { _overscanEnabled = enabled; }
@@ -26,7 +27,7 @@ public:
 
     void SwapSettings(VideoBackendBase& other)
     {
-        std::swap(_overscanEnabled, other._overscanEnabled);
-        std::swap(_showFps, other._showFps);
+        _overscanEnabled.exchange(other._overscanEnabled);
+        _showFps.exchange(other._showFps);
     }
 };
