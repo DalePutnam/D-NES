@@ -7,11 +7,11 @@
 #endif
 
 
-std::unique_ptr<IGLPlatform> IGLPlatform::CreateGLPlatform()
+std::unique_ptr<IGLPlatform> IGLPlatform::CreateGLPlatform(NES& nes)
 {
 #if defined(_WIN32)
 	return std::unique_ptr<IGLPlatform>(new WGLPlatform());
 #elif defined(__linux)
-	return std::unique_ptr<IGLPlatform>(new GLXPlatform());
+	return std::make_unique<GLXPlatform>(nes);
 #endif
 }

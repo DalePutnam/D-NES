@@ -4,28 +4,32 @@
 #include <string>
 #include <atomic>
 
+#include "nes.h"
+
 class VideoBackendBase
 {
 public:
-    VideoBackendBase() = default;
     virtual ~VideoBackendBase() = default;
 
-    virtual int Prepare() = 0;
-    virtual void Finalize() = 0;
+    virtual void Initialize() = 0;
+    virtual void CleanUp() noexcept = 0;
 
-    virtual void SubmitFrame(uint8_t* frameBuffer) = 0;
-    virtual void ShowMessage(const std::string& message, uint32_t duration) = 0;
+    virtual void SubmitFrame(uint8_t* frameBuffer) noexcept = 0;
+    virtual void ShowMessage(const std::string& message, uint32_t duration) noexcept = 0;
 
 protected:
+    NES& _nes;
     std::atomic<bool> _overscanEnabled{false};
     std::atomic<bool> _showFps{false};
 
 public:
-    void SetOverscanEnabled(bool enabled) { _overscanEnabled = enabled; }
+    VideoBackendBase(NES& nes): _nes(nes) {}
 
-    void SetShowFps(bool show) { _showFps = show; }
+    void SetOverscanEnabled(bool enabled) noexcept { _overscanEnabled = enabled; }
 
-    void SwapSettings(VideoBackendBase& other)
+    void SetShowFps(bool show) noexcept { _showFps = show; }
+
+    void SwapSettings(VideoBackendBase& other) noexcept
     {
         _overscanEnabled.exchange(other._overscanEnabled);
         _showFps.exchange(other._showFps);

@@ -11,14 +11,14 @@
 class OpenGLBackend final : public VideoBackendBase
 {
 public:
-    OpenGLBackend(void* windowHandle);
+    OpenGLBackend(NES& nes, void* windowHandle);
     ~OpenGLBackend();
 
-    int Prepare() override;
-    void Finalize() override;
+    void Initialize() override;
+    void CleanUp() noexcept override;
 
-    void SubmitFrame(uint8_t* frameBuffer) override;
-    void ShowMessage(const std::string& message, uint32_t duration) override;    
+    void SubmitFrame(uint8_t* frameBuffer) noexcept override;
+    void ShowMessage(const std::string& message, uint32_t duration) noexcept override;    
 
 private:
 

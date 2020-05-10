@@ -24,10 +24,9 @@ public:
     Cart(NES& nes);
     ~Cart();
 
-    int Initialize(const char* romPath, const char* saveFile);
-
-    int SaveNvRam();
-    int LoadNvRam();
+    void Initialize(const char* romPath, const char* saveFile);
+    void SaveNvRam();
+    void LoadNvRam();
 
     uint8_t CpuRead(uint16_t address);
     void CpuWrite(uint8_t M, uint16_t address);

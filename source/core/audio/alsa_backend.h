@@ -11,13 +11,13 @@
 class AlsaBackend : public AudioBackendBase
 {
 public:
-    AlsaBackend() = default;
+    AlsaBackend(NES& nes): AudioBackendBase(nes) {}
     ~AlsaBackend() = default;
 
     virtual void Initialize() override;
-    virtual void CleanUp() override;
-    virtual void Reset() override;
-    virtual void SubmitSample(float sample) override;
+    virtual void CleanUp() noexcept override;
+    virtual void Reset() noexcept override;
+    virtual void SubmitSample(float sample) noexcept override;
 private:
     void StreamWorker();
 

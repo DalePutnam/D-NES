@@ -30,9 +30,17 @@ Cart::~Cart()
 {
 }
 
-int Cart::Initialize(const char* romFile, const char* saveFile)
+void Cart::Initialize(const char* romFile, const char* saveFile)
 {
-    _iNesFile = std::make_unique<iNesFile>(romFile);
+    try
+    {
+        _iNesFile = std::make_unique<iNesFile>(romFile);    
+    }
+    catch (NesException& ex)
+    {
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "{}", ex.what());
+    }
+
     _saveFile = saveFile;
 
     switch (_iNesFile->GetMapperNumber())
@@ -53,45 +61,46 @@ int Cart::Initialize(const char* romFile, const char* saveFile)
         _mapper = std::make_unique<MMC3>(_nes, *_iNesFile);
         break;
     default:
-        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Cart: Mapper {} is unsupported", _iNesFile->GetMapperNumber());
-        return ERROR_UNSUPPORTED_MAPPER;
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Mapper {} is unsupported", _iNesFile->GetMapperNumber());
+        throw NesException(ERROR_UNSUPPORTED_MAPPER);
     }
-
-    return dnes::SUCCESS;
 }
 
-int Cart::SaveNvRam()
+void Cart::SaveNvRam()
 {
     if (_saveFile.empty())
     {
-        return 0;
+        SPDLOG_LOGGER_INFO(_nes.GetLogger(), "No save file specified, save data will not be written");
+        return;
     }
 
     std::ofstream saveStream(_saveFile.c_str(), std::ofstream::out | std::ofstream::binary);
 
-    if (saveStream.good())
+    if (!saveStream.good())
     {
-        _mapper->SaveNativeSave(saveStream);
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Could not open save file {}, save data not written", _saveFile);
+        throw NesException(ERROR_FAILED_TO_SAVE_NV_RAM);
     }
 
-    return 0;
+    _mapper->SaveNativeSave(saveStream);
 }
 
-int Cart::LoadNvRam()
+void Cart::LoadNvRam()
 {
     if (_saveFile.empty())
     {
-        return 0;
+        SPDLOG_LOGGER_INFO(_nes.GetLogger(), "No save file specified, save data will not be read");
+        return;
     }
 
     std::ifstream saveStream(_saveFile.c_str(), std::ifstream::in | std::ofstream::binary);
 
-    if (saveStream.good())
+    if (!saveStream.good())
     {
-        _mapper->LoadNativeSave(saveStream);
+        SPDLOG_LOGGER_INFO(_nes.GetLogger(), "Could not open save file {}, assuming no save data yet exists", _saveFile);
     }
-
-    return 0;
+    
+    _mapper->LoadNativeSave(saveStream);
 }
 
 uint8_t Cart::CpuRead(uint16_t address)

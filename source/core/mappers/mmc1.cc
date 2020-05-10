@@ -185,7 +185,8 @@ uint8_t MMC1::NameTableRead(uint16_t address)
         }
         break;
     default:
-        throw NesException("MMC1", "Unreachable");
+        assert(false); // Unreachable
+        return 0;
     }
 }
 
@@ -222,7 +223,7 @@ void MMC1::NameTableWrite(uint8_t M, uint16_t address)
         }
         break;
     default:
-        throw NesException("MMC1", "Unreachable");
+        assert(false); // Unreachable
     }
 }
 

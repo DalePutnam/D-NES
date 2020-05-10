@@ -5,11 +5,11 @@
 class NullAudioBackend : public AudioBackendBase
 {
 public:
-    NullAudioBackend() = default;
+    NullAudioBackend(NES& nes): AudioBackendBase(nes) {};
     ~NullAudioBackend() = default;
 
     virtual void Initialize() override {};
-    virtual void CleanUp() override {};
-    virtual void Reset() override {};
-    virtual void SubmitSample(float sample) override {};
+    virtual void CleanUp() noexcept override {};
+    virtual void Reset() noexcept override {};
+    virtual void SubmitSample(float sample) noexcept override {};
 };

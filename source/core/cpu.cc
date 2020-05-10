@@ -1927,21 +1927,19 @@ uint8_t CPU::GetControllerOneState()
     return ControllerOneState;
 }
 
-int CPU::StartLog(const std::string& logFile)
+void CPU::StartLog(const std::string& logFile)
 {
     LogFile = fopen(logFile.c_str(), "w");
 
     if (LogFile == nullptr)
     {
-        return ERROR_FAILED_TO_OPEN_CPU_LOG_FILE;
+        throw NesException(ERROR_FAILED_TO_OPEN_CPU_LOG_FILE);
     }
 
     LogEnabled = true;
-
-    return SUCCESS;
 }
 
-void CPU::StopLog()
+void CPU::StopLog() noexcept
 {
     if (!LogEnabled)
     {
@@ -2299,7 +2297,7 @@ void CPU::Step()
         DoXAA(address);
         break;
     case STP:
-        throw NesException("CPU", "Executed STP instruction, halting");
+        throw NesException(ERROR_CPU_EXECUTED_STP);
     }
 
     AccumulatorFlag = false;

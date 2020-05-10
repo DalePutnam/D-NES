@@ -1,6 +1,7 @@
 #if defined(__linux)
 
 #include "nes_exception.h"
+#include "error_handling.h"
 
 #include "glx_platform.h"
 
@@ -11,51 +12,62 @@ void GLXPlatform::InitializeWindow(void* windowHandle)
 
     if (_display == nullptr)
     {
-        throw NesException("GLXPlatform", "Failed to connect to X11 Display");
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to connect to X11 Display");
+        throw NesException(ERROR_INITIALIZE_OPENGL_FAILED);
     }
 
     XWindowAttributes attributes;
     if (XGetWindowAttributes(_display, _parentWindowHandle, &attributes) == 0)
     {
         XCloseDisplay(_display);
-        throw NesException("GLXPlatform", "Failed to retrieve X11 window attributes");
+
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to retrieve X11 window attributes");
+        throw NesException(ERROR_INITIALIZE_OPENGL_FAILED);
     }
 
-	GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
+    GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
 
-	_xVisualInfo = glXChooseVisual(_display, 0, att);
-	if (_xVisualInfo == nullptr) {
-		XCloseDisplay(_display);
-		throw NesException("GLXPlatform", "Failed to choose GLX visual settings");
-	}
+    _xVisualInfo = glXChooseVisual(_display, 0, att);
+    if (_xVisualInfo == nullptr) {
+        XCloseDisplay(_display);
 
-	Colormap colorMap = XCreateColormap(_display, _parentWindowHandle, _xVisualInfo->visual, AllocNone);
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to choose GLX visual settings");
+        throw NesException(ERROR_INITIALIZE_OPENGL_FAILED);
+    }
 
-	XSetWindowAttributes setWindowAttributes;
-	setWindowAttributes.colormap = colorMap;
-	setWindowAttributes.event_mask = ExposureMask | KeyPressMask;
+    Colormap colorMap = XCreateColormap(_display, _parentWindowHandle, _xVisualInfo->visual, AllocNone);
 
-	_windowHandle = XCreateWindow(_display, _parentWindowHandle, 0, 0, attributes.width, attributes.height, 0, _xVisualInfo->depth,
-							InputOutput, _xVisualInfo->visual, CWColormap | CWEventMask, &setWindowAttributes);
+    XSetWindowAttributes setWindowAttributes;
+    setWindowAttributes.colormap = colorMap;
+    setWindowAttributes.event_mask = ExposureMask | KeyPressMask;
+
+    _windowHandle = XCreateWindow(_display, _parentWindowHandle, 0, 0, attributes.width, attributes.height, 0, _xVisualInfo->depth,
+                            InputOutput, _xVisualInfo->visual, CWColormap | CWEventMask, &setWindowAttributes);
 
     if (XMapWindow(_display, _windowHandle) == 0)
     {
         XDestroyWindow(_display, _windowHandle);
         XCloseDisplay(_display);
-        throw NesException("GLXPlatform", "Failed to map X11 window");
+
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to map X11 window");
+        throw NesException(ERROR_INITIALIZE_OPENGL_FAILED);
     }
 }
 
 void GLXPlatform::InitializeContext()
 {
-	_oglContext = glXCreateContext(_display, _xVisualInfo, NULL, GL_TRUE);
-	if (_oglContext == NULL) {
-		throw NesException("GLXPlatform", "Failed to create GLX context");
-	}
+    _oglContext = glXCreateContext(_display, _xVisualInfo, NULL, GL_TRUE);
+    if (_oglContext == nullptr)
+    {
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to create GLX context");
+        throw NesException(ERROR_INITIALIZE_OPENGL_FAILED);
+    }
 
-	if (!glXMakeCurrent(_display, _windowHandle, _oglContext)) {
-		throw NesException("GLXPlatform", "Failed to make GLX context current");
-	}
+    if (!glXMakeCurrent(_display, _windowHandle, _oglContext))
+    {
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to make GLX context current");
+        throw NesException(ERROR_INITIALIZE_OPENGL_FAILED);
+    }
 }
 
 void GLXPlatform::DestroyWindow()
@@ -68,7 +80,7 @@ void GLXPlatform::DestroyWindow()
 void GLXPlatform::DestroyContext()
 {
     glXMakeCurrent(_display, None, NULL);
-	glXDestroyContext(_display, _oglContext);
+    glXDestroyContext(_display, _oglContext);
 }
 
 void GLXPlatform::SwapBuffers()

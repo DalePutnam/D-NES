@@ -2,8 +2,6 @@
 
 #include <map>
 
-constexpr int SUCCESS = 0;
-
 constexpr int ERROR_LOAD_GAME_AFTER_START = 1;
 constexpr int ERROR_LOAD_GAME_FAILED = 2;
 constexpr int ERROR_SET_WINDOW_HANDLE_AFTER_START = 3;
@@ -25,6 +23,14 @@ constexpr int ERROR_OPEN_LOG_FILE_FAILED = 18;
 constexpr int ERROR_SET_LOG_FILE_AFTER_START = 19;
 constexpr int ERROR_SET_LOG_CALLBACK_AFTER_START = 20;
 constexpr int ERROR_UNSUPPORTED_MAPPER = 21;
+constexpr int ERROR_INITIALIZE_OPENGL_FAILED = 22;
+constexpr int ERROR_FAILED_TO_SAVE_NV_RAM = 23;
+constexpr int ERROR_CPU_EXECUTED_STP = 24;
+constexpr int ERROR_INITIALIZE_ALSA_FAILED = 25;
+constexpr int ERROR_STATE_LOAD_FAILED = 26;
+constexpr int ERROR_FAILED_TO_OPEN_ROM_FILE = 27;
+constexpr int ERROR_FAILED_TO_READ_ROM_FILE = 28;
+constexpr int ERROR_INVALID_INES_HEADER = 29;
 
 static const std::map<int, std::string> ERROR_CODE_TO_MESSAGE_MAP
 {
@@ -48,5 +54,25 @@ static const std::map<int, std::string> ERROR_CODE_TO_MESSAGE_MAP
     {ERROR_OPEN_LOG_FILE_FAILED, "Failed to open the requested log file"},
     {ERROR_SET_LOG_FILE_AFTER_START, "Cannot set the log file after the emulator has started"},
     {ERROR_SET_LOG_CALLBACK_AFTER_START, "Cannot set the log callback after the emulator has started"},
-    {ERROR_UNSUPPORTED_MAPPER, "Mapper specified in ROM file is unsupported"}
+    {ERROR_UNSUPPORTED_MAPPER, "Mapper specified in ROM file is unsupported"},
+    {ERROR_INITIALIZE_OPENGL_FAILED, "Failed to initialize OpenGL"},
+    {ERROR_FAILED_TO_SAVE_NV_RAM, "Failed to write save file"},
+    {ERROR_CPU_EXECUTED_STP, "STP instruction executed, emulation stopped"},
+    {ERROR_INITIALIZE_ALSA_FAILED, "Failed to initialize ALSA"},
+    {ERROR_STATE_LOAD_FAILED, "Failed to load state save"},
+    {ERROR_FAILED_TO_OPEN_ROM_FILE, "Failed to open the specified ROM file"},
+    {ERROR_FAILED_TO_READ_ROM_FILE, "An error occured while reading the ROM file"},
+    {ERROR_INVALID_INES_HEADER, "The ROM file header is invalid"}
 };
+
+static inline const char* GetErrorMessageFromCode(int code)
+{
+    auto it = ERROR_CODE_TO_MESSAGE_MAP.find(code);
+
+    if (it == ERROR_CODE_TO_MESSAGE_MAP.end())
+    {
+        return "Unrecognized error code";
+    }
+
+    return it->second.c_str();
+}

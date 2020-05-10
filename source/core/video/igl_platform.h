@@ -3,10 +3,12 @@
 #include <cstdint>
 #include <memory>
 
+#include "nes.h"
+
 class IGLPlatform
 {
 public:
-	static std::unique_ptr<IGLPlatform> CreateGLPlatform();
+	static std::unique_ptr<IGLPlatform> CreateGLPlatform(NES& nes);
 
 	virtual void InitializeWindow(void* windowHandle) = 0;
 	virtual void InitializeContext() = 0;

@@ -78,8 +78,8 @@ NES::NES()
     SetLogLevel(dnes::LogLevel::ERROR);
     SetLogPattern(DEFAULT_LOG_PATTERN);
 
-    VideoOut = std::make_unique<NullVideoBackend>();
-    AudioOut = std::make_unique<NullAudioBackend>();
+    VideoOut = std::make_unique<NullVideoBackend>(*this);
+    AudioOut = std::make_unique<NullAudioBackend>(*this);
 
     Cpu = std::make_unique<CPU>(*this);
     Ppu = std::make_unique<PPU>(*this);
@@ -114,12 +114,11 @@ int NES::LoadGame(const char* romFile, const char* saveFile)
 
     try
     {
-        return Cartridge->Initialize(romFile, saveFile);
+        Cartridge->Initialize(romFile, saveFile);
     }
-    catch (std::string& msg)
+    catch (NesException& ex)
     {
-        SPDLOG_LOGGER_ERROR(GetLogger(), "iNesFile: {}", msg);
-        return ERROR_LOAD_GAME_FAILED;
+        return ex.errorCode();
     }
 
     return dnes::SUCCESS;
@@ -132,15 +131,22 @@ int NES::SetWindowHandle(void* handle)
         return ERROR_SET_WINDOW_HANDLE_AFTER_START;
     }
 
-    auto newBackend = std::make_unique<OpenGLBackend>(handle);
-    newBackend->SwapSettings(*VideoOut);
+    try
+    {
+        auto newVideoBackend = std::make_unique<OpenGLBackend>(*this, handle);
+        newVideoBackend->SwapSettings(*VideoOut);
 
-    VideoOut = std::move(newBackend);
+        VideoOut = std::move(newVideoBackend);
 
-    auto newAudioBackend = std::make_unique<AlsaBackend>();
-    newAudioBackend->SwapSettings(*AudioOut);
+        auto newAudioBackend = std::make_unique<AlsaBackend>(*this);
+        newAudioBackend->SwapSettings(*AudioOut);
 
-    AudioOut = std::move(newAudioBackend);
+        AudioOut = std::move(newAudioBackend);
+    }
+    catch (NesException& ex)
+    {
+        return ex.errorCode();
+    }
 
     return dnes::SUCCESS;
 }
@@ -241,11 +247,19 @@ int NES::StartCpuLog(const char* logFile)
 {
     Pause();
 
-    int result = Cpu->StartLog(logFile);
+    try
+    {
+        Cpu->StartLog(logFile);
+    }
+    catch (NesException& ex)
+    {
+        Resume();
+        return ex.errorCode();
+    }
 
     Resume();
 
-    return result;
+    return dnes::SUCCESS;
 }
 
 void NES::StopCpuLog()
@@ -552,7 +566,7 @@ void NES::Run()
     try
     {
         AudioOut->Initialize();
-        VideoOut->Prepare();
+        VideoOut->Initialize();
 
         Cartridge->LoadNvRam();
 
@@ -586,12 +600,12 @@ void NES::Run()
 
         Cartridge->SaveNvRam();
 
-        VideoOut->Finalize();
+        VideoOut->CleanUp();
         AudioOut->CleanUp();
     }
     catch (NesException& ex)
     {
-        SetErrorCode(ERROR_RUNTIME_ERROR);
+        SetErrorCode(ex.errorCode());
 
         if (Callback != nullptr)
         {
@@ -626,14 +640,7 @@ void DestroyNES(INES* nes)
 
 const char* GetErrorMessageFromCode(int code)
 {
-    auto it = ERROR_CODE_TO_MESSAGE_MAP.find(code);
-
-    if (it == ERROR_CODE_TO_MESSAGE_MAP.end())
-    {
-        return "Unrecognized error code";
-    }
-
-    return it->second.c_str();
+    return ::GetErrorMessageFromCode(code);
 }
 
 }; // namespace dnes

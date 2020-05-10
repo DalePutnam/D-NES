@@ -2,6 +2,7 @@
 #include <exception>
 
 #include "nes_exception.h"
+#include "error_handling.h"
 #include "ines.h"
 
 // Read header
@@ -28,7 +29,7 @@ iNesFile::iNesFile(const std::string& file)
     std::ifstream romStream(file.c_str(), std::ifstream::in | std::ifstream::binary);
     if (!romStream.good())
     {
-        throw "Unable to open ROM.";
+        throw NesException(ERROR_FAILED_TO_OPEN_ROM_FILE);
     }
 
     // Read header
@@ -36,7 +37,7 @@ iNesFile::iNesFile(const std::string& file)
     romStream.read(reinterpret_cast<char*>(&header), sizeof(header));
     if (!romStream.good())
     {
-        throw "Unable read ROM header.";
+        throw NesException(ERROR_FAILED_TO_READ_ROM_FILE);
     }
 
     // Check header signature
@@ -45,7 +46,7 @@ iNesFile::iNesFile(const std::string& file)
           header.signature[2] == 'S' &&
           header.signature[3] == '\x1A'))
     {
-        throw "Invalid ROM header.";
+        throw NesException(ERROR_INVALID_INES_HEADER);
     }
 
     // Check version
@@ -81,7 +82,7 @@ iNesFile::iNesFile(const std::string& file)
         romStream.read(reinterpret_cast<char*>(rom.get()), romSize);
         if (!romStream.good())
         {
-            throw "Unable to read PRG ROM.";
+            throw NesException(ERROR_FAILED_TO_READ_ROM_FILE);
         }
 
         _prgRom.reset(rom.release());
@@ -93,7 +94,7 @@ iNesFile::iNesFile(const std::string& file)
         romStream.read(reinterpret_cast<char*>(rom.get()), romSize);
         if (!romStream.good())
         {
-            throw "Unable to read CHR ROM.";
+            throw NesException(ERROR_FAILED_TO_READ_ROM_FILE);
         }
 
         _chrRom.reset(rom.release());
@@ -109,7 +110,7 @@ iNesFile::iNesFile(const std::string& file)
         romStream.read(reinterpret_cast<char*>(rom.get()), romSize);
         if (!romStream.good() && !romStream.eof())
         {
-            throw "Unable to read miscellaneous ROM.";
+            throw NesException(ERROR_FAILED_TO_READ_ROM_FILE);
         }
 
         _miscRom.reset(rom.release());
@@ -127,7 +128,7 @@ iNesFile::iNesFile(const std::string& file)
         romStream.read(reinterpret_cast<char*>(rom.get()), romSize);
         if (!romStream.good())
         {
-            throw "Unable to read PRG ROM.";
+            throw NesException(ERROR_FAILED_TO_READ_ROM_FILE);
         }
 
         _prgRom.reset(rom.release());
@@ -139,7 +140,7 @@ iNesFile::iNesFile(const std::string& file)
         romStream.read(reinterpret_cast<char*>(rom.get()), romSize);
         if (!romStream.good())
         {
-            throw "Unable to read CHR ROM.";
+            throw NesException(ERROR_FAILED_TO_READ_ROM_FILE);
         }
 
         _chrRom.reset(rom.release());

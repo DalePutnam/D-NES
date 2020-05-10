@@ -1,6 +1,7 @@
 #include <cstdint>
 
 #include "nes_exception.h"
+#include "error_handling.h"
 
 #include "opengl_backend.h"
 #include "osd_font.h"
@@ -177,16 +178,18 @@ void compileShaders(const std::string& vertexShader, const std::string& fragment
 }
 }
 
-OpenGLBackend::OpenGLBackend(void* windowHandle)
-    : _windowHandle(windowHandle)
+OpenGLBackend::OpenGLBackend(NES& nes, void* windowHandle)
+    : VideoBackendBase(nes)
+    , _windowHandle(windowHandle)
 {
-    _glPlatform = IGLPlatform::CreateGLPlatform();
+    _glPlatform = IGLPlatform::CreateGLPlatform(nes);
 }
 
 OpenGLBackend::~OpenGLBackend()
 {
 }
-int OpenGLBackend::Prepare()
+
+void OpenGLBackend::Initialize()
 {
     _glPlatform->InitializeWindow(_windowHandle);
     _glPlatform->InitializeContext();
@@ -200,8 +203,10 @@ int OpenGLBackend::Prepare()
     }
     catch (std::string& err)
     {
-        Finalize();
-        throw NesException("OpenGLBackend", err);
+        CleanUp();
+
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to compile shaders: {}", err);
+        throw NesException(ERROR_INITIALIZE_OPENGL_FAILED);
     }
 
     glGenVertexArrays(1, &_frameVertexArrayId);
@@ -237,17 +242,15 @@ int OpenGLBackend::Prepare()
 
     glGenBuffers(1, &_textVertexBuffer);
     glGenBuffers(1, &_textUVBuffer);
-
-    return 0;
 }
 
-void OpenGLBackend::Finalize()
+void OpenGLBackend::CleanUp() noexcept
 {
     _glPlatform->DestroyContext();
     _glPlatform->DestroyWindow();
 }
 
-void OpenGLBackend::SubmitFrame(uint8_t * fb)
+void OpenGLBackend::SubmitFrame(uint8_t * fb) noexcept
 {
     bool overscanEnabled = _overscanEnabled;
     bool showingFps = _showFps;
@@ -306,7 +309,7 @@ void OpenGLBackend::SwapFrameBuffers()
     _glPlatform->SwapBuffers();
 }
 
-void OpenGLBackend::ShowMessage(const std::string & message, uint32_t duration)
+void OpenGLBackend::ShowMessage(const std::string & message, uint32_t duration) noexcept
 {
     using namespace std::chrono;
 

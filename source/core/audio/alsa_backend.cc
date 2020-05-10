@@ -1,4 +1,5 @@
 #include "nes_exception.h"
+#include "error_handling.h"
 
 #include "alsa_backend.h"
 #include <cstring>
@@ -97,11 +98,12 @@ FailedExit:
     if (_alsaHandle) snd_pcm_close(_alsaHandle);
     if (alsaHwParams) snd_pcm_hw_params_free(alsaHwParams);
     if (alsaSwParams) snd_pcm_sw_params_free(alsaSwParams);
-    
-    throw NesException("AlsaBackend", std::string{"Failed to initialize. "} + snd_strerror(rc));
+
+    SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "Failed to initialize ALSA: {}", snd_strerror(rc));
+    throw NesException(ERROR_INITIALIZE_ALSA_FAILED);
 }
 
-void AlsaBackend::CleanUp()
+void AlsaBackend::CleanUp() noexcept
 {
     _running = false;
     _cv.notify_all();
@@ -118,7 +120,7 @@ void AlsaBackend::CleanUp()
     snd_pcm_close(_alsaHandle);
 }
 
-void AlsaBackend::Reset()
+void AlsaBackend::Reset() noexcept
 {
     std::unique_lock<std::mutex> lock(_mutex);
 
@@ -135,7 +137,7 @@ void AlsaBackend::Reset()
     _cv.notify_all();
 }
 
-void AlsaBackend::SubmitSample(float sample)
+void AlsaBackend::SubmitSample(float sample) noexcept
 {
     std::unique_lock<std::mutex> lock(_mutex);
 

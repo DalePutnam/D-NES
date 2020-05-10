@@ -102,7 +102,7 @@ void APU::PulseUnit::WriteRegister(uint8_t reg, uint8_t value)
 
         break;
     default:
-        throw NesException("APU::PulseUnit", "Tried to write to non-existant register " + std::to_string(reg));
+        assert(false); // Unreachable
     }
 }
 
@@ -341,7 +341,7 @@ void APU::TriangleUnit::WriteRegister(uint8_t reg, uint8_t value)
 
         break;
     default:
-        throw NesException("APU::TriangleUnit",  "Tried to write to non-existant register " + std::to_string(reg));
+        assert(false); // Unreachable
     }
 }
 
@@ -488,7 +488,7 @@ void APU::NoiseUnit::WriteRegister(uint8_t reg, uint8_t value)
         EnvelopeStartFlag = true;
         break;
     default:
-        throw NesException("APU::NoiseUnit", "Tried to write to non-existant register " + std::to_string(reg));
+        assert(false); // Unreachable
     }
 }
 
@@ -700,7 +700,7 @@ void APU::DmcUnit::WriteRegister(uint8_t reg, uint8_t value)
         SampleLength = 0x0001 | (static_cast<uint16_t>(value) << 4);
         break;
     default:
-        throw NesException("APU::DmcUnit", "Tried to write to non-existant register " + std::to_string(reg));
+        assert(false); // Unreachable
     }
 }
 

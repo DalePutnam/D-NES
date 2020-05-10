@@ -1,14 +1,21 @@
 #pragma once
 
-#include <string>
 #include <exception>
+
+#include "error_handling.h"
 
 class NesException : public std::exception
 {
 public:
-    explicit NesException(const std::string& component, const std::string& message);
-    const char* what() const noexcept override;
+    explicit NesException(int errorCode): _errorCode(errorCode) {} 
+
+    const char* what() const noexcept override
+    {
+        return ::GetErrorMessageFromCode(_errorCode);
+    }
+
+    int errorCode() const noexcept { return _errorCode; };
 
 private:
-    std::string _message;
+    int _errorCode;
 };

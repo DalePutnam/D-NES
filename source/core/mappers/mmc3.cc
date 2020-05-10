@@ -179,7 +179,7 @@ void MMC3::CpuWrite(uint8_t M, uint16_t address)
             _prgReg1 = M;
             break;
         default:
-            throw NesException("MMC3", "Serious Problems");
+            assert(false); // Unreachable
         }
     }
     else if (address == 0xA000 && _mirroring != iNesFile::Mirroring::FourScreen)

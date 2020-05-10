@@ -5,12 +5,12 @@
 class NullVideoBackend final : public VideoBackendBase
 {
 public:
-    NullVideoBackend() = default;
+    NullVideoBackend(NES& nes): VideoBackendBase(nes) {}
     ~NullVideoBackend() = default;
 
-    int Prepare() { return 0; }
-    void Finalize() {}
+    void Initialize() {}
+    void CleanUp() noexcept {}
 
-    void SubmitFrame(uint8_t* frameBuffer) {}
-    void ShowMessage(const std::string& message, uint32_t duration) {}
+    void SubmitFrame(uint8_t* frameBuffer) noexcept {}
+    void ShowMessage(const std::string& message, uint32_t duration) noexcept {}
 };

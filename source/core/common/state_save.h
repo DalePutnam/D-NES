@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "nes_exception.h"
+#include "error_handling.h"
 
 class StateSave
 {
@@ -75,7 +76,7 @@ public:
     {
         if (buffer.size() - readIndex < sizeof(T))
         {
-            throw NesException("State Save", "Tried to extract state value that was out of range");
+            throw NesException(ERROR_STATE_LOAD_FAILED);
         }
 
         memcpy(&value, buffer.data() + readIndex, sizeof(T));
@@ -99,7 +100,7 @@ public:
     {
         if (buffer.size() - readIndex < length * sizeof(T))
         {
-            throw NesException("State Save", "Tried to extract state value that was out of range");
+            throw NesException(ERROR_STATE_LOAD_FAILED);
         }
 
         memcpy(data, buffer.data() + readIndex, length * sizeof(T));

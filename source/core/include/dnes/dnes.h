@@ -60,6 +60,7 @@ class INES
 public:
     enum class State
     {
+        CREATED,
         READY,
         RUNNING,
         PAUSED,
