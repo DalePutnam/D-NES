@@ -10,7 +10,6 @@ add_library(dnes SHARED
     ppu.cc
     apu.cc
     cart.cc
-    common/file.cc
     common/nes_exception.cc
     common/ines.cc
     mappers/mapper_base.cc

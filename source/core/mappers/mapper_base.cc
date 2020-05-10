@@ -4,7 +4,6 @@
 
 #include "cpu.h"
 #include "ppu.h"
-#include "file.h"
 #include "mapper_base.h"
 
 using namespace std;

@@ -12,7 +12,6 @@
 
 #include "cart.h"
 #include "ines.h"
-#include "file.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
 #include "mappers/mmc1.h"

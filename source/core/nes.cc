@@ -15,7 +15,6 @@
 #include "video/opengl_backend.h"
 #include "video/null_video_backend.h"
 #include "common/error_handling.h"
-#include "common/file.h"
 
 namespace
 {
