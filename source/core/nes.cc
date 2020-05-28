@@ -14,7 +14,7 @@
 #include "audio/null_audio_backend.h"
 #include "video/opengl_backend.h"
 #include "video/null_video_backend.h"
-#include "common/error_handling.h"
+#include "error.h"
 
 namespace
 {

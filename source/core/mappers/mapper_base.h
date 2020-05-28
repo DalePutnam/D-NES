@@ -4,7 +4,7 @@
 #include <fstream>
 #include <mutex>
 
-#include "ines.h"
+#include "ines_file.h"
 #include "nes.h"
 #include "state_save.h"
 

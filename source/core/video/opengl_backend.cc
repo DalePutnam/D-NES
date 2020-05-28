@@ -1,7 +1,6 @@
 #include <cstdint>
 
-#include "nes_exception.h"
-#include "error_handling.h"
+#include "error.h"
 
 #include "opengl_backend.h"
 #include "osd_font.h"

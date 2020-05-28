@@ -9,13 +9,11 @@
 #include <cstring>
 #include <iostream>
 
-#include "nes_exception.h"
-
 #include "cpu.h"
 #include "ppu.h"
 #include "apu.h"
 
-#include "common/error_handling.h"
+#include "error.h"
 
 // One of the headers on windows defines OVERFLOW
 #ifdef OVERFLOW

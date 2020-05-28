@@ -11,7 +11,7 @@
 #include <memory>
 
 #include "nes.h"
-#include "ines.h"
+#include "ines_file.h"
 #include "state_save.h"
 
 class CPU;

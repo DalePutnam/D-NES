@@ -1,5 +1,4 @@
-#include "nes_exception.h"
-#include "error_handling.h"
+#include "error.h"
 
 #include "alsa_backend.h"
 #include <cstring>

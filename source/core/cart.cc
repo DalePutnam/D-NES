@@ -11,7 +11,7 @@
 #include <cstring>
 
 #include "cart.h"
-#include "ines.h"
+#include "ines_file.h"
 #include "mappers/mapper_base.h"
 #include "mappers/nrom.h"
 #include "mappers/mmc1.h"
@@ -19,7 +19,7 @@
 #include "mappers/cnrom.h"
 #include "mappers/mmc3.h"
 
-#include "error_handling.h"
+#include "error.h"
 
 Cart::Cart(NES& nes)
     : _nes(nes)
