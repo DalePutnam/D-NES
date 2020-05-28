@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10.2)
 
 project(dnes)
 
-include_directories(mappers audio video common .)
+include_directories(mappers audio video .)
 
 add_library(dnes SHARED
     nes.cc
@@ -10,7 +10,7 @@ add_library(dnes SHARED
     ppu.cc
     apu.cc
     cart.cc
-    common/ines.cc
+    ines_file.cc
     mappers/mapper_base.cc
     mappers/nrom.cc
     mappers/mmc1.cc
