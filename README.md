@@ -2,6 +2,9 @@
 
 A Nintendo Entertainment System emulator I've been working on in my spare time.
 
+Officially retiring from working on this. There's so much else I want to work on, but this emulator keeps finding a way to take up my time. Even though no one uses it and it was purely
+to see if I could make an emulator that functions at all, which I've achieved. Time to move on.
+
 CPU: Working with full support for unofficial opcodes  
 PPU (Video): Working, but I'm still working out some of the more obscure behaviour.   
 APU (Audio): Working on Windows and Linux.  
