@@ -47,10 +47,10 @@ public:
     void SetTurboModeEnabled(bool enabled) override;
 
     int GetFrameRate() override;
-    void GetNameTable(int table, uint8_t* pixels) override;
-    void GetPatternTable(int table, int palette, uint8_t* pixels) override;
-    void GetPalette(int palette, uint8_t* pixels) override;
-    void GetSprite(int sprite, uint8_t* pixels) override;
+    int GetNameTable(uint32_t tableIndex, uint8_t* imageBuffer) override;
+    int GetPatternTable(uint32_t tableIndex, uint32_t paletteIndex, uint8_t* imageBuffer) override;
+    int GetPalette(uint32_t paletteIndex, uint8_t* imageBuffer) override;
+    int GetSprite(uint32_t spriteIndex, uint8_t* imageBuffer) override;
     void SetNtscDecoderEnabled(bool enabled) override;
     void SetFpsDisplayEnabled(bool enabled) override;
     void SetOverscanEnabled(bool enabled) override;

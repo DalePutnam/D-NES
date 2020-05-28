@@ -100,12 +100,12 @@ struct PPUState
     bool SpriteEvaluationRunning{true};
     bool SpriteEvaluationSpriteZero{true};
 
-    void SetBusAddress(Cart* cart, uint16_t address);
+    void SetBusAddress(Cart& cart, uint16_t address);
     uint8_t ReadPalette(uint16_t address);
     void WritePalette(uint8_t value, uint16_t address);
-    uint8_t Read(Cart* cart);
-    void Write(Cart* cart, uint8_t value);
-    uint8_t Peek(Cart* cart, uint16_t address);
+    uint8_t Read(Cart& cart);
+    void Write(Cart& cart, uint8_t value);
+    uint8_t Peek(Cart& cart, uint16_t address);
     void StepSpriteEvaluation();
     uint32_t DecodePixel(uint16_t colour);
     uint32_t RenderPixel();
@@ -113,40 +113,40 @@ struct PPUState
     void IncrementXScroll();
     void IncrementYScroll();
     void LoadBackgroundShiftRegisters();
-    void SetNameTableAddress(Cart* cart);
-    void DoNameTableFetch(Cart* cart);
-    void SetBackgroundAttributeAddress(Cart* cart);
-    void DoBackgroundAttributeFetch(Cart* cart);
-    void SetBackgroundLowByteAddress(Cart* cart);
-    void DoBackgroundLowByteFetch(Cart* cart);
-    void SetBackgroundHighByteAddress(Cart* cart);
-    void DoBackgroundHighByteFetch(Cart* cart);
+    void SetNameTableAddress(Cart& cart);
+    void DoNameTableFetch(Cart& cart);
+    void SetBackgroundAttributeAddress(Cart& cart);
+    void DoBackgroundAttributeFetch(Cart& cart);
+    void SetBackgroundLowByteAddress(Cart& cart);
+    void DoBackgroundLowByteFetch(Cart& cart);
+    void SetBackgroundHighByteAddress(Cart& cart);
+    void DoBackgroundHighByteFetch(Cart& cart);
     void DoSpriteAttributeFetch();
     void DoSpriteXCoordinateFetch();
-    void SetSpriteLowByteAddress(Cart* cart);
-    void DoSpriteLowByteFetch(Cart* cart);
-    void SetSpriteHighByteAddress(Cart* cart);
-    void DoSpriteHighByteFetch(Cart* cart);
-    void Step(uint32_t* frameBuffer, Cart* cart);
+    void SetSpriteLowByteAddress(Cart& cart);
+    void DoSpriteLowByteFetch(Cart& cart);
+    void SetSpriteHighByteAddress(Cart& cart);
+    void DoSpriteHighByteFetch(Cart& cart);
+    void Step(uint32_t* frameBuffer, Cart& cart);
     uint8_t ReadPPUStatus();
     uint8_t ReadOAMData();
-    uint8_t ReadPPUData(Cart* cart);
+    uint8_t ReadPPUData(Cart& cart);
     void WritePPUCTRL(uint8_t M);
     void WritePPUMASK(uint8_t M);
     void WriteOAMADDR(uint8_t M);
     void WriteOAMDATA(uint8_t M);
     void WritePPUSCROLL(uint8_t M);
-    void WritePPUADDR(Cart* cart, uint8_t M);
-    void WritePPUDATA(Cart* cart, uint8_t M);
+    void WritePPUADDR(Cart& cart, uint8_t M);
+    void WritePPUDATA(Cart& cart, uint8_t M);
 };
 
-void PPUState::SetBusAddress(Cart* cart, uint16_t address)
+void PPUState::SetBusAddress(Cart& cart, uint16_t address)
 {
     PpuBusAddress = address & 0x3FFF;
 
     if (PpuBusAddress < 0x3F00)
     {
-        cart->SetPpuAddress(PpuBusAddress);
+        cart.SetPpuAddress(PpuBusAddress);
     }
 }
 
@@ -172,11 +172,11 @@ void PPUState::WritePalette(uint8_t value, uint16_t address)
     PaletteTable[address % 0x20] = value & 0x3F; // Ignore bits 6 and 7
 }
 
-uint8_t PPUState::Read(Cart* cart)
+uint8_t PPUState::Read(Cart& cart)
 {
     if (PpuBusAddress < 0x3F00)
     {
-        return cart->PpuRead();
+        return cart.PpuRead();
     }
     else
     {
@@ -184,11 +184,11 @@ uint8_t PPUState::Read(Cart* cart)
     }
 }
 
-void PPUState::Write(Cart* cart, uint8_t value)
+void PPUState::Write(Cart& cart, uint8_t value)
 {
     if (PpuBusAddress < 0x3F00)
     {
-        cart->PpuWrite(value);
+        cart.PpuWrite(value);
     }
     else
     {
@@ -196,11 +196,11 @@ void PPUState::Write(Cart* cart, uint8_t value)
     }
 }
 
-uint8_t PPUState::Peek(Cart* cart, uint16_t address)
+uint8_t PPUState::Peek(Cart& cart, uint16_t address)
 {
     if (address < 0x3F00)
     {
-        return cart->PpuPeek(address);
+        return cart.PpuPeek(address);
     }
     else
     {
@@ -469,22 +469,22 @@ void PPUState::LoadBackgroundShiftRegisters()
     BackgroundAttributeShift1 = BackgroundAttributeShift1 | ((AttributeByte & 0x2) ? 0xFF : 0x00);
 }
 
-void PPUState::SetNameTableAddress(Cart* cart)
+void PPUState::SetNameTableAddress(Cart& cart)
 {
     SetBusAddress(cart, 0x2000 | (PpuAddress & 0x0FFF));
 }
 
-void PPUState::DoNameTableFetch(Cart* cart)
+void PPUState::DoNameTableFetch(Cart& cart)
 {
     NameTableByte = Read(cart);
 }
 
-void PPUState::SetBackgroundAttributeAddress(Cart* cart)
+void PPUState::SetBackgroundAttributeAddress(Cart& cart)
 {
     SetBusAddress(cart, 0x23C0 | (PpuAddress & 0x0C00) | ((PpuAddress >> 4) & 0x38) | ((PpuAddress >> 2) & 0x07));
 }
 
-void PPUState::DoBackgroundAttributeFetch(Cart* cart)
+void PPUState::DoBackgroundAttributeFetch(Cart& cart)
 {
     // Get the attribute byte, determines the palette to use when rendering
     AttributeByte = Read(cart);
@@ -492,7 +492,7 @@ void PPUState::DoBackgroundAttributeFetch(Cart* cart)
     AttributeByte = (AttributeByte >> attributeShift) & 0x3;
 }
 
-void PPUState::SetBackgroundLowByteAddress(Cart* cart)
+void PPUState::SetBackgroundLowByteAddress(Cart& cart)
 {
     uint8_t fineY = PpuAddress >> 12; // Get fine y scroll bits from address
     uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
@@ -500,12 +500,12 @@ void PPUState::SetBackgroundLowByteAddress(Cart* cart)
     SetBusAddress(cart, BaseBackgroundTableAddress + patternAddress + fineY);
 }
 
-void PPUState::DoBackgroundLowByteFetch(Cart* cart)
+void PPUState::DoBackgroundLowByteFetch(Cart& cart)
 {
     TileBitmapLow = Read(cart);
 }
 
-void PPUState::SetBackgroundHighByteAddress(Cart* cart)
+void PPUState::SetBackgroundHighByteAddress(Cart& cart)
 {
     uint8_t fineY = PpuAddress >> 12; // Get fine y scroll
     uint16_t patternAddress = static_cast<uint16_t>(NameTableByte) << 4; // Get pattern address, independent of the table
@@ -513,7 +513,7 @@ void PPUState::SetBackgroundHighByteAddress(Cart* cart)
     SetBusAddress(cart, BaseBackgroundTableAddress + patternAddress + fineY + 8);
 }
 
-void PPUState::DoBackgroundHighByteFetch(Cart* cart)
+void PPUState::DoBackgroundHighByteFetch(Cart& cart)
 {
     TileBitmapHigh = Read(cart);
 }
@@ -530,7 +530,7 @@ void PPUState::DoSpriteXCoordinateFetch()
     SpriteCounter[sprite] = Oam[SecondaryOamOffset + (sprite * 4) + 3];
 }
 
-void PPUState::SetSpriteLowByteAddress(Cart* cart)
+void PPUState::SetSpriteLowByteAddress(Cart& cart)
 {
     uint8_t sprite = (Dot - 257) / 8;
     if (sprite < SpriteCount)
@@ -568,7 +568,7 @@ void PPUState::SetSpriteLowByteAddress(Cart* cart)
     }
 }
 
-void PPUState::DoSpriteLowByteFetch(Cart* cart)
+void PPUState::DoSpriteLowByteFetch(Cart& cart)
 {
     uint8_t sprite = (Dot - 257) / 8;
     uint8_t bitmap = Read(cart);
@@ -576,7 +576,7 @@ void PPUState::DoSpriteLowByteFetch(Cart* cart)
     SpriteShift0[sprite] = sprite < SpriteCount ? bitmap : 0x00; 
 }
 
-void PPUState::SetSpriteHighByteAddress(Cart* cart)
+void PPUState::SetSpriteHighByteAddress(Cart& cart)
 {
     uint8_t sprite = (Dot - 257) / 8;
     if (sprite < SpriteCount)
@@ -614,7 +614,7 @@ void PPUState::SetSpriteHighByteAddress(Cart* cart)
     }
 }
 
-void PPUState::DoSpriteHighByteFetch(Cart* cart)
+void PPUState::DoSpriteHighByteFetch(Cart& cart)
 {
     uint8_t sprite = (Dot - 257) / 8;
     uint8_t bitmap = Read(cart);
@@ -622,7 +622,7 @@ void PPUState::DoSpriteHighByteFetch(Cart* cart)
     SpriteShift1[sprite] = sprite < SpriteCount ? bitmap : 0x00; 
 }
 
-void PPUState::Step(uint32_t* frameBuffer, Cart* cart)
+void PPUState::Step(uint32_t* frameBuffer, Cart& cart)
 {
     // Visible Lines and Pre-Render Line
     if ((Line >= 0 && Line <= 239) || Line == 261)
@@ -862,7 +862,7 @@ uint8_t PPUState::ReadOAMData()
     return OamData;
 }
 
-uint8_t PPUState::ReadPPUData(Cart* cart)
+uint8_t PPUState::ReadPPUData(Cart& cart)
 {
     uint8_t value = DataBuffer;
     DataBuffer = Read(cart);
@@ -951,7 +951,7 @@ void PPUState::WritePPUSCROLL(uint8_t M)
     LowerBits = static_cast<uint8_t>(0x1F & M);
 }
 
-void PPUState::WritePPUADDR(Cart* cart, uint8_t M)
+void PPUState::WritePPUADDR(Cart& cart, uint8_t M)
 {
     if (Clock > ResetDelay)
     {      
@@ -972,7 +972,7 @@ void PPUState::WritePPUADDR(Cart* cart, uint8_t M)
     LowerBits = static_cast<uint8_t>(0x1F & M);
 }
 
-void PPUState::WritePPUDATA(Cart* cart, uint8_t M)
+void PPUState::WritePPUDATA(Cart& cart, uint8_t M)
 {
     Write(cart, M);
     PpuAddressIncrement ? PpuAddress = (PpuAddress + 32) & 0x7FFF : PpuAddress = (PpuAddress + 1) & 0x7FFF;
@@ -989,15 +989,6 @@ PPU::PPU(NES& nes)
 }
 
 PPU::~PPU() = default;
-
-void PPU::AttachCPU(CPU* cpu)
-{
-}
-
-void PPU::AttachCart(Cart* cart)
-{
-    _cart = cart;
-}
 
 int32_t PPU::GetCurrentDot()
 {
@@ -1046,7 +1037,7 @@ uint64_t PPU::GetClock()
 
 void PPU::Step()
 {
-    _ppuState->Step(_frameBuffer.get(), _cart);
+    _ppuState->Step(_frameBuffer.get(), _nes.GetCart());
 
     if (_ppuState->Line == 240 && _ppuState->Dot == 0)
     {
@@ -1074,7 +1065,7 @@ uint8_t PPU::ReadOAMData()
 
 uint8_t PPU::ReadPPUData()
 {
-    return _ppuState->ReadPPUData(_cart);
+    return _ppuState->ReadPPUData(_nes.GetCart());
 }
 
 void PPU::WritePPUCTRL(uint8_t M)
@@ -1104,12 +1095,12 @@ void PPU::WritePPUSCROLL(uint8_t M)
 
 void PPU::WritePPUADDR(uint8_t M)
 {
-    _ppuState->WritePPUADDR(_cart, M);
+    _ppuState->WritePPUADDR(_nes.GetCart(), M);
 }
 
 void PPU::WritePPUDATA(uint8_t M)
 {
-    _ppuState->WritePPUDATA(_cart, M);
+    _ppuState->WritePPUDATA(_nes.GetCart(), M);
 }
 
 int PPU::GetFrameRate()
@@ -1117,74 +1108,95 @@ int PPU::GetFrameRate()
     return 0;
 }
 
-void PPU::GetNameTable(int table, uint8_t* pixels)
+void PPU::GetNameTable(uint32_t tableIndex, uint8_t* imageBuffer)
 {
-    uint16_t tableIndex;
-    if (table == 0)
-    {
-        tableIndex = 0x000;
-    }
-    else if (table == 1)
-    {
-        tableIndex = 0x400;
-    }
-    else if (table == 2)
-    {
-        tableIndex = 0x800;
-    }
-    else
-    {
-        tableIndex = 0xC00;
-    }
+    uint16_t tableAddress;
 
+    // Select nametable address
+    switch (tableIndex)
+    {
+    case 0:
+        tableAddress = 0x000;
+        break;
+    case 1:
+        tableAddress = 0x400;
+        break;
+    case 2:
+        tableAddress = 0x800;
+        break;
+    case 3:
+        tableAddress = 0xC00;
+        break;
+    default:
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "The specified name table index {} is out of range. Valid values are 0-3", tableIndex);
+        throw NesException(ERROR_INVALID_NAME_TABLE_INDEX);
+    };
+
+    SPDLOG_LOGGER_INFO(_nes.GetLogger(), "Rendering name table {}", tableIndex);
+
+    // Render specified nametable to the supplied buffer
     for (uint32_t i = 0; i < 30; ++i)
     {
         for (uint32_t f = 0; f < 32; ++f)
         {
-            uint16_t address = (tableIndex | (i << 5) | f);
-            uint8_t ntByte = _ppuState->Peek(_cart, 0x2000 | address);
+            uint16_t address = (tableAddress | (i << 5) | f);
+            uint8_t ntByte = _ppuState->Peek(_nes.GetCart(), 0x2000 | address);
             uint8_t atShift = (((address & 0x0002) >> 1) | ((address & 0x0040) >> 5)) * 2;
-            uint8_t atByte = _ppuState->Peek(_cart, 0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
+            uint8_t atByte = _ppuState->Peek(_nes.GetCart(), 0x23C0 | (address & 0x0C00) | ((address >> 4) & 0x38) | ((address >> 2) & 0x07));
             atByte = (atByte >> atShift) & 0x3;
             uint16_t patternAddress = static_cast<uint16_t>(ntByte) * 16;
 
             for (uint32_t h = 0; h < 8; ++h)
             {
-                uint8_t tileLow = _ppuState->Peek(_cart, _ppuState->BaseBackgroundTableAddress + patternAddress + h);
-                uint8_t tileHigh = _ppuState->Peek(_cart, _ppuState->BaseBackgroundTableAddress + patternAddress + h + 8);
+                uint8_t tileLow = _ppuState->Peek(_nes.GetCart(), _ppuState->BaseBackgroundTableAddress + patternAddress + h);
+                uint8_t tileHigh = _ppuState->Peek(_nes.GetCart(), _ppuState->BaseBackgroundTableAddress + patternAddress + h + 8);
 
                 for (uint32_t g = 0; g < 8; ++g)
                 {
                     uint16_t pixel = 0x0003 & ((((tileLow << g) & 0x80) >> 7) | (((tileHigh << g) & 0x80) >> 6));
                     uint16_t paletteIndex = 0x3F00 | (atByte << 2) | pixel;
                     if ((paletteIndex & 0x3) == 0) paletteIndex = 0x3F00;
-                    uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteIndex)];
+                    uint32_t rgb = RgbLookupTable[_ppuState->Peek(_nes.GetCart(), paletteIndex)];
                     uint8_t red = (rgb & 0xFF0000) >> 16;
                     uint8_t green = (rgb & 0x00FF00) >> 8;
                     uint8_t blue = (rgb & 0x0000FF);
 
                     uint32_t index = ((24 * f) + (g * 3)) + ((6144 * i) + (h * 768));
 
-                    pixels[index] = red;
-                    pixels[index + 1] = green;
-                    pixels[index + 2] = blue;
+                    imageBuffer[index] = red;
+                    imageBuffer[index + 1] = green;
+                    imageBuffer[index + 2] = blue;
                 }
             }
         }
     }
 }
 
-void PPU::GetPatternTable(int table, int palette, uint8_t* pixels)
+void PPU::GetPatternTable(uint32_t tableIndex, uint32_t paletteIndex, uint8_t* imageBuffer)
 {
-    uint16_t tableIndex;
-    if (table == 0)
+    uint16_t tableAddress;
+
+    // Select pattern table address
+    switch (tableIndex)
     {
-        tableIndex = 0x0000;
-    }
-    else
+    case 0:
+        tableAddress = 0x0000;
+        break;
+    case 1:
+        tableAddress = 0x1000;
+        break;
+    default:
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "The specified pattern table index {} is out of range. Valid values are 0-1", tableIndex);
+        throw NesException(ERROR_INVALID_PATTERN_TABLE_INDEX);
+    };
+
+    if (paletteIndex > 7)
     {
-        tableIndex = 0x1000;
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "The specified palette index {} is out of range. Valid values are 0-7", paletteIndex);
+        throw NesException(ERROR_INVALID_PALETTE_INDEX);
     }
+
+    SPDLOG_LOGGER_INFO(_nes.GetLogger(), "Rendering pattern table {} using palette {}", tableIndex, paletteIndex);
 
     for (uint32_t i = 0; i < 16; ++i)
     {
@@ -1194,64 +1206,64 @@ void PPU::GetPatternTable(int table, int palette, uint8_t* pixels)
 
             for (uint32_t g = 0; g < 8; ++g)
             {
-                uint8_t tileLow = _ppuState->Peek(_cart, tableIndex + patternIndex + g);
-                uint8_t tileHigh = _ppuState->Peek(_cart, tableIndex + patternIndex + g + 8);
+                uint8_t tileLow = _ppuState->Peek(_nes.GetCart(), tableAddress + patternIndex + g);
+                uint8_t tileHigh = _ppuState->Peek(_nes.GetCart(), tableAddress + patternIndex + g + 8);
 
                 for (uint32_t h = 0; h < 8; ++h)
                 {
                     uint16_t pixel = 0x0003 & ((((tileLow << h) & 0x80) >> 7) | (((tileHigh << h) & 0x80) >> 6));
-                    uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-                    uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteIndex)];
+                    uint16_t colorIndex = (0x3F00 + (4 * (paletteIndex % 8))) | pixel;
+                    uint32_t rgb = RgbLookupTable[_ppuState->Peek(_nes.GetCart(), colorIndex)];
                     uint8_t red = (rgb & 0xFF0000) >> 16;
                     uint8_t green = (rgb & 0x00FF00) >> 8;
                     uint8_t blue = (rgb & 0x0000FF);
 
                     uint32_t index = ((24 * f) + (h * 3)) + ((3072 * i) + (g * 384));
 
-                    pixels[index] = red;
-                    pixels[index + 1] = green;
-                    pixels[index + 2] = blue;
+                    imageBuffer[index] = red;
+                    imageBuffer[index + 1] = green;
+                    imageBuffer[index + 2] = blue;
                 }
             }
         }
     }
 }
 
-void PPU::GetPalette(int palette, uint8_t* pixels)
+void PPU::GetPalette(uint32_t paletteIndex, uint8_t* imageBuffer)
 {
     uint16_t baseAddress;
-    if (palette == 0)
+    switch (paletteIndex)
     {
+    case 0:
         baseAddress = 0x3F00;
-    }
-    else if (palette == 1)
-    {
+        break;
+    case 1:
         baseAddress = 0x3F04;
-    }
-    else if (palette == 2)
-    {
+        break;
+    case 2:
         baseAddress = 0x3F08;
-    }
-    else if (palette == 3)
-    {
+        break;
+    case 3:
         baseAddress = 0x3F0C;
-    }
-    else if (palette == 4)
-    {
+        break;
+    case 4:
         baseAddress = 0x3F10;
-    }
-    else if (palette == 5)
-    {
+        break;
+    case 5:
         baseAddress = 0x3F14;
-    }
-    else if (palette == 6)
-    {
+        break;
+    case 6:
         baseAddress = 0x3F18;
-    }
-    else
-    {
+        break;
+    case 7:
         baseAddress = 0x3F1C;
+        break;
+    default:
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "The specified palette index {} is out of range. Valid values are 0-7", paletteIndex);
+        throw NesException(ERROR_INVALID_PALETTE_INDEX);
     }
+
+    SPDLOG_LOGGER_INFO(_nes.GetLogger(), "Rendering palette {}", paletteIndex);
 
     for (uint32_t i = 0; i < 4; ++i)
     {
@@ -1261,25 +1273,33 @@ void PPU::GetPalette(int palette, uint8_t* pixels)
         {
             for (uint32_t h = 0; h < 16; ++h)
             {
-                uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteAddress)];
+                uint32_t rgb = RgbLookupTable[_ppuState->Peek(_nes.GetCart(), paletteAddress)];
                 uint8_t red = (rgb & 0xFF0000) >> 16;
                 uint8_t green = (rgb & 0x00FF00) >> 8;
                 uint8_t blue = (rgb & 0x0000FF);
 
                 uint32_t index = ((48 * i) + (h * 3)) + (192 * g);
 
-                pixels[index] = red;
-                pixels[index + 1] = green;
-                pixels[index + 2] = blue;
+                imageBuffer[index] = red;
+                imageBuffer[index + 1] = green;
+                imageBuffer[index + 2] = blue;
             }
         }
     }
 }
 
-void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
+void PPU::GetSprite(uint32_t spriteIndex, uint8_t* imageBuffer)
 {
-    uint8_t byteOne = _ppuState->Oam[(0x4 * sprite) + 1];
-    uint8_t byteTwo = _ppuState->Oam[(0x4 * sprite) + 2];
+    if (spriteIndex > 63)
+    {
+        SPDLOG_LOGGER_ERROR(_nes.GetLogger(), "The specified sprite index {} is out of range. Valid values are 0-63", spriteIndex);
+        throw NesException(ERROR_INVALID_PALETTE_INDEX);
+    }
+
+    SPDLOG_LOGGER_INFO(_nes.GetLogger(), "Rendering sprite {}", spriteIndex);
+
+    uint8_t byteOne = _ppuState->Oam[(0x4 * spriteIndex) + 1];
+    uint8_t byteTwo = _ppuState->Oam[(0x4 * spriteIndex) + 2];
 
     uint16_t tableIndex = _ppuState->BaseSpriteTableAddress;
     uint16_t patternIndex = byteOne * 16;
@@ -1287,23 +1307,23 @@ void PPU::GetPrimaryOAM(int sprite, uint8_t* pixels)
 
     for (uint32_t i = 0; i < 8; ++i)
     {
-        uint8_t tileLow = _ppuState->Peek(_cart, tableIndex + patternIndex + i);
-        uint8_t tileHigh = _ppuState->Peek(_cart, tableIndex + patternIndex + i + 8);
+        uint8_t tileLow = _ppuState->Peek(_nes.GetCart(), tableIndex + patternIndex + i);
+        uint8_t tileHigh = _ppuState->Peek(_nes.GetCart(), tableIndex + patternIndex + i + 8);
 
         for (uint32_t f = 0; f < 8; ++f)
         {
             uint16_t pixel = 0x0003 & ((((tileLow << f) & 0x80) >> 7) | (((tileHigh << f) & 0x80) >> 6));
             uint16_t paletteIndex = (0x3F00 + (4 * (palette % 8))) | pixel;
-            uint32_t rgb = RgbLookupTable[_ppuState->Peek(_cart, paletteIndex)];
+            uint32_t rgb = RgbLookupTable[_ppuState->Peek(_nes.GetCart(), paletteIndex)];
             uint8_t red = (rgb & 0xFF0000) >> 16;
             uint8_t green = (rgb & 0x00FF00) >> 8;
             uint8_t blue = (rgb & 0x0000FF);
 
             uint32_t index = (24 * i) + (f * 3);
 
-            pixels[index] = red;
-            pixels[index + 1] = green;
-            pixels[index + 2] = blue;
+            imageBuffer[index] = red;
+            imageBuffer[index + 1] = green;
+            imageBuffer[index + 2] = blue;
         }
     }
 }

@@ -22,6 +22,13 @@ class INES;
 
 constexpr int SUCCESS = 0;
 
+constexpr uint32_t FRAME_BUFFER_SIZE = 256 * 240 * 3;
+constexpr uint32_t NAME_TABLE_BUFFER_SIZE = 256 * 240 * 3;
+constexpr uint32_t PATTERN_TABLE_BUFFER_SIZE = (16 * 16) * (8 * 8) * 3;
+constexpr uint32_t PALETTE_BUFFER_SIZE = (16 * 16) * 4 * 3;
+constexpr uint32_t SPRITE_BUFFER_SIZE_8X8 = (8 * 8) * 3;
+constexpr uint32_t SPRITE_BUFFER_SIZE_8X16 = (8 * 16) * 3;
+
 DNES_DLL INES* CreateNES();
 DNES_DLL void DestroyNES(INES* nes);
 
@@ -91,10 +98,10 @@ public:
     virtual void SetTurboModeEnabled(bool enabled) = 0;
 
     virtual int GetFrameRate() = 0;
-    virtual void GetNameTable(int table, uint8_t* pixels) = 0;
-    virtual void GetPatternTable(int table, int palette, uint8_t* pixels) = 0;
-    virtual void GetPalette(int palette, uint8_t* pixels) = 0;
-    virtual void GetSprite(int sprite, uint8_t* pixels) = 0;
+    virtual int GetNameTable(uint32_t tableIndex, uint8_t* imageBuffer) = 0;
+    virtual int GetPatternTable(uint32_t tableIndex, uint32_t paletteIndex, uint8_t* imageBuffer) = 0;
+    virtual int GetPalette(uint32_t paletteIndex, uint8_t* imageBuffer) = 0;
+    virtual int GetSprite(uint32_t spriteIndex, uint8_t* imageBuffer) = 0;
     virtual void SetNtscDecoderEnabled(bool enabled) = 0;
     virtual void SetFpsDisplayEnabled(bool enabled) = 0;
     virtual void SetOverscanEnabled(bool enabled) = 0;

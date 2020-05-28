@@ -93,9 +93,6 @@ NES::NES()
     Cpu->AttachAPU(Apu.get());
     Cpu->AttachCart(Cartridge.get());
 
-    Ppu->AttachCPU(Cpu.get());
-    Ppu->AttachCart(Cartridge.get());
-
     CurrentState = State::READY;
 }
 
@@ -286,24 +283,60 @@ int NES::GetFrameRate()
     return Ppu->GetFrameRate();
 }
 
-void NES::GetNameTable(int table, uint8_t* pixels)
+int NES::GetNameTable(uint32_t tableIndex, uint8_t* imageBuffer)
 {
-    Ppu->GetNameTable(table, pixels);
+    try
+    {
+        Ppu->GetNameTable(tableIndex, imageBuffer);
+    }
+    catch (NesException& ex)
+    {
+        return ex.errorCode();
+    }
+
+    return dnes::SUCCESS;
 }
 
-void NES::GetPatternTable(int table, int palette, uint8_t* pixels)
+int NES::GetPatternTable(uint32_t tableIndex, uint32_t paletteIndex, uint8_t* imageBuffer)
 {
-    Ppu->GetPatternTable(table, palette, pixels);
+    try
+    {
+        Ppu->GetPatternTable(tableIndex, paletteIndex, imageBuffer);
+    }
+    catch (NesException& ex)
+    {
+        return ex.errorCode();
+    }
+
+    return dnes::SUCCESS;
 }
 
-void NES::GetPalette(int palette, uint8_t* pixels)
+int NES::GetPalette(uint32_t paletteIndex, uint8_t* imageBuffer)
 {
-    Ppu->GetPalette(palette, pixels);
+    try
+    {
+        Ppu->GetPalette(paletteIndex, imageBuffer);
+    }
+    catch (NesException& ex)
+    {
+        return ex.errorCode();
+    }
+
+    return dnes::SUCCESS;
 }
 
-void NES::GetSprite(int sprite, uint8_t* pixels)
+int NES::GetSprite(uint32_t spriteIndex, uint8_t* imageBuffer)
 {
-    Ppu->GetPrimaryOAM(sprite, pixels);
+    try
+    {
+        Ppu->GetSprite(spriteIndex, imageBuffer);
+    }
+    catch (NesException& ex)
+    {
+        return ex.errorCode();
+    }
+
+    return dnes::SUCCESS;
 }
 
 void NES::SetNtscDecoderEnabled(bool enabled)

@@ -13,28 +13,35 @@
 #include "state_save.h"
 
 class NES;
-class CPU;
-class Cart;
-
 struct PPUState;
 
 class PPU
 {
 public:
     PPU(NES& nes);
-
     ~PPU();
 
-    void AttachCPU(CPU* cpu);
-    void AttachCart(Cart* cart);
+    // User facing interface (via the NES object)
+    bool EndOfFrame();
 
+    int GetFrameRate();
+
+    void GetNameTable(uint32_t tableIndex, uint8_t* imageBuffer);
+    void GetPatternTable(uint32_t tableIndex, uint32_t paletteIndex, uint8_t* imageBuffer);
+    void GetPalette(uint32_t paletteIndex, uint8_t* imageBuffer);
+    void GetSprite(uint32_t spriteIndex, uint8_t* imageBuffer);
+
+    StateSave::Ptr SaveState();
+    void LoadState(const StateSave::Ptr& state);
+
+
+    // Internal operations interface
+    void Step();
+
+    bool GetNMIActive();
     int32_t GetCurrentDot();
     int32_t GetCurrentScanline();
     uint64_t GetClock();
-
-    void Step();
-    bool GetNMIActive();
-    
     uint8_t ReadPPUStatus();
     uint8_t ReadOAMData();
     uint8_t ReadPPUData();
@@ -46,21 +53,9 @@ public:
     void WritePPUADDR(uint8_t M);
     void WritePPUDATA(uint8_t M);
 
-    int GetFrameRate();
-    void GetNameTable(int table, uint8_t* pixels);
-    void GetPatternTable(int table, int palette, uint8_t* pixels);
-    void GetPalette(int palette, uint8_t* pixels);
-    void GetPrimaryOAM(int sprite, uint8_t* pixels);
-
-    StateSave::Ptr SaveState();
-    void LoadState(const StateSave::Ptr& state);
-
-    bool EndOfFrame();
-
 private:
     NES& _nes;
 
-    Cart* _cart;
     std::unique_ptr<PPUState> _ppuState;
     std::unique_ptr<uint32_t[]> _frameBuffer;
 

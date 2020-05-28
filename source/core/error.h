@@ -31,6 +31,10 @@ constexpr int ERROR_STATE_LOAD_FAILED = 26;
 constexpr int ERROR_FAILED_TO_OPEN_ROM_FILE = 27;
 constexpr int ERROR_FAILED_TO_READ_ROM_FILE = 28;
 constexpr int ERROR_INVALID_INES_HEADER = 29;
+constexpr int ERROR_INVALID_NAME_TABLE_INDEX = 30;
+constexpr int ERROR_INVALID_PATTERN_TABLE_INDEX = 31;
+constexpr int ERROR_INVALID_PALETTE_INDEX = 32;
+constexpr int ERROR_INVALID_SPRITE_INDEX = 33;
 
 static const std::map<int, std::string> ERROR_CODE_TO_MESSAGE_MAP
 {
@@ -62,7 +66,11 @@ static const std::map<int, std::string> ERROR_CODE_TO_MESSAGE_MAP
     {ERROR_STATE_LOAD_FAILED, "Failed to load state save"},
     {ERROR_FAILED_TO_OPEN_ROM_FILE, "Failed to open the specified ROM file"},
     {ERROR_FAILED_TO_READ_ROM_FILE, "An error occured while reading the ROM file"},
-    {ERROR_INVALID_INES_HEADER, "The ROM file header is invalid"}
+    {ERROR_INVALID_INES_HEADER, "The ROM file header is invalid"},
+    {ERROR_INVALID_NAME_TABLE_INDEX, "The requested name table index is out of range"},
+    {ERROR_INVALID_PATTERN_TABLE_INDEX, "The requested pattern table index is out of range"},
+    {ERROR_INVALID_PALETTE_INDEX, "The requested palette index is out of range"},
+    {ERROR_INVALID_SPRITE_INDEX, "The requestd sprite index is out of range"}
 };
 
 static inline const char* GetErrorMessageFromCode(int code)
