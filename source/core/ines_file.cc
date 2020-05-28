@@ -1,9 +1,8 @@
 #include <fstream>
 #include <exception>
 
-#include "nes_exception.h"
-#include "error_handling.h"
-#include "ines.h"
+#include "error.h"
+#include "ines_file.h"
 
 // Read header
 struct iNesHeader
