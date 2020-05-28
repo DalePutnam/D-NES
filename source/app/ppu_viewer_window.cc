@@ -37,21 +37,21 @@ PPUViewerWindow::PPUViewerWindow(wxWindow* parent, NESPtr& nes)
 {
     for (uint32_t i = 0; i < 64; ++i)
     {
-        SpriteBuffers[i] = new uint8_t[8*8*3];
+        SpriteBuffers[i] = new uint8_t[dnes::SPRITE_BUFFER_SIZE_8X8];
 
         if (i < 8)
         {
-            PaletteBuffers[i] = new uint8_t[64*16*3];
+            PaletteBuffers[i] = new uint8_t[dnes::PALETTE_BUFFER_SIZE];
         }
 
         if (i < 4)
         {
-            NameTableBuffers[i] = new uint8_t[256*240*3];
+            NameTableBuffers[i] = new uint8_t[dnes::NAME_TABLE_BUFFER_SIZE];
         }
 
         if (i < 2)
         {
-            PatternTableBuffers[i] = new uint8_t[128*128*3];
+            PatternTableBuffers[i] = new uint8_t[dnes::PATTERN_TABLE_BUFFER_SIZE];
         }
     }
 
